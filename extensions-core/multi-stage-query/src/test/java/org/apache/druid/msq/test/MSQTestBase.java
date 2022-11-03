@@ -230,7 +230,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private TestGroupByBuffers groupByBuffers;
-  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(WorkerMemoryParameters.compute(
+  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(WorkerMemoryParameters.createInstance(
       WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
       2,
       10,

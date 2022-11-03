@@ -20,19 +20,31 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.primitives.Ints;
+import com.google.inject.Injector;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.input.InputSpecs;
+import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 
 import java.util.Objects;
 
 /**
  * Class for determining how much JVM heap to allocate to various purposes.
  *
- * First, we take {@link #USABLE_MEMORY_FRACTION} out of the total JVM heap and split it into "bundles" of
- * equal size. The number of bundles is based entirely on server configuration; this makes the calculation
- * robust to different queries running simultaneously in the same JVM.
+ * First, we take {@link #USABLE_MEMORY_FRACTION} out of the total JVM heap.
+ *
+ * Then, we carve out some space for each worker that may be running in our JVM; see {@link #memoryPerWorker}.
+ *
+ * Then, we split the rest into "bundles" of equal size; see {@link #memoryPerBundle}. The number of bundles is based
+ * entirely on server configuration; this makes the calculation robust to different queries running simultaneously in
+ * the same JVM.
  *
  * Then, we split up the resources for each bundle in two different ways: one assuming it'll be used for a
  * {@link org.apache.druid.frame.processor.SuperSorter}, and one assuming it'll be used for a regular
@@ -91,6 +103,18 @@ public class WorkerMemoryParameters
   private static final int APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN = 3_000;
 
   /**
+   * Maximum percent of *total* available memory (not each bundle), i.e. {@link #USABLE_MEMORY_FRACTION}, that we'll
+   * ever use for maxRetainedBytes of {@link ClusterByStatisticsCollectorImpl} across all workers.
+   */
+  private static final double PARTITION_STATS_MEMORY_MAX_FRACTION = 0.1;
+
+  /**
+   * Maximum number of bytes we'll ever use for maxRetainedBytes of {@link ClusterByStatisticsCollectorImpl} for
+   * a single worker. Acts as a limit on the value computed based on {@link #PARTITION_STATS_MEMORY_MAX_FRACTION}.
+   */
+  private static final long PARTITION_STATS_MEMORY_MAX_BYTES = 300_000_000;
+
+  /**
    * Fraction of free memory per bundle that can be used by {@link org.apache.druid.msq.querykit.BroadcastJoinHelper}
    * to store broadcast data on-heap. This is used to limit the total size of input frames, which we expect to
    * expand on-heap. Expansion can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are
@@ -103,22 +127,62 @@ public class WorkerMemoryParameters
   private final int superSorterMaxChannelsPerProcessor;
   private final long appenderatorMemory;
   private final long broadcastJoinMemory;
+  private final int partitionStatisticsMaxRetainedBytes;
 
   WorkerMemoryParameters(
       final int superSorterMaxActiveProcessors,
       final int superSorterMaxChannelsPerProcessor,
       final long appenderatorMemory,
-      final long broadcastJoinMemory
+      final long broadcastJoinMemory,
+      final int partitionStatisticsMaxRetainedBytes
   )
   {
     this.superSorterMaxActiveProcessors = superSorterMaxActiveProcessors;
     this.superSorterMaxChannelsPerProcessor = superSorterMaxChannelsPerProcessor;
     this.appenderatorMemory = appenderatorMemory;
     this.broadcastJoinMemory = broadcastJoinMemory;
+    this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
   }
 
   /**
-   * Returns an object specifying memory-usage parameters for a stage in a worker.
+   * Create a production instance for {@link org.apache.druid.msq.indexing.MSQControllerTask}.
+   */
+  public static WorkerMemoryParameters createProductionInstanceForController(final Injector injector)
+  {
+    return createInstance(
+        Runtime.getRuntime().maxMemory(),
+        computeNumWorkersInJvm(injector),
+        computeNumProcessorsInJvm(injector),
+        0
+    );
+  }
+
+  /**
+   * Create a production instance for {@link org.apache.druid.msq.indexing.MSQWorkerTask}.
+   */
+  public static WorkerMemoryParameters createProductionInstanceForWorker(
+      final Injector injector,
+      final QueryDefinition queryDef,
+      final int stageNumber
+  )
+  {
+    final IntSet inputStageNumbers =
+        InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
+    final int numInputWorkers =
+        inputStageNumbers.intStream()
+                         .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
+                         .sum();
+
+    return createInstance(
+        Runtime.getRuntime().maxMemory(),
+        computeNumWorkersInJvm(injector),
+        computeNumProcessorsInJvm(injector),
+        numInputWorkers
+    );
+  }
+
+  /**
+   * Returns an object specifying memory-usage parameters.
    *
    * Throws a {@link MSQException} with an appropriate fault if the provided combination of parameters cannot
    * yield a workable memory situation.
@@ -129,13 +193,14 @@ public class WorkerMemoryParameters
    * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
    * @param numInputWorkers           number of workers across input stages that need to be merged together.
    */
-  public static WorkerMemoryParameters compute(
+  public static WorkerMemoryParameters createInstance(
       final long maxMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
       final int numInputWorkers
   )
   {
+    final long workerMemory = memoryPerWorker(maxMemoryInJvm, numWorkersInJvm);
     final long bundleMemory = memoryPerBundle(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
     final long bundleMemoryForProcessing = bundleMemory - bundleMemoryForInputChannels;
@@ -179,7 +244,8 @@ public class WorkerMemoryParameters
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
         (long) (bundleMemoryForProcessing * APPENDERATOR_MEMORY_FRACTION),
-        (long) (bundleMemoryForProcessing * BROADCAST_JOIN_MEMORY_FRACTION)
+        (long) (bundleMemoryForProcessing * BROADCAST_JOIN_MEMORY_FRACTION),
+        Ints.checkedCast(workerMemory) // 100% of worker memory is devoted to partition statistics
     );
   }
 
@@ -220,6 +286,11 @@ public class WorkerMemoryParameters
     return broadcastJoinMemory;
   }
 
+  public int getPartitionStatisticsMaxRetainedBytes()
+  {
+    return partitionStatisticsMaxRetainedBytes;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -233,7 +304,8 @@ public class WorkerMemoryParameters
     return superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
            && superSorterMaxChannelsPerProcessor == that.superSorterMaxChannelsPerProcessor
            && appenderatorMemory == that.appenderatorMemory
-           && broadcastJoinMemory == that.broadcastJoinMemory;
+           && broadcastJoinMemory == that.broadcastJoinMemory
+           && partitionStatisticsMaxRetainedBytes == that.partitionStatisticsMaxRetainedBytes;
   }
 
   @Override
@@ -243,7 +315,8 @@ public class WorkerMemoryParameters
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
         appenderatorMemory,
-        broadcastJoinMemory
+        broadcastJoinMemory,
+        partitionStatisticsMaxRetainedBytes
     );
   }
 
@@ -255,12 +328,13 @@ public class WorkerMemoryParameters
            ", superSorterMaxChannelsPerProcessor=" + superSorterMaxChannelsPerProcessor +
            ", appenderatorMemory=" + appenderatorMemory +
            ", broadcastJoinMemory=" + broadcastJoinMemory +
+           ", partitionStatisticsMaxRetainedBytes=" + partitionStatisticsMaxRetainedBytes +
            '}';
   }
 
   /**
    * Computes the highest value of numInputWorkers, for the given parameters, that can be passed to
-   * {@link #compute} without resulting in a {@link TooManyWorkersFault}.
+   * {@link #createInstance} without resulting in a {@link TooManyWorkersFault}.
    *
    * Returns 0 if no number of workers would be OK.
    */
@@ -276,17 +350,66 @@ public class WorkerMemoryParameters
     return Math.max(0, Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1));
   }
 
+  /**
+   * Maximum number of workers that may exist in the current JVM.
+   */
+  private static int computeNumWorkersInJvm(final Injector injector)
+  {
+    final AppenderatorsManager appenderatorsManager = injector.getInstance(AppenderatorsManager.class);
+
+    if (appenderatorsManager instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer
+      return injector.getInstance(WorkerConfig.class).getCapacity();
+    } else {
+      // CliPeon
+      return 1;
+    }
+  }
+
+  /**
+   * Maximum number of concurrent processors that exist in the current JVM.
+   */
+  private static int computeNumProcessorsInJvm(final Injector injector)
+  {
+    return injector.getInstance(Bouncer.class).getMaxCount();
+  }
+
+  /**
+   * Compute the memory allocated to each worker. Includes anything that exists outside of processing bundles.
+   *
+   * Today, we only look at one thing: the amount of memory taken up by
+   * {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}. This is the single largest source of memory
+   * usage outside processing bundles.
+   */
+  private static long memoryPerWorker(
+      final long maxMemoryInJvm,
+      final int numWorkersInJvm
+  )
+  {
+    final long usableMemory = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION);
+    final long memoryForWorkers = (long) Math.min(
+        usableMemory * PARTITION_STATS_MEMORY_MAX_FRACTION,
+        numWorkersInJvm * PARTITION_STATS_MEMORY_MAX_BYTES
+    );
+
+    return memoryForWorkers / numWorkersInJvm;
+  }
+
+  /**
+   * Compute the memory allocated to each processing bundle.
+   */
   private static long memoryPerBundle(
       final long maxMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm
   )
   {
+    final long usableMemory = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION);
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
 
-    // Need to subtract memoryForStatisticsTracking off the top, since this is reserved for statistics collection.
-    final long memoryForStatisticsTracking = (long) numWorkersInJvm * StageDefinition.PARTITION_STATS_MAX_BYTES;
-    final long memoryForBundles = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION - memoryForStatisticsTracking);
+    // Need to subtract memoryForWorkers off the top of usableMemory, since this is reserved for statistics collection.
+    final long memoryForWorkers = numWorkersInJvm * memoryPerWorker(maxMemoryInJvm, numWorkersInJvm);
+    final long memoryForBundles = usableMemory - memoryForWorkers;
 
     // Divide up the usable memory per bundle.
     return memoryForBundles / bundleCount;

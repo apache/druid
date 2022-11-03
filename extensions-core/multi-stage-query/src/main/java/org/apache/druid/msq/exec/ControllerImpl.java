@@ -1943,7 +1943,11 @@ public class ControllerImpl implements Controller
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
       this.closer = closer;
-      this.queryKernel = new ControllerQueryKernel(queryDef);
+      this.queryKernel = new ControllerQueryKernel(
+          queryDef,
+          WorkerMemoryParameters.createProductionInstanceForController(context.injector())
+                                .getPartitionStatisticsMaxRetainedBytes()
+      );
     }
 
     /**
