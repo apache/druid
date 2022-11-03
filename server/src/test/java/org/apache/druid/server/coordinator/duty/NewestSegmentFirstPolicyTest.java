@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -1581,6 +1582,37 @@ public class NewestSegmentFirstPolicyTest
         ImmutableMap.of(DATA_SOURCE, timeline),
         Collections.emptyMap()
     );
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testAllToFinerGranularity()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"),
+                                                            new UserCompactionTaskGranularityConfig(Granularities.DAY,
+                                                                                                    null,
+                                                                                                    null))
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                Intervals.ETERNITY,
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
     Assert.assertFalse(iterator.hasNext());
   }
 

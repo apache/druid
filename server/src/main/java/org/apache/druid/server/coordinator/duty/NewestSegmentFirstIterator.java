@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -113,6 +114,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, SegmentTimeline timeline) -> {
+      boolean allToFinerGranularityCompaction = false;
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
@@ -129,6 +131,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
             // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
             // of 2020-01/2020-02 and 2020-02/2020-03.
+            if (Intervals.ETERNITY.equals(segment.getInterval())
+                && !Granularities.ALL.equals(configuredSegmentGranularity)) {
+              log.warn("Cannot compact segments from ALL to finer granularity for datasource[%s]", dataSource);
+              allToFinerGranularityCompaction = true;
+              continue;
+            }
             for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
               intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
             }
@@ -161,6 +169,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
           originalTimeline = timeline;
           timeline = timelineWithConfiguredSegmentGranularity;
+        }
+        if (allToFinerGranularityCompaction) {
+          return;
         }
         final List<Interval> searchIntervals =
             findInitialSearchInterval(dataSource, timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
