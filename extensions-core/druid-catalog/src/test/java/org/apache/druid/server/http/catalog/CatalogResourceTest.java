@@ -20,10 +20,10 @@
 package org.apache.druid.server.http.catalog;
 
 import org.apache.druid.catalog.http.CatalogResource;
-import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
+import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.Columns;

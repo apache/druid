@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
@@ -44,14 +45,12 @@ import java.util.function.Supplier;
  * Global update notifier for the catalog. Registers itself as a catalog
  * listener, then uses the common cache notifier to send Smile-encoded JSON
  * updates to broker nodes discovered from node discovery (typically ZooKeeper.)
- * <p>
- * Deletes are encoded as a table update with a table definition of a special
- * tombstone type. This saves having the need for two endpoints, or having
- * a wrapper class to handle deletes.
  */
 @ManageLifecycle
 public class CatalogUpdateNotifier implements CatalogUpdateListener
 {
+  private static final EmittingLogger LOG = new EmittingLogger(CatalogUpdateNotifier.class);
+
   private static final String CALLER_NAME = "Catalog Sync";
   private static final long TIMEOUT_MS = 5000;
 
@@ -88,12 +87,14 @@ public class CatalogUpdateNotifier implements CatalogUpdateListener
   public void start()
   {
     notifier.start();
+    LOG.info("Catalog catalog update notifier started");
   }
 
   @LifecycleStop
   public void stop()
   {
     notifier.stop();
+    LOG.info("Catalog catalog update notifier stopped");
   }
 
   @Override

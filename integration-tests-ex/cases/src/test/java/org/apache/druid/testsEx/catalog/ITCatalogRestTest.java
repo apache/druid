@@ -20,9 +20,9 @@
 package org.apache.druid.testsEx.catalog;
 
 import com.google.inject.Inject;
-import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
+import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.TableId;

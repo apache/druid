@@ -77,6 +77,7 @@ public class CacheNotifier
 
   public void start()
   {
+    LOG.info("Starting Catalog sync");
     exec.submit(() -> {
       while (!Thread.interrupted()) {
         try {
@@ -117,5 +118,6 @@ public class CacheNotifier
       LOG.warn("Shutting down Catalog sync with %d unsent notifications", updates.size());
     }
     exec.shutdownNow();
+    LOG.info("Catalog sync stopped");
   }
 }

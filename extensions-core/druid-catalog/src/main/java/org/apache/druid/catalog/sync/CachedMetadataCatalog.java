@@ -35,7 +35,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -52,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Both tables and schemas are cached. In particular, if a table or
  * schema is requested, and does not exist in the base catalog, then
  * that schema is marked as not existing and won't be fetched again.
- *
+ * <p>
  * The cache is updated via an update facility which either flushes
  * the cache (crude) or listens to the base catalog for updates and
  * populates the cache with updates. For a local cache, the DB layer
@@ -62,7 +64,18 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
 {
   private static final Logger LOG = new Logger(CachedMetadataCatalog.class);
 
+  /**
+   * Indicates that the schema entry has not yet been fetched from the catalog.
+   */
   public static final int NOT_FETCHED = -1;
+
+  /**
+   * Indicates that the schema was requested from the catalog, and the catalog
+   * reported that no such schema exists. Saves pinging the catalog over and
+   * over for an undefined schema. The catalog will let us know if the schema
+   * becomes defined (which it won't because, at present, schemas are hard-coded
+   * to a fixed set.)
+   */
   public static final int UNDEFINED = 0;
 
   /**
@@ -84,14 +97,14 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
   {
     private final SchemaSpec schema;
     private long version = NOT_FETCHED;
-    private final ConcurrentHashMap<String, TableEntry> cache = new ConcurrentHashMap<>();
+    private final Map<String, TableEntry> cache = new TreeMap<>();
 
     protected SchemaEntry(SchemaSpec schema)
     {
       this.schema = schema;
     }
 
-    protected TableMetadata resolveTable(TableId tableId)
+    protected synchronized TableMetadata resolveTable(TableId tableId)
     {
       TableEntry entry = cache.computeIfAbsent(
           tableId.name(),
@@ -111,15 +124,14 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
           cache.put(table.id().name(), new TableEntry(table));
         }
       }
-      List<TableMetadata> orderedTables = new ArrayList<>();
 
       // Get the list of actual tables; excluding any cached "misses".
-      cache.forEach((k, v) -> {
-        if (v.table != null) {
-          orderedTables.add(v.table);
+      List<TableMetadata> orderedTables = new ArrayList<>(cache.size());
+      for (TableEntry entry : cache.values()) {
+        if (entry.table != null) {
+          orderedTables.add(entry.table);
         }
-      });
-      orderedTables.sort((e1, e2) -> e1.id().name().compareTo(e2.id().name()));
+      }
       return orderedTables;
     }
 
@@ -162,7 +174,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       version = Math.max(version, table.updateTime());
     }
 
-    protected TableEntry computeCreate(TableEntry entry, TableMetadata update)
+    private TableEntry computeCreate(TableEntry entry, TableMetadata update)
     {
       if (entry != null && entry.table != null) {
         LOG.warn("Received creation event for existing entry: %s", update.id().sqlName());
@@ -248,7 +260,7 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       return true;
     }
 
-    public Set<String> tableNames()
+    public synchronized Set<String> tableNames()
     {
       Set<String> tables = new HashSet<>();
       cache.forEach((k, v) -> {

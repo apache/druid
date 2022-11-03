@@ -100,7 +100,8 @@ public class CatalogResource
    * Create or update a new table containing the given table specification.
    * Supports three use cases:
    * <ul>
-   * <li>"create if not exists": default use case with no options.</li>
+   * <li>"create": default use case with no options: returns an error if
+   *     a table of the same name already exists.</li>
    * <li>"create or update": set {@code overwrite=true}.</li>
    * <li>"update": set {@code version} to the expected current version.
    *     This form enforces optimistic locking.</li>
@@ -115,6 +116,7 @@ public class CatalogResource
    *        match. If not (or if the table does not exist), returns an error.
    * @param overwrite if {@code true}, then overwrites any existing table.
    *        If {@code false}, then the operation fails if the table already exists.
+   *        Ignored if a version is specified.
    * @param req the HTTP request used for authorization.
     */
   @POST
@@ -134,7 +136,7 @@ public class CatalogResource
       final SchemaSpec schema = validateSchema(dbSchema, true);
       validateTableName(name);
       authorizeTable(schema, name, Action.WRITE, req);
-      validateTableSpec(schema, name, spec);
+      validateTableSpec(schema, spec);
       final TableMetadata table = TableMetadata.newTable(TableId.of(dbSchema, name), spec);
       try {
         catalog.validate(table);
@@ -235,6 +237,21 @@ public class CatalogResource
   // ---------------------------------------------------------------------
   // Modify a table within the catalog
 
+  /**
+   * Modify an existing table. The edit operations perform incremental changes
+   * on a table spec, avoiding the need for the client to download the entire
+   * spec to make common changes. The incremental nature avoids the need for
+   * optimistic concurrency control using versions: the request applies the
+   * change within a transaction using actual locking. The operations are
+   * designed so that, in most cases, the results are easy to predict even if
+   * the table spec changed between the time it was retrieve and the edit operation
+   * is submitted.
+   *
+   * @param dbSchema The name of the schema that holds the table.
+   * @param name The name of the table definition to delete. The user must have
+   *             write access.
+   * @param editRequest The operation to perform. See the classes for details.
+   */
   @POST
   @Path("/schemas/{schema}/tables/{name}/edit")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -263,6 +280,9 @@ public class CatalogResource
   /**
    * Retrieves the list of all Druid schema names, all table names, or
    * all table metadata.
+   *
+   * @param format the format of the response. See the code for the
+   *        available formats
    */
   @GET
   @Path("/schemas")
@@ -298,7 +318,9 @@ public class CatalogResource
    * which will probably differ from the list of actual tables. For example, for
    * the read-only schemas, there will be no table definitions.
    *
-   * @param dbSchema The Druid schema to query. The user must have read access.
+   * @param schema The Druid schema to query. The user must have read access.
+   * @param format the format of the response. See the code for the
+   *        available formats
    */
   @GET
   @Path("/schemas/{schema}/tables")
@@ -431,7 +453,7 @@ public class CatalogResource
   private List<TableMetadata> getTableStatusForSchema(
       final SchemaSpec schema,
       final HttpServletRequest req
-  ) throws CatalogException
+  )
   {
     // Crude but effective, assuming low volume: get all the data, and throw away
     // the columns and properties.
@@ -498,7 +520,7 @@ public class CatalogResource
     }
   }
 
-  private void validateTableSpec(SchemaSpec schema, String name, TableSpec spec) throws CatalogException
+  private void validateTableSpec(SchemaSpec schema, TableSpec spec) throws CatalogException
   {
     // The given table spec has to be valid for the given schema.
     try {

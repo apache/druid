@@ -32,12 +32,30 @@ import java.util.Objects;
  * REST API level description of a table. Tables have multiple types
  * as described by subclasses. Stores the operational aspects of a
  * table, such as its name, creation time, state and spec.
+ * <p>
+ * Doubles as a "holder" of partial collections of table metadata
+ * internally. For example, in the "edit" operation, the id and
+ * a partial spec will be available, the other fields are implicitly
+ * unset. The set of provided fields is implicit in the code that uses
+ * the object. (Providing partial information avoids the need to query
+ * the DB for information that won't actually be used.)
  *
  * @see {@link ResolvedTable} for the semantic representation.
  */
 @PublicApi
 public class TableMetadata
 {
+  /**
+   * State of the metadata table entry (not necessarily of the underlying
+   * datasource.) A table entry will be Active normally. The Deleting state
+   * is provided to handle one very specific case: a request to delete a
+   * datasource. Since datasources are large, and consist of a large number of
+   * segments, it takes time to unload segments from data nodes, then physically
+   * delete those segments. The Deleting state says that this process has started.
+   * It tell the Broker to act as if the table no longer exists in queries, but
+   * not to allow creation of a new table of the same name until the deletion
+   * process completes and the table metadata entry is deleted.
+   */
   public enum TableState
   {
     ACTIVE("A"),

@@ -21,10 +21,10 @@ package org.apache.druid.server.http.catalog;
 
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
-import org.apache.druid.catalog.http.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
+import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;

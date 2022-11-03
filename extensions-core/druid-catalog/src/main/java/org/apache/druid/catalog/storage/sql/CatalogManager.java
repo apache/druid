@@ -27,6 +27,8 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 /**
@@ -39,9 +41,20 @@ import java.util.List;
  */
 public interface CatalogManager
 {
+  /**
+   * Perform a transform (edit) of the table metadata. The metadata
+   * argument provided contains the table ID and the portion of the
+   * spec requested for the given operation: either properties or
+   * columns.
+   * <p>
+   * The return value is either the updated spec to be written to the
+   * DB, or {@link null}, which indicates that no change was needed.
+   * When non-null, the spec will contain a revised version of either
+   * the columns or the properties, as determined by the specific operation.
+   */
   interface TableTransform
   {
-    TableSpec apply(TableMetadata spec) throws CatalogException;
+    @Nullable TableSpec apply(TableMetadata metadata) throws CatalogException;
   }
 
   /**
@@ -97,9 +110,22 @@ public interface CatalogManager
    *
    * @param id        the table to update
    * @param transform the transform to apply to the table properties
-   * @return          the update timestamp (version) of the updated record
+   * @return          the update timestamp (version) of the updated record, or 0 if
+   *                  the transform returns {@code null}, which indicates no change
+   *                  is needed
    */
   long updateProperties(TableId id, TableTransform transform) throws CatalogException;
+
+  /**
+   * Update the table columns incrementally using the transform provided. Performs the update
+   * in a transaction to ensure the read and write are atomic.
+   *
+   * @param id        the table to update
+   * @param transform the transform to apply to the table columns
+   * @return          the update timestamp (version) of the updated record, or 0 if
+   *                  the transform returns {@code null}, which indicates no change
+   *                  is needed
+   */
   long updateColumns(TableId id, TableTransform transform) throws CatalogException;
 
   /**

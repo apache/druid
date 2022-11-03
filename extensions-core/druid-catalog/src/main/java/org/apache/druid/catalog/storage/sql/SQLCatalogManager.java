@@ -62,6 +62,15 @@ public class SQLCatalogManager implements CatalogManager
 {
   public static final String TABLES_TABLE = "tableDefs";
 
+  private static final String SCHEMA_NAME_COL = "schemaName";
+  private static final String TABLE_NAME_COL = "name";
+  private static final String CREATION_TIME_COL = "creationTime";
+  private static final String UPDATE_TIME_COL = "updateTime";
+  private static final String STATE_COL = "state";
+  private static final String TABLE_TYPE_COL = "tableType";
+  private static final String PROPERTIES_COL = "properties";
+  private static final String COLUMNS_COL = "columns";
+
   private final MetadataStorageManager metastoreManager;
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
@@ -142,14 +151,14 @@ public class SQLCatalogManager implements CatalogManager
               final long updateTime = System.currentTimeMillis();
               final Update stmt = handle
                   .createStatement(statement(INSERT_TABLE))
-                  .bind("schemaName", table.id().schema())
-                  .bind("name", table.id().name())
-                  .bind("creationTime", updateTime)
-                  .bind("updateTime", updateTime)
-                  .bind("state", TableMetadata.TableState.ACTIVE.code())
-                  .bind("tableType", spec.type())
-                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()));
+                  .bind(SCHEMA_NAME_COL, table.id().schema())
+                  .bind(TABLE_NAME_COL, table.id().name())
+                  .bind(CREATION_TIME_COL, updateTime)
+                  .bind(UPDATE_TIME_COL, updateTime)
+                  .bind(STATE_COL, TableMetadata.TableState.ACTIVE.code())
+                  .bind(TABLE_TYPE_COL, spec.type())
+                  .bind(PROPERTIES_COL, JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind(COLUMNS_COL, JacksonUtils.toBytes(jsonMapper, spec.columns()));
               try {
                 stmt.execute();
               }
@@ -196,8 +205,8 @@ public class SQLCatalogManager implements CatalogManager
               final Query<Map<String, Object>> query = handle
                   .createQuery(statement(SELECT_TABLE))
                   .setFetchSize(connector.getStreamingFetchSize())
-                  .bind("schemaName", id.schema())
-                  .bind("name", id.name());
+                  .bind(SCHEMA_NAME_COL, id.schema())
+                  .bind(TABLE_NAME_COL, id.name());
               final ResultIterator<TableMetadata> resultIterator =
                   query.map((index, r, ctx) ->
                     new TableMetadata(
@@ -249,17 +258,17 @@ public class SQLCatalogManager implements CatalogManager
               final long updateTime = System.currentTimeMillis();
               final int updateCount = handle
                   .createStatement(statement(REPLACE_SPEC_STMT))
-                  .bind("schemaName", id.schema())
-                  .bind("name", id.name())
-                  .bind("tableType", spec.type())
-                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()))
-                  .bind("updateTime", updateTime)
+                  .bind(SCHEMA_NAME_COL, id.schema())
+                  .bind(TABLE_NAME_COL, id.name())
+                  .bind(TABLE_TYPE_COL, spec.type())
+                  .bind(PROPERTIES_COL, JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind(COLUMNS_COL, JacksonUtils.toBytes(jsonMapper, spec.columns()))
+                  .bind(UPDATE_TIME_COL, updateTime)
                   .execute();
               if (updateCount == 0) {
                 throw tableNotFound(id);
               }
-              return table.fromInsert(updateTime);
+              return table.asUpdate(updateTime);
             }
           }
       );
@@ -274,6 +283,7 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
+  private static final String OLD_VERSION_PARAM = "oldVersion";
   private static final String UPDATE_SPEC_STMT =
       REPLACE_SPEC_STMT +
       "  AND updateTime = :oldVersion";
@@ -293,13 +303,13 @@ public class SQLCatalogManager implements CatalogManager
               final long updateTime = System.currentTimeMillis();
               final int updateCount = handle
                   .createStatement(statement(UPDATE_SPEC_STMT))
-                  .bind("schemaName", id.schema())
-                  .bind("name", id.name())
-                  .bind("tableType", spec.type())
-                  .bind("properties", JacksonUtils.toBytes(jsonMapper, spec.properties()))
-                  .bind("columns", JacksonUtils.toBytes(jsonMapper, spec.columns()))
-                  .bind("updateTime", updateTime)
-                  .bind("oldVersion", oldVersion)
+                  .bind(SCHEMA_NAME_COL, id.schema())
+                  .bind(TABLE_NAME_COL, id.name())
+                  .bind(TABLE_TYPE_COL, spec.type())
+                  .bind(PROPERTIES_COL, JacksonUtils.toBytes(jsonMapper, spec.properties()))
+                  .bind(COLUMNS_COL, JacksonUtils.toBytes(jsonMapper, spec.columns()))
+                  .bind(UPDATE_TIME_COL, updateTime)
+                  .bind(OLD_VERSION_PARAM, oldVersion)
                   .execute();
               if (updateCount == 0) {
                 throw new NotFoundException(
@@ -354,8 +364,8 @@ public class SQLCatalogManager implements CatalogManager
                 final Query<Map<String, Object>> query = handle
                     .createQuery(statement(SELECT_PROPERTIES_STMT))
                     .setFetchSize(connector.getStreamingFetchSize())
-                    .bind("schemaName", id.schema())
-                    .bind("name", id.name());
+                    .bind(SCHEMA_NAME_COL, id.schema())
+                    .bind(TABLE_NAME_COL, id.name());
 
                 final ResultIterator<TableSpec> resultIterator = query
                       .map((index, r, ctx) ->
@@ -381,10 +391,10 @@ public class SQLCatalogManager implements CatalogManager
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
                     .createStatement(statement(UPDATE_PROPERTIES_STMT))
-                    .bind("schemaName", id.schema())
-                    .bind("name", id.name())
-                    .bind("properties", JacksonUtils.toBytes(jsonMapper, revised.properties()))
-                    .bind("updateTime", updateTime)
+                    .bind(SCHEMA_NAME_COL, id.schema())
+                    .bind(TABLE_NAME_COL, id.name())
+                    .bind(PROPERTIES_COL, JacksonUtils.toBytes(jsonMapper, revised.properties()))
+                    .bind(UPDATE_TIME_COL, updateTime)
                     .execute();
                 if (updateCount == 0) {
                   // Should never occur because we're holding a lock.
@@ -446,8 +456,8 @@ public class SQLCatalogManager implements CatalogManager
                 final Query<Map<String, Object>> query = handle
                     .createQuery(statement(SELECT_COLUMNS_STMT))
                     .setFetchSize(connector.getStreamingFetchSize())
-                    .bind("schemaName", id.schema())
-                    .bind("name", id.name());
+                    .bind(SCHEMA_NAME_COL, id.schema())
+                    .bind(TABLE_NAME_COL, id.name());
 
                 final ResultIterator<TableSpec> resultIterator = query
                       .map((index, r, ctx) ->
@@ -473,10 +483,10 @@ public class SQLCatalogManager implements CatalogManager
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
                     .createStatement(statement(UPDATE_COLUMNS_STMT))
-                    .bind("schemaName", id.schema())
-                    .bind("name", id.name())
-                    .bind("columns", JacksonUtils.toBytes(jsonMapper, revised.columns()))
-                    .bind("updateTime", updateTime)
+                    .bind(SCHEMA_NAME_COL, id.schema())
+                    .bind(TABLE_NAME_COL, id.name())
+                    .bind(COLUMNS_COL, JacksonUtils.toBytes(jsonMapper, revised.columns()))
+                    .bind(UPDATE_TIME_COL, updateTime)
                     .execute();
                 if (updateCount == 0) {
                   // Should never occur because we're holding a lock.
@@ -506,9 +516,9 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
-  private static final String UPDATE_STATE =
+  private static final String MARK_DELETING_STMT =
       "UPDATE %s\n SET\n" +
-      "  state = :state,\n" +
+      "  state = 'D',\n" +
       "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n";
@@ -524,11 +534,10 @@ public class SQLCatalogManager implements CatalogManager
           {
             long updateTime = System.currentTimeMillis();
             int updateCount = handle
-                .createStatement(statement(UPDATE_STATE))
-                .bind("schemaName", id.schema())
-                .bind("name", id.name())
-                .bind("updateTime", updateTime)
-                .bind("state", TableMetadata.TableState.DELETING.code())
+                .createStatement(statement(MARK_DELETING_STMT))
+                .bind(SCHEMA_NAME_COL, id.schema())
+                .bind(TABLE_NAME_COL, id.name())
+                .bind(UPDATE_TIME_COL, updateTime)
                 .execute();
             sendDeletion(id);
             return updateCount == 1 ? updateTime : 0;
@@ -537,7 +546,7 @@ public class SQLCatalogManager implements CatalogManager
     );
   }
 
-  private static final String DELETE_TABLE =
+  private static final String DELETE_TABLE_STMT =
       "DELETE FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n";
@@ -553,9 +562,9 @@ public class SQLCatalogManager implements CatalogManager
             public Void withHandle(Handle handle) throws NotFoundException
             {
               int updateCount = handle
-                  .createStatement(statement(DELETE_TABLE))
-                  .bind("schemaName", id.schema())
-                  .bind("name", id.name())
+                  .createStatement(statement(DELETE_TABLE_STMT))
+                  .bind(SCHEMA_NAME_COL, id.schema())
+                  .bind(TABLE_NAME_COL, id.name())
                   .execute();
               if (updateCount == 0) {
                 throw tableNotFound(id);
@@ -575,7 +584,7 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
-  private static final String SELECT_ALL_TABLE_PATHS =
+  private static final String SELECT_ALL_TABLE_PATHS_STMT =
       "SELECT schemaName, name\n" +
       "FROM %s\n" +
       "ORDER BY schemaName, name";
@@ -590,7 +599,7 @@ public class SQLCatalogManager implements CatalogManager
           public List<TableId> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle
-                .createQuery(statement(SELECT_ALL_TABLE_PATHS))
+                .createQuery(statement(SELECT_ALL_TABLE_PATHS_STMT))
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<TableId> resultIterator =
                 query.map((index, r, ctx) ->
@@ -602,7 +611,7 @@ public class SQLCatalogManager implements CatalogManager
     );
   }
 
-  private static final String SELECT_TABLE_NAMES_IN_SCHEMA =
+  private static final String SELECT_TABLE_NAMES_IN_SCHEMA_STMT =
       "SELECT name\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
@@ -618,8 +627,8 @@ public class SQLCatalogManager implements CatalogManager
           public List<String> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle
-                .createQuery(statement(SELECT_TABLE_NAMES_IN_SCHEMA))
-                .bind("schemaName", dbSchema)
+                .createQuery(statement(SELECT_TABLE_NAMES_IN_SCHEMA_STMT))
+                .bind(SCHEMA_NAME_COL, dbSchema)
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<String> resultIterator =
                 query.map((index, r, ctx) ->
@@ -631,7 +640,7 @@ public class SQLCatalogManager implements CatalogManager
     );
   }
 
-  private static final String SELECT_TABLES_IN_SCHEMA =
+  private static final String SELECT_TABLES_IN_SCHEMA_STMT =
       "SELECT name, creationTime, updateTime, state, tableType, properties, columns\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
@@ -647,8 +656,8 @@ public class SQLCatalogManager implements CatalogManager
           public List<TableMetadata> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle
-                .createQuery(statement(SELECT_TABLES_IN_SCHEMA))
-                .bind("schemaName", dbSchema)
+                .createQuery(statement(SELECT_TABLES_IN_SCHEMA_STMT))
+                .bind(SCHEMA_NAME_COL, dbSchema)
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<TableMetadata> resultIterator =
                 query.map((index, r, ctx) ->

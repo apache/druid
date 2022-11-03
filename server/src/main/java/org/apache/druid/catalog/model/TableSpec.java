@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,8 +51,8 @@ public class TableSpec
   @JsonCreator
   public TableSpec(
       @JsonProperty("type") final String type,
-      @JsonProperty("properties") final Map<String, Object> properties,
-      @JsonProperty("columns") final List<ColumnSpec> columns
+      @JsonProperty("properties") @Nullable final Map<String, Object> properties,
+      @JsonProperty("columns") @Nullable final List<ColumnSpec> columns
   )
   {
     this.type = type;

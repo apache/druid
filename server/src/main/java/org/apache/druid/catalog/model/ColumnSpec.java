@@ -40,9 +40,35 @@ import java.util.Objects;
 @UnstableApi
 public class ColumnSpec
 {
+  /**
+   * The type of column spec (not the column data type). For example, in a
+   * cube, dimensions and measures have distinct sets of properties.
+   */
   private final String type;
+
+  /**
+   * The name of the column as known to the SQL layer. At present, there is no
+   * support for column aliases, so this is also the column name as physically
+   * stored in segments.
+   */
   private final String name;
+
+  /**
+   * The data type of the column expressed as a supported SQL type. The data type here must
+   * directly match a Druid storage type. So, {@code BIGINT} for {code long}, say.
+   * This usage does not support Druid's usual "fudging": one cannot use {@link INTEGER}
+   * to mean {@code long}. The type will likely encode complex and aggregation types
+   * in the future, though that is not yet supported. The set of valid mappings is
+   * defined in the {@link Columns} class.
+   */
   private final String sqlType;
+
+  /**
+   * Properties for the column. At present, these are all user and application defined.
+   * For example, a UI layer might want to store a display format. Druid may define
+   * properties in the future. Candidates would be indexing options if/when there are
+   * choices available per-column.
+   */
   private final Map<String, Object> properties;
 
   @JsonCreator

@@ -21,9 +21,10 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.CatalogException;
-import org.apache.druid.catalog.http.MoveColumn.Position;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
+import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
+import org.apache.druid.catalog.http.TableEditRequest.MoveColumn.Position;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;
@@ -47,6 +48,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Performs an incremental update of an existing table. Allows the user to
+ * provide very specific "edit" commands without the need to download the
+ * entire table spec to make a typical change.
+ * <p>
+ * The process is that the edit "request" is in the form of a subclass of
+ * {@link TableEditRequest}. The DB layer starts a transaction, then calls
+ * back to this class to perform the edit. The DB layer then updates the
+ * table spec in the DB with the returned information. This ensures that
+ * a) we use actual (non-optimistic) locking, and b) allows the edit
+ * operation itself to reside here and not in the DB layer.
+ */
 public class TableEditor
 {
   private final CatalogStorage catalog;
@@ -64,6 +77,14 @@ public class TableEditor
     this.editRequest = editRequest;
   }
 
+  /**
+   * Perform the edit operation.
+   *
+   * @return the updated table version, or 0 if the operation was not applied.
+   *         the 0 value indicates, say, an empty or no-op edit request
+   * @throws CatalogException for errors. Mapped to an HTTP response in the
+   *         {@link CatalogResource} class
+   */
   public long go() throws CatalogException
   {
     if (editRequest instanceof HideColumns) {
@@ -207,7 +228,7 @@ public class TableEditor
     if (CollectionUtils.isNullOrEmpty(existingColumns)) {
       return null;
     }
-    Set<String> drop = new HashSet<String>(toDrop);
+    Set<String> drop = new HashSet<>(toDrop);
     List<ColumnSpec> revised = new ArrayList<>();
     for (ColumnSpec col : existingColumns) {
       if (!drop.contains(col.name())) {
