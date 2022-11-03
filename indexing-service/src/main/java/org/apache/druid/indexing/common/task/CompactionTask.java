@@ -110,6 +110,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -903,7 +904,7 @@ public class CompactionTask extends AbstractBatchIndexTask
    */
   static class ExistingSegmentAnalyzer
   {
-    private final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments;
+    private final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable;
 
     private final boolean needRollup;
     private final boolean needQueryGranularity;
@@ -911,7 +912,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final boolean needMetricsSpec;
 
     // For processRollup:
-    private boolean rollupIsValid = true;
     private Boolean rollup;
 
     // For processQueryGranularity:
@@ -925,14 +925,14 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
 
     ExistingSegmentAnalyzer(
-        final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments,
+        final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
         final boolean needRollup,
         final boolean needQueryGranularity,
         final boolean needDimensionsSpec,
         final boolean needMetricsSpec
     )
     {
-      this.segments = Lists.newArrayList(segments);
+      this.segmentsIterable = segmentsIterable;
       this.needRollup = needRollup;
       this.needQueryGranularity = needQueryGranularity;
       this.needDimensionsSpec = needDimensionsSpec;
@@ -946,7 +946,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         return;
       }
 
-      sortSegmentsList();
+      final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments = sortSegmentsListNewestFirst();
 
       for (Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> segmentPair : segments) {
         final DataSegment dataSegment = segmentPair.lhs;
@@ -1038,15 +1038,25 @@ public class CompactionTask extends AbstractBatchIndexTask
     }
 
     /**
-     * Sort segments in order, such that we look at later segments prior to earlier ones. Useful when analyzing
-     * dimensions, as it allows us to take the latest value we see, and therefore prefer types from more recent
-     * segments, if there was a change.
+     * Sort {@link #segmentsIterable} in order, such that we look at later segments prior to earlier ones. Useful when
+     * analyzing dimensions, as it allows us to take the latest value we see, and therefore prefer types from more
+     * recent segments, if there was a change.
+     *
+     * Returns a List copy of the original Iterable.
      */
-    private void sortSegmentsList()
+    private List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> sortSegmentsListNewestFirst()
     {
+      final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments =
+          Lists.newArrayList(segmentsIterable);
+
       segments.sort(
-          (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o2.lhs.getInterval(), o1.lhs.getInterval())
+          Comparator.comparing(
+              o -> o.lhs.getInterval(),
+              Comparators.intervalsByStartThenEnd().reversed()
+          )
       );
+
+      return segments;
     }
 
     private void processRollup(final QueryableIndex index)
@@ -1057,17 +1067,12 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
       // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
-      if (rollupIsValid) {
-        Boolean isRollup = index.getMetadata().isRollup();
-        if (isRollup == null) {
-          rollupIsValid = false;
-          rollup = false;
-        } else if (rollup == null) {
-          rollup = isRollup;
-        } else if (!isRollup.equals(rollup)) {
-          rollupIsValid = false;
-          rollup = false;
-        }
+      final Boolean isIndexRollup = index.getMetadata().isRollup();
+
+      if (rollup == null) {
+        rollup = isIndexRollup;
+      } else {
+        rollup = rollup && Boolean.valueOf(true).equals(isIndexRollup);
       }
     }
 
