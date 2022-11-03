@@ -1,0 +1,127 @@
+name: Static Checks CI
+on:
+  pull_request:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+
+env:
+  MVN: mvn -B
+  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+  MAVEN_SKIP_TESTS: -P skip-tests
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+          cache: 'maven'
+
+      - name: animal sniffer checks
+        run: ${MVN} animal-sniffer:check --fail-at-end
+
+      - name: checkstyle
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
+      - name: enforcer checks
+        run: ${MVN} enforcer:enforce --fail-at-end
+
+      - name: forbidden api checks
+        run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+
+      - name: pmd checks
+        run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
+
+      - name: spotbugs checks
+        run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
+      - name: license checks
+        uses: actions/github-script@v6
+        with:
+          script: |
+             sudo apt-get update && sudo apt-get install python3 -y
+             curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+             ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
+             pip3 install wheel  # install wheel first explicitly
+             pip3 install --upgrade pyyaml
+        run: |
+          ${MVN} apache-rat:check -Prat --fail-at-end
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+          -Drat.consoleOutput=true
+          # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
+          # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
+          mkdir -p target
+          distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
+          distribution/bin/check-licenses.py licenses.yaml target/license-reports
+
+      - name: script checks
+        # who watches the watchers?
+        run: ./check_test_suite_test.py
+
+      - name: analyze dependencies
+        run: |-
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
+
+          The dependency analysis has found a dependency that is either:
+
+          1) Used and undeclared: These are available as a transitive dependency but should be explicitly
+          added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
+          shown above.
+
+          2) Unused and declared: These are not needed and removing them from the POM will speed up the build
+          and reduce the artifact size. The dependencies to remove are shown above.
+
+          If there are false positive dependency analysis warnings, they can be suppressed:
+          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
+          https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
+
+          For more information, refer to:
+          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
+
+          " && false; }
+
+      - name: analyze hadoop 3 dependencies
+        run: |-
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
+
+          The dependency analysis has found a dependency that is either:
+
+          1) Used and undeclared: These are available as a transitive dependency but should be explicitly
+            added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
+            shown above.
+
+          2) Unused and declared: These are not needed and removing them from the POM will speed up the build
+            and reduce the artifact size. The dependencies to remove are shown above.
+
+          If there are false positive dependency analysis warnings, they can be suppressed:
+            https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
+            https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
+
+          For more information, refer to:
+          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
+
+          " && false; }
+
+      - name: intellij inspections
+        run: |
+          ./check_test_suite.py && travis_terminate 0 || docker run --rm
+          -v $(pwd):/project
+          -v ~/.m2:/home/inspect/.m2
+          ccaominh/intellij-inspect:1.0.0
+          /project/pom.xml
+          /project/.idea/inspectionProfiles/Druid.xml
+          --levels ERROR
+          --scope JavaInspectionsScope
+
+      - name: (openjdk11) strict compilation
+        uses: actions/setup-java@v3
+        # errorprone requires JDK 11
+        distribution: 'zulu'
+        java-version: '11'
+        # Strict compilation requires more than 2 GB
+        run: |
+          ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
+          ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
