@@ -912,7 +912,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     private final boolean needMetricsSpec;
 
     // For processRollup:
-    private Boolean rollup;
+    private boolean rollup = true;
 
     // For processQueryGranularity:
     private Granularity queryGranularity;
@@ -1068,12 +1068,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       // carry-overs (i.e. query granularity & rollup) are valid iff they are the same in every segment:
       // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
       final Boolean isIndexRollup = index.getMetadata().isRollup();
-
-      if (rollup == null) {
-        rollup = isIndexRollup;
-      } else {
-        rollup = rollup && Boolean.valueOf(true).equals(isIndexRollup);
-      }
+      rollup = rollup && Boolean.valueOf(true).equals(isIndexRollup);
     }
 
     private void processQueryGranularity(final QueryableIndex index)
