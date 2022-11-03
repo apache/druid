@@ -14,13 +14,22 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup java 8
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: setup java 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '8'
           cache: 'maven'
+
+      - name: maven install
+        run: |
+          echo 'Running Maven install...' &&
+          MAVEN_OPTS='-Xmx3000m' \
+          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: animal sniffer checks
         run: ${MVN} animal-sniffer:check --fail-at-end
@@ -46,8 +55,7 @@ jobs:
           ${MVN} apache-rat:check -Prat --fail-at-end
           -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
           -Drat.consoleOutput=true
-          # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
-          # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
+          # Generate dependency reports and checks they are valid.
           mkdir -p target
           distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
           distribution/bin/check-licenses.py licenses.yaml target/license-reports
@@ -58,26 +66,26 @@ jobs:
 
       - name: analyze dependencies
         run: |-
-          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true \
-          || ./.github/scripts/display_dependency_analysis_error_message.sh
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ||
+          ./.github/scripts/display_dependency_analysis_error_message.sh
 
       - name: analyze hadoop 3 dependencies
         run: |-
-          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 \
-          || ./.github/scripts/display_dependency_analysis_error_message.sh
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 ||
+          ./.github/scripts/display_dependency_analysis_error_message.sh
 
       - name: intellij inspections
         run: |
-          ./check_test_suite.py && travis_terminate 0 || docker run --rm
-          -v $(pwd):/project
-          -v ~/.m2:/home/inspect/.m2
-          ccaominh/intellij-inspect:1.0.0
-          /project/pom.xml
-          /project/.idea/inspectionProfiles/Druid.xml
-          --levels ERROR
+          docker run --rm \
+          -v $(pwd):/project \
+          -v ~/.m2:/home/inspect/.m2 \
+          ccaominh/intellij-inspect:1.0.0 \
+          /project/pom.xml \
+          /project/.idea/inspectionProfiles/Druid.xml \
+          --levels ERROR \
           --scope JavaInspectionsScope
 
-      - name: Setup java 11
+      - name: setup java 11
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
@@ -87,5 +95,4 @@ jobs:
         # errorprone requires JDK 11
         # Strict compilation requires more than 2 GB
         run: |
-          ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
-          ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+          MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
