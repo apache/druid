@@ -41,6 +41,9 @@ import java.util.stream.Collectors;
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
 {
+  // Each String object has ~40 bytes of overhead, and x 2 for key and value strings
+  private static final long HEAP_ENTRY_OVERHEAD = 80;
+
   private final Map<String, String> map;
 
   private final boolean isOneToOne;
@@ -53,6 +56,37 @@ public class MapLookupExtractor extends LookupExtractor
   {
     this.map = Preconditions.checkNotNull(map, "map");
     this.isOneToOne = isOneToOne;
+  }
+
+  /**
+   * Estimate the heap footprint of a Map.
+   *
+   * Important note: the implementation accepts any kind of Map, but estimates zero footprint for keys and values of
+   * types other than String.
+   */
+  public static <K, V> long estimateHeapFootprint(@Nullable final Map<K, V> map)
+  {
+    if (map == null) {
+      return 0;
+    }
+
+    final int numEntries = map.size();
+    long numChars = 0;
+
+    for (Map.Entry<K, V> sEntry : map.entrySet()) {
+      final K key = sEntry.getKey();
+      final V value = sEntry.getValue();
+
+      if (key instanceof String) {
+        numChars += ((String) key).length();
+      }
+
+      if (value instanceof String) {
+        numChars += ((String) value).length();
+      }
+    }
+
+    return HEAP_ENTRY_OVERHEAD * numEntries + numChars * Character.BYTES;
   }
 
   @JsonProperty
@@ -145,6 +179,12 @@ public class MapLookupExtractor extends LookupExtractor
   public Set<String> keySet()
   {
     return Collections.unmodifiableSet(map.keySet());
+  }
+
+  @Override
+  public long estimateHeapFootprint()
+  {
+    return estimateHeapFootprint(map);
   }
 
   @Override

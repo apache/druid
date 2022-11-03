@@ -30,6 +30,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
@@ -60,6 +61,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.io.File;
 
@@ -106,6 +108,8 @@ public class TaskToolboxFactory
   private final IntermediaryDataManager intermediaryDataManager;
   private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
+  private final TaskLogPusher taskLogPusher;
+  private final String attemptId;
 
   @Inject
   public TaskToolboxFactory(
@@ -144,7 +148,9 @@ public class TaskToolboxFactory
       OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
-      ShuffleClient shuffleClient
+      ShuffleClient shuffleClient,
+      TaskLogPusher taskLogPusher,
+      @AttemptId String attemptId
   )
   {
     this.config = config;
@@ -183,6 +189,8 @@ public class TaskToolboxFactory
     this.coordinatorClient = coordinatorClient;
     this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
+    this.taskLogPusher = taskLogPusher;
+    this.attemptId = attemptId;
   }
 
   public TaskToolbox build(Task task)
@@ -230,6 +238,8 @@ public class TaskToolboxFactory
         .coordinatorClient(coordinatorClient)
         .supervisorTaskClientProvider(supervisorTaskClientProvider)
         .shuffleClient(shuffleClient)
+        .taskLogPusher(taskLogPusher)
+        .attemptId(attemptId)
         .build();
   }
 }

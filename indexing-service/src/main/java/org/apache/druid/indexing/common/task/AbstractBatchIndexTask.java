@@ -31,7 +31,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -154,7 +153,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * @see #stopGracefully(TaskConfig)
    */
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public String setup(TaskToolbox toolbox) throws Exception
   {
     if (taskLockHelper == null) {
       // Subclasses generally use "isReady" to initialize the taskLockHelper. It's not guaranteed to be called before
@@ -169,8 +168,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     synchronized (this) {
       if (stopped) {
-        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
-        return TaskStatus.failure(getId(), errMsg);
+        return "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,
@@ -183,7 +181,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         resourceCloserOnAbnormalExit.register(config -> currentThread.interrupt());
       }
     }
-    return runTask(toolbox);
+    return super.setup(toolbox);
   }
 
   @Override
@@ -248,11 +246,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       resourceCloserOnAbnormalExit.register(cleaner);
     }
   }
-
-  /**
-   * The method to actually process this task. This method is executed in {@link #run(TaskToolbox)}.
-   */
-  public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
 
   /**
    * Return true if this task can overwrite existing segments.
