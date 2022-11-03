@@ -43,10 +43,10 @@ describe('Execution', () => {
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm_simple",
-              "groupId": "query-32ced762-7679-4a25-9220-3915c5976961",
-              "id": "query-32ced762-7679-4a25-9220-3915c5976961",
+              "groupId": "query-09af0c1e-1c0f-4539-917c-b0458849d0d9",
+              "id": "query-09af0c1e-1c0f-4539-917c-b0458849d0d9",
               "resource": Object {
-                "availabilityGroup": "query-32ced762-7679-4a25-9220-3915c5976961",
+                "availabilityGroup": "query-09af0c1e-1c0f-4539-917c-b0458849d0d9",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -80,21 +80,20 @@ describe('Execution', () => {
                     "finalize": false,
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
+                    "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                    "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
+                    "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
                     "inputFormat": Object {
-                      "featureSpec": Object {},
-                      "flattenSpec": null,
+                      "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
+                      "useJsonNodeReader": false,
                     },
                     "inputSource": Object {
-                      "httpAuthenticationPassword": null,
-                      "httpAuthenticationUsername": null,
                       "type": "http",
                       "uris": Array [
                         "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
@@ -153,8 +152,9 @@ describe('Execution', () => {
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxParseExceptions": 0,
+                "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
+                "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                 "sqlReplaceTimeChunks": "all",
               },
               "sqlTypeNames": Array [
@@ -163,8 +163,9 @@ describe('Execution', () => {
               ],
               "type": "query_controller",
             },
-            "task": "query-32ced762-7679-4a25-9220-3915c5976961",
+            "task": "query-09af0c1e-1c0f-4539-917c-b0458849d0d9",
           },
+          "capacityInfo": undefined,
           "destination": Object {
             "dataSource": "kttm_simple",
             "replaceTimeChunks": Array [
@@ -175,10 +176,10 @@ describe('Execution', () => {
             },
             "type": "dataSource",
           },
-          "duration": 25097,
+          "duration": 9012,
           "engine": "sql-msq-task",
           "error": undefined,
-          "id": "query-32ced762-7679-4a25-9220-3915c5976961",
+          "id": "query-09af0c1e-1c0f-4539-917c-b0458849d0d9",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
@@ -188,21 +189,20 @@ describe('Execution', () => {
               "finalize": false,
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
+              "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
+              "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
               "inputFormat": Object {
-                "featureSpec": Object {},
-                "flattenSpec": null,
+                "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
+                "useJsonNodeReader": false,
               },
               "inputSource": Object {
-                "httpAuthenticationPassword": null,
-                "httpAuthenticationUsername": null,
                 "type": "http",
                 "uris": Array [
                   "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
@@ -299,12 +299,12 @@ describe('Execution', () => {
                   },
                   "sortProgress": Object {
                     "levelToMergedBatches": Object {
-                      "0": 1,
+                      "0": 2,
                       "1": 1,
                       "2": 1,
                     },
                     "levelToTotalBatches": Object {
-                      "0": 1,
+                      "0": 2,
                       "1": 1,
                       "2": 1,
                     },
@@ -335,18 +335,16 @@ describe('Execution', () => {
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "0b353011-6ea1-480a-8ca8-386771621672_0",
+                  "id": "b94caff0-f693-47ed-a242-ccf837550383_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
-                        "featureSpec": Object {},
-                        "flattenSpec": null,
+                        "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
+                        "useJsonNodeReader": false,
                       },
                       "inputSource": Object {
-                        "httpAuthenticationPassword": null,
-                        "httpAuthenticationUsername": null,
                         "type": "http",
                         "uris": Array [
                           "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
@@ -377,9 +375,10 @@ describe('Execution', () => {
                         "finalize": false,
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
+                        "queryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                        "sqlQueryId": "32ced762-7679-4a25-9220-3915c5976961",
+                        "sqlQueryId": "09af0c1e-1c0f-4539-917c-b0458849d0d9",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
@@ -436,17 +435,17 @@ describe('Execution', () => {
                     },
                   ],
                 },
-                "duration": 20229,
+                "duration": 4887,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2022-08-22T20:12:53.790Z",
+                "startTime": "2022-10-31T16:11:15.380Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "0b353011-6ea1-480a-8ca8-386771621672_1",
+                  "id": "b94caff0-f693-47ed-a242-ccf837550383_1",
                   "input": Array [
                     Object {
                       "stage": 0,
@@ -511,17 +510,21 @@ describe('Execution', () => {
                   },
                   "signature": Array [],
                 },
-                "duration": 2497,
+                "duration": 1908,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "stageNumber": 1,
-                "startTime": "2022-08-22T20:13:13.991Z",
+                "startTime": "2022-10-31T16:11:20.264Z",
                 "workerCount": 1,
               },
             ],
           },
-          "startTime": 2022-08-22T20:12:51.391Z,
+          "startTime": 2022-10-31T16:11:13.160Z,
           "status": "SUCCESS",
+          "usageInfo": Object {
+            "pendingTasks": 0,
+            "runningTasks": 2,
+          },
           "warnings": undefined,
         }
       `);

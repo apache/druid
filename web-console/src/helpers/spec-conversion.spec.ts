@@ -115,8 +115,8 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toEqual(sane`
       -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
+      REPLACE INTO "wikipedia" OVERWRITE ALL
+      WITH "source" AS (SELECT * FROM TABLE(
         EXTERN(
           '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
           '{"type":"json"}',
@@ -148,7 +148,7 @@ describe('spec conversion', () => {
         "metroCode",
         "countryIsoCode",
         "regionName"
-      FROM source
+      FROM "source"
       WHERE NOT ("channel" = 'xxx')
       PARTITIONED BY HOUR
       CLUSTERED BY "isRobot"
@@ -255,8 +255,8 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toEqual(sane`
       -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia_rollup OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
+      REPLACE INTO "wikipedia_rollup" OVERWRITE ALL
+      WITH "source" AS (SELECT * FROM TABLE(
         EXTERN(
           '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
           '{"type":"json"}',
@@ -288,7 +288,7 @@ describe('spec conversion', () => {
         SUM("deltaBucket") AS "sum_deltaBucket",
         SUM("deleted") AS "sum_deleted",
         APPROX_COUNT_DISTINCT_DS_THETA("page") AS "page_theta"
-      FROM source
+      FROM "source"
       GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
       PARTITIONED BY HOUR
     `);
@@ -417,8 +417,8 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toEqual(sane`
       -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO newSource OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
+      REPLACE INTO "newSource" OVERWRITE ALL
+      WITH "source" AS (SELECT * FROM TABLE(
         EXTERN(
           '{"type":"s3","uris":["s3://path"]}',
           '{"columns":["col1","col2","col3","col4","metric1","metric2","metric3","metric4","metric5","metric6","metric7"],"type":"timeAndDims"}',
@@ -426,7 +426,7 @@ describe('spec conversion', () => {
         )
       ))
       SELECT
-        TIME_FLOOR(CASE WHEN CAST(event_ts AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(event_ts AS BIGINT)) ELSE TIME_PARSE(event_ts) END, 'PT1H') AS __time,
+        TIME_FLOOR(CASE WHEN CAST("event_ts" AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST("event_ts" AS BIGINT)) ELSE TIME_PARSE("event_ts") END, 'PT1H') AS __time,
         "col1",
         "col2",
         "col3",
@@ -438,7 +438,7 @@ describe('spec conversion', () => {
         APPROX_COUNT_DISTINCT_BUILTIN("field5") AS "metric5",
         SUM("field6") AS "metric6",
         SUM("field7") AS "metric7"
-      FROM source
+      FROM "source"
       WHERE "col2" = 'xxx'
       GROUP BY 1, 2, 3, 4, 5
       PARTITIONED BY HOUR
@@ -537,8 +537,8 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toEqual(sane`
       -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
+      REPLACE INTO "wikipedia" OVERWRITE ALL
+      WITH "source" AS (SELECT * FROM TABLE(
         EXTERN(
           '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
           '{"type":"json"}',
@@ -571,7 +571,7 @@ describe('spec conversion', () => {
         "metroCode",
         "countryIsoCode",
         "regionName"
-      FROM source
+      FROM "source"
       PARTITIONED BY HOUR
       CLUSTERED BY "isRobot"
     `);
@@ -667,8 +667,8 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toEqual(sane`
       -- This SQL query was auto generated from an ingestion spec
-      REPLACE INTO wikipedia OVERWRITE ALL
-      WITH source AS (SELECT * FROM TABLE(
+      REPLACE INTO "wikipedia" OVERWRITE ALL
+      WITH "source" AS (SELECT * FROM TABLE(
         EXTERN(
           '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
           '{"type":"json"}',
@@ -701,7 +701,7 @@ describe('spec conversion', () => {
         "metroCode",
         "countryIsoCode",
         "regionName"
-      FROM source
+      FROM "source"
       WHERE REWRITE_[{"type":"strange"}]_TO_SQL --:ISSUE: The spec contained a filter that could not be automatically converted, please convert it manually
       PARTITIONED BY HOUR
       CLUSTERED BY "isRobot"

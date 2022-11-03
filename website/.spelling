@@ -694,7 +694,8 @@ WorkerRpcFailed
 # MSQ context parameters
 maxNumTasks 
 taskAssignment 
-finalizeAggregations 
+finalizeAggregations
+indexSpec
 rowsInMemory 
 segmentSortOrder 
 rowsPerSegment 
