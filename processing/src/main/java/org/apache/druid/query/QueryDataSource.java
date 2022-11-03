@@ -25,16 +25,19 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 @JsonTypeName("query")
 public class QueryDataSource implements DataSource
 {
   @JsonProperty
-  private final Query query;
+  private final Query<?> query;
 
   @JsonCreator
   public QueryDataSource(@JsonProperty("query") Query query)
@@ -87,6 +90,28 @@ public class QueryDataSource implements DataSource
   {
     return false;
   }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTime
+  )
+  {
+    return Function.identity();
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return new QueryDataSource(query.withDataSource(query.getDataSource().withUpdatedDataSource(newSource)));
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
 
   @Override
   public String toString()

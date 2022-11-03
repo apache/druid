@@ -60,8 +60,9 @@ function _build_distribution() {
     && cd distribution/target \
     && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
     && cd apache-druid-$(_get_druid_version) \
-    && java -classpath "lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions:druid-testing-tools \
-    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && mkdir -p extensions/druid-testing-tools \
+    && cp "$(_get_code_root)/extensions-core/testing-tools/target/druid-testing-tools-$(_get_druid_version).jar" extensions/druid-testing-tools/ \
+    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
     && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
   )
 }
@@ -110,7 +111,7 @@ function start() {
   echo "$pid" > "$DRUID_PID_FILE"
   _log "Druid started with pid ${pid}"
 
-  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 20
+  _wait_for_200_response "http://localhost:8888/unified-console.html" 3 30
 }
 
 function stop() {

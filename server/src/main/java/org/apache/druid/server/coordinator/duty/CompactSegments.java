@@ -33,7 +33,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -46,7 +45,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -128,7 +127,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final CoordinatorStats stats = new CoordinatorStats();
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+      Map<String, SegmentTimeline> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
@@ -386,7 +385,7 @@ public class CompactSegments implements CoordinatorCustomDuty
             try {
               segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
             }
-            catch (IAE iae) {
+            catch (IllegalArgumentException iae) {
               // This case can happen if the existing segment interval result in complicated periods.
               // Fall back to setting segmentGranularity as null
               LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);

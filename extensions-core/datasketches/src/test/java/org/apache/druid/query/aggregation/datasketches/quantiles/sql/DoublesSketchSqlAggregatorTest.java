@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -62,6 +63,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
@@ -96,7 +98,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      QueryRunnerFactoryConglomerate conglomerate
+  ) throws IOException
   {
     DoublesSketchModule.registerSerde();
 
@@ -118,7 +122,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                             .withRollup(false)
                             .build()
                     )
-                    .rows(CalciteTests.ROWS1)
+                    .rows(TestDataBuilder.ROWS1)
                     .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
@@ -140,7 +144,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnFloatAndLongs() throws Exception
+  public void testQuantileOnFloatAndLongs()
   {
     testQuery(
         "SELECT\n"
@@ -213,7 +217,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnComplexColumn() throws Exception
+  public void testQuantileOnComplexColumn()
   {
     testQuery(
         "SELECT\n"
@@ -270,7 +274,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnCastedString() throws Exception
+  public void testQuantileOnCastedString()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -363,7 +367,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuery() throws Exception
+  public void testQuantileOnInnerQuery()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -429,7 +433,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuantileQuery() throws Exception
+  public void testQuantileOnInnerQuantileQuery()
   {
     ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
     builder.add(new Object[]{"", 1.0});
@@ -496,7 +500,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoublesSketchPostAggs() throws Exception
+  public void testDoublesSketchPostAggs()
   {
     testQuery(
         "SELECT\n"
@@ -679,7 +683,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoublesSketchPostAggsPostSort() throws Exception
+  public void testDoublesSketchPostAggsPostSort()
   {
     testQuery(
         "SELECT DS_GET_QUANTILE(y, 0.5), DS_GET_QUANTILE(y, 0.98) from ("
@@ -728,7 +732,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -768,7 +772,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"
@@ -828,7 +832,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSuccessWithSmallMaxStreamLength() throws Exception
+  public void testSuccessWithSmallMaxStreamLength()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(

@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
@@ -103,7 +104,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   NewestSegmentFirstIterator(
       ObjectMapper objectMapper,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, SegmentTimeline> dataSources,
       Map<String, List<Interval>> skipIntervals
   )
   {
@@ -111,7 +112,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.compactionConfigs = compactionConfigs;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
-    dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
+    dataSources.forEach((String dataSource, SegmentTimeline timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
@@ -121,7 +122,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
           // Create a new timeline to hold segments in the new configured segment granularity
-          VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+          SegmentTimeline timelineWithConfiguredSegmentGranularity = new SegmentTimeline();
           Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           for (DataSegment segment : segments) {
             // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity

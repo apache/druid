@@ -67,7 +67,7 @@ public class KinesisIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
@@ -79,7 +79,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(10000, config.getRecordBufferSize());
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
-    Assert.assertEquals(20000, config.getFetchSequenceNumberTimeout());
     Assert.assertNull(config.getFetchThreads());
     Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
@@ -100,7 +99,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"recordBufferSize\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
-                     + "  \"fetchSequenceNumberTimeout\": 6000,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
                      + "  \"fetchThreads\": 2,\n"
@@ -117,7 +115,7 @@ public class KinesisIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
@@ -128,7 +126,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(1000, config.getRecordBufferSize());
     Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, config.getRecordBufferFullWait());
-    Assert.assertEquals(6000, config.getFetchSequenceNumberTimeout());
     Assert.assertEquals(2, (int) config.getFetchThreads());
     Assert.assertTrue(config.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertFalse(config.isResetOffsetAutomatically());
@@ -156,7 +153,6 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         1000,
         500,
-        null,
         42,
         null,
         false,
@@ -177,7 +173,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
     Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
     Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assert.assertNull(deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
@@ -216,7 +212,6 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         1000,
         500,
-        null,
         42,
         null,
         false,
@@ -236,7 +231,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
     Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
     Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assert.assertNull(deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
     Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
     Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
@@ -268,7 +263,6 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"recordBufferSize\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
-                     + "  \"fetchSequenceNumberTimeout\": 6000,\n"
                      + "  \"resetOffsetAutomatically\": true,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
                      + "  \"fetchThreads\": 2\n"
@@ -292,7 +286,6 @@ public class KinesisIndexTaskTuningConfigTest
         2,
         100L,
         new Period("PT3S"),
-        new File("/tmp/xxx"),
         4,
         new IndexSpec(),
         new IndexSpec(),
@@ -309,9 +302,7 @@ public class KinesisIndexTaskTuningConfigTest
         1000,
         500,
         500,
-        6000,
         2,
-        null,
         null,
         null,
         null,
@@ -329,7 +320,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
-    Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
+    Assert.assertNull(copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertTrue(copy.isReportParseExceptions());
@@ -337,7 +328,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(1000, copy.getRecordBufferSize());
     Assert.assertEquals(500, copy.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, copy.getRecordBufferFullWait());
-    Assert.assertEquals(6000, copy.getFetchSequenceNumberTimeout());
     Assert.assertEquals(2, (int) copy.getFetchThreads());
     Assert.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
     Assert.assertTrue(copy.isResetOffsetAutomatically());

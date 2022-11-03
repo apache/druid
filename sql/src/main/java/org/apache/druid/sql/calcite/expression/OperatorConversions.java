@@ -318,8 +318,8 @@ public class OperatorConversions
      * operator should never, ever, return null.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
-     * {@link #returnTypeNullableArray}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be used before
-     * calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
+     * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder returnTypeNonNull(final SqlTypeName typeName)
     {
@@ -335,8 +335,8 @@ public class OperatorConversions
      * Sets the return type of the operator to "typeName", marked as nullable.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
-     * {@link #returnTypeNullableArray}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be used before
-     * calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
+     * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder returnTypeNullable(final SqlTypeName typeName)
     {
@@ -352,8 +352,8 @@ public class OperatorConversions
      * Sets the return type of the operator to "typeName", marked as nullable if any of its operands are nullable.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
-     * {@link #returnTypeNullableArray}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be used before
-     * calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
+     * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder returnTypeCascadeNullable(final SqlTypeName typeName)
     {
@@ -366,10 +366,10 @@ public class OperatorConversions
      * Sets the return type of the operator to an array type with elements of "typeName", marked as nullable.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
-     * {@link #returnTypeNullableArray}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be used before
-     * calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * {@link #returnTypeArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be
+     * used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
-    public OperatorBuilder returnTypeNullableArray(final SqlTypeName elementTypeName)
+    public OperatorBuilder returnTypeArrayWithNullableElements(final SqlTypeName elementTypeName)
     {
       Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
@@ -379,13 +379,33 @@ public class OperatorConversions
       return this;
     }
 
+    /**
+     * Sets the return type of the operator to an array type with elements of "typeName", marked as nullable.
+     *
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
+     * {@link #returnTypeArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be
+     * used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     */
+    public OperatorBuilder returnTypeNullableArrayWithNullableElements(final SqlTypeName elementTypeName)
+    {
+      this.returnTypeInference = ReturnTypes.cascade(
+          opBinding -> Calcites.createSqlArrayTypeWithNullability(
+              opBinding.getTypeFactory(),
+              elementTypeName,
+              true
+          ),
+          SqlTypeTransforms.FORCE_NULLABLE
+      );
+      return this;
+    }
+
 
     /**
      * Provides customized return type inference logic.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, {@link #returnTypeCascadeNullable(SqlTypeName)}
-     * {@link #returnTypeNullableArray}, or {@link #returnTypeInference(SqlReturnTypeInference)} must be used before
-     * calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     * {@link #returnTypeNullableArrayWithNullableElements}, or {@link #returnTypeInference(SqlReturnTypeInference)}
+     * must be used before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
      */
     public OperatorBuilder returnTypeInference(final SqlReturnTypeInference returnTypeInference)
     {
@@ -457,6 +477,12 @@ public class OperatorConversions
     public OperatorBuilder literalOperands(final int... literalOperands)
     {
       this.literalOperands = literalOperands;
+      return this;
+    }
+
+    public OperatorBuilder operandTypeInference(SqlOperandTypeInference operandTypeInference)
+    {
+      this.operandTypeInference = operandTypeInference;
       return this;
     }
 

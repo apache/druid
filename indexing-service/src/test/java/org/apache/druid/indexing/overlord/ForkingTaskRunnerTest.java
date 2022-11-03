@@ -40,21 +40,28 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.assertj.core.util.Lists;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertEquals;
+
 public class ForkingTaskRunnerTest
 {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
@@ -72,7 +79,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testPatternMatcherLeavesUnbalancedQuoteJavaOptions()
   {
-    Assert.assertEquals("\"", Iterators.get(new QuotableWhiteSpaceSplitter("\"").iterator(), 0));
+    assertEquals("\"", Iterators.get(new QuotableWhiteSpaceSplitter("\"").iterator(), 0));
   }
 
   @Test
@@ -124,7 +131,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testFarApart()
   {
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.of("start", "stop"), ImmutableList.copyOf(
             new QuotableWhiteSpaceSplitter(
                 "start\t\t\t\t \n\f\r\n \f\f \n\r\f\n\r\t stop"
@@ -145,7 +152,7 @@ public class ForkingTaskRunnerTest
 
   private static void checkValues(String[] strings)
   {
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.copyOf(strings),
         ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(Joiner.on(" ").join(strings)))
     );
@@ -182,9 +189,9 @@ public class ForkingTaskRunnerTest
         null,
         startupLoggingConfig
     );
-    Assert.assertEquals(
+    assertEquals(
         originalAndExpectedCommand.rhs,
-        forkingTaskRunner.getMaskedCommand(
+        ForkingTaskRunner.getMaskedCommand(
             startupLoggingConfig.getMaskProperties(),
             originalAndExpectedCommand.lhs
         )
@@ -209,7 +216,8 @@ public class ForkingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new Properties(),
@@ -231,29 +239,39 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         // Emulate task process failure
         return 1;
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(NoopTask.create()).get();
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(
+    assertEquals(TaskState.FAILED, status.getStatusCode());
+    assertEquals(
         "Task execution process exited unsuccessfully with code[1]. See middleManager logs for more details.",
         status.getErrorMsg()
     );
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 
   @Test
-  public void testTaskStatusWhenTaskProcessSucceedsTaskSucceeds() throws ExecutionException, InterruptedException
+  public void testTaskStatusWhenTaskProcessSucceedsTaskSucceeds() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
+    File file = temporaryFolder.newFolder();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
             null,
-            null,
+            file.toString(),
             null,
             null,
             ImmutableList.of(),
@@ -264,7 +282,8 @@ public class ForkingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new Properties(),
@@ -282,8 +301,9 @@ public class ForkingTaskRunnerTest
         Mockito.doNothing().when(processHolder).shutdown();
 
         for (String param : command) {
-          if (param.endsWith("status.json")) {
-            mapper.writeValue(new File(param), TaskStatus.success(task.getId()));
+          if (param.endsWith(task.getId())) {
+            File resultFile = Paths.get(taskConfig.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
             break;
           }
         }
@@ -294,25 +314,35 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         return 0;
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(task).get();
-    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertNull(status.getErrorMsg());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 
   @Test
-  public void testTaskStatusWhenTaskProcessSucceedsTaskFails() throws ExecutionException, InterruptedException
+  public void testTaskStatusWhenTaskProcessSucceedsTaskFails() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
+    File file = temporaryFolder.newFolder();
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
         new ForkingTaskRunnerConfig(),
         new TaskConfig(
             null,
-            null,
+            file.toString(),
             null,
             null,
             ImmutableList.of(),
@@ -323,7 +353,8 @@ public class ForkingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new Properties(),
@@ -341,8 +372,9 @@ public class ForkingTaskRunnerTest
         Mockito.doNothing().when(processHolder).shutdown();
 
         for (String param : command) {
-          if (param.endsWith("status.json")) {
-            mapper.writeValue(new File(param), TaskStatus.failure(task.getId(), "task failure test"));
+          if (param.endsWith(task.getId())) {
+            File resultFile = Paths.get(taskConfig.getTaskDir(task.getId()).getAbsolutePath(), "attempt", "1", "status.json").toFile();
+            mapper.writeValue(resultFile, TaskStatus.failure(task.getId(), "task failure test"));
             break;
           }
         }
@@ -357,9 +389,36 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     final TaskStatus status = forkingTaskRunner.run(task).get();
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("task failure test", status.getErrorMsg());
+    assertEquals(TaskState.FAILED, status.getStatusCode());
+    assertEquals("task failure test", status.getErrorMsg());
+  }
+
+  @Test
+  public void testGettingTheNextAttemptDir() throws IOException
+  {
+    File file = temporaryFolder.newFolder();
+    TaskConfig taskConfig = new TaskConfig(
+        null,
+        file.toString(),
+        null,
+        null,
+        ImmutableList.of(),
+        false,
+        new Period("PT0S"),
+        new Period("PT10S"),
+        ImmutableList.of(),
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false
+    );
+    String taskId = "foo";
+    assertEquals(1, ForkingTaskRunner.getNextAttemptID(taskConfig, taskId));
+    assertEquals(2, ForkingTaskRunner.getNextAttemptID(taskConfig, taskId));
+    assertEquals(3, ForkingTaskRunner.getNextAttemptID(taskConfig, taskId));
   }
 
   @Test
@@ -399,7 +458,8 @@ public class ForkingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new Properties(),
@@ -425,6 +485,7 @@ public class ForkingTaskRunnerTest
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     forkingTaskRunner.run(task).get();
     Assert.assertTrue(xmxJavaOptsArrayIndex.get() > xmxJavaOptsIndex.get());
     Assert.assertTrue(xmxJavaOptsIndex.get() >= 0);
@@ -464,7 +525,8 @@ public class ForkingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new Properties(),
@@ -483,13 +545,22 @@ public class ForkingTaskRunnerTest
       @Override
       int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
       {
+        WorkerConfig workerConfig = new WorkerConfig();
+        Assert.assertEquals(1L, (long) this.getWorkerUsedTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity(), (long) this.getWorkerTotalTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCapacity() - 1, (long) this.getWorkerIdleTaskSlotCount());
+        Assert.assertEquals(workerConfig.getCategory(), this.getWorkerCategory());
+        Assert.assertEquals(workerConfig.getVersion(), this.getWorkerVersion());
         return 1;
       }
     };
 
+    forkingTaskRunner.setNumProcessorsPerTask();
     ExecutionException e = Assert.assertThrows(ExecutionException.class, () -> forkingTaskRunner.run(task).get());
     Assert.assertTrue(e.getMessage().endsWith(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
                                               + " in context of task: " + task.getId() + " must be an array of strings.")
     );
+    Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
+    Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
   }
 }

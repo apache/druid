@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.sql.http.SqlQuery;
@@ -291,7 +290,7 @@ public class TieredBrokerHostSelector
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
 
       // Log if query debugging is enabled
-      if (QueryContexts.isDebug(sqlQuery.getContext())) {
+      if (sqlQuery.queryContext().isDebug()) {
         log.info(
             "No brokerServiceName found for SQL Query [%s], Context [%s]. Using default selector for [%s].",
             sqlQuery.getQuery(),

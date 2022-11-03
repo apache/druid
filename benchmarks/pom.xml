@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.23.0-SNAPSHOT</version>
+    <version>25.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -36,6 +36,10 @@
       <artifactId>jmh-core</artifactId>
       <version>${jmh.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
@@ -174,7 +178,11 @@
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>com.github.seancfoley</groupId>
+      <artifactId>ipaddress</artifactId>
+      <version>5.3.4</version>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -200,7 +208,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -210,7 +218,9 @@
             <configuration>
               <finalName>${uberjar.name}</finalName>
               <appendAssemblyId>false</appendAssemblyId>
-              <descriptor>assembly.xml</descriptor>
+              <descriptors>
+                <descriptor>assembly.xml</descriptor>
+              </descriptors>
               <archive>
                 <manifest>
                   <mainClass>org.openjdk.jmh.Main</mainClass>
@@ -271,9 +281,6 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <configuration>
-            <argLine>@{jacocoArgLine}</argLine>
-          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

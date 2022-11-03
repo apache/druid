@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
@@ -147,7 +146,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           !query.isSkipEmptyBuckets() &&
           // Returns empty sequence if bySegment is set because bySegment results are mostly used for
           // caching in historicals or debugging where the exact results are preferred.
-          !QueryContexts.isBySegment(query)) {
+          !query.context().isBySegment()) {
         // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
         // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
@@ -233,6 +232,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                                  RowAdapters.standardRow(),
                                  () -> new MapBasedRow(null, null),
                                  aggregatorsSignature,
+                                 false,
                                  false
                              )
                          );

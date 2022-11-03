@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, TextArea } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
+import AceEditor from 'react-ace';
 
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
@@ -84,7 +85,18 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
         {jsonState.loading ? (
           <Loader />
         ) : (
-          <TextArea readOnly value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()} />
+          <AceEditor
+            mode="hjson"
+            theme="solarized_dark"
+            readOnly
+            fontSize={12}
+            width="100%"
+            height="100%"
+            showPrintMargin={false}
+            showGutter={false}
+            value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
+            style={{}}
+          />
         )}
       </div>
     </div>

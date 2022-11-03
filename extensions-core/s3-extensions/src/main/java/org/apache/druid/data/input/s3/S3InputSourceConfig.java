@@ -21,6 +21,7 @@ package org.apache.druid.data.input.s3;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
@@ -34,14 +35,10 @@ import java.util.Objects;
  */
 public class S3InputSourceConfig
 {
-  @JsonProperty
-  private String assumeRoleArn;
-  @JsonProperty
-  private String assumeRoleExternalId;
-  @JsonProperty
-  private PasswordProvider accessKeyId;
-  @JsonProperty
-  private PasswordProvider secretAccessKey;
+  private final String assumeRoleArn;
+  private final String assumeRoleExternalId;
+  private final PasswordProvider accessKeyId;
+  private final PasswordProvider secretAccessKey;
 
   @JsonCreator
   public S3InputSourceConfig(
@@ -56,28 +53,39 @@ public class S3InputSourceConfig
     if (accessKeyId != null || secretAccessKey != null) {
       this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
       this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
+    } else {
+      this.accessKeyId = null;
+      this.secretAccessKey = null;
     }
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAssumeRoleArn()
   {
     return assumeRoleArn;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAssumeRoleExternalId()
   {
     return assumeRoleExternalId;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public PasswordProvider getAccessKeyId()
   {
     return accessKeyId;
   }
 
   @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public PasswordProvider getSecretAccessKey()
   {
     return secretAccessKey;

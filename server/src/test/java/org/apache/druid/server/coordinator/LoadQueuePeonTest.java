@@ -88,26 +88,11 @@ public class LoadQueuePeonTest extends CuratorTestBase
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            Duration.millis(0)
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(Duration.millis(0))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();
@@ -221,14 +206,14 @@ public class LoadQueuePeonTest extends CuratorTestBase
     for (final DataSegment segment : segmentToDrop) {
       loadQueuePeon.dropSegment(
           segment,
-          () -> segmentDroppedSignals.get(segment.getId()).countDown()
+          success -> segmentDroppedSignals.get(segment.getId()).countDown()
       );
     }
 
     for (final DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
           segment,
-          () -> segmentLoadedSignals.get(segment.getId()).countDown()
+          success -> segmentLoadedSignals.get(segment.getId()).countDown()
       );
     }
 
@@ -293,26 +278,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            new Duration(1),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            new Duration("PT1s")
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withLoadTimeoutDelay(new Duration(1))
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();
@@ -321,14 +292,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-          }
-        }
+        success -> segmentLoadedSignal.countDown()
     );
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
@@ -355,26 +319,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(
-            null,
-            null,
-            null,
-            null,
-            new Duration(1),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            10,
-            new Duration("PT1s")
-        )
+        new TestDruidCoordinatorConfig.Builder()
+            .withLoadTimeoutDelay(new Duration(1))
+            .withCoordinatorKillMaxSegments(10)
+            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
+            .withCoordinatorKillIgnoreDurationToRetain(false)
+            .build()
     );
 
     loadQueuePeon.start();
@@ -402,14 +352,9 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-            delayedSegmentLoadedSignal.countDown();
-          }
+        success -> {
+          segmentLoadedSignal.countDown();
+          delayedSegmentLoadedSignal.countDown();
         }
     );
 

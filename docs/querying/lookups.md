@@ -22,9 +22,6 @@ title: "Lookups"
   ~ under the License.
   -->
 
-
-> Lookups are an [experimental](../development/experimental.md) feature.
-
 Lookups are a concept in Apache Druid where dimension values are (optionally) replaced with new values, allowing join-like
 functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
 [dimension specs](../querying/dimensionspecs.md) for more information. For the purpose of these documents, a "key"
@@ -101,7 +98,7 @@ This lookup is injective (assuming it contains all possible keys from your data)
 3 -> Billy
 ```
 
-But this one is not, since both "2" and "3" map to the same key:
+But this one is not, since both "2" and "3" map to the same value:
 
 ```
 1 -> Foo
@@ -272,7 +269,7 @@ All entries in the map will UPDATE existing entries. No entries will be deleted.
 
 ### Update lookup
 
-A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
+A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` creates or updates that specific extractor factory.
 
 For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
 
@@ -289,6 +286,8 @@ For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/
 ```
 
 This will replace the `site_id_customer1` lookup in the `realtime_customer1` with the definition above.
+
+Assign a unique version identifier each time you update a lookup extractor factory. Otherwise the call will fail.
 
 ### Get all lookups
 
@@ -482,10 +481,3 @@ ex: `GET /druid/v1/lookups/introspect/nato-phonetic/values`
     "Dash"
 ]
 ```
-
-## Druid version 0.10.0 to 0.10.1 upgrade/downgrade
-Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup processes optionally persist a snapshot of loaded lookups on disk.
-If upgrading from druid version 0.10.0 to 0.10.1, then migration for all persisted metadata is handled automatically.
-If downgrading from 0.10.1 to 0.9.0 then lookups updates done via Coordinator while 0.10.1 was running, would be lost.
-
-

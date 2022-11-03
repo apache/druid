@@ -362,7 +362,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     private TestTask(String id, Interval interval, Map<String, Object> context)
     {
-      super(id, "datasource", context);
+      super(id, "datasource", context, IngestionMode.NONE);
       this.interval = interval;
     }
 
@@ -370,6 +370,19 @@ public class TaskQueueTest extends IngestionTestBase
     public boolean isReady(TaskActionClient taskActionClient) throws Exception
     {
       return tryTimeChunkLock(taskActionClient, ImmutableList.of(interval));
+    }
+
+    @Override
+    public String setup(TaskToolbox toolbox)
+    {
+      // do nothing
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    {
+      // do nothing
     }
 
     @Override

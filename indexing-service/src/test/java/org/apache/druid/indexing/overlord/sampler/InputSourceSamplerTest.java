@@ -44,10 +44,12 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -125,6 +127,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "parserType = {0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    OBJECT_MAPPER.registerModules(new SamplerModule().getJacksonModules());
     return ImmutableList.of(
         new Object[]{ParserType.STR_JSON, false},
         new Object[]{ParserType.STR_JSON, true},
@@ -142,7 +145,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   @Before
   public void setupTest()
   {
-    inputSourceSampler = new InputSourceSampler();
+    inputSourceSampler = new InputSourceSampler(OBJECT_MAPPER);
 
     mapOfRows = new ArrayList<>();
     final List<String> columns = ImmutableList.of("t", "dim1", "dim2", "met1");
@@ -245,7 +248,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         createInputFormat(),
         null,
-        new SamplerConfig(3, null)
+        new SamplerConfig(3, null, null, null)
     );
 
     Assert.assertEquals(3, response.getNumRowsRead());
@@ -1226,10 +1229,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         STR_JSON_ROWS.stream().limit(STR_JSON_ROWS.size() - 1).collect(Collectors.joining())
     );
 
-    SamplerResponse response = inputSourceSampler.sample(new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
-                                                         createInputFormat(),
-                                                         dataSchema,
-                                                         new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/));
+    SamplerResponse response = inputSourceSampler.sample(
+        new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
+        createInputFormat(),
+        dataSchema,
+        new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/, null, null)
+    );
 
     //
     // the 1st json block contains STR_JSON_ROWS.size() lines, and 2nd json block contains STR_JSON_ROWS.size()-1 lines
@@ -1327,6 +1332,109 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     inputSourceSampler.sample(failingReaderInputSource, null, null, null);
   }
 
+  @Test
+  public void testRowLimiting() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        null
+    );
+    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputFormat inputFormat = createInputFormat();
+
+    SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        inputFormat,
+        dataSchema,
+        new SamplerConfig(4, null, null, null)
+    );
+
+    Assert.assertEquals(4, response.getNumRowsRead());
+    Assert.assertEquals(4, response.getNumRowsIndexed());
+    Assert.assertEquals(2, response.getData().size());
+
+  }
+
+  @Test
+  public void testMaxBytesInMemoryLimiting() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        null
+    );
+    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputFormat inputFormat = createInputFormat();
+
+    SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        inputFormat,
+        dataSchema,
+        new SamplerConfig(null, null, HumanReadableBytes.valueOf(256), null)
+    );
+
+    Assert.assertEquals(4, response.getNumRowsRead());
+    Assert.assertEquals(4, response.getNumRowsIndexed());
+    Assert.assertEquals(2, response.getData().size());
+  }
+
+  @Test
+  public void testMaxClientResponseBytesLimiting() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("t", null, null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
+    final AggregatorFactory[] aggregatorFactories = {new LongSumAggregatorFactory("met1", "met1")};
+    final GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.HOUR,
+        true,
+        null
+    );
+    final DataSchema dataSchema = createDataSchema(
+        timestampSpec,
+        dimensionsSpec,
+        aggregatorFactories,
+        granularitySpec,
+        null
+    );
+    final InputSource inputSource = createInputSource(getTestRows(), dataSchema);
+    final InputFormat inputFormat = createInputFormat();
+
+    SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        inputFormat,
+        dataSchema,
+        new SamplerConfig(null, null, null, HumanReadableBytes.valueOf(300))
+    );
+
+    Assert.assertEquals(4, response.getNumRowsRead());
+    Assert.assertEquals(4, response.getNumRowsIndexed());
+    Assert.assertEquals(2, response.getData().size());
+  }
+
   private List<String> getTestRows()
   {
     switch (parserType) {
@@ -1355,7 +1463,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   {
     switch (parserType) {
       case STR_JSON:
-        return new JsonInputFormat(null, null, null);
+        return new JsonInputFormat(null, null, null, null, null);
       case STR_CSV:
         return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0);
       default:
@@ -1599,6 +1707,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
     {
       return null;
+    }
+
+    @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset)
+    {
+      return true;
     }
 
     @Override

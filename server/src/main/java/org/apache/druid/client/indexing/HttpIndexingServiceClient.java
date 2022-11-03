@@ -209,6 +209,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
             response.getStatus(),
             response.getContent()
         );
+
       }
       final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
           response.getContent(),
@@ -317,27 +318,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
-  {
-    try {
-      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskIds))
-      );
-
-      return jsonMapper.readValue(
-          responseHolder.getContent(),
-          new TypeReference<Map<String, TaskStatus>>()
-          {
-          }
-      );
-    }
-    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

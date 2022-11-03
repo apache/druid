@@ -55,12 +55,13 @@ sub read_config_file
 
   my @commands;
   my @verify;
+  my @notify;
   my $kill_timeout;
   while (my $line = <$config_fh>) {
     chomp $line;
     next if $line =~ /^(\s*\#.*|\s*)$/;
 
-    if ($line =~ /^(:verify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
+    if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
       my $name = $1;
       my $order = 50;
       my $command = $2;
@@ -72,6 +73,8 @@ sub read_config_file
 
       if ($name eq ':verify') {
         push @verify, $command;
+      } elsif ($name eq ':notify') {
+        push @notify, $command;
       } elsif ($name eq ':kill-timeout') {
         $kill_timeout = int($command);
       } else {
@@ -92,7 +95,7 @@ sub read_config_file
   }
 
   close $config_fh;
-  return { commands => \@commands, verify => \@verify, 'kill-timeout' => $kill_timeout };
+  return { commands => \@commands, verify => \@verify, notify => \@notify, 'kill-timeout' => $kill_timeout };
 }
 
 sub stringify_exit_status
@@ -136,6 +139,8 @@ sub pretty
       return "\x1b[1m$text\x1b[0m";
     } elsif ($color eq 'red') {
       return "\x1b[31m\x1b[1m$text\x1b[0m";
+    } elsif ($color eq 'green') {
+      return "\x1b[32m\x1b[1m$text\x1b[0m";
     } else {
       return $text;
     }
@@ -192,8 +197,9 @@ if (defined $config->{'kill-timeout'}) {
   $opt{'kill-timeout'} = $config->{'kill-timeout'};
 }
 
-# Remember where vardir, svdir are after chdiring
+# Remember where vardir, logdir, svdir are after chdiring
 my $vardir = File::Spec->rel2abs($opt{vardir});
+my $logdir = File::Spec->rel2abs(realpath($ENV{'DRUID_LOG_DIR'} || "$FindBin::Bin/../log"));
 my $svdir = "$vardir/sv";
 
 # chdir to the root of the distribution (or whereever)
@@ -207,6 +213,11 @@ if (! -e "$vardir/tmp") {
 # Create svdir
 if (! -e $svdir) {
   system("mkdir -p \Q$svdir\E") == 0 or die "mkdir $svdir failed: $!\n";
+}
+
+# Create logdir, if needed
+if (!defined $opt{svlogd} && ! -e "$logdir") {
+  system("mkdir -p \Q$logdir\E") == 0 or die "mkdir $logdir failed: $!\n";
 }
 
 # Lock svdir and keep it locked until we exit
@@ -230,20 +241,37 @@ $SIG{TERM} = sub { if (!$killed) { $killed = 15; $killkill = time + $opt{'kill-t
 # Build up control fifo command over multiple sysreads, potentially
 my $fifobuffer = '';
 
+# Run notification commands and print their output
+for my $notify_cmd (@{$config->{notify}}) {
+  my $notify_output = qx[$notify_cmd 2>&1];
+  if (!$?) {
+    for my $notify_line (split /\n/, $notify_output) {
+      logit pretty($notify_line, 'green');
+    }
+  }
+}
+
+if (defined $opt{svlogd}) {
+  logit "Starting services with log directory [$svdir].";
+} else {
+  logit "Starting services with log directory [$logdir].";
+}
+
 while (1) {
   # Spawn new procs
   if (!$killed) {
     for my $command (grep { !$_->{pid} } @commands) {
       if ($command->{down} < time) {
-        my $logfile = sprintf("%s%s", "$svdir/$command->{name}", defined $opt{'svlogd'} ? "" : ".log");
-
         if (my $pid = fork) {
           $command->{pid} = $pid;
-          $command->{logfile} = $logfile;
         } else {
           setsid;
 
           if (defined $opt{'svlogd'}) {
+            # If using svlogd, program output goes into the service directory. We do not use $logdir here.
+            my $logfile = "$svdir/$command->{name}";
+            logit "Running command[" . pretty($command->{name}, 'bold') . "]: $command->{command}";
+
             if (! -e $logfile) {
               system("mkdir -p \Q$logfile\E") == 0 or logdie "mkdir $logfile failed: $!\n";
             }
@@ -258,9 +286,12 @@ while (1) {
 
             open STDOUT, "|svlogd $logfile" or logdie "pipe to svlogd $logfile failed: $!\n";
           } else {
-            # Since the log4j2 is configured to write log to file, which means there's no application log output to the console,
-            # We don't need to redirect the STDOUT of application to a file
-            # open STDOUT, ">>", $logfile or logdie "open $logfile failed: $!\n";
+            # If not using svlogd, program output goes to $logdir. In the default configuration, this will be a small
+            # amount of logging from the JVM itself, because all of the Druid and ZooKeeper logs are written into
+            # separate files by log4j2.
+            logit "Running command[" . pretty($command->{name}, 'bold') . "]: $command->{command}";
+            my $logfile = "$logdir/$command->{name}.stdout.log";
+            open STDOUT, ">>", $logfile or logdie "open $logfile failed: $!\n";
           }
 
           open STDERR, ">&STDOUT" or logdie "redirecting stderr failed: $!\n";

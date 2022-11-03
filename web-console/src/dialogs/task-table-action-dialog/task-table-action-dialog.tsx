@@ -75,21 +75,21 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
       {activeTab === 'status' && (
         <ShowJson
           endpoint={`${taskEndpointBase}/status`}
-          transform={x => deepGet(x, 'status')}
+          transform={x => deepGet(x, 'status') || x}
           downloadFilename={`task-status-${taskId}.json`}
         />
       )}
       {activeTab === 'payload' && (
         <ShowJson
           endpoint={taskEndpointBase}
-          transform={x => deepGet(x, 'payload')}
+          transform={x => deepGet(x, 'payload') || x}
           downloadFilename={`task-payload-${taskId}.json`}
         />
       )}
       {activeTab === 'reports' && (
         <ShowJson
           endpoint={`${taskEndpointBase}/reports`}
-          transform={x => deepGet(x, 'ingestionStatsAndErrors.payload')}
+          transform={x => deepGet(x, 'ingestionStatsAndErrors.payload') || x}
           downloadFilename={`task-reports-${taskId}.json`}
         />
       )}

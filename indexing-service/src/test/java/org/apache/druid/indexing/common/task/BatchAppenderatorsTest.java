@@ -243,7 +243,7 @@ public class BatchAppenderatorsTest
               "foo",
               new TestAppenderatorsManager(),
               metrics,
-              new TestTaskToolbox(
+              makeTaskToolbox(
                   objectMapper,
                   indexMerger,
                   TaskConfig.BatchProcessingMode.OPEN_SEGMENTS
@@ -258,7 +258,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -266,7 +266,7 @@ public class BatchAppenderatorsTest
               "foo",
               new TestAppenderatorsManager(),
               metrics,
-              new TestTaskToolbox(
+              makeTaskToolbox(
                   objectMapper,
                   indexMerger,
                   TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS
@@ -281,7 +281,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
 
           break;
@@ -290,7 +290,7 @@ public class BatchAppenderatorsTest
               "foo",
               new TestAppenderatorsManager(),
               metrics,
-              new TestTaskToolbox(
+              makeTaskToolbox(
                   objectMapper,
                   indexMerger,
                   TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS
@@ -305,7 +305,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         default:
@@ -560,71 +560,43 @@ public class BatchAppenderatorsTest
       }
     }
 
-
-    private static class TestTaskToolbox extends TaskToolbox
+    private static TaskToolbox makeTaskToolbox(
+        ObjectMapper mapper,
+        IndexMergerV9 indexMergerV9,
+        TaskConfig.BatchProcessingMode mode
+    )
     {
-      private final Map<DataSegment, File> segmentFileMap;
+      return new TaskToolbox.Builder()
+          .config(
+              new TaskConfig(
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  false,
+                  null,
+                  null,
+                  null,
+                  false,
+                  false,
+                  mode.name(),
+                  null,
+                  false
+              )
+          )
+          .joinableFactory(NoopJoinableFactory.INSTANCE)
+          .jsonMapper(mapper)
+          .indexIO(new IndexIO(new ObjectMapper(), () -> 0))
+          .indexMergerV9(indexMergerV9)
+          .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+          .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+          .chatHandlerProvider(new NoopChatHandlerProvider())
+          .appenderatorsManager(new TestAppenderatorsManager())
+          .taskLogPusher(null)
+          .attemptId("1")
+          .build();
 
-      TestTaskToolbox(ObjectMapper mapper, IndexMergerV9 indexMergerV9, TaskConfig.BatchProcessingMode mode)
-      {
-        super(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                mode.name(),
-                null
-            ),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NoopJoinableFactory.INSTANCE,
-            null,
-            null,
-            mapper,
-            null,
-            new IndexIO(
-                new ObjectMapper(),
-                () -> 0
-            ),
-            null,
-            null,
-            null,
-            indexMergerV9,
-            null,
-            null,
-            null,
-            null,
-            new NoopTestTaskReportFileWriter(),
-            null,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopChatHandlerProvider(),
-            null,
-            new TestAppenderatorsManager(),
-            null,
-            null,
-            null,
-            null
-        );
-        this.segmentFileMap = null;
-      }
     }
   }
 }

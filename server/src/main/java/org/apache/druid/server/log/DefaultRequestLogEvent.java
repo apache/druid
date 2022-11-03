@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -55,23 +55,25 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
    */
   @JsonValue(value = false)
   @Override
-  public Map<String, Object> toMap()
+  public EventMap toMap()
   {
-    final Map<String, Object> map = new HashMap<>();
-    map.put("feed", getFeed());
-    map.put("timestamp", getCreatedTime());
-    map.put("service", getService());
-    map.put("host", getHost());
-    if (getQuery() != null) {
-      map.put("query", getQuery());
-    }
+    final EventMap.Builder builder = EventMap
+        .builder()
+        .put("feed", getFeed())
+        .put("timestamp", getCreatedTime())
+        .put("service", getService())
+        .put("host", getHost())
+        .putNonNull("query", getQuery());
+
     if (getSql() != null) {
-      map.put("sql", getSql());
-      map.put("sqlQueryContext", getSqlQueryContext());
+      builder.put("sql", getSql())
+             .put("sqlQueryContext", getSqlQueryContext());
     }
-    map.put("remoteAddr", getRemoteAddr());
-    map.put("queryStats", getQueryStats());
-    return map;
+
+    builder.put("remoteAddr", getRemoteAddr())
+           .put("queryStats", getQueryStats());
+
+    return builder.build();
   }
 
   @Override

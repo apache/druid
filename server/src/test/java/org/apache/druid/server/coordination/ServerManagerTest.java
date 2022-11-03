@@ -84,7 +84,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
@@ -196,7 +196,7 @@ public class ServerManagerTest
         new LocalCacheProvider().get(),
         new CacheConfig(),
         segmentManager,
-        NoopJoinableFactory.INSTANCE,
+        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new ServerConfig()
     );
 

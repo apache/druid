@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -64,6 +65,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
@@ -85,8 +87,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
   }
 
+  @SuppressWarnings("resource")
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      QueryRunnerFactoryConglomerate conglomerate
+  ) throws IOException
   {
     HllSketchModule.registerSerde();
     final QueryableIndex index = IndexBuilder.create()
@@ -108,10 +113,10 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                      .withRollup(false)
                                                      .build()
                                              )
-                                             .rows(CalciteTests.ROWS1)
+                                             .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
@@ -121,7 +126,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                    .build(),
         index
     );
-    return walker;
   }
 
   @Override
@@ -149,7 +153,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketch() throws Exception
+  public void testApproxCountDistinctHllSketch()
   {
     // Can't vectorize due to SUBSTRING expression.
     cannotVectorize();
@@ -244,7 +248,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testAvgDailyCountDistinctHllSketch() throws Exception
+  public void testAvgDailyCountDistinctHllSketch()
   {
     // Can't vectorize due to outer query, which runs on an inline datasource.
     cannotVectorize();
@@ -340,7 +344,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctHllSketchIsRounded() throws Exception
+  public void testApproxCountDistinctHllSketchIsRounded()
   {
     testQuery(
         "SELECT"
@@ -376,7 +380,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggs() throws Exception
+  public void testHllSketchPostAggs()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -528,7 +532,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testtHllSketchPostAggsPostSort() throws Exception
+  public void testtHllSketchPostAggsPostSort()
   {
     final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
                                  + "  Log Config K   : 12\n"
@@ -582,7 +586,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     testQuery(
@@ -620,7 +624,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"

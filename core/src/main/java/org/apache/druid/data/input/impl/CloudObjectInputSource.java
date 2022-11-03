@@ -19,8 +19,11 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -41,9 +44,11 @@ import java.util.stream.Stream;
 public abstract class CloudObjectInputSource extends AbstractInputSource
     implements SplittableInputSource<List<CloudObjectLocation>>
 {
+  private final String scheme;
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+  private final String filter;
 
   public CloudObjectInputSource(
       String scheme,
@@ -52,29 +57,41 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<CloudObjectLocation> objects
   )
   {
+    this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    this.filter = null;
 
-    if (!CollectionUtils.isNullOrEmpty(objects)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
-    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
-      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
-      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
-    } else {
-      throwIfIllegalArgs(true);
-    }
+    illegalArgsChecker();
+  }
+
+  public CloudObjectInputSource(
+      String scheme,
+      @Nullable List<URI> uris,
+      @Nullable List<URI> prefixes,
+      @Nullable List<CloudObjectLocation> objects,
+      @Nullable String filter
+  )
+  {
+    this.scheme = scheme;
+    this.uris = uris;
+    this.prefixes = prefixes;
+    this.objects = objects;
+    this.filter = filter;
+
+    illegalArgsChecker();
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<URI> getUris()
   {
     return uris;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<URI> getPrefixes()
   {
     return prefixes;
@@ -82,9 +99,18 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<CloudObjectLocation> getObjects()
   {
     return objects;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getFilter()
+  {
+    return filter;
   }
 
   /**
@@ -98,6 +124,9 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * this input sources backend API. This is called internally by {@link #createSplits} and {@link #estimateNumSplits},
    * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
+   *
+   * If {@link #filter} is set, the filter will be applied on {@link #uris} or {@link #objects}.
+   * {@link #filter} uses a glob notation, for example: "*.parquet".
    */
   protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 
@@ -108,12 +137,23 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   )
   {
     if (!CollectionUtils.isNullOrEmpty(objects)) {
-      return objects.stream().map(object -> new InputSplit<>(Collections.singletonList(object)));
+      Stream<CloudObjectLocation> objectStream = objects.stream();
+
+      if (StringUtils.isNotBlank(filter)) {
+        objectStream = objectStream.filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter));
+      }
+
+      return objectStream.map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
+
     if (!CollectionUtils.isNullOrEmpty(uris)) {
-      return uris.stream()
-                 .map(CloudObjectLocation::new)
-                 .map(object -> new InputSplit<>(Collections.singletonList(object)));
+      Stream<URI> uriStream = uris.stream();
+
+      if (StringUtils.isNotBlank(filter)) {
+        uriStream = uriStream.filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter));
+      }
+
+      return uriStream.map(CloudObjectLocation::new).map(object -> new InputSplit<>(Collections.singletonList(object)));
     }
 
     return getPrefixesSplitStream(getSplitHintSpecOrDefault(splitHintSpec));
@@ -164,15 +204,31 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       return false;
     }
     CloudObjectInputSource that = (CloudObjectInputSource) o;
-    return Objects.equals(uris, that.uris) &&
+    return Objects.equals(scheme, that.scheme) &&
+           Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(objects, that.objects);
+           Objects.equals(objects, that.objects) &&
+           Objects.equals(filter, that.filter);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, prefixes, objects);
+    return Objects.hash(scheme, uris, prefixes, objects, filter);
+  }
+
+  private void illegalArgsChecker() throws IllegalArgumentException
+  {
+    if (!CollectionUtils.isNullOrEmpty(objects)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
+    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
+      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
+      uris.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
+      prefixes.forEach(uri -> CloudObjectLocation.validateUriScheme(scheme, uri));
+    } else {
+      throwIfIllegalArgs(true);
+    }
   }
 
   private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException

@@ -225,6 +225,12 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FloatAnyAggregatorFactory(newName, getFieldName());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

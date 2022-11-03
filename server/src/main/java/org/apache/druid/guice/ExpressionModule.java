@@ -19,12 +19,12 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.ArrayQuantileExprMacro;
 import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
 import org.apache.druid.query.expression.ContainsExprMacro;
 import org.apache.druid.query.expression.GuiceExprMacroTable;
@@ -33,6 +33,7 @@ import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
 import org.apache.druid.query.expression.IPv4AddressStringifyExprMacro;
 import org.apache.druid.query.expression.LikeExprMacro;
+import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.RegexpExtractExprMacro;
 import org.apache.druid.query.expression.RegexpLikeExprMacro;
 import org.apache.druid.query.expression.TimestampCeilExprMacro;
@@ -45,32 +46,41 @@ import org.apache.druid.query.expression.TrimExprMacro;
 
 import java.util.List;
 
-public class ExpressionModule implements DruidModule
+public class ExpressionModule implements Module
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
       ImmutableList.<Class<? extends ExprMacroTable.ExprMacro>>builder()
-          .add(IPv4AddressMatchExprMacro.class)
-          .add(IPv4AddressParseExprMacro.class)
-          .add(IPv4AddressStringifyExprMacro.class)
-          .add(LikeExprMacro.class)
-          .add(RegexpExtractExprMacro.class)
-          .add(RegexpLikeExprMacro.class)
-          .add(ContainsExprMacro.class)
-          .add(CaseInsensitiveContainsExprMacro.class)
-          .add(TimestampCeilExprMacro.class)
-          .add(TimestampExtractExprMacro.class)
-          .add(TimestampFloorExprMacro.class)
-          .add(TimestampFormatExprMacro.class)
-          .add(TimestampParseExprMacro.class)
-          .add(TimestampShiftExprMacro.class)
-          .add(TrimExprMacro.BothTrimExprMacro.class)
-          .add(TrimExprMacro.LeftTrimExprMacro.class)
-          .add(TrimExprMacro.RightTrimExprMacro.class)
-          .add(HyperUniqueExpressions.HllCreateExprMacro.class)
-          .add(HyperUniqueExpressions.HllAddExprMacro.class)
-          .add(HyperUniqueExpressions.HllEstimateExprMacro.class)
-          .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
-          .build();
+                   .add(ArrayQuantileExprMacro.class)
+                   .add(IPv4AddressMatchExprMacro.class)
+                   .add(IPv4AddressParseExprMacro.class)
+                   .add(IPv4AddressStringifyExprMacro.class)
+                   .add(LikeExprMacro.class)
+                   .add(RegexpExtractExprMacro.class)
+                   .add(RegexpLikeExprMacro.class)
+                   .add(ContainsExprMacro.class)
+                   .add(CaseInsensitiveContainsExprMacro.class)
+                   .add(TimestampCeilExprMacro.class)
+                   .add(TimestampExtractExprMacro.class)
+                   .add(TimestampFloorExprMacro.class)
+                   .add(TimestampFormatExprMacro.class)
+                   .add(TimestampParseExprMacro.class)
+                   .add(TimestampShiftExprMacro.class)
+                   .add(TrimExprMacro.BothTrimExprMacro.class)
+                   .add(TrimExprMacro.LeftTrimExprMacro.class)
+                   .add(TrimExprMacro.RightTrimExprMacro.class)
+                   .add(HyperUniqueExpressions.HllCreateExprMacro.class)
+                   .add(HyperUniqueExpressions.HllAddExprMacro.class)
+                   .add(HyperUniqueExpressions.HllEstimateExprMacro.class)
+                   .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
+                   .add(NestedDataExpressions.JsonObjectExprMacro.class)
+                   .add(NestedDataExpressions.JsonKeysExprMacro.class)
+                   .add(NestedDataExpressions.JsonPathsExprMacro.class)
+                   .add(NestedDataExpressions.JsonValueExprMacro.class)
+                   .add(NestedDataExpressions.JsonQueryExprMacro.class)
+                   .add(NestedDataExpressions.ToJsonStringExprMacro.class)
+                   .add(NestedDataExpressions.ParseJsonExprMacro.class)
+                   .add(NestedDataExpressions.TryParseJsonExprMacro.class)
+                   .build();
 
   @Override
   public void configure(Binder binder)
@@ -79,12 +89,6 @@ public class ExpressionModule implements DruidModule
     for (Class<? extends ExprMacroTable.ExprMacro> exprMacroClass : EXPR_MACROS) {
       addExprMacro(binder, exprMacroClass);
     }
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
   }
 
   public static void addExprMacro(final Binder binder, final Class<? extends ExprMacroTable.ExprMacro> clazz)

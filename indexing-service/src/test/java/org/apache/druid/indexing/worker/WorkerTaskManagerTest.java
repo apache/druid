@@ -22,7 +22,7 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -95,7 +95,8 @@ public class WorkerTaskManagerTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -139,10 +140,12 @@ public class WorkerTaskManagerTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopIndexingServiceClient(),
+                new NoopOverlordClient(),
                 null,
                 null,
-                null
+                null,
+                null,
+                "1"
             ),
             taskConfig,
             location
@@ -274,7 +277,7 @@ public class WorkerTaskManagerTest
     Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         throw new Error("task failure test");
       }

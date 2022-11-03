@@ -23,7 +23,7 @@ title: "Retaining or automatically dropping data"
   -->
 
 
-In Apache Druid, Coordinator processes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the Coordinator console (http://coordinator_ip:port).
+In Apache Druid, Coordinator processes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set via the [web console](./web-console.md).
 
 There are three types of rules, i.e., load rules, drop rules, and broadcast rules. Load rules indicate how segments should be assigned to different historical process tiers and how many replicas of a segment should exist in each tier.
 Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different datasources should be co-located in Historical processes.
@@ -33,7 +33,7 @@ default set of rules can be configured. Rules are read in order and hence the or
 Coordinator will cycle through all used segments and match each segment with the first rule that applies. Each segment
 may only match a single rule.
 
-Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
+Note: It is recommended that the web console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
 
 ## Load rules
 
@@ -230,5 +230,5 @@ submit a [kill task](../ingestion/tasks.md) to the [Overlord](../design/overlord
 
 Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid,
 you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and then mark as
-used all segments belonging to the datasource in the Druid Coordinator console, or through the Druid Coordinator
+used all segments belonging to the datasource in the web console, or through the Druid Coordinator
 endpoints.

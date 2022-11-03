@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
@@ -94,7 +93,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
       // Note: this variable is effective only when queryContext has a timeout.
       // See the comment of ResponseContext.Key.TIMEOUT_AT.
-      final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
+      final long timeoutAt = System.currentTimeMillis() + queryPlus.getQuery().context().getTimeout();
       responseContext.putTimeoutTime(timeoutAt);
 
       if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
@@ -373,7 +372,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       if (timeoutAt == null || timeoutAt == 0L) {
         responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
       }
-      return engine.process((ScanQuery) query, segment, responseContext);
+      return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
     }
   }
 }

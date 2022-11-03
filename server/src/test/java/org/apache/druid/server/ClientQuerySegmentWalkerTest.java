@@ -77,6 +77,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -125,6 +126,7 @@ public class ClientQuerySegmentWalkerTest
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
   private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
+
 
   private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
@@ -501,7 +503,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -569,7 +575,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -748,7 +758,8 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           null
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -1331,6 +1342,7 @@ public class ClientQuerySegmentWalkerTest
             .put(globalFactory.getClass(), GlobalTableDataSource.class)
             .build()
     );
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     class CapturingWalker implements QuerySegmentWalker
     {
@@ -1379,7 +1391,7 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
-                joinableFactory,
+                joinableFactoryWrapper,
                 conglomerate,
                 schedulerForTest
             ),
@@ -1389,7 +1401,7 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory,
+                joinableFactoryWrapper,
                 schedulerForTest
                 ),
             ClusterOrLocal.LOCAL

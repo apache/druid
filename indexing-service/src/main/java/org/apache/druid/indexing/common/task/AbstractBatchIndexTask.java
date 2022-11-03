@@ -31,7 +31,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -74,7 +73,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
@@ -127,9 +126,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   // Store lock versions
   Map<Interval, String> intervalToVersion = new HashMap<>();
 
-  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
+  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
-    super(id, dataSource, context);
+    super(id, dataSource, context, ingestionMode);
     maxAllowedLockCount = -1;
   }
 
@@ -139,10 +138,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable TaskResource taskResource,
       String dataSource,
       @Nullable Map<String, Object> context,
-      int maxAllowedLockCount
+      int maxAllowedLockCount,
+      IngestionMode ingestionMode
   )
   {
-    super(id, groupId, taskResource, dataSource, context);
+    super(id, groupId, taskResource, dataSource, context, ingestionMode);
     this.maxAllowedLockCount = maxAllowedLockCount;
   }
 
@@ -154,7 +154,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * @see #stopGracefully(TaskConfig)
    */
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public String setup(TaskToolbox toolbox) throws Exception
   {
     if (taskLockHelper == null) {
       // Subclasses generally use "isReady" to initialize the taskLockHelper. It's not guaranteed to be called before
@@ -169,8 +169,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     synchronized (this) {
       if (stopped) {
-        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
-        return TaskStatus.failure(getId(), errMsg);
+        return "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,
@@ -183,7 +182,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         resourceCloserOnAbnormalExit.register(config -> currentThread.interrupt());
       }
     }
-    return runTask(toolbox);
+    return super.setup(toolbox);
   }
 
   @Override
@@ -250,11 +249,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * The method to actually process this task. This method is executed in {@link #run(TaskToolbox)}.
-   */
-  public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
-
-  /**
    * Return true if this task can overwrite existing segments.
    */
   public abstract boolean requireLockExistingSegments();
@@ -306,11 +300,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
+    IngestionMode ingestionMode = getIngestionMode();
+    final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
+                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock || ioConfig.isDropExisting()) {
-      log.info("forceTimeChunkLock[%s] or isDropExisting[%s] is set to true. Use timeChunk lock",
-               forceTimeChunkLock, ioConfig.isDropExisting()
+    if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
+      log.info(
+          "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
+          forceTimeChunkLock, ingestionMode
       );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
@@ -479,7 +476,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       } else {
         // Use segment lock
         // Create a timeline to find latest segments only
-        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+        final SegmentTimeline timeline = SegmentTimeline.forSegments(
             segments
         );
 
@@ -505,10 +502,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
-  public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
+  public static boolean isGuaranteedRollup(
+      IngestionMode ingestionMode,
+      IndexTuningConfig tuningConfig
+  )
   {
     Preconditions.checkArgument(
-        !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
+        !(ingestionMode == IngestionMode.APPEND && tuningConfig.isForceGuaranteedRollup()),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();

@@ -38,14 +38,12 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
+import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
@@ -91,19 +89,16 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private DataSourcesSnapshot dataSourcesSnapshot;
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
-  private ScheduledExecutorFactory scheduledExecutorFactory;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
   private LoadQueuePeon sourceLoadQueuePeon;
   private LoadQueuePeon destinationLoadQueuePeon;
-  private MetadataRuleManager metadataRuleManager;
   private CountDownLatch leaderAnnouncerLatch;
   private CountDownLatch leaderUnannouncerLatch;
   private PathChildrenCache sourceLoadQueueChildrenCache;
   private PathChildrenCache destinationLoadQueueChildrenCache;
   private DruidCoordinatorConfig druidCoordinatorConfig;
-  private ObjectMapper objectMapper;
   private JacksonConfigManager configManager;
-  private DruidNode druidNode;
+
   private static final String SEGPATH = "/druid/segments";
   private static final String SOURCE_LOAD_PATH = "/druid/loadQueue/localhost:1";
   private static final String DESTINATION_LOAD_PATH = "/druid/loadQueue/localhost:2";
@@ -123,8 +118,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
 
-  private ScheduledExecutorService peonExec = Execs.scheduledSingleThreaded("Master-PeonExec--%d");
-  private ExecutorService callbackExec = Execs.multiThreaded(4, "LoadQueuePeon-callbackexec--%d");
+  private final ScheduledExecutorService peonExec = Execs.scheduledSingleThreaded("Master-PeonExec--%d");
+  private final ExecutorService callbackExec = Execs.multiThreaded(4, "LoadQueuePeon-callbackexec--%d");
 
   public CuratorDruidCoordinatorTest()
   {
@@ -139,7 +134,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
 
-    metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
@@ -154,7 +148,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
 
     setupServerAndCurator();
@@ -164,27 +158,15 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(SOURCE_LOAD_PATH);
     curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
-    objectMapper = new DefaultObjectMapper();
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        new Duration(COORDINATOR_START_DELAY),
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        new Duration(COORDINATOR_PERIOD),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        new Duration("PT0s")
-    );
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
+        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
+        .withCoordinatorKillMaxSegments(10)
+        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
         SOURCE_LOAD_PATH,
@@ -215,57 +197,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         callbackExec,
         druidCoordinatorConfig
     );
-    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
-    scheduledExecutorFactory = (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor();
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
-    coordinator = new DruidCoordinator(
-        druidCoordinatorConfig,
-        new ZkPathsConfig()
-        {
-
-          @Override
-          public String getBase()
-          {
-            return "druid";
-          }
-        },
-        configManager,
-        segmentsMetadataManager,
-        baseView,
-        metadataRuleManager,
-        () -> curator,
-        new NoopServiceEmitter(),
-        scheduledExecutorFactory,
-        null,
-        null,
-        new NoopServiceAnnouncer()
-        {
-          @Override
-          public void announce(DruidNode node)
-          {
-            // count down when this coordinator becomes the leader
-            leaderAnnouncerLatch.countDown();
-          }
-
-          @Override
-          public void unannounce(DruidNode node)
-          {
-            leaderUnannouncerLatch.countDown();
-          }
-        },
-        druidNode,
-        loadManagementPeons,
-        null,
-        null,
-        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        new CostBalancerStrategyFactory(),
-        EasyMock.createNiceMock(LookupCoordinatorManager.class),
-        new TestDruidLeaderSelector(),
-        null,
-        ZkEnablementConfig.ENABLED
-    );
   }
 
   @After
@@ -298,8 +232,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     segmentRemovedLatch = new CountDownLatch(0);
 
-    CountDownLatch destCountdown = new CountDownLatch(1);
-    CountDownLatch srcCountdown = new CountDownLatch(1);
     setupView();
 
     DruidServer source = new DruidServer(
@@ -359,6 +291,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // these child watchers are used to simulate actions of historicals, announcing a segment on noticing a load queue
     // for the destination and unannouncing from source server when noticing a drop request
 
+    CountDownLatch srcCountdown = new CountDownLatch(1);
     sourceLoadQueueChildrenCache.getListenable().addListener(
         (CuratorFramework curatorFramework, PathChildrenCacheEvent event) -> {
           if (event.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
@@ -370,6 +303,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         }
     );
 
+    CountDownLatch destCountdown = new CountDownLatch(1);
     destinationLoadQueueChildrenCache.getListenable().addListener(
         (CuratorFramework curatorFramework, PathChildrenCacheEvent event) -> {
           if (event.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
@@ -405,6 +339,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
+
     coordinator.moveSegment(
         coordinatorRuntimeParams,
         source.toImmutableDruidServer(),
@@ -522,42 +457,22 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     sourceLoadQueuePeon.start();
     destinationLoadQueuePeon.start();
 
+    final LoadQueueTaskMaster loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
+    EasyMock.expect(loadQueueTaskMaster.isHttpLoading()).andReturn(false).anyTimes();
+    EasyMock.replay(loadQueueTaskMaster);
+
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
-        new ZkPathsConfig()
-        {
-
-          @Override
-          public String getBase()
-          {
-            return "druid";
-          }
-        },
         configManager,
         segmentsMetadataManager,
         baseView,
-        metadataRuleManager,
-        () -> curator,
+        EasyMock.createNiceMock(MetadataRuleManager.class),
         new NoopServiceEmitter(),
-        scheduledExecutorFactory,
+        (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor(),
         null,
-        null,
-        new NoopServiceAnnouncer()
-        {
-          @Override
-          public void announce(DruidNode node)
-          {
-            // count down when this coordinator becomes the leader
-            leaderAnnouncerLatch.countDown();
-          }
-
-          @Override
-          public void unannounce(DruidNode node)
-          {
-            leaderUnannouncerLatch.countDown();
-          }
-        },
-        druidNode,
+        loadQueueTaskMaster,
+        new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
+        new DruidNode("hey", "what", false, 1234, null, true, false),
         loadManagementPeons,
         null,
         null,
@@ -565,8 +480,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         new CostBalancerStrategyFactory(),
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
-        null,
-        ZkEnablementConfig.ENABLED
+        null
     );
   }
 

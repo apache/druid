@@ -39,44 +39,40 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
-  private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 20000;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
 
   private final int recordBufferSize;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int fetchSequenceNumberTimeout;
   private final Integer fetchThreads;
   private final int maxRecordsPerPoll;
 
-  @JsonCreator
   public KinesisIndexTaskTuningConfig(
-      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
-      @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
-      @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
-      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-      @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
-      @JsonProperty("maxTotalRows") Long maxTotalRows,
-      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
-      @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
-      @JsonProperty("indexSpec") IndexSpec indexSpec,
-      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
-      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
-      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
-      @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
-      @JsonProperty("recordBufferSize") Integer recordBufferSize,
-      @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
-      @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
-      @JsonProperty("fetchSequenceNumberTimeout") Integer fetchSequenceNumberTimeout,
-      @JsonProperty("fetchThreads") Integer fetchThreads,
-      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
+      @Nullable AppendableIndexSpec appendableIndexSpec,
+      Integer maxRowsInMemory,
+      Long maxBytesInMemory,
+      @Nullable Boolean skipBytesInMemoryOverheadCheck,
+      Integer maxRowsPerSegment,
+      Long maxTotalRows,
+      Period intermediatePersistPeriod,
+      File basePersistDirectory,
+      Integer maxPendingPersists,
+      IndexSpec indexSpec,
+      @Nullable IndexSpec indexSpecForIntermediatePersists,
+      Boolean reportParseExceptions,
+      Long handoffConditionTimeout,
+      Boolean resetOffsetAutomatically,
+      Boolean skipSequenceNumberAvailabilityCheck,
+      Integer recordBufferSize,
+      Integer recordBufferOfferTimeout,
+      Integer recordBufferFullWait,
+      Integer fetchThreads,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @Nullable Boolean logParseExceptions,
+      @Nullable Integer maxParseExceptions,
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Integer maxRecordsPerPoll,
+      @Nullable Period intermediateHandoffPeriod
   )
   {
     super(
@@ -106,14 +102,69 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
                                     ? DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT
                                     : recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait == null ? DEFAULT_RECORD_BUFFER_FULL_WAIT : recordBufferFullWait;
-    this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout
-                                      == null ? DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT : fetchSequenceNumberTimeout;
     this.fetchThreads = fetchThreads; // we handle this being null later
     this.maxRecordsPerPoll = maxRecordsPerPoll == null ? DEFAULT_MAX_RECORDS_PER_POLL : maxRecordsPerPoll;
 
     Preconditions.checkArgument(
         !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
         "resetOffsetAutomatically cannot be used if skipSequenceNumberAvailabilityCheck=true"
+    );
+  }
+
+  @JsonCreator
+  private KinesisIndexTaskTuningConfig(
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
+      @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
+      @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
+      @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
+      @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
+      @JsonProperty("maxTotalRows") Long maxTotalRows,
+      @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
+      @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
+      @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
+      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
+      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
+      @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
+      @JsonProperty("recordBufferSize") Integer recordBufferSize,
+      @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
+      @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
+      @JsonProperty("fetchThreads") Integer fetchThreads,
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
+      @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
+  )
+  {
+    this(
+        appendableIndexSpec,
+        maxRowsInMemory,
+        maxBytesInMemory,
+        skipBytesInMemoryOverheadCheck,
+        maxRowsPerSegment,
+        maxTotalRows,
+        intermediatePersistPeriod,
+        null,
+        maxPendingPersists,
+        indexSpec,
+        indexSpecForIntermediatePersists,
+        reportParseExceptions,
+        handoffConditionTimeout,
+        resetOffsetAutomatically,
+        skipSequenceNumberAvailabilityCheck,
+        recordBufferSize,
+        recordBufferOfferTimeout,
+        recordBufferFullWait,
+        fetchThreads,
+        segmentWriteOutMediumFactory,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions,
+        maxRecordsPerPoll,
+        intermediateHandoffPeriod
     );
   }
 
@@ -133,12 +184,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   public int getRecordBufferFullWait()
   {
     return recordBufferFullWait;
-  }
-
-  @JsonProperty
-  public int getFetchSequenceNumberTimeout()
-  {
-    return fetchSequenceNumberTimeout;
   }
 
   @JsonProperty
@@ -175,7 +220,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getRecordBufferSize(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
         getFetchThreads(),
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),
@@ -202,7 +246,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return recordBufferSize == that.recordBufferSize &&
            recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
            recordBufferFullWait == that.recordBufferFullWait &&
-           fetchSequenceNumberTimeout == that.fetchSequenceNumberTimeout &&
            maxRecordsPerPoll == that.maxRecordsPerPoll &&
            Objects.equals(fetchThreads, that.fetchThreads);
   }
@@ -215,7 +258,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         recordBufferSize,
         recordBufferOfferTimeout,
         recordBufferFullWait,
-        fetchSequenceNumberTimeout,
         fetchThreads,
         maxRecordsPerPoll
     );
@@ -231,7 +273,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
-           ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
@@ -241,7 +282,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", recordBufferSize=" + recordBufferSize +
            ", recordBufferOfferTimeout=" + recordBufferOfferTimeout +
            ", recordBufferFullWait=" + recordBufferFullWait +
-           ", fetchSequenceNumberTimeout=" + fetchSequenceNumberTimeout +
            ", fetchThreads=" + fetchThreads +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", logParseExceptions=" + isLogParseExceptions() +

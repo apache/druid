@@ -19,22 +19,25 @@
 
 package org.apache.druid.server;
 
-import com.google.common.base.Splitter;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.InitializationTest;
+import org.apache.druid.initialization.ServerInjectorBuilderTest;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class StatusResourceTest
 {
@@ -42,7 +45,7 @@ public class StatusResourceTest
   public void testLoadedModules()
   {
 
-    Collection<DruidModule> modules = ImmutableList.of(new InitializationTest.TestDruidModule());
+    Collection<DruidModule> modules = ImmutableList.of(new ServerInjectorBuilderTest.TestDruidModule());
     List<StatusResource.ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
@@ -62,13 +65,44 @@ public class StatusResourceTest
   }
 
   @Test
-  public void testPropertiesWithRestrictedConfigs()
+  public void testHiddenProperties() throws Exception
+  {
+    testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.properties");
+  }
+
+  @Test
+  public void testHiddenPropertiesContain() throws Exception
+  {
+    testHiddenPropertiesWithPropertyFileName("status.resource.test.runtime.hpc.properties");
+  }
+
+  private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
   {
     Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
-        "status.resource.test.runtime.properties"))));
+        fileName))));
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
-    Set<String> hiddenProperties = new HashSet<>();
-    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
-    hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
+    Set<String> lowerCasePropertyNames = returnedProperties.keySet()
+                                                           .stream()
+                                                           .map(StringUtils::toLowerCase)
+                                                           .collect(Collectors.toSet());
+
+    Assert.assertTrue(
+        "The list of unfiltered Properties is not > the list of filtered Properties?!?",
+        injector.getInstance(Properties.class).stringPropertyNames().size() > returnedProperties.size()
+    );
+
+    Set<String> hiddenProperties = new ObjectMapper().readValue(
+        returnedProperties.get("druid.server.hiddenProperties"),
+        new TypeReference<Set<String>>() {});
+
+    hiddenProperties.forEach(
+        (property) -> {
+          lowerCasePropertyNames.forEach(
+              lowerCasePropertyName -> Assert.assertFalse(lowerCasePropertyName.contains(StringUtils.toLowerCase(
+                  property)))
+          );
+        }
+    );
   }
+
 }

@@ -26,7 +26,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -35,19 +34,17 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ResultGranularTimestampComparator;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.DimFilter;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -147,41 +144,14 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       @Override
       public byte[] computeCacheKey(SearchQuery query)
       {
-        final DimFilter dimFilter = query.getDimensionsFilter();
-        final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
-        final byte[] querySpecBytes = query.getQuery().getCacheKey();
-        final byte[] granularityBytes = query.getGranularity().getCacheKey();
-
-        final List<DimensionSpec> dimensionSpecs =
-            query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
-        final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
-        int dimensionsBytesSize = 0;
-        int index = 0;
-        for (DimensionSpec dimensionSpec : dimensionSpecs) {
-          dimensionsBytes[index] = dimensionSpec.getCacheKey();
-          dimensionsBytesSize += dimensionsBytes[index].length;
-          ++index;
-        }
-
-        final byte[] sortSpecBytes = query.getSort().getCacheKey();
-
-        final ByteBuffer queryCacheKey = ByteBuffer
-            .allocate(
-                1 + 4 + granularityBytes.length + filterBytes.length +
-                querySpecBytes.length + dimensionsBytesSize + sortSpecBytes.length
-            )
-            .put(SEARCH_QUERY)
-            .put(Ints.toByteArray(query.getLimit()))
-            .put(granularityBytes)
-            .put(filterBytes)
-            .put(querySpecBytes)
-            .put(sortSpecBytes);
-
-        for (byte[] bytes : dimensionsBytes) {
-          queryCacheKey.put(bytes);
-        }
-
-        return queryCacheKey.array();
+        return new CacheKeyBuilder(SEARCH_QUERY).appendInt(query.getLimit())
+                                                .appendCacheable(query.getGranularity())
+                                                .appendCacheable(query.getFilter())
+                                                .appendCacheable(query.getQuery())
+                                                .appendCacheable(query.getSort())
+                                                .appendCacheables(query.getDimensions())
+                                                .appendCacheable(query.getVirtualColumns())
+                                                .build();
       }
 
       @Override
@@ -358,7 +328,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         return runner.run(queryPlus, responseContext);
       }
 
-      final boolean isBySegment = QueryContexts.isBySegment(query);
+      final boolean isBySegment = query.context().isBySegment();
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withLimit(config.getMaxSearchLimit())), responseContext),

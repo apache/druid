@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.Types;
 
@@ -151,7 +152,13 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
+    throw new IAE(
+        "operator '%s' in expression (%s %s %s) is not supported on type STRING.",
+        this.op,
+        this.left.stringify(),
+        this.op,
+        this.right.stringify()
+    );
   }
 
   protected abstract long evalLong(long left, long right);

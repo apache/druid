@@ -19,13 +19,13 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
@@ -40,7 +40,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
@@ -111,7 +113,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
       ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
-      String[] arrayElements = exprEval.asStringArray();
+      Object[] arrayElements = exprEval.asArray();
       if (arrayElements == null || arrayElements.length == 0) {
         // If arrayElements is empty which means complexExpr is an empty array,
         // it is technically more correct to return a TrueDimFiler here.
@@ -119,11 +121,11 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         // to create an empty array with no argument, we just return null.
         return null;
       } else if (arrayElements.length == 1) {
-        return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), arrayElements[0]);
+        return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
       } else {
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            Sets.newHashSet(arrayElements),
+            new InDimFilter.ValuesSet(Arrays.stream(arrayElements).map(Evals::asString).collect(Collectors.toList())),
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

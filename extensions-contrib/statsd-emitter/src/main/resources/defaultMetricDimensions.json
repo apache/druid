@@ -63,9 +63,15 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
+  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
+  "worker/taskSlot/total/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
+  "worker/taskSlot/used/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
+
   "taskSlot/total/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/idle/count" : { "dimensions" : ["category"], "type" : "gauge" },
-  "taskSlot/busy/count" : { "dimensions" : ["category"], "type" : "gauge" },
+  "taskSlot/used/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
@@ -139,5 +145,32 @@
   "jetty/threadPool/isLowOnThreads": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/min": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/max": { "dimensions" : [], "type" : "gauge" },
-  "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" }
+  "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" },
+
+  "coordinator/time" : { "dimensions" : [], "type" : "timer"},
+  "coordinator/global/time" : { "dimensions" : [], "type" : "timer"},
+
+  "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
+  "tier/total/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
+  "tier/replication/factor" : { "dimensions" : ["tier"], "type" : "gauge" },
+  "tier/historical/count" : { "dimensions" : ["tier"], "type" : "count" },
+
+  "compact/task/count" : { "dimensions" : [], "type" : "count" },
+  "compactTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
+  "compactTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
+
+  "segment/waitCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "interval/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "segment/skipCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/skipCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "interval/skipCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "segment/compacted/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "segment/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "interval/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
+  "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" }
 }

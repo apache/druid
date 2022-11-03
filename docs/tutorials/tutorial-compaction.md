@@ -24,40 +24,46 @@ sidebar_label: "Compacting segments"
   -->
 
 
-This tutorial demonstrates how to compact existing segments into fewer but larger segments.
+This tutorial demonstrates how to compact existing segments into fewer but larger segments in Apache Druid.
 
-Because there is some per-segment memory and processing overhead, it can sometimes be beneficial to reduce the total number of segments.
-Please check [Segment size optimization](../operations/segment-optimization.md) for details.
+There is some per-segment memory and processing overhead during query processing.
+Therefore, it can be beneficial to reduce the total number of segments.
+See [Segment size optimization](../operations/segment-optimization.md) for details.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
+## Prerequisites
+
+This tutorial assumes you have already downloaded Apache Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+If you haven't already, you should finish the following tutorials first:
+- [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
+- [Tutorial: Querying data](../tutorials/tutorial-query.md)
 
 ## Load the initial data
 
-For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create 1-3 segments per hour in the input data.
+This tutorial uses the Wikipedia edits sample data included with the Druid distribution.
+To load the initial data, you use an ingestion spec that loads batch data with segment granularity of `HOUR` and creates between one and three segments per hour.
 
-The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.json`. Let's submit that spec, which will create a datasource called `compaction-tutorial`:
+You can review the ingestion spec at `quickstart/tutorial/compaction-init-index.json`.
+Submit the spec as follows to create a datasource called `compaction-tutorial`:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/compaction-init-index.json --url http://localhost:8081
 ```
 
-> Please note that `maxRowsPerSegment` in the ingestion spec is set to 1000. This is to generate multiple segments per hour and _NOT_ recommended in production.
-> It's 5000000 by default and may need to be adjusted to make your segments optimized.
+> `maxRowsPerSegment` in the tutorial ingestion spec is set to 1000 to generate multiple segments per hour for demonstration purposes. Do not use this spec in production.
 
-After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the Druid Console.
+After the ingestion completes, navigate to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to see the new datasource in the web console.
 
 ![compaction-tutorial datasource](../assets/tutorial-compaction-01.png "compaction-tutorial datasource")
 
-Click the `51 segments` link next to "Fully Available" for the `compaction-tutorial` datasource to view information about the datasource's segments:
+In the **Availability** column for the `compaction-tutorial` datasource, click the link for **51 segments** to view segments information for the datasource.
 
-There will be 51 segments for this datasource, 1-3 segments per hour in the input data:
+The datasource comprises 51 segments, between one and three segments per hour from the input data:
 
 ![Original segments](../assets/tutorial-compaction-02.png "Original segments")
 
-Running a COUNT(*) query on this datasource shows that there are 39,244 rows:
+Run a COUNT query on the datasource to verify there are 39,244 rows:
 
 ```bash
 dsql> select count(*) from "compaction-tutorial";
@@ -71,9 +77,8 @@ Retrieved 1 row in 1.38s.
 
 ## Compact the data
 
-Let's now compact these 51 small segments.
-
-We have included a compaction task spec for this tutorial datasource at `quickstart/tutorial/compaction-keep-granularity.json`:
+Now you compact these 51 small segments and retain the segment granularity of `HOUR`.
+The Druid distribution includes a compaction task spec for this tutorial datasource at `quickstart/tutorial/compaction-keep-granularity.json`:
 
 ```json
 {
@@ -82,19 +87,21 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index_parallel",
-    "maxRowsPerSegment" : 5000000,
+    "partitionsSpec": {
+        "type": "dynamic"
+    },
     "maxRowsInMemory" : 25000
   }
 }
 ```
 
-This will compact all segments for the interval `2015-09-12/2015-09-13` in the `compaction-tutorial` datasource.
+This compacts all segments for the interval `2015-09-12/2015-09-13` in the `compaction-tutorial` datasource.
 
-The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments.
+The parameters in the `tuningConfig` control the maximum number of rows present in each compacted segment and thus affect the number of segments in the compacted set.
 
-In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 `maxRowsPerSegment` (note that the total number of rows is 39244).
+This datasource only has 39,244 rows. 39,244 is below the default limit of 5,000,000 `maxRowsPerSegment` for [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning). Therefore, Druid only creates one compacted segment per hour.
 
-Let's submit this task now:
+Submit the compaction task now:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json --url http://localhost:8081
@@ -102,17 +109,19 @@ bin/post-index-task --file quickstart/tutorial/compaction-keep-granularity.json 
 
 After the task finishes, refresh the [segments view](http://localhost:8888/unified-console.html#segments).
 
-The original 51 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segments remaining.
+Over time the Coordinator marks the original 51 segments as unused and subsequently removes them to leave only the new compacted segments.
 
-By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Druid Console, with 75 total segments:
+By default, the Coordinator does not mark segments as unused until the Coordinator has been running for at least 15 minutes.
+During that time, you may see 75 total segments comprised of the old segment set and the new compacted set:
 
 ![Compacted segments intermediate state 1](../assets/tutorial-compaction-03.png "Compacted segments intermediate state 1")
 
 ![Compacted segments intermediate state 2](../assets/tutorial-compaction-04.png "Compacted segments intermediate state 2")
 
-The new compacted segments have a more recent version than the original segments, so even when both sets of segments are shown in the Druid Console, queries will only read from the new compacted segments.
+The new compacted segments have a more recent version than the original segments.
+Even though the web console displays both sets of segments, queries only read from the new compacted segments.
 
-Let's try running a COUNT(*) on `compaction-tutorial` again, where the row count should still be 39,244:
+Run a COUNT query on `compaction-tutorial` again to verify the number of rows remains 39,244:
 
 ```bash
 dsql> select count(*) from "compaction-tutorial";
@@ -124,7 +133,7 @@ dsql> select count(*) from "compaction-tutorial";
 Retrieved 1 row in 1.30s.
 ```
 
-After the Coordinator has been running for at least 15 minutes, the [segments view](http://localhost:8888/unified-console.html#segments) should show there are 24 segments, one per hour:
+After the Coordinator has been running for at least 15 minutes, the segments view only shows the new 24 segments, one for each hour:
 
 ![Compacted segments hourly granularity 1](../assets/tutorial-compaction-05.png "Compacted segments hourly granularity 1")
 
@@ -132,9 +141,9 @@ After the Coordinator has been running for at least 15 minutes, the [segments vi
 
 ## Compact the data with new segment granularity
 
-The compaction task can also produce compacted segments with a granularity different from the granularity of the input segments.
+You can also change the segment granularity in a compaction task to produce compacted segments with a different granularity from that of the input segments.
 
-We have included a compaction task spec that will create DAY granularity segments at `quickstart/tutorial/compaction-day-granularity.json`:
+The Druid distribution includes a compaction task spec to create `DAY` granularity segments at `quickstart/tutorial/compaction-day-granularity.json`:
 
 ```json
 {
@@ -143,7 +152,9 @@ We have included a compaction task spec that will create DAY granularity segment
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index_parallel",
-    "maxRowsPerSegment" : 5000000,
+    "partitionsSpec": {
+        "type": "dynamic"
+    },
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true
   },
@@ -156,21 +167,22 @@ We have included a compaction task spec that will create DAY granularity segment
 
 Note that `segmentGranularity` is set to `DAY` in this compaction task spec.
 
-Let's submit this task now:
+Submit this task now:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/compaction-day-granularity.json --url http://localhost:8081
 ```
 
-It will take a bit of time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, there will only be one DAY granularity segment:
+It takes some time before the Coordinator marks the old input segments as unused, so you may see an intermediate state with 25 total segments. Eventually, only one DAY granularity segment remains:
 
 ![Compacted segments day granularity 1](../assets/tutorial-compaction-07.png "Compacted segments day granularity 1")
 
 ![Compacted segments day granularity 2](../assets/tutorial-compaction-08.png "Compacted segments day granularity 2")
 
+## Learn more
 
-## Further reading
+This tutorial demonstrated how to use a compaction task spec to manually compact segments and how to optionally change the segment granularity for segments.
 
-[Task documentation](../ingestion/tasks.md)
 
-[Segment optimization](../operations/segment-optimization.md)
+- For more details, see [Compaction](../data-management/compaction.md).
+- To learn about the benefits of compaction, see [Segment optimization](../operations/segment-optimization.md).

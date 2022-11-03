@@ -32,6 +32,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
+import java.util.Collections;
 import java.util.List;
 
 public class DruidViewMacro implements TableMacro
@@ -56,8 +57,13 @@ public class DruidViewMacro implements TableMacro
   public TranslatableTable apply(final List<Object> arguments)
   {
     final RelDataType rowType;
-    try (final DruidPlanner planner = plannerFactory.createPlanner(viewSql, null)) {
-      rowType = planner.plan().rowType();
+    try (final DruidPlanner planner =
+             plannerFactory.createPlanner(
+                 ViewSqlEngine.INSTANCE,
+                 viewSql,
+                 Collections.emptyMap())) {
+      planner.validate();
+      rowType = planner.prepare().getValidatedRowType();
     }
     catch (Exception e) {
       throw new RuntimeException(e);

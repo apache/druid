@@ -28,8 +28,11 @@ always_run_jobs = ['license checks', '(openjdk8) packaging check', '(openjdk11) 
 # of CI can be skipped. however, jobs which are always run will still be run even if only these files are changed
 ignore_prefixes = ['.github', '.idea', '.asf.yaml', '.backportrc.json', '.codecov.yml', '.dockerignore', '.gitignore',
                    '.lgtm.yml', 'CONTRIBUTING.md', 'setup-hooks.sh', 'upload.sh', 'dev', 'distribution/docker',
-                   'distribution/asf-release-process-guide.md', '.travis.yml', 'check_test_suite.py',
-                   'check_test_suite_test.py', 'owasp-dependency-check-suppressions.xml']
+                   'distribution/asf-release-process-guide.md', '.travis.yml',
+                   'owasp-dependency-check-suppressions.xml', 'licenses']
+
+script_prefixes = ['check_test_suite.py', 'check_test_suite_test.py']
+script_job = ['script checks']
 
 # these files are docs changes
 # if changes are limited to this set then we can skip web-console and java
@@ -43,6 +46,7 @@ docs_jobs = ['docs']
 web_console_prefixes = ['web-console/']
 # travis web-console job name
 web_console_jobs = ['web console', 'web console end-to-end test']
+web_console_still_run_for_java_jobs = ['web console end-to-end test']
 
 
 def check_ignore(file):
@@ -51,6 +55,11 @@ def check_ignore(file):
         print("found ignorable file change: {}".format(file))
     return is_always_ignore
 
+def check_testable_script(file):
+    is_script = True in (file.startswith(prefix) for prefix in script_prefixes)
+    if is_script:
+        print("found script file change: {}".format(file))
+    return is_script
 
 def check_docs(file):
     is_docs = True in (file.startswith(prefix) for prefix in docs_prefixes)
@@ -85,6 +94,8 @@ def check_should_run_suite(suite, diff_files):
     any_console = False
     all_console = True
     any_java = False
+    any_testable_script = False
+    all_testable_script = True
 
     # go over all of the files in the diff and collect some information about the diff contents, we'll use this later
     # to decide whether or not to run the suite
@@ -96,8 +107,11 @@ def check_should_run_suite(suite, diff_files):
         all_docs = all_docs and is_docs
         is_console = check_console(f)
         any_console = any_console or is_console
-        all_console = any_console and is_console
-        any_java = any_java or (not is_ignore and not is_docs and not is_console)
+        all_console = all_console and is_console
+        is_script = check_testable_script(f)
+        any_testable_script = any_testable_script or is_script
+        all_testable_script = all_testable_script and is_script
+        any_java = any_java or (not is_ignore and not is_docs and not is_console and not is_script)
 
     # if everything is ignorable, we can skip this suite
     if all_ignore:
@@ -108,11 +122,17 @@ def check_should_run_suite(suite, diff_files):
     # if all of the changes are docs paths, but the current suite is not a docs job, we can skip
     if all_docs:
         return False
+    if suite in web_console_still_run_for_java_jobs:
+        return any_console or any_java
     # if the test suite is a web console job, return true if any of the changes are web console files
     if suite in web_console_jobs:
         return any_console
     # if all of the changes are web console paths, but the current suite is not a web console job, we can skip
     if all_console:
+        return False
+    if suite in script_job:
+        return any_testable_script
+    if all_testable_script:
         return False
 
     # if all of the files belong to known non-java groups, we can also skip java

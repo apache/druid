@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexNode;
@@ -33,12 +32,11 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * A Calcite {@code RexExecutor} that reduces Calcite expressions by evaluating them using Druid's own built-in
@@ -110,12 +108,11 @@ public class DruidRexExecutor implements RexExecutor
             throw new UnsupportedSQLQueryException("Illegal TIMESTAMP constant: %s", constExp);
           }
 
-          literal = rexBuilder.makeTimestampLiteral(
-              Calcites.jodaToCalciteTimestampString(
-                  DateTimes.utc(exprResult.asLong()),
-                  plannerContext.getTimeZone()
-              ),
-              RelDataType.PRECISION_NOT_SPECIFIED
+          literal = Calcites.jodaToCalciteTimestampLiteral(
+              rexBuilder,
+              DateTimes.utc(exprResult.asLong()),
+              plannerContext.getTimeZone(),
+              constExp.getType().getPrecision()
           );
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
@@ -133,7 +130,7 @@ public class DruidRexExecutor implements RexExecutor
               double exprResultDouble = exprResult.asDouble();
               if (Double.isNaN(exprResultDouble) || Double.isInfinite(exprResultDouble)) {
                 String expression = druidExpression.getExpression();
-                throw new UnsupportedSQLQueryException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as bigint ('cast(%s as bigint)') or char ('cast(%s as char)') or change the expression itself",
+                throw new UnsupportedSQLQueryException("'%s' evaluates to '%s' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(%s as BIGINT)') or VARCHAR ('CAST(%s as VARCHAR)') or change the expression itself",
                     expression,
                     Double.toString(exprResultDouble),
                     expression,
@@ -145,32 +142,44 @@ public class DruidRexExecutor implements RexExecutor
           }
         } else if (sqlTypeName == SqlTypeName.ARRAY) {
           assert exprResult.isArray();
-          if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
+          final Object[] array = exprResult.asArray();
+          if (array == null) {
+            literal = rexBuilder.makeNullLiteral(constExp.getType());
+          } else if (SqlTypeName.NUMERIC_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
             if (exprResult.type().getElementType().is(ExprType.LONG)) {
-              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asLongArray())
-                                                              .map(BigDecimal::valueOf)
-                                                              .collect(Collectors.toList());
+              List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
+              for (Object val : array) {
+                final Number longVal = (Number) val;
+                if (longVal == null) {
+                  resultAsBigDecimalList.add(null);
+                } else {
+                  resultAsBigDecimalList.add(BigDecimal.valueOf(longVal.longValue()));
+                }
+              }
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             } else {
-              List<BigDecimal> resultAsBigDecimalList = Arrays.stream(exprResult.asDoubleArray()).map(
-                  doubleVal -> {
-                    if (Double.isNaN(doubleVal) || Double.isInfinite(doubleVal)) {
-                      String expression = druidExpression.getExpression();
-                      throw new UnsupportedSQLQueryException(
-                          "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the array to bigint or char or change the expression itself",
-                          expression,
-                          Double.toString(doubleVal)
-                      );
-                    }
-                    return BigDecimal.valueOf(doubleVal);
-                  }
-              ).collect(Collectors.toList());
+              List<BigDecimal> resultAsBigDecimalList = new ArrayList<>(array.length);
+              for (Object val : array) {
+                final Number doubleVal = (Number) val;
+                if (doubleVal == null) {
+                  resultAsBigDecimalList.add(null);
+                } else if (Double.isNaN(doubleVal.doubleValue()) || Double.isInfinite(doubleVal.doubleValue())) {
+                  String expression = druidExpression.getExpression();
+                  throw new UnsupportedSQLQueryException(
+                      "'%s' contains an element that evaluates to '%s' which is not supported in SQL. You can either cast the element in the ARRAY to BIGINT or VARCHAR or change the expression itself",
+                      expression,
+                      Double.toString(doubleVal.doubleValue())
+                  );
+                } else {
+                  resultAsBigDecimalList.add(BigDecimal.valueOf(doubleVal.doubleValue()));
+                }
+              }
               literal = rexBuilder.makeLiteral(resultAsBigDecimalList, constExp.getType(), true);
             }
           } else {
-            literal = rexBuilder.makeLiteral(Arrays.asList(exprResult.asArray()), constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(Arrays.asList(array), constExp.getType(), true);
           }
-        } else if (sqlTypeName == SqlTypeName.OTHER && constExp.getType() instanceof RowSignatures.ComplexSqlType) {
+        } else if (sqlTypeName == SqlTypeName.OTHER) {
           // complex constant is not reducible, so just leave it as an expression
           literal = constExp;
         } else {

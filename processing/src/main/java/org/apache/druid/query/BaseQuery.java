@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -38,7 +40,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 /**
  *
@@ -58,7 +59,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
   private final boolean descending;
-  private final Map<String, Object> context;
+  private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
   private final Granularity granularity;
@@ -86,7 +87,7 @@ public abstract class BaseQuery<T> implements Query<T>
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
     this.dataSource = dataSource;
-    this.context = context;
+    this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
     this.descending = descending;
     this.granularity = granularity;
@@ -101,6 +102,7 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @JsonProperty
   @Override
+  @JsonInclude(Include.NON_DEFAULT)
   public boolean isDescending()
   {
     return descending;
@@ -165,28 +167,16 @@ public abstract class BaseQuery<T> implements Query<T>
 
   @Override
   @JsonProperty
+  @JsonInclude(Include.NON_DEFAULT)
   public Map<String, Object> getContext()
   {
+    return context.asMap();
+  }
+
+  @Override
+  public QueryContext context()
+  {
     return context;
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    return context == null ? null : (ContextType) context.get(key);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    ContextType retVal = getContextValue(key);
-    return retVal == null ? defaultValue : retVal;
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
-  {
-    return QueryContexts.parseBoolean(this, key, defaultValue);
   }
 
   /**
@@ -204,13 +194,7 @@ public abstract class BaseQuery<T> implements Query<T>
       final Map<String, Object> overrides
   )
   {
-    Map<String, Object> overridden = new TreeMap<>();
-    if (context != null) {
-      overridden.putAll(context);
-    }
-    overridden.putAll(overrides);
-
-    return overridden;
+    return QueryContexts.override(context, overrides);
   }
 
   /**
@@ -230,7 +214,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return (String) getContextValue(QUERY_ID);
+    return context().getString(QUERY_ID);
   }
 
   @Override
@@ -243,20 +227,13 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getSubQueryId()
   {
-    return (String) getContextValue(SUB_QUERY_ID);
+    return context().getString(SUB_QUERY_ID);
   }
 
   @Override
   public Query<T> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
-  }
-
-  @Nullable
-  @Override
-  public String getSqlQueryId()
-  {
-    return (String) getContextValue(SQL_QUERY_ID);
   }
 
   @Override

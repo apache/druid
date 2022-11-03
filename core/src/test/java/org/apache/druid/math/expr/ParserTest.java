@@ -29,12 +29,15 @@ import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -67,14 +70,14 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(expected, actual);
   }
 
-
   @Test
   public void testParseConstants()
   {
     validateLiteral("null", null, null);
     validateLiteral("'hello'", ExpressionType.STRING, "hello");
     validateLiteral("'hello \\uD83E\\uDD18'", ExpressionType.STRING, "hello \uD83E\uDD18");
-    validateLiteral("1", ExpressionType.LONG, 1L);
+    validateLiteral("1", ExpressionType.LONG, BigInteger.valueOf(1L));
+    validateLiteral(String.valueOf(Long.MAX_VALUE), ExpressionType.LONG, BigInteger.valueOf(Long.MAX_VALUE));
     validateLiteral("1.", ExpressionType.DOUBLE, 1.0, false);
     validateLiteral("1.234", ExpressionType.DOUBLE, 1.234);
     validateLiteral("1e10", ExpressionType.DOUBLE, 1.0E10, false);
@@ -94,6 +97,48 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testParseOutOfRangeLong()
+  {
+    // Two greater than Long.MAX_VALUE
+    final String s = "9223372036854775809";
+
+    // When not flattening, the "out of long range" error happens during eval.
+    final Expr expr = Parser.parse(s, ExprMacroTable.nil(), false);
+    final ArithmeticException e = Assert.assertThrows(
+        ArithmeticException.class,
+        () -> expr.eval(InputBindings.nilBindings())
+    );
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("BigInteger out of long range"));
+
+    // When flattening, the "out of long range" error happens during parse, not eval.
+    final ArithmeticException e2 = Assert.assertThrows(
+        ArithmeticException.class,
+        () -> Parser.parse(s, ExprMacroTable.nil(), true)
+    );
+    MatcherAssert.assertThat(e2.getMessage(), CoreMatchers.containsString("BigInteger out of long range"));
+  }
+
+  @Test
+  public void testFlattenBinaryOpConstantConstant()
+  {
+    final Expr expr = Parser.parse("(2 + -3)", ExprMacroTable.nil(), true);
+    Assert.assertTrue(expr.isLiteral());
+    Assert.assertEquals(-1L, expr.getLiteralValue());
+  }
+
+  @Test
+  public void testFlattenBinaryOpIdentifierConstant()
+  {
+    final Expr expr = Parser.parse("(s + -3)", ExprMacroTable.nil(), true);
+    Assert.assertFalse(expr.isLiteral());
+    MatcherAssert.assertThat(expr, CoreMatchers.instanceOf(BinPlusExpr.class));
+
+    final Expr right = ((BinPlusExpr) expr).right;
+    Assert.assertTrue(right.isLiteral());
+    Assert.assertEquals(-3L, right.getLiteralValue());
+  }
+
+  @Test
   public void testSimpleUnaryOps1()
   {
     String actual = Parser.parse("-x", ExprMacroTable.nil()).toString();
@@ -108,6 +153,7 @@ public class ParserTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleUnaryOps2()
   {
+    validateFlatten(String.valueOf(Long.MIN_VALUE), String.valueOf(Long.MIN_VALUE), String.valueOf(Long.MIN_VALUE));
     validateFlatten("-1", "-1", "-1");
     validateFlatten("--1", "--1", "1");
     validateFlatten("-1+2", "(+ -1 2)", "1");
@@ -309,24 +355,29 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testLiteralExplicitTypedArrays()
   {
     ExpressionProcessing.initializeForTests(true);
-    validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
-    validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
-    validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // mixed type tests
-    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    try {
+      validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
+      validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
+      validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // explicit typed string arrays should accept any literal and convert
-    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
-    validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
-    validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+      // mixed type tests
+      validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+      validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
-    // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
-    // be defined...
-    validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
-    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-    ExpressionProcessing.initializeForTests(null);
+      // explicit typed string arrays should accept any literal and convert
+      validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+      validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
+      validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+
+      // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
+      // be defined...
+      validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
+      validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
@@ -474,8 +525,8 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testApplyFunctions()
   {
     validateParser(
-        "map(() -> 1, x)",
-        "(map ([] -> 1), [x])",
+        "map((x) -> 1, x)",
+        "(map ([x] -> 1), [x])",
         ImmutableList.of("x"),
         ImmutableSet.of(),
         ImmutableSet.of("x")
@@ -730,7 +781,11 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(type, parsed.getOutputType(emptyBinding));
     Assert.assertEquals(type, parsedFlat.getOutputType(emptyBinding));
     Assert.assertEquals(expected, parsed.getLiteralValue());
-    Assert.assertEquals(expected, parsedFlat.getLiteralValue());
+    Assert.assertEquals(
+        // Special case comparison: literal integers start life as BigIntegerExpr; converted to LongExpr later.
+        expected instanceof BigInteger ? ((BigInteger) expected).longValueExact() : expected,
+        parsedFlat.getLiteralValue()
+    );
     if (roundTrip) {
       Assert.assertEquals(expr, parsed.stringify());
       Assert.assertEquals(expr, parsedFlat.stringify());

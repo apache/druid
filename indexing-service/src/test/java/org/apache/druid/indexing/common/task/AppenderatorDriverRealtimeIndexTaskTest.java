@@ -31,7 +31,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -1565,7 +1565,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -1654,10 +1655,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         new NoopChatHandlerProvider(),
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 

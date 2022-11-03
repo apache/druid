@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.37
+version: 1.12.317
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -596,6 +596,16 @@ libraries:
 
 ---
 
+name: IPAddress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.3.4
+libraries:
+  - com.github.seancfoley: ipaddress
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -658,13 +668,16 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.1
+version: 3.12.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
   - commons-lang3: |
       Apache Commons Lang
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2001-2021 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -709,23 +722,17 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3
+version: 1.10.0
 libraries:
   - org.apache.commons: commons-text
 notices:
   - commons-text: |
       Apache Commons Text
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2014-2020 The Apache Software Foundation
 
----
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
-name: Apache Commons Text
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.4
-libraries:
-  - org.apache.commons: commons-text
 ---
 
 name: Airline
@@ -793,7 +800,7 @@ name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.6
+version: 1.7
 libraries:
   - com.nimbusds: lang-tag
 
@@ -864,7 +871,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java
 
@@ -874,7 +881,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-api
 
@@ -884,9 +891,19 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-extended
+
+---
+
+name: kubernetes fabric java client
+license_category: binary
+module: extensions-contrib/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 5.12.2
+libraries:
+  - io.fabric8: kubernetes-client
 
 ---
 
@@ -934,7 +951,7 @@ name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.4
+version: 1.8.5
 libraries:
   - io.gsonfire: gson-fire
 
@@ -947,6 +964,16 @@ license_name: Apache License version 2.0
 version: 1.6.2
 libraries:
   - io.swagger: swagger-annotations
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.8.6
+libraries:
+  - com.google.code.gson: gson
 
 ---
 
@@ -964,7 +991,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.2
+version: 0.7.3
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1004,7 +1031,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1652,7 +1679,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.3.0
+version: 5.3.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -1661,16 +1688,16 @@ libraries:
 notices:
   - curator-client: |
       Curator Client
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-framework: |
       Curator Framework
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-x-discovery: |
       Curator Service Discovery
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
 
 ---
 
@@ -1827,7 +1854,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.17.1
+version: 2.18.0
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -2012,7 +2039,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.40.v20210413
+version: 9.4.48.v20220622
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2147,16 +2174,6 @@ notice: |
   Permission to use, copy, modify and distribute UnixCrypt
   for non-commercial or commercial purposes and without fee is
   granted provided that the copyright notice appears in all copies.
-
----
-
-name: JVM Attach API
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.5
-libraries:
-  - org.gridkit.lab: jvm-attach-api
 
 ---
 
@@ -2353,7 +2370,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.8.0
 libraries:
   - org.lz4: lz4-java
 
@@ -3781,7 +3798,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.1.0
+version: 3.3.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3790,7 +3807,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3801,7 +3818,7 @@ name: snappy-java
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
-version: 1.1.2.6
+version: 1.1.8.4
 libraries:
   - org.xerial.snappy: snappy-java
 
@@ -3872,9 +3889,19 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.8.9
 libraries:
   - com.google.code.gson: gson
+
+---
+
+name: j2objc
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -3954,7 +3981,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.3.3-1
+version: 1.5.2-3
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -3989,7 +4016,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -4042,7 +4069,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 7.1
+version: 9.3
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -4142,7 +4169,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4154,7 +4181,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4166,7 +4193,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4178,7 +4205,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4557,7 +4584,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.2
+version: 1.7.6
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4690,13 +4717,13 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.1.0
+version: 3.3.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -4982,7 +5009,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.7.1
+version: 1.1.8.4
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5018,7 +5045,7 @@ libraries:
 name: DNS Java
 license_category: binary
 module: java-core
-license_name: BSD 2-Clause license
+license_name: BSD-2-Clause License
 version: 2.1.7
 libraries:
   - dnsjava: dnsjava
@@ -5307,7 +5334,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.21.4
+version: 0.26.1
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5497,7 +5524,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 2.3.3
+version: 2.12.1
 license_file_path: licenses/bin/d3-array.BSD3
 
 ---
@@ -5507,7 +5534,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.12
+version: 2.1.0
 license_file_path: licenses/bin/d3-axis.BSD3
 
 ---
@@ -5517,7 +5544,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-color.BSD3
 
 ---
@@ -5537,7 +5564,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.3.2
+version: 2.0.1
 license_file_path: licenses/bin/d3-interpolate.BSD3
 
 ---
@@ -5547,7 +5574,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 3.2.0
+version: 3.3.0
 license_file_path: licenses/bin/d3-scale.BSD3
 
 ---
@@ -5557,7 +5584,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-selection.BSD3
 
 ---
@@ -5656,7 +5683,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.10
+version: 0.16.1
 
 ---
 
@@ -5725,7 +5752,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.14.7
+version: 1.15.1
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5837,6 +5864,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 3.3.0
 license_file_path: licenses/bin/import-fresh.MIT
+
+---
+
+name: "internmap"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 1.0.1
+license_file_path: licenses/bin/internmap.ISC
 
 ---
 
@@ -6526,4 +6563,14 @@ license_name: ISC License
 copyright: Eemeli Aro
 version: 1.10.2
 license_file_path: licenses/bin/yaml.ISC
+
+---
+
+name: "zustand"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Paul Henschel
+version: 3.7.2
+license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

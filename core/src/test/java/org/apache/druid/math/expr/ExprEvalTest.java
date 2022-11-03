@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -131,6 +132,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public void testLongArraySerde()
   {
     assertExpr(0, new Long[]{1L, 2L, 3L});
+    assertExpr(0, new long[]{1L, 2L, 3L});
     assertExpr(1234, new Long[]{1L, 2L, null, 3L});
     assertExpr(1234, new Long[]{});
   }
@@ -165,6 +167,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public void testDoubleArraySerde()
   {
     assertExpr(0, new Double[]{1.1, 2.2, 3.3});
+    assertExpr(0, new double[]{1.1, 2.2, 3.3});
     assertExpr(1234, new Double[]{1.1, 2.2, null, 3.3});
     assertExpr(1234, new Double[]{});
   }
@@ -334,12 +337,12 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     ExprEval someStringArray = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
     Assert.assertArrayEquals(
-        new Long[]{1L, 2L, null, null, 3L},
-        someStringArray.asLongArray()
+        new Object[]{1L, 2L, NullHandling.defaultLongValue(), NullHandling.defaultLongValue(), 3L},
+        someStringArray.castTo(ExpressionType.LONG_ARRAY).asArray()
     );
     Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, null, null, 3.3},
-        someStringArray.asDoubleArray()
+        new Object[]{1.0, 2.0, NullHandling.defaultDoubleValue(), NullHandling.defaultDoubleValue(), 3.3},
+        someStringArray.castTo(ExpressionType.DOUBLE_ARRAY).asArray()
     );
   }
 
@@ -368,13 +371,27 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     ExprEval.serialize(buffer, position, expected.type(), expected, maxSizeBytes);
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
+          "deserialized value with buffer references allowed",
           expected.asArray(),
-          ExprEval.deserialize(buffer, position, expected.type()).asArray()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).asArray()
+      );
+
+      Assert.assertArrayEquals(
+          "deserialized value with buffer references not allowed",
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).asArray()
       );
     } else {
       Assert.assertEquals(
+          "deserialized value with buffer references allowed",
           expected.value(),
-          ExprEval.deserialize(buffer, position, expected.type()).value()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).value()
+      );
+
+      Assert.assertEquals(
+          "deserialized value with buffer references not allowed",
+          expected.value(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).value()
       );
     }
   }

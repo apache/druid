@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
@@ -27,7 +28,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -37,22 +40,31 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopSysMonitor;
+import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.Properties;
+import java.util.Set;
 
 public class MetricsModuleTest
 {
+  private static final String CPU_ARCH = System.getProperty("os.arch");
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -153,6 +165,55 @@ public class MetricsModuleTest
     expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage("Unknown monitor scheduler[UnknownScheduler]");
     createInjector(properties).getInstance(MonitorScheduler.class);
+  }
+
+  @Test
+  public void testGetSysMonitorViaInjector()
+  {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
+    final NodeRole nodeRole = NodeRole.PEON;
+    final Injector injector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+        },
+        binder -> {
+          binder.bind(
+              new TypeLiteral<Set<NodeRole>>()
+              {
+              }).annotatedWith(Self.class).toInstance(ImmutableSet.of(nodeRole));
+        }
+    );
+    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dimensionIdHolder);
+    final MetricsModule metricsModule = new MetricsModule();
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertTrue(sysMonitor instanceof NoopSysMonitor);
+    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+  }
+
+  @Test
+  public void testGetSysMonitorWhenNull()
+  {
+    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
+    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+
+    final Injector injector = createInjector(new Properties());
+    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dimensionIdHolder);
+    final MetricsModule metricsModule = new MetricsModule();
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertFalse(sysMonitor instanceof NoopSysMonitor);
+    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
   private static Injector createInjector(Properties properties)

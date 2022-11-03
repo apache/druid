@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -41,6 +41,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayDoubleGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColumnSelectorStrategy;
@@ -75,6 +76,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -90,13 +92,13 @@ import java.util.stream.Stream;
  * This code runs on data servers, like Historicals.
  *
  * Used by
- * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter)}.
+ * {@link GroupByStrategyV2#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
  */
 public class GroupByQueryEngineV2
 {
-  private static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
+  public static final GroupByStrategyFactory STRATEGY_FACTORY = new GroupByStrategyFactory();
 
-  private static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
+  public static GroupByColumnSelectorPlus[] createGroupBySelectorPlus(
       ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] baseSelectorPlus,
       int dimensionStart
   )
@@ -119,7 +121,9 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig
+      final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     if (storageAdapter == null) {
@@ -137,7 +141,7 @@ public class GroupByQueryEngineV2
 
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-          query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
+          query.context().getString(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP)
       );
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null
@@ -147,7 +151,7 @@ public class GroupByQueryEngineV2
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-      final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+      final boolean doVectorize = query.context().getVectorize().shouldVectorize(
           VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
 
@@ -161,7 +165,9 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             filter,
             interval,
-            querySpecificConfig
+            querySpecificConfig,
+            processingConfig,
+            groupByQueryMetrics
         );
       } else {
         result = processNonVectorized(
@@ -170,8 +176,10 @@ public class GroupByQueryEngineV2
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
+            processingConfig,
             filter,
-            interval
+            interval,
+            groupByQueryMetrics
         );
       }
 
@@ -189,8 +197,10 @@ public class GroupByQueryEngineV2
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
+      final DruidProcessingConfig processingConfig,
       @Nullable final Filter filter,
-      final Interval interval
+      final Interval interval,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
@@ -199,7 +209,7 @@ public class GroupByQueryEngineV2
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        groupByQueryMetrics
     );
 
     return cursors.flatMap(
@@ -232,6 +242,7 @@ public class GroupByQueryEngineV2
                   return new ArrayAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -243,6 +254,7 @@ public class GroupByQueryEngineV2
                   return new HashAggregateIterator(
                       query,
                       querySpecificConfig,
+                      processingConfig,
                       cursor,
                       processingBuffer,
                       fudgeTimestamp,
@@ -446,7 +458,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
+  public abstract static class GroupByEngineIterator<KeyType> implements Iterator<ResultRow>, Closeable
   {
     protected final GroupByQuery query;
     protected final GroupByQueryConfig querySpecificConfig;
@@ -460,11 +472,12 @@ public class GroupByQueryEngineV2
     protected CloseableGrouperIterator<KeyType, ResultRow> delegate = null;
     protected final boolean allSingleValueDims;
     protected final boolean allowMultiValueGrouping;
-
+    protected final long maxSelectorFootprint;
 
     public GroupByEngineIterator(
         final GroupByQuery query,
         final GroupByQueryConfig querySpecificConfig,
+        final DruidProcessingConfig processingConfig,
         final Cursor cursor,
         final ByteBuffer buffer,
         @Nullable final DateTime fudgeTimestamp,
@@ -474,6 +487,7 @@ public class GroupByQueryEngineV2
     {
       this.query = query;
       this.querySpecificConfig = querySpecificConfig;
+      this.maxSelectorFootprint = querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig);
       this.cursor = cursor;
       this.buffer = buffer;
       this.keySerde = new GroupByEngineKeySerde(dims, query);
@@ -482,7 +496,7 @@ public class GroupByQueryEngineV2
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
       this.allSingleValueDims = allSingleValueDims;
-      this.allowMultiValueGrouping = query.getContextBoolean(
+      this.allowMultiValueGrouping = query.context().getBoolean(
           GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
           true
       );
@@ -610,13 +624,13 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
+  public static class HashAggregateIterator extends GroupByEngineIterator<ByteBuffer>
   {
     private static final Logger LOGGER = new Logger(HashAggregateIterator.class);
 
     private final int[] stack;
     private final Object[] valuess;
-    private final ByteBuffer keyBuffer;
+    protected final ByteBuffer keyBuffer;
 
     private int stackPointer = Integer.MIN_VALUE;
     private boolean currentRowWasPartiallyAggregated = false;
@@ -627,6 +641,7 @@ public class GroupByQueryEngineV2
     public HashAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -634,7 +649,7 @@ public class GroupByQueryEngineV2
         boolean allSingleValueDims
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
 
       final int dimCount = query.getDimensions().size();
       stack = new int[dimCount];
@@ -742,7 +757,7 @@ public class GroupByQueryEngineV2
 
         // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
         // us to go past the limit.)
-        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        if (selectorInternalFootprint > maxSelectorFootprint) {
           return;
         }
       }
@@ -831,7 +846,7 @@ public class GroupByQueryEngineV2
 
         // Check selectorInternalFootprint after advancing the cursor. (We reset after the first row that causes
         // us to go past the limit.)
-        if (selectorInternalFootprint > querySpecificConfig.getMaxSelectorDictionarySize()) {
+        if (selectorInternalFootprint > maxSelectorFootprint) {
           return;
         }
       }
@@ -851,7 +866,7 @@ public class GroupByQueryEngineV2
     }
   }
 
-  private static class ArrayAggregateIterator extends GroupByEngineIterator<Integer>
+  private static class ArrayAggregateIterator extends GroupByEngineIterator<IntKey>
   {
     private final int cardinality;
 
@@ -865,6 +880,7 @@ public class GroupByQueryEngineV2
     public ArrayAggregateIterator(
         GroupByQuery query,
         GroupByQueryConfig querySpecificConfig,
+        DruidProcessingConfig processingConfig,
         Cursor cursor,
         ByteBuffer buffer,
         @Nullable DateTime fudgeTimestamp,
@@ -873,7 +889,7 @@ public class GroupByQueryEngineV2
         int cardinality
     )
     {
-      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, processingConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
       this.cardinality = cardinality;
       if (dims.length == 1) {
         this.dim = dims[0];
@@ -895,13 +911,13 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void aggregateSingleValueDims(Grouper<Integer> grouper)
+    protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
       aggregateSingleValueDims((IntGrouper) grouper);
     }
 
     @Override
-    protected void aggregateMultiValueDims(Grouper<Integer> grouper)
+    protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
       aggregateMultiValueDims((IntGrouper) grouper);
     }
@@ -971,11 +987,12 @@ public class GroupByQueryEngineV2
     }
 
     @Override
-    protected void putToRow(Integer key, ResultRow resultRow)
+    protected void putToRow(IntKey key, ResultRow resultRow)
     {
+      final int intKey = key.intValue();
       if (dim != null) {
-        if (key != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
-          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(key));
+        if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
+          resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
@@ -1020,17 +1037,26 @@ public class GroupByQueryEngineV2
     }
 
     @Override
+    public ByteBuffer createKey()
+    {
+      return ByteBuffer.allocate(keySize);
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(ByteBuffer key)
     {
       return key;
     }
 
     @Override
-    public ByteBuffer fromByteBuffer(ByteBuffer buffer, int position)
+    public void readFromByteBuffer(ByteBuffer dstBuffer, ByteBuffer srcBuffer, int position)
     {
-      final ByteBuffer dup = buffer.duplicate();
-      dup.position(position).limit(position + keySize);
-      return dup.slice();
+      dstBuffer.limit(keySize);
+      dstBuffer.position(0);
+
+      for (int i = 0; i < keySize; i++) {
+        dstBuffer.put(i, srcBuffer.get(position + i));
+      }
     }
 
     @Override

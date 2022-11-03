@@ -18,6 +18,7 @@
 # global dictionary is at the start, file overrides afterwards
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
+1M
 32-bit
 500MiB
 64-bit
@@ -38,6 +39,7 @@ BCP
 Base64
 Base64-encoded
 ByteBuffer
+bottlenecked
 concat
 CIDR
 CORS
@@ -55,10 +57,12 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
 DogStatsD
+DOCTYPE
 Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
@@ -94,6 +98,7 @@ HDFSFirehose
 HLL
 HashSet
 Homebrew
+html
 HyperLogLog
 IAM
 IANA
@@ -112,6 +117,8 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+ioConfig
+Istio
 JBOD
 JDBC
 JDK
@@ -123,6 +130,7 @@ JRE
 JS
 JSON
 JsonPath
+JSONPath
 JSSE
 JVM
 JVMs
@@ -150,6 +158,7 @@ MariaDB
 MiddleManager
 MiddleManagers
 Montréal
+MSQ
 Murmur3
 MVCC
 NFS
@@ -174,6 +183,7 @@ S3
 SDK
 SIGAR
 SPNEGO
+Splunk
 SqlInputSource
 SQLServer
 SSD
@@ -207,6 +217,8 @@ aggregator
 aggregators
 ambari
 analytics
+arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -223,13 +235,16 @@ backfills
 backpressure
 base64
 big-endian
+bigint
 blobstore
 boolean
 breakpoint
 broadcasted
+bucketSize
 checksums
 classpath
 clickstream
+clientConfig
 codebase
 codec
 colocated
@@ -258,13 +273,16 @@ dequeued
 deserialization
 deserialize
 deserialized
+deserializes
 downtimes
 druid
 druid–kubernetes-extensions
 e.g.
 encodings
 endian
+endpointConfig
 enum
+expectedType
 expr
 failover
 featureSpec
@@ -283,6 +301,7 @@ gzipped
 hadoop
 hasher
 hashtable
+high-QPS
 historicals
 hostname
 hostnames
@@ -291,19 +310,30 @@ https
 idempotency
 i.e.
 influxdb
+ingestions
 ingestionSpec
 injective
 inlined
 inSubQueryThreshold
 interruptible
+isAllowList
 jackson-jq
 javadoc
 joinable
+jsonCompression
+json_keys
+json_object
+json_paths
+json_query
+json_value
+karlkfi
 kerberos
 keystore
 keytool
 keytab
 kubernetes
+kubexit
+k8s
 laning
 lifecycle
 localhost
@@ -314,6 +344,7 @@ lookback
 lookups
 mapreduce
 masse
+maxBytes
 maxNumericInFilters
 maxNumFiles
 maxNumSegments
@@ -322,6 +353,8 @@ memcached
 mergeable
 metadata
 millis
+microbatch
+microbatches
 misconfiguration
 misconfigured
 mostAvailableSize
@@ -333,18 +366,22 @@ namespaced
 namespaces
 natively
 netflow
+nonfinalized
 non-nullable
 noop
 numerics
 numShards
 parameterized
+parse_json
 parseable
 partitioner
 partitionFunction
 partitionsSpec
+pathParts
 performant
 plaintext
 pluggable
+podSpec
 postgres
 postgresql
 pre-aggregated
@@ -355,6 +392,7 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-existing
 pre-filtered
 pre-filtering
 pre-generated
@@ -372,9 +410,12 @@ prepopulated
 preprocessing
 priori
 procs
+processFromRaw
 programmatically
 proto
 proxied
+proxyConfig
+QPS
 quantile
 quantiles
 queryable
@@ -401,16 +442,21 @@ searchable
 secondaryPartitionPruning
 seekable-stream
 servlet
+setProcessingThreadNames
+sigterm
 simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
+Smoosh
+smoosh
 smooshed
 splittable
 ssl
 sslmode
 stdout
 storages
+stringDictionaryEncoding
 stringified
 subarray
 subnet
@@ -422,12 +468,15 @@ subtask
 subtasks
 supervisorTaskId
 symlink
+syntaxes
 tiering
 timeseries
 timestamp
 timestamps
+to_json_string
 tradeoffs
 transformSpec
+try_parse_json
 tsv
 ulimit
 unannounce
@@ -441,11 +490,17 @@ unioned
 unmergeable
 unmerged
 UNNEST
+unnest
+unnested
+unnesting
+unnests
 unparseable
 unparsed
 unsetting
 untrusted
 useFilterCNF
+useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris
@@ -455,11 +510,14 @@ v1
 v2
 vCPUs
 validator
+varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
 versioning
+virtualColumns
 w.r.t.
+walkthrough
 whitelist
 whitelisted
 whitespace
@@ -490,11 +548,15 @@ ISOYEAR
 IS_NULLABLE
 JDBC_TYPE
 MIDDLE_MANAGER
+MILLIS_TO_TIMESTAMP
 NULLable
 NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
+POSIX
+P1M
+P1Y
 PT1M
 PT5M
 SCHEMA_NAME
@@ -522,12 +584,14 @@ druid.server.tier
 druid.sql.planner.maxSemiJoinRowsInMemory
 druid.sql.planner.sqlTimeZone
 druid.sql.planner.useApproximateCountDistinct
-druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useApproximateTopN
+druid.sql.planner.useGroupingSetForExactDistinct
+druid.sql.planner.useNativeQueryExplain
 error_msg
 exprs
 group_id
 interval_expr
+is_active
 is_available
 is_leader
 is_overshadowed
@@ -547,6 +611,7 @@ segment_id
 server_type
 shard_spec
 sqlTimeZone
+sql-msq-task
 supervisor_id
 sys
 sys.segments
@@ -558,11 +623,104 @@ useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
 wikipedia
+your-table
+enableTimeBoundaryPlanning
+TimeBoundary
+druid.query.default.context.enableTimeBoundaryPlanning
 IEC
+# MSQ general
+SegmentGenerator
+granularity_string
+QueryKit
+# MSQ report fields
+taskId
+multiStageQuery.taskId
+multiStageQuery.payload.status
+multiStageQuery.payload.status.status
+multiStageQuery.payload.status.startTime 
+multiStageQuery.payload.status.durationMs
+multiStageQuery.payload.status.pendingTasks
+multiStageQuery.payload.status.runningTasks
+multiStageQuery.payload.status.errorReport
+multiStageQuery.payload.status.errorReport.taskId
+multiStageQuery.payload.status.errorReport.host
+multiStageQuery.payload.status.errorReport.stageNumber
+multiStageQuery.payload.status.errorReport.error
+multiStageQuery.payload.status.errorReport.error.errorCode
+multiStageQuery.payload.status.errorReport.error.errorMessage
+multiStageQuery.payload.status.errorReport.exceptionStackTrace
+multiStageQuery.payload.stages stages
+multiStageQuery.payload.stages[].stageNumber
+definition.id
+definition.input
+definition.broadcast
+definition.processor
+definition.signature
+stageNumber
+startTime
+multiStageQuery.payload.stages
+READING_INPUT
+POST_READING
+RESULTS_COMPLETE
+workerCount
+partitionCount
+startCount
+# MSQ errors and limits
+BroadcastTablesTooLarge  
+CannotParseExternalData 
+ColumnNameRestricted
+ColumnTypeNotSupported
+DurableStorageConfiguration  
+ColumnTypeNotSupported 
+InsertCannotAllocateSegment
+InsertCannotBeEmpty 
+InsertCannotOrderByDescending  
+InsertCannotReplaceExistingSegment 
+InsertLockPreempted  
+InsertTimeNull
+CURRENT_TIMESTAMP  
+InsertTimeOutOfBounds
+UnknownError
+TaskStartTimeout
+OutOfMemoryError
+SegmentGenerator
+maxFrameSize
+InvalidNullByte  
+QueryNotSupported   
+QueryNotSupported   
+RowTooLarge  
+TooManyBuckets  
+TooManyInputFiles 
+TooManyPartitions   
+TooManyColumns 
+TooManyWarnings 
+TooManyWorkers 
+NotEnoughMemory  
+WorkerFailed  
+WorkerRpcFailed  
+# MSQ context parameters
+maxNumTasks 
+taskAssignment 
+finalizeAggregations
+indexSpec
+rowsInMemory 
+segmentSortOrder 
+rowsPerSegment 
+durableShuffleStorage
+# Aggregations
+groupByEnableMultiValueUnnesting
+APPROX_COUNT_DISTINCT_DS_HLL
+APPROX_COUNT_DISTINCT_DS_THETA
+APPROX_QUANTILE_DS
+DS_QUANTILES_SKETCH
+APPROX_QUANTILE_FIXED_BUCKETS
+
+# File specific overrides
  - ../docs/comparisons/druid-vs-elasticsearch.md
 100x
  - ../docs/configuration/logging.md
 _common
+appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage
 druid-s3-extensions
@@ -609,7 +767,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
@@ -671,7 +829,6 @@ baseDataSource
 baseDataSource-hashCode
 classpathPrefix
 derivativeDataSource
-dimensionsSpec
 druid.extensions.hadoopDependenciesDir
 hadoopDependencyCoordinates
 maxTaskCount
@@ -725,6 +882,7 @@ HTTPServer
 conversionFactor
 prometheus
 Pushgateway
+flushPeriod
  - ../docs/development/extensions-contrib/tdigestsketch-quantiles.md
 postAggregator
 quantileFromTDigestSketch
@@ -867,7 +1025,11 @@ gcs-connector
 hadoop2
 hdfs
  - ../docs/development/extensions-core/kafka-extraction-namespace.md
+Aotearoa
+Czechia
+KTable
 LookupExtractorFactory
+Zeelund
 zookeeper.connect
  - ../docs/development/extensions-core/kafka-ingestion.md
 0.11.x.
@@ -1024,6 +1186,7 @@ com.example
 common.runtime.properties
 druid-aws-rds-extensions
 druid-cassandra-storage
+druid-compressed-bigdecimal
 druid-distinctcount
 druid-ec2-extensions
 druid-kafka-extraction-namespace
@@ -1083,6 +1246,7 @@ column_1
 column_n
 com.opencsv
 ctrl
+descriptorString
 headerFormat
 headerLabelPrefix
 jsonLowercase
@@ -1098,7 +1262,7 @@ timestampColumnName
 timestampSpec
 urls
 valueFormat
- - ../docs/ingestion/data-management.md
+ - ../docs/data-management/compaction.md
 1GB
 IOConfig
 compactionTask
@@ -1132,7 +1296,6 @@ datetime
 f.example.com
 filePattern
 forceExtendableShardSpecs
-granularitySpec
 ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
@@ -1311,6 +1474,8 @@ expm1
 expr
 expr1
 expr2
+expr3
+expr4
 fromIndex
 getExponent
 hypot
@@ -1414,13 +1579,16 @@ time-iso8601
 hadoopStorageDirectory
  - ../docs/operations/insert-segment-to-db.md
 0.14.x
+ - ../docs/operations/java.md
+G1
+Temurin
  - ../docs/operations/metrics.md
 0.14.x
 1s
 Bufferpool
 EventReceiverFirehose
 EventReceiverFirehoseMonitor
-Filesystesm
+Filesystem
 JVMMonitor
 QueryCountStatsMonitor
 RealtimeMetricsMonitor
@@ -1428,6 +1596,8 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 TaskSlotCountStatsMonitor
+WorkerTaskCountStatsMonitor
+workerVersion
 bufferCapacity
 bufferpoolName
 cms
@@ -1459,6 +1629,7 @@ poolName
 remoteAddress
 segmentAvailabilityConfirmed
 serviceName
+taskIngestionMode
 taskStatus
 taskType
 threadPoolNumBusyThreads.
@@ -1567,12 +1738,10 @@ maxResults
 orderby
 orderbys
 outputName
-pre-existing
 pushdown
 row1
 subtotalsSpec
-unnested
-unnesting
+tradeoff
  - ../docs/querying/having.md
 HavingSpec
 HavingSpecs
@@ -1626,6 +1795,7 @@ enableParallelMerge
 enableJoinLeftTableScanDirect
 enableJoinFilterPushDown
 enableJoinFilterRewrite
+enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
 floatSum
 joinFilterRewriteMaxSize
@@ -1749,6 +1919,12 @@ keytabs
 dsql
  - ../docs/tutorials/tutorial-retention.md
 2015-09-12T12
+ - ../docs/tutorials/tutorial-sketches-theta.md
+clickstreams
+uid
+_k_
+Bridgerton
+Hellmar
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
@@ -1841,7 +2017,6 @@ cpuacct
 dataSourceName
 datetime
 defaultHistory
-dimensionsSpec
 doubleMax
 doubleMin
 doubleSum
@@ -1860,6 +2035,7 @@ druid_taskLock
 druid_taskLog
 druid_tasks
 DruidQueryRel
+durationToRetain
 ec2
 equalDistribution
 extractionFn
@@ -2005,3 +2181,108 @@ protobuf
 Golang
 multiValueHandling
 _n_
+KLL
+KllFloatsSketch
+KllDoublesSketch
+PMF
+CDF
+maxStreamLength
+toString
+100TB
+- ../docs/development/extensions-contrib/compressed-big-decimal.md
+compressedBigDecimal
+limitSpec
+metricsSpec
+postAggregations
+SaleAmount
+IngestionSpec
+druid-compressed-bigdecimal
+doubleSum
+ - ../docs/querying/sql-functions.md
+ANY_VALUE 
+APPROX_COUNT_DISTINCT_DS_HLL 
+APPROX_COUNT_DISTINCT_DS_THETA 
+APPROX_QUANTILE_DS 
+APPROX_QUANTILE_FIXED_BUCKETS 
+ARRAY_CONCAT_AGG 
+BIT_AND 
+BIT_OR 
+BIT_XOR 
+BITWISE_AND 
+BITWISE_COMPLEMENT 
+BITWISE_CONVERT_DOUBLE_TO_LONG_BITS 
+BITWISE_CONVERT_LONG_BITS_TO_DOUBLE 
+BITWISE_OR 
+BITWISE_SHIFT_LEFT 
+BITWISE_SHIFT_RIGHT 
+BITWISE_XOR 
+BLOOM_FILTER 
+BTRIM 
+CHAR_LENGTH 
+CHARACTER_LENGTH 
+CURRENT_DATE 
+CURRENT_TIMESTAMP 
+DATE_TRUNC 
+DS_CDF 
+DS_GET_QUANTILE 
+DS_GET_QUANTILES 
+DS_HISTOGRAM 
+DS_HLL 
+DS_QUANTILE_SUMMARY 
+DS_QUANTILES_SKETCH 
+DS_RANK 
+DS_THETA 
+EARLIEST_BY 
+_e_
+HLL_SKETCH_ESTIMATE 
+HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS 
+HLL_SKETCH_TO_STRING 
+HLL_SKETCH_UNION 
+LATEST_BY 
+base-10
+MV_APPEND 
+MV_CONCAT 
+MV_CONTAINS 
+MV_FILTER_NONE 
+MV_FILTER_ONLY 
+MV_LENGTH 
+MV_OFFSET 
+MV_OFFSET_OF 
+MV_ORDINAL 
+MV_ORDINAL_OF 
+MV_OVERLAP 
+MV_PREPEND 
+MV_SLICE 
+MV_TO_STRING 
+NULLIF 
+_n_th
+STDDEV_POP 
+STDDEV_SAMP 
+STRING_FORMAT 
+STRING_TO_MV 
+SUBSTR 
+TDIGEST_GENERATE_SKETCH 
+TDIGEST_QUANTILE 
+TEXTCAT 
+THETA_SKETCH_ESTIMATE 
+THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS 
+THETA_SKETCH_INTERSECT 
+THETA_SKETCH_NOT 
+THETA_SKETCH_UNION 
+TIME_CEIL 
+TIME_EXTRACT 
+TIME_FLOOR 
+TIME_FORMAT 
+TIME_IN_INTERVAL 
+TIMESTAMP_TO_MILLIS 
+TIMESTAMPADD 
+TIMESTAMPDIFF 
+TRUNC 
+VAR_POP 
+VAR_SAMP
+KTable
+Aotearoa
+Czechia
+Zeelund
+ - ../docs/tutorials/docker.md
+ nano

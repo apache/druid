@@ -16,24 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent } from '@blueprintjs/core';
+import { IconName, IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
-import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import React from 'react';
-import { Filter, FilterRender } from 'react-table';
 
 import { AppToaster } from '../singletons';
-
-export const STANDARD_TABLE_PAGE_SIZE = 50;
-export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
-
-export const SMALL_TABLE_PAGE_SIZE = 25;
-export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 // These constants are used to make sure that they are not constantly recreated thrashing the pure components
 export const EMPTY_OBJECT: any = {};
@@ -45,108 +36,45 @@ export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
+export function nonEmptyArray(a: any): a is unknown[] {
+  return Array.isArray(a) && Boolean(a.length);
+}
+
+export function isSimpleArray(a: any): a is (string | number | boolean)[] {
+  return (
+    Array.isArray(a) &&
+    a.every(x => {
+      const t = typeof x;
+      return t === 'string' || t === 'number' || t === 'boolean';
+    })
+  );
+}
+
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
 }
 
-export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  return addFilterRaw(filters, id, `"${value}"`);
+export function clamp(n: number, min: number, max: number): number {
+  return Math.min(Math.max(n, min), max);
 }
 
-export function addFilterRaw(filters: Filter[], id: string, value: string): Filter[] {
-  const currentFilter = filters.find(f => f.id === id);
-  if (currentFilter) {
-    filters = filters.filter(f => f.id !== id);
-    if (currentFilter.value !== value) {
-      filters = filters.concat({ id, value });
+export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string | number): T[] {
+  const keyX = keyFn(x);
+  let added = false;
+  const newXs = xs.map(currentX => {
+    if (keyFn(currentX) === keyX) {
+      added = true;
+      return x;
+    } else {
+      return currentX;
     }
-  } else {
-    filters = filters.concat({ id, value });
+  });
+  if (!added) {
+    newXs.push(x);
   }
-  return filters;
-}
-
-export function makeTextFilter(placeholder = ''): FilterRender {
-  return function TextFilter({ filter, onChange, key }) {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <InputGroup
-        key={key}
-        onChange={(e: any) => onChange(e.target.value)}
-        value={filterValue}
-        rightElement={
-          filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />
-        }
-        placeholder={placeholder}
-      />
-    );
-  };
-}
-
-export function makeBooleanFilter(): FilterRender {
-  return function BooleanFilter({ filter, onChange, key }) {
-    const filterValue = filter ? filter.value : '';
-    return (
-      <HTMLSelect
-        key={key}
-        style={{ width: '100%' }}
-        onChange={(event: any) => onChange(event.target.value)}
-        value={filterValue || 'all'}
-        fill
-      >
-        <option value="all">Show all</option>
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </HTMLSelect>
-    );
-  };
-}
-
-// ----------------------------
-
-interface NeedleAndMode {
-  needle: string;
-  mode: 'exact' | 'includes';
-}
-
-export function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value;
-  if (input.startsWith(`"`) && input.endsWith(`"`)) {
-    return {
-      needle: input.slice(1, -1),
-      mode: 'exact',
-    };
-  } else {
-    return {
-      needle: input.replace(/^"/, '').toLowerCase(),
-      mode: 'includes',
-    };
-  }
-}
-
-export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
-  if (value == null) return false;
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return needle === String(value);
-  } else {
-    return String(value).toLowerCase().includes(needle);
-  }
-}
-
-export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression {
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
-  const needle = needleAndMode.needle;
-  if (needleAndMode.mode === 'exact') {
-    return SqlRef.columnWithQuotes(filter.id).equal(SqlLiteral.create(needle));
-  } else {
-    return SqlFunction.simple('LOWER', [SqlRef.columnWithQuotes(filter.id)]).like(
-      SqlLiteral.create(`%${needle}%`),
-    );
-  }
+  return newXs;
 }
 
 // ----------------------------
@@ -332,14 +260,6 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 
 // ----------------------------
 
-export function parseJson(json: string): any {
-  try {
-    return JSONBig.parse(json);
-  } catch (e) {
-    return undefined;
-  }
-}
-
 export function validJson(json: string): boolean {
   try {
     JSONBig.parse(json);
@@ -365,6 +285,15 @@ export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }
 
+export function zeroDivide(a: number, b: number): number {
+  if (b === 0) return 0;
+  return a / b;
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 export function arrangeWithPrefixSuffix(
   things: readonly string[],
   prefix: readonly string[],
@@ -377,25 +306,6 @@ export function arrangeWithPrefixSuffix(
 }
 
 // ----------------------------
-
-export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType;
-  switch (type) {
-    case 'json':
-      blobType = 'application/json';
-      break;
-    case 'tsv':
-      blobType = 'text/tab-separated-values';
-      break;
-    default:
-      // csv
-      blobType = `text/${type}`;
-  }
-  const blob = new Blob([text], {
-    type: blobType,
-  });
-  FileSaver.saveAs(blob, filename);
-}
 
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
@@ -482,7 +392,7 @@ export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
 }
 
-export function twoLines(line1: string, line2: string) {
+export function twoLines(line1: string | JSX.Element, line2: string | JSX.Element) {
   return (
     <>
       {line1}
@@ -530,4 +440,16 @@ export function objectHash(obj: any): string {
 
 export function hasPopoverOpen(): boolean {
   return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+}
+
+export function checkedCircleIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK_CIRCLE : IconNames.CIRCLE;
+}
+
+export function tickIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK : IconNames.BLANK;
+}
+
+export function generate8HexId(): string {
+  return (Math.random() * 1e10).toString(16).replace('.', '').substr(0, 8);
 }

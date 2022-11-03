@@ -39,7 +39,6 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -72,7 +71,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * Query handler for Broker processes (see CliBroker).
+ * Query handler for the Broker processes (see CliBroker).
  *
  * This class is responsible for:
  *
@@ -163,7 +162,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
-    final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
+    final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
@@ -431,7 +430,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
-                query.<String>getContextValue("postProcessing"),
+                query.context().getString("postProcessing"),
                 new TypeReference<PostProcessingOperator<T>>() {}
             )
         )

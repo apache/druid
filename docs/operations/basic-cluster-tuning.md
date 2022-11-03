@@ -90,11 +90,9 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 #### Segment Cache Size
 
-`druid.segmentCache.locations` specifies locations where segment data can be stored on the Historical. The sum of available disk space across these locations is set as the default value for property: `druid.server.maxSize`, which controls the total size of segment data that can be assigned by the Coordinator to a Historical.
+For better query performance, do not allocate segment data to a Historical in excess of the system free memory.  When `free system memory` is greater than or equal to `druid.segmentCache.locations`, the more segment data the Historical can be held in the memory-mapped segment cache.
 
-Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
-
-Therefore, the size of cache locations set within `druid.segmentCache.locations` should be such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / total size of all `druid.segmentCache.locations`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance. The total segment data size assigned to a Historical can be overridden with `druid.server.maxSize`, but this is not required for most of the use cases.
+Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For some rarer use cases, you can override this behavior with `druid.server.maxSize` property.
 
 #### Number of Historicals
 
@@ -261,7 +259,7 @@ The total memory usage of the MiddleManager + Tasks:
 If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
-slots available for other tasks, such as [compaction tasks](../ingestion/compaction.md).
+slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).
 
 ###### Hadoop ingestion
 

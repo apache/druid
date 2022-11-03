@@ -76,6 +76,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -95,8 +96,8 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Duration;
@@ -196,7 +197,15 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
-    super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context, -1);
+    super(
+        getOrMakeId(id, TYPE, dataSource),
+        null,
+        taskResource,
+        dataSource,
+        context,
+        -1,
+        computeCompactionIngestionMode(ioConfig)
+    );
     Checks.checkOneNotNullOrEmpty(
         ImmutableList.of(
             new Property<>("ioConfig", ioConfig),
@@ -422,9 +431,25 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
+  @VisibleForTesting
+  void emitCompactIngestionModeMetrics(
+      ServiceEmitter emitter,
+      boolean isDropExisting
+  )
+  {
+
+    if (emitter == null) {
+      return;
+    }
+    emitMetric(emitter, "ingest/count", 1);
+  }
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+
+    // emit metric for compact ingestion mode:
+    emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
+
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
@@ -710,7 +735,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         segmentProvider.findSegments(toolbox.getTaskActionClient());
     segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
     final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
     return new NonnullPair<>(segmentFileMap, timelineSegments);

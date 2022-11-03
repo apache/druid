@@ -138,7 +138,7 @@ public class TopNQueryEngine
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
         topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
-      } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
+      } else if (selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false)) {
         // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
         // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
         topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);

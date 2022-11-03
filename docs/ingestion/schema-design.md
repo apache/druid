@@ -34,7 +34,7 @@ general tips and common practices.
 * All columns in Druid datasources, other than the timestamp column, are either dimensions or metrics. This follows the [standard naming convention](https://en.wikipedia.org/wiki/Online_analytical_processing#Overview_of_OLAP_systems) of OLAP data.
 * Typical production datasources have tens to hundreds of columns.
 * [Dimension columns](./data-model.md#dimensions) are stored as-is, so they can be filtered on, grouped by, or aggregated at query time. They are always single Strings, [arrays of Strings](../querying/multi-value-dimensions.md), single Longs, single Doubles or single Floats.
-* [Metric columns](./data-model.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approx). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
+* [Metric columns](./data-model.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approximate-aggregations). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
 
 
 ## If you're coming from a...
@@ -102,8 +102,8 @@ see [partitioning and sorting](./partitioning.md) below for details).
 - Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
 database systems.
 - Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
-to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want to
-be able to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approx).
+to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want the ability
+to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approximate-aggregations).
 - Consider enabling [rollup](./rollup.md), which will allow Druid to potentially combine multiple points into one
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
@@ -167,7 +167,7 @@ so they can be sorted and the quantile can be computed, Druid instead only needs
 can reduce data transfer needs to mere kilobytes.
 
 For details about the sketches available in Druid, see the
-[approximate aggregators](../querying/aggregations.md#approx) page.
+[approximate aggregators](../querying/aggregations.md#approximate-aggregations) page.
 
 If you prefer videos, take a look at [Not exactly!](https://www.youtube.com/watch?v=Hpd3f_MLdXo), a conference talk
 about sketches in Druid.
@@ -201,8 +201,9 @@ like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Dru
 
 ### Nested dimensions
 
-At the time of this writing, Druid does not support nested dimensions. Nested dimensions need to be flattened. For example,
-if you have data of the following form:
+You can ingest and store nested JSON in a Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
+
+If you want to ingest nested data in a format other than JSON&mdash;for example Avro, ORC, and Parquet&mdash;you  must use the `flattenSpec` object to flatten it. For example, if you have data of the following form:
 
 ```
 {"foo":{"bar": 3}}
@@ -214,8 +215,7 @@ then before indexing it, you should transform it to:
 {"foo_bar": 3}
 ```
 
-Druid is capable of flattening JSON, Avro, or Parquet input data.
-Please read about [`flattenSpec`](./ingestion-spec.md#flattenspec) for more details.
+See the [`flattenSpec`](./ingestion-spec.md#flattenspec) documentation for more details.
 
 <a name="counting"></a>
 

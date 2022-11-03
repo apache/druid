@@ -64,10 +64,9 @@ import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
-import org.apache.druid.segment.serde.SpatialIndexColumnPartSupplier;
-import org.apache.druid.segment.serde.StringBitmapIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -80,6 +79,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -152,35 +152,38 @@ public class IndexIO
         throw new SegmentValidationException("Metric names differ. Expected [%s] found [%s]", metNames1, metNames2);
       }
     }
-    final RowIterator it1 = adapter1.getRows();
-    final RowIterator it2 = adapter2.getRows();
-    long row = 0L;
-    while (it1.moveToNext()) {
-      if (!it2.moveToNext()) {
-        throw new SegmentValidationException("Unexpected end of second adapter");
+    try (
+        final RowIterator it1 = adapter1.getRows();
+        final RowIterator it2 = adapter2.getRows()
+    ) {
+      long row = 0L;
+      while (it1.moveToNext()) {
+        if (!it2.moveToNext()) {
+          throw new SegmentValidationException("Unexpected end of second adapter");
+        }
+        final RowPointer rp1 = it1.getPointer();
+        final RowPointer rp2 = it2.getPointer();
+        ++row;
+        if (rp1.getRowNum() != rp2.getRowNum()) {
+          throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rp1.getRowNum(), rp2.getRowNum());
+        }
+        try {
+          validateRowValues(rp1, adapter1, rp2, adapter2);
+        }
+        catch (SegmentValidationException ex) {
+          throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rp1, rp2);
+        }
       }
-      final RowPointer rp1 = it1.getPointer();
-      final RowPointer rp2 = it2.getPointer();
-      ++row;
-      if (rp1.getRowNum() != rp2.getRowNum()) {
-        throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rp1.getRowNum(), rp2.getRowNum());
+      if (it2.moveToNext()) {
+        throw new SegmentValidationException("Unexpected end of first adapter");
       }
-      try {
-        validateRowValues(rp1, adapter1, rp2, adapter2);
+      if (row != adapter1.getNumRows()) {
+        throw new SegmentValidationException(
+            "Actual Row count mismatch. Expected [%d] found [%d]",
+            row,
+            adapter1.getNumRows()
+        );
       }
-      catch (SegmentValidationException ex) {
-        throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rp1, rp2);
-      }
-    }
-    if (it2.moveToNext()) {
-      throw new SegmentValidationException("Unexpected end of first adapter");
-    }
-    if (row != adapter1.getNumRows()) {
-      throw new SegmentValidationException(
-          "Actual Row count mismatch. Expected [%d] found [%d]",
-          row,
-          adapter1.getNumRows()
-      );
     }
   }
 
@@ -440,7 +443,7 @@ public class IndexIO
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
       for (String dimension : index.getAvailableDimensions()) {
         ColumnBuilder builder = new ColumnBuilder()
@@ -454,17 +457,20 @@ public class IndexIO
                     Suppliers.ofInstance(index.getDimColumn(dimension)),
                     columnConfig.columnCacheSizeBytes()
                 )
-            )
-            .setBitmapIndex(
-                new StringBitmapIndexColumnPartSupplier(
-                    new ConciseBitmapFactory(),
-                    index.getBitmapIndexes().get(dimension),
-                    index.getDimValueLookup(dimension)
-                )
             );
-        if (index.getSpatialIndexes().get(dimension) != null) {
-          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(index.getSpatialIndexes().get(dimension)));
-        }
+        GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
+        ImmutableRTree spatialIndex = index.getSpatialIndexes().get(dimension);
+        builder.setIndexSupplier(
+            new DictionaryEncodedStringIndexSupplier(
+                new ConciseBitmapFactory(),
+                index.getDimValueLookup(dimension),
+                index.getDimValueUtf8Lookup(dimension),
+                bitmaps,
+                spatialIndex
+            ),
+            bitmaps != null,
+            spatialIndex != null
+        );
         columns.put(dimension, getColumnHolderSupplier(builder, lazy));
       }
 
@@ -619,7 +625,7 @@ public class IndexIO
         }
       }
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
       // Register the time column
       ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");

@@ -22,7 +22,9 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -64,6 +66,17 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
   }
 
+  /**
+   * Whether the provided time interval and granularity combination is allowed.
+   *
+   * We restrict ETERNITY with non-ALL granularity, because allowing it would involve creating a very high number
+   * of time grains. This would cause queries to take an excessive amount of time or run out of memory.
+   */
+  public static boolean isQueryGranularityAllowed(final Interval interval, final Granularity granularity)
+  {
+    return Granularities.ALL.equals(granularity) || !Intervals.ETERNITY.equals(interval);
+  }
+
   @Override
   public Interval getInterval()
   {
@@ -91,7 +104,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   @Override
   public int getDimensionCardinality(String column)
   {
-    return Integer.MAX_VALUE;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -169,6 +182,14 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
 
     if (actualInterval == null) {
       return Sequences.empty();
+    }
+
+    if (!isQueryGranularityAllowed(actualInterval, gran)) {
+      throw new IAE(
+          "Cannot support interval [%s] with granularity [%s]",
+          Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
+          gran
+      );
     }
 
     final RowWalker<RowType> rowWalker = new RowWalker<>(

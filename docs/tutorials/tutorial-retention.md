@@ -41,7 +41,7 @@ The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. L
 bin/post-index-task --file quickstart/tutorial/retention-index.json --url http://localhost:8081
 ```
 
-After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the Druid Console's datasource view.
+After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the web console's datasource view.
 
 This view shows the available datasources and a summary of the retention rules for each datasource:
 
@@ -85,7 +85,7 @@ Now click `Save`. You can see the new rules in the datasources view:
 
 ![New rules](../assets/tutorial-retention-05.png "New rules")
 
-Give the cluster a few minutes to apply the rule change, and go to the [segments view](http://localhost:8888/unified-console.html#segments) in the Druid Console.
+Give the cluster a few minutes to apply the rule change, and go to the [segments view](http://localhost:8888/unified-console.html#segments) in the web console.
 The segments for the first 12 hours of 2015-09-12 are now gone:
 
 ![New segments](../assets/tutorial-retention-06.png "New segments")

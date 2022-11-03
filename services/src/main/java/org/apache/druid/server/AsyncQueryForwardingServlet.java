@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
@@ -46,6 +47,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.QueryHostFinder;
@@ -55,6 +57,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.sql.http.SqlResource;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -64,12 +67,14 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -265,11 +270,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         handleException(response, objectMapper, e);
         return;
       }
-    } else if (routeSqlByStrategy && isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
+    } else if (isSqlQueryEndpoint && HttpMethod.POST.is(method)) {
       try {
         SqlQuery inputSqlQuery = objectMapper.readValue(request.getInputStream(), SqlQuery.class);
+        inputSqlQuery = buildSqlQueryWithId(inputSqlQuery);
         request.setAttribute(SQL_QUERY_ATTRIBUTE, inputSqlQuery);
-        targetServer = hostFinder.findServerSql(inputSqlQuery);
+        if (routeSqlByStrategy) {
+          targetServer = hostFinder.findServerSql(inputSqlQuery);
+        } else {
+          targetServer = hostFinder.pickDefaultServer();
+        }
         LOG.debug("Forwarding SQL query to broker [%s]", targetServer.getHost());
       }
       catch (IOException e) {
@@ -289,6 +299,22 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
 
     doService(request, response);
+  }
+
+  /**
+   * Rebuilds the {@link SqlQuery} object with sqlQueryId and queryId context parameters if not present
+   * @param sqlQuery the original SqlQuery
+   * @return an updated sqlQuery object with sqlQueryId and queryId context parameters
+   */
+  private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
+  {
+    Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
+    String sqlQueryId = (String) context.getOrDefault(BaseQuery.SQL_QUERY_ID, UUID.randomUUID().toString());
+    // set queryId to sqlQueryId if not overridden
+    String queryId = (String) context.getOrDefault(BaseQuery.QUERY_ID, sqlQueryId);
+    context.put(BaseQuery.SQL_QUERY_ID, sqlQueryId);
+    context.put(BaseQuery.QUERY_ID, queryId);
+    return sqlQuery.withOverridenContext(context);
   }
 
   /**
@@ -376,7 +402,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletResponse response
   ) throws ServletException, IOException
   {
-    // Just call the superclass service method. Overriden in tests.
+    // Just call the superclass service method. Overridden in tests.
     super.service(request, response);
   }
 
@@ -448,12 +474,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected Response.Listener newProxyResponseListener(HttpServletRequest request, HttpServletResponse response)
   {
-    final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
-    if (query != null) {
-      return newMetricsEmittingProxyResponseListener(request, response, query, System.nanoTime());
-    } else {
-      return super.newProxyResponseListener(request, response);
-    }
+    boolean isJDBC = request.getAttribute(AVATICA_QUERY_ATTRIBUTE) != null;
+    return newMetricsEmittingProxyResponseListener(
+        request,
+        response,
+        (Query) request.getAttribute(QUERY_ATTRIBUTE),
+        (SqlQuery) request.getAttribute(SQL_QUERY_ATTRIBUTE),
+        isJDBC,
+        System.nanoTime()
+    );
   }
 
   @Override
@@ -499,11 +528,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private Response.Listener newMetricsEmittingProxyResponseListener(
       HttpServletRequest request,
       HttpServletResponse response,
-      Query query,
+      @Nullable Query query,
+      @Nullable SqlQuery sqlQuery,
+      boolean isJDBC,
       long startNs
   )
   {
-    return new MetricsEmittingProxyResponseListener(request, response, query, startNs);
+    return new MetricsEmittingProxyResponseListener(request, response, query, sqlQuery, isJDBC, startNs);
   }
 
   @Override
@@ -530,6 +561,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Query timeout metric is not relevant here and this metric is already being tracked in the Broker and the
     // data nodes using QueryResource
     return 0L;
+  }
+
+  @Override
+  protected void onServerResponseHeaders(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Response serverResponse
+  )
+  {
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
+    super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
   @VisibleForTesting
@@ -648,22 +690,28 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private class MetricsEmittingProxyResponseListener<T> extends ProxyResponseListener
   {
     private final HttpServletRequest req;
-    private final HttpServletResponse res;
+    @Nullable
     private final Query<T> query;
+    @Nullable
+    private final SqlQuery sqlQuery;
+    private final boolean isJDBC;
     private final long startNs;
 
     public MetricsEmittingProxyResponseListener(
         HttpServletRequest request,
         HttpServletResponse response,
-        Query<T> query,
+        @Nullable Query<T> query,
+        @Nullable SqlQuery sqlQuery,
+        boolean isJDBC,
         long startNs
     )
     {
       super(request, response);
 
       this.req = request;
-      this.res = response;
       this.query = query;
+      this.sqlQuery = sqlQuery;
+      this.isJDBC = isJDBC;
       this.startNs = startNs;
     }
 
@@ -671,14 +719,63 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     public void onComplete(Result result)
     {
       final long requestTimeNs = System.nanoTime() - startNs;
-      try {
-        boolean success = result.isSucceeded();
-        if (success) {
-          successfulQueryCount.incrementAndGet();
-        } else {
-          failedQueryCount.incrementAndGet();
+      String queryId = null;
+      String sqlQueryId = null;
+      if (isJDBC) {
+        sqlQueryId = result.getResponse().getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      } else if (sqlQuery != null) {
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
+      } else if (query != null) {
+        queryId = query.getId();
+      }
+
+      // not a native or SQL query, no need to emit metrics and logs
+      if (queryId == null && sqlQueryId == null) {
+        super.onComplete(result);
+        return;
+      }
+
+      boolean success = result.isSucceeded();
+      if (success) {
+        successfulQueryCount.incrementAndGet();
+      } else {
+        failedQueryCount.incrementAndGet();
+      }
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
+
+      //noinspection VariableNotUsedInsideIf
+      if (sqlQueryId != null) {
+        // SQL query doesn't have a native query translation in router. Hence, not logging the native query.
+        if (sqlQuery != null) {
+          try {
+            requestLogger.logSqlQuery(
+                RequestLogLine.forSql(
+                    sqlQuery.getQuery(),
+                    sqlQuery.getContext(),
+                    DateTimes.nowUtc(),
+                    req.getRemoteAddr(),
+                    new QueryStats(
+                        ImmutableMap.of(
+                            "query/time",
+                            TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
+                            "success",
+                            success
+                            && result.getResponse().getStatus() == Status.OK.getStatusCode()
+                        )
+                    )
+                )
+            );
+          }
+          catch (IOException e) {
+            LOG.error(e, "Unable to log SQL query [%s]!", sqlQuery);
+          }
         }
-        emitQueryTime(requestTimeNs, success);
+        super.onComplete(result);
+        return;
+      }
+
+      try {
         requestLogger.logNativeQuery(
             RequestLogLine.forNative(
                 query,
@@ -706,10 +803,64 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     @Override
     public void onFailure(Response response, Throwable failure)
     {
+      final long requestTimeNs = System.nanoTime() - startNs;
+      final String errorMessage = failure.getMessage();
+      String queryId = null;
+      String sqlQueryId = null;
+      if (isJDBC) {
+        sqlQueryId = response.getHeaders().get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      } else if (sqlQuery != null) {
+        sqlQueryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.SQL_QUERY_ID, null);
+        queryId = (String) sqlQuery.getContext().getOrDefault(BaseQuery.QUERY_ID, null);
+      } else if (query != null) {
+        queryId = query.getId();
+      }
+
+      // not a native or SQL query, no need to emit metrics and logs
+      if (queryId == null && sqlQueryId == null) {
+        super.onFailure(response, failure);
+        return;
+      }
+
+      failedQueryCount.incrementAndGet();
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
+
+      //noinspection VariableNotUsedInsideIf
+      if (sqlQueryId != null) {
+        // SQL query doesn't have a native query translation in router. Hence, not logging the native query.
+        if (sqlQuery != null) {
+          try {
+            requestLogger.logSqlQuery(
+                RequestLogLine.forSql(
+                    sqlQuery.getQuery(),
+                    sqlQuery.getContext(),
+                    DateTimes.nowUtc(),
+                    req.getRemoteAddr(),
+                    new QueryStats(
+                        ImmutableMap.of(
+                            "success",
+                            false,
+                            "exception",
+                            errorMessage == null ? "no message" : errorMessage
+                        )
+                    )
+                )
+            );
+          }
+          catch (IOException e) {
+            LOG.error(e, "Unable to log SQL query [%s]!", sqlQuery);
+          }
+          LOG.makeAlert(failure, "Exception handling request")
+             .addData("exception", failure.toString())
+             .addData("sqlQuery", sqlQuery)
+             .addData("peer", req.getRemoteAddr())
+             .emit();
+        }
+        super.onFailure(response, failure);
+        return;
+      }
+
       try {
-        final String errorMessage = failure.getMessage();
-        failedQueryCount.incrementAndGet();
-        emitQueryTime(System.nanoTime() - startNs, false);
         requestLogger.logNativeQuery(
             RequestLogLine.forNative(
                 query,
@@ -739,14 +890,25 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success)
+    private void emitQueryTime(long requestTimeNs, boolean success, @Nullable String sqlQueryId, @Nullable String queryId)
     {
-      QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
-          queryMetricsFactory,
-          warehouse.getToolChest(query),
-          query,
-          req.getRemoteAddr()
-      );
+      QueryMetrics queryMetrics;
+      if (sqlQueryId != null) {
+        queryMetrics = queryMetricsFactory.makeMetrics();
+        queryMetrics.remoteAddress(req.getRemoteAddr());
+        // Setting sqlQueryId and queryId dimensions to the metric
+        queryMetrics.sqlQueryId(sqlQueryId);
+        if (queryId != null) { // query id is null for JDBC SQL
+          queryMetrics.queryId(queryId);
+        }
+      } else {
+        queryMetrics = DruidMetrics.makeRequestMetrics(
+            queryMetricsFactory,
+            warehouse.getToolChest(query),
+            query,
+            req.getRemoteAddr()
+        );
+      }
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }

@@ -31,16 +31,21 @@ public class Groupers
 
   private static final AggregateResult DICTIONARY_FULL_ZERO_COUNT = AggregateResult.partial(
       0,
-      "Not enough dictionary space to execute this query. Try increasing "
-      + "druid.query.groupBy.maxMergingDictionarySize or enable disk spilling by setting "
-      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+      "Not enough dictionary memory to execute this query. Try enabling "
+      + "disk spilling by setting druid.query.groupBy.maxOnDiskStorage to an amount of bytes "
+      + "available on your machine for on-disk scratch files. "
+      + "See https://druid.apache.org/docs/latest/querying/groupbyquery.html#memory-tuning-and-resource-limits "
+      + "for details."
   );
 
   private static final AggregateResult HASH_TABLE_FULL_ZERO_COUNT = AggregateResult.partial(
       0,
-      "Not enough aggregation buffer space to execute this query. Try increasing "
-      + "druid.processing.buffer.sizeBytes or enable disk spilling by setting "
-      + "druid.query.groupBy.maxOnDiskStorage to a positive number."
+      "Not enough merge buffer memory to execute this query. Try enabling "
+      + "disk spilling by setting druid.query.groupBy.maxOnDiskStorage to an amount of bytes "
+      + "available on your machine for on-disk scratch files. Or, if you have additional off-heap memory "
+      + "available, consider increasing druid.processing.buffer.sizeBytes. "
+      + "See https://druid.apache.org/docs/latest/querying/groupbyquery.html#memory-tuning-and-resource-limits "
+      + "for details."
   );
 
   private static final int USED_FLAG_MASK = 0x7fffffff;

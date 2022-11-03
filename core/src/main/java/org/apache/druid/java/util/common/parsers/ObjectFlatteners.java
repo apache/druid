@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
@@ -64,6 +65,9 @@ public class ObjectFlatteners
         case JQ:
           extractor = flattenerMaker.makeJsonQueryExtractor(fieldSpec.getExpr());
           break;
+        case TREE:
+          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getNodes());
+          break;
         default:
           throw new UOE("Unsupported field type[%s]", fieldSpec.getType());
       }
@@ -89,7 +93,7 @@ public class ObjectFlatteners
           @Override
           public boolean isEmpty()
           {
-            throw new UnsupportedOperationException();
+            return keySet().isEmpty();
           }
 
           @Override
@@ -208,6 +212,7 @@ public class ObjectFlatteners
     };
   }
 
+  @ExtensionPoint
   public interface FlattenerMaker<T>
   {
     JsonProvider getJsonProvider();
@@ -232,6 +237,14 @@ public class ObjectFlatteners
     Function<T, Object> makeJsonQueryExtractor(String expr);
 
     /**
+     * Create a "field" extractor for nested json expressions
+     */
+    default Function<T, Object> makeJsonTreeExtractor(List<String> nodes)
+    {
+      throw new UOE("makeJsonTreeExtractor has not been implemented.");
+    }
+
+    /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to
      * extract and convert data
      */
@@ -251,7 +264,9 @@ public class ObjectFlatteners
         Map<String, Object> actualMap = new HashMap<>();
         for (String key : jsonProvider.getPropertyKeys(o)) {
           Object field = jsonProvider.getMapValue(o, key);
-          if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
+          if (field == null) {
+            actualMap.put(key, null);
+          } else if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
             actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
           } else {
             actualMap.put(key, finalizeConversionForMap(field));

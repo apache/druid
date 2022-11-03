@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.23.0-SNAPSHOT</version>
+        <version>25.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -46,12 +46,6 @@
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-gcp-common</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-console</artifactId>
             <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -304,10 +298,6 @@
             <artifactId>commons-lang</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.aether</groupId>
-            <artifactId>aether-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
@@ -451,7 +441,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>1.3</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -466,6 +455,8 @@
                     <excludes>
                         <!-- There are UTs for this class but it is very difficult to get required branch coverage -->
                         <exclude>org/apache/druid/metadata/BasicDataSourceExt.class</exclude>
+                        <!-- Tested in the SQL layer, but, oddly, not in this module. -->
+                        <exclude>org/apache/druid/server/QueryResponse.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>

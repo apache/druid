@@ -38,7 +38,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
@@ -159,7 +158,12 @@ public class QueryScheduler implements QueryWatcher
     Optional<Integer> priority = prioritizationStrategy.computePriority(queryPlus, segments);
     query = priority.map(query::withPriority).orElse(query);
     Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
-    LOGGER.info("[%s] lane assigned to [%s] query with [%,d] priority", lane.orElse("default"), query.getType(), priority.orElse(Integer.valueOf(0)));
+    LOGGER.debug(
+        "[%s] lane assigned to [%s] query with [%,d] priority",
+        lane.orElse("default"),
+        query.getType(),
+        priority.orElse(0)
+    );
     final ServiceMetricEvent.Builder builderUsr = ServiceMetricEvent.builder().setFeed("metrics")
                                                                     .setDimension("lane", lane.orElse("default"))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
@@ -249,7 +253,7 @@ public class QueryScheduler implements QueryWatcher
   @VisibleForTesting
   List<Bulkhead> acquireLanes(Query<?> query)
   {
-    final String lane = QueryContexts.getLane(query);
+    final String lane = query.context().getLane();
     final Optional<BulkheadConfig> laneConfig = lane == null ? Optional.empty() : laneRegistry.getConfiguration(lane);
     final Optional<BulkheadConfig> totalConfig = laneRegistry.getConfiguration(TOTAL);
     List<Bulkhead> hallPasses = new ArrayList<>(2);

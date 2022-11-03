@@ -29,6 +29,7 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
@@ -42,6 +43,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.segment.TestHelper;
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -109,6 +111,7 @@ public class GroupByQueryRunnerFailureTest
             configSupplier,
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
+            TestHelper.makeJsonMapper(),
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
@@ -119,24 +122,10 @@ public class GroupByQueryRunnerFailureTest
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
       "GroupByQueryEngine-bufferPool",
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      }
+      () -> ByteBuffer.allocate(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes())
   );
   private static final CloseableDefaultBlockingPool<ByteBuffer> MERGE_BUFFER_POOL = new CloseableDefaultBlockingPool<>(
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      },
+      () -> ByteBuffer.allocate(DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes()),
       DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
   );
 
@@ -310,7 +299,17 @@ public class GroupByQueryRunnerFailureTest
           }
         }
     );
-    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
     GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
   }
 }

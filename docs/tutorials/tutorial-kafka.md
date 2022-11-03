@@ -43,6 +43,11 @@ curl -O https://archive.apache.org/dist/kafka/2.7.0/kafka_2.13-2.7.0.tgz
 tar -xzf kafka_2.13-2.7.0.tgz
 cd kafka_2.13-2.7.0
 ```
+Start zookeeper first with the following command:
+
+```bash
+./bin/zookeeper-server-start.sh config/zookeeper.properties
+```
 
 Start a Kafka broker by running the following command in a new terminal:
 
@@ -254,7 +259,7 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.md).
 
-You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
+You can view the current supervisors and tasks in the web console: [http://localhost:8888/unified-console.md#tasks](http://localhost:8888/unified-console.html#tasks).
 
 ## Querying your data
 

@@ -43,22 +43,15 @@ public class ScanQuerySpecTest
     String legacy =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
         + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
-        + "\"limit\":3,"
-        + "\"context\":null}";
+        + "\"limit\":3}";
 
     String current =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
         + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"virtualColumns\":[],"
         + "\"resultFormat\":\"list\","
-        + "\"batchSize\":20480,"
         + "\"limit\":3,"
-        + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
-        + "\"context\":null,"
-        + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
     ScanQuery query = new ScanQuery(
@@ -89,15 +82,10 @@ public class ScanQuerySpecTest
     String originalJson =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
         + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"virtualColumns\":[],"
         + "\"resultFormat\":\"list\","
-        + "\"batchSize\":20480,"
         + "\"limit\":3,"
         + "\"order\":\"ascending\","
-        + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"context\":null,"
-        + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
     ScanQuery expectedQuery = new ScanQuery(
@@ -132,15 +120,10 @@ public class ScanQuerySpecTest
     String originalJson =
         "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
         + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"virtualColumns\":[],"
         + "\"resultFormat\":\"list\","
-        + "\"batchSize\":20480,"
         + "\"limit\":3,"
         + "\"orderBy\":[{\"columnName\":\"quality\",\"order\":\"ascending\"}],"
-        + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"context\":null,"
-        + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
     ScanQuery expectedQuery = new ScanQuery(

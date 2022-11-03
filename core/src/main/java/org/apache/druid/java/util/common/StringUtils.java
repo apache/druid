@@ -100,14 +100,37 @@ public class StringUtils
   }
 
   /**
-   * Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Decodes a UTF-8 string from the remaining bytes of a non-null buffer.
    * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * Use {@link #fromUtf8Nullable(ByteBuffer)} if the buffer might be null.
    */
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
+  /**
+   * If buffer is Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * If the value is null, this method returns null. If the buffer will never be null, use {@link #fromUtf8(ByteBuffer)}
+   * instead.
+   */
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final ByteBuffer buffer)
+  {
+    if (buffer == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(buffer, buffer.remaining());
+  }
+
+  /**
+   * Converts a string to a UTF-8 byte array.
+   *
+   * @throws NullPointerException if "string" is null
+   */
   public static byte[] toUtf8(final String string)
   {
     try {
@@ -117,6 +140,16 @@ public class StringUtils
       // Should never happen
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Converts a string to UTF-8 bytes, returning them as a newly-allocated on-heap {@link ByteBuffer}.
+   * If "string" is null, returns null.
+   */
+  @Nullable
+  public static ByteBuffer toUtf8ByteBuffer(@Nullable final String string)
+  {
+    return string == null ? null : ByteBuffer.wrap(toUtf8(string));
   }
 
   /**

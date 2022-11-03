@@ -46,7 +46,7 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -74,7 +74,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
-      NoopJoinableFactory.INSTANCE,
+      JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
       new WorkerConfig(),
       MapCache.create(10),
       new CacheConfig(),
@@ -119,8 +119,6 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   @Test
   public void test_getBundle_knownDataSource()
   {
-
-
     final UnifiedIndexerAppenderatorsManager.DatasourceBundle bundle = manager.getBundle(
         Druids.newScanQueryBuilder()
               .dataSource(appenderator.getDataSource())
