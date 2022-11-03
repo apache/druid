@@ -52,11 +52,7 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
   return (
     <div className="execution-progress-bar-pane">
       <Label>
-        {stages
-          ? execution.isWaitingForQuery()
-            ? 'Running query...'
-            : 'Query complete, waiting for segments to be loaded...'
-          : 'Loading...'}
+        {Execution.getProgressDescription(execution)}
         {onCancel && (
           <>
             {' '}

@@ -17,26 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.timeline;
 
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.Map;
+import java.util.Comparator;
+import java.util.Iterator;
 
 /**
- * Segment searching policy used by {@link CompactSegments}.
+ * {@link VersionedIntervalTimeline} for {@link DataSegment} objects.
  */
-public interface CompactionSegmentSearchPolicy
+public class SegmentTimeline extends VersionedIntervalTimeline<String, DataSegment>
 {
-  /**
-   * Reset the current states of this policy. This method should be called whenever iterating starts.
-   */
-  CompactionSegmentIterator reset(
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
-  );
+  public static SegmentTimeline forSegments(Iterable<DataSegment> segments)
+  {
+    return forSegments(segments.iterator());
+  }
+
+  public static SegmentTimeline forSegments(Iterator<DataSegment> segments)
+  {
+    final SegmentTimeline timeline = new SegmentTimeline();
+    VersionedIntervalTimeline.addSegments(timeline, segments);
+    return timeline;
+  }
+
+  public SegmentTimeline()
+  {
+    super(Comparator.naturalOrder());
+  }
+
+  public boolean isOvershadowed(DataSegment segment)
+  {
+    return isOvershadowed(segment.getInterval(), segment.getVersion(), segment);
+  }
+
 }

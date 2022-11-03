@@ -58,7 +58,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
   private final int maxRetainedBytes;
   private final int maxBuckets;
-  private double totalRetainedBytes;
+  private long totalRetainedBytes;
 
   private ClusterByStatisticsCollectorImpl(
       final ClusterBy clusterBy,
@@ -369,8 +369,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
    */
   private void downSample()
   {
-    double newTotalRetainedBytes = totalRetainedBytes;
-    final double targetTotalRetainedBytes = totalRetainedBytes / 2;
+    long newTotalRetainedBytes = totalRetainedBytes;
+    final long targetTotalRetainedBytes = totalRetainedBytes / 2;
 
     final List<BucketHolder> sortedHolders = new ArrayList<>(buckets.size());
 
@@ -384,7 +384,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     // Downsample least-dense buckets first. (They're less likely to need high resolution.)
     sortedHolders.sort(
         Comparator.comparing((BucketHolder holder) ->
-                                 (double) holder.keyCollector.estimatedTotalWeight() / holder.keyCollector.estimatedRetainedKeys())
+                                 (double) holder.keyCollector.estimatedTotalWeight()
+                                 / holder.keyCollector.estimatedRetainedKeys())
     );
 
     int i = 0;
