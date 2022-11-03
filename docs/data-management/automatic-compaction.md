@@ -119,7 +119,7 @@ Compaction tasks fetch all [relevant segments](compaction.md#compaction-io-confi
 _unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance
 and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec). All three values must be set to nonnull values: `segmentGranularity`, `queryGranularity`, and `rollup`.
+- [`granularitySpec`](compaction.md#compaction-granularity-spec). All three values must be set to non-null values: `segmentGranularity`, `queryGranularity`, and `rollup`.
 - [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 

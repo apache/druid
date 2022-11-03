@@ -140,7 +140,7 @@ A compaction task internally generates an `index` or `index_parallel` task spec 
 
 Compaction tasks fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance and minimize disk usage of the `compact` task:
 
-- [`granularitySpec`](#compaction-granularity-spec). All three values must be set to nonnull values: `segmentGranularity`, `queryGranularity`, and `rollup`.
+- [`granularitySpec`](#compaction-granularity-spec). All three values must be set to non-null values: `segmentGranularity`, `queryGranularity`, and `rollup`.
 - [`dimensionsSpec`](#compaction-dimensions-spec)
 - `metricsSpec`
 
