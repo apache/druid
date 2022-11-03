@@ -39,15 +39,8 @@ jobs:
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
       - name: license checks
-        uses: actions/github-script@v6
-        with:
-          script: |
-             sudo apt-get update && sudo apt-get install python3 -y
-             curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
-             ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
-             pip3 install wheel  # install wheel first explicitly
-             pip3 install --upgrade pyyaml
         run: |
+          ./.github/scripts/setup_generate_license.sh
           ${MVN} apache-rat:check -Prat --fail-at-end
           -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
           -Drat.consoleOutput=true
@@ -63,47 +56,13 @@ jobs:
 
       - name: analyze dependencies
         run: |-
-          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
-
-          The dependency analysis has found a dependency that is either:
-
-          1) Used and undeclared: These are available as a transitive dependency but should be explicitly
-          added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
-          shown above.
-
-          2) Unused and declared: These are not needed and removing them from the POM will speed up the build
-          and reduce the artifact size. The dependencies to remove are shown above.
-
-          If there are false positive dependency analysis warnings, they can be suppressed:
-          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
-          https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
-
-          For more information, refer to:
-          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
-
-          " && false; }
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true \
+          || ./.github/scripts/display_dependency_analysis_error_message.sh
 
       - name: analyze hadoop 3 dependencies
         run: |-
-          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
-
-          The dependency analysis has found a dependency that is either:
-
-          1) Used and undeclared: These are available as a transitive dependency but should be explicitly
-            added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
-            shown above.
-
-          2) Unused and declared: These are not needed and removing them from the POM will speed up the build
-            and reduce the artifact size. The dependencies to remove are shown above.
-
-          If there are false positive dependency analysis warnings, they can be suppressed:
-            https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
-            https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
-
-          For more information, refer to:
-          https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
-
-          " && false; }
+          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 \
+          || ./.github/scripts/display_dependency_analysis_error_message.sh
 
       - name: intellij inspections
         run: |
@@ -116,11 +75,13 @@ jobs:
           --levels ERROR
           --scope JavaInspectionsScope
 
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
       - name: (openjdk11) strict compilation
-        uses: actions/setup-java@v3
         # errorprone requires JDK 11
-        distribution: 'zulu'
-        java-version: '11'
         # Strict compilation requires more than 2 GB
         run: |
           ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
