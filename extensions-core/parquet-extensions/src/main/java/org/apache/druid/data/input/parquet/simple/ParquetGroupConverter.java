@@ -193,16 +193,16 @@ class ParquetGroupConverter
   {
     if (
         listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
+        listItem.getType().getFieldCount() == 1 &&
         !listItem.getType().isPrimitive() &&
-        listItem.getType().asGroupType().getFieldCount() == 1 &&
         listItem.getType().getFields().get(0).isPrimitive()
     ) {
       // nullable primitive list elements can have a repeating wrapper element, peel it off
       return convertPrimitiveField(listItem, 0, binaryAsString);
     } else if (
         listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
-        listItem.getFieldRepetitionCount(0) == 1 &&
         listItem.getType().getFieldCount() == 1 &&
+        listItem.getFieldRepetitionCount(0) == 1 &&
         listItem.getType().getName().equalsIgnoreCase("list") &&
         listItem.getType().getFieldName(0).equalsIgnoreCase("element") &&
         listItem.getGroup(0, 0).getType().isRepetition(Type.Repetition.OPTIONAL)
