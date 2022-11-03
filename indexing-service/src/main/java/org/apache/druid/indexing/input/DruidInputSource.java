@@ -56,8 +56,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.Streams;
@@ -509,7 +509,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       }
     }
 
-    return VersionedIntervalTimeline.forSegments(usedSegments).lookup(interval);
+    return SegmentTimeline.forSegments(usedSegments).lookup(interval);
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForSegmentIds(

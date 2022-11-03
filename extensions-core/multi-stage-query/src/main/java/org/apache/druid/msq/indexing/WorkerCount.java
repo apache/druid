@@ -17,26 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
-
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.Map;
+package org.apache.druid.msq.indexing;
 
 /**
- * Segment searching policy used by {@link CompactSegments}.
+ * Information about current status of worker tasks
  */
-public interface CompactionSegmentSearchPolicy
+public class WorkerCount
 {
-  /**
-   * Reset the current states of this policy. This method should be called whenever iterating starts.
-   */
-  CompactionSegmentIterator reset(
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
-  );
+  private final int runningWorkerCount;
+
+  private final int pendingWorkerCount;
+
+  public WorkerCount(int runningWorkerCount, int pendingWorkerCount)
+  {
+    this.runningWorkerCount = runningWorkerCount;
+    this.pendingWorkerCount = pendingWorkerCount;
+  }
+
+  public int getRunningWorkerCount()
+  {
+    return runningWorkerCount;
+  }
+
+  public int getPendingWorkerCount()
+  {
+    return pendingWorkerCount;
+  }
 }
