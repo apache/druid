@@ -102,6 +102,7 @@ import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -210,7 +211,12 @@ public class WorkerImpl implements Worker
       }
       catch (Throwable e) {
         maybeErrorReport = Optional.of(
-            MSQErrorReport.fromException(id(), MSQTasks.getHostFromSelfNode(selfDruidNode), null, e)
+            MSQErrorReport.fromException(
+                id(),
+                MSQTasks.getHostFromSelfNode(selfDruidNode),
+                null,
+                e
+            )
         );
       }
 
@@ -241,6 +247,7 @@ public class WorkerImpl implements Worker
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
+
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
     closer.register(workerClient::close);
 
@@ -583,7 +590,6 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          workerTaskList,
           MSQTasks.makeStorageConnector(context.injector()),
           closer
       );
@@ -601,8 +607,9 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          id(),
+          task().getWorkerNumber(),
           stageNumber,
+          task().getId(),
           frameSize,
           MSQTasks.makeStorageConnector(context.injector())
       );
@@ -709,18 +716,18 @@ public class WorkerImpl implements Worker
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
       if (durableStageStorageEnabled) {
-        final String fileName = DurableStorageOutputChannelFactory.getPartitionFileName(
+        final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
             task.getControllerTaskId(),
-            task.getId(),
             stageId.getStageNumber(),
-            partition
+            task.getWorkerNumber(),
+            task.getId()
         );
         try {
-          MSQTasks.makeStorageConnector(context.injector()).deleteFile(fileName);
+          MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
         }
         catch (Exception e) {
           // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
-          log.warn(e, "Error while cleaning up temporary files at path " + fileName);
+          log.warn(e, "Error while cleaning up folder at path " + folderName);
         }
       }
     }
@@ -888,7 +895,38 @@ public class WorkerImpl implements Worker
             for (OutputChannel channel : outputChannels.getAllChannels()) {
               stageOutputs.computeIfAbsent(stageDef.getId(), ignored1 -> new ConcurrentHashMap<>())
                           .computeIfAbsent(channel.getPartitionNumber(), ignored2 -> channel.getReadableChannel());
+
             }
+
+            if (durableStageStorageEnabled) {
+              // Once the outputs channels have been resolved and are ready for reading, the worker appends the filename
+              // with a special marker flag and adds it to the
+              DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
+                  DurableStorageOutputChannelFactory.createStandardImplementation(
+                      task.getControllerTaskId(),
+                      task().getWorkerNumber(),
+                      stageDef.getStageNumber(),
+                      task().getId(),
+                      frameContext.memoryParameters().getStandardFrameSize(),
+                      MSQTasks.makeStorageConnector(context.injector())
+                  );
+              try {
+                durableStorageOutputChannelFactory.createSuccessFile(task.getId());
+              }
+              catch (IOException e) {
+                throw new ISE(
+                    e,
+                    "Unable to create the success file [%s] at the location [%s]",
+                    DurableStorageUtils.SUCCESS_MARKER_FILENAME,
+                    DurableStorageUtils.getSuccessFilePath(
+                        task.getControllerTaskId(),
+                        stageDef.getStageNumber(),
+                        task().getWorkerNumber()
+                    )
+                );
+              }
+            }
+
             kernelManipulationQueue.add(holder -> holder.getStageKernelMap()
                                                         .get(stageDef.getId())
                                                         .setResultsComplete(resultObject));

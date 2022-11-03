@@ -24,12 +24,16 @@ import com.google.inject.Injector;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
+import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 
@@ -38,7 +42,7 @@ import java.util.Objects;
 /**
  * Class for determining how much JVM heap to allocate to various purposes.
  *
- * First, we take {@link #USABLE_MEMORY_FRACTION} out of the total JVM heap.
+ * First, we take a chunk out of the total JVM heap that is dedicated for MSQ; see {@link #computeUsableMemoryInJvm}.
  *
  * Then, we carve out some space for each worker that may be running in our JVM; see {@link #memoryPerWorker}.
  *
@@ -53,11 +57,13 @@ import java.util.Objects;
  */
 public class WorkerMemoryParameters
 {
+  private static final Logger log = new Logger(WorkerMemoryParameters.class);
+
   /**
    * Percent of memory that we allocate to bundles. It is less than 100% because we need to leave some space
    * left over for miscellaneous other stuff, and to ensure that GC pressure does not get too high.
    */
-  private static final double USABLE_MEMORY_FRACTION = 0.75;
+  static final double USABLE_MEMORY_FRACTION = 0.75;
 
   /**
    * Percent of each bundle's memory that we allocate to appenderators. It is less than 100% because appenderators
@@ -151,6 +157,7 @@ public class WorkerMemoryParameters
   {
     return createInstance(
         Runtime.getRuntime().maxMemory(),
+        computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
         0
@@ -175,6 +182,7 @@ public class WorkerMemoryParameters
 
     return createInstance(
         Runtime.getRuntime().maxMemory(),
+        computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
         numInputWorkers
@@ -195,18 +203,19 @@ public class WorkerMemoryParameters
    */
   public static WorkerMemoryParameters createInstance(
       final long maxMemoryInJvm,
+      final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
       final int numInputWorkers
   )
   {
-    final long workerMemory = memoryPerWorker(maxMemoryInJvm, numWorkersInJvm);
-    final long bundleMemory = memoryPerBundle(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+    final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
+    final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
     final long bundleMemoryForProcessing = bundleMemory - bundleMemoryForInputChannels;
 
     if (bundleMemoryForProcessing < PROCESSING_MINIMUM_BYTES) {
-      final int maxWorkers = computeMaxWorkers(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+      final int maxWorkers = computeMaxWorkers(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
       if (maxWorkers > 0) {
         throw new MSQException(new TooManyWorkersFault(numInputWorkers, Math.min(Limits.MAX_WORKERS, maxWorkers)));
@@ -215,6 +224,7 @@ public class WorkerMemoryParameters
         throw new MSQException(
             new NotEnoughMemoryFault(
                 maxMemoryInJvm,
+                usableMemoryInJvm,
                 numWorkersInJvm,
                 numProcessingThreadsInJvm
             )
@@ -226,7 +236,14 @@ public class WorkerMemoryParameters
     final int maxNumFramesForSuperSorter = Ints.checkedCast(bundleMemory / WorkerMemoryParameters.LARGE_FRAME_SIZE);
 
     if (maxNumFramesForSuperSorter < MIN_SUPER_SORTER_FRAMES) {
-      throw new MSQException(new NotEnoughMemoryFault(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm));
+      throw new MSQException(
+          new NotEnoughMemoryFault(
+              maxMemoryInJvm,
+              usableMemoryInJvm,
+              numWorkersInJvm,
+              numProcessingThreadsInJvm
+          )
+      );
     }
 
     final int superSorterMaxActiveProcessors = Math.min(
@@ -339,12 +356,12 @@ public class WorkerMemoryParameters
    * Returns 0 if no number of workers would be OK.
    */
   static int computeMaxWorkers(
-      final long maxMemoryInJvm,
+      final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm
   )
   {
-    final long bundleMemory = memoryPerBundle(maxMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+    final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
     // Inverse of memoryNeededForInputChannels.
     return Math.max(0, Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1));
@@ -382,13 +399,12 @@ public class WorkerMemoryParameters
    * usage outside processing bundles.
    */
   private static long memoryPerWorker(
-      final long maxMemoryInJvm,
+      final long usableMemoryInJvm,
       final int numWorkersInJvm
   )
   {
-    final long usableMemory = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION);
     final long memoryForWorkers = (long) Math.min(
-        usableMemory * PARTITION_STATS_MEMORY_MAX_FRACTION,
+        usableMemoryInJvm * PARTITION_STATS_MEMORY_MAX_FRACTION,
         numWorkersInJvm * PARTITION_STATS_MEMORY_MAX_BYTES
     );
 
@@ -399,17 +415,17 @@ public class WorkerMemoryParameters
    * Compute the memory allocated to each processing bundle.
    */
   private static long memoryPerBundle(
-      final long maxMemoryInJvm,
+      final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm
   )
   {
-    final long usableMemory = (long) (maxMemoryInJvm * USABLE_MEMORY_FRACTION);
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
 
-    // Need to subtract memoryForWorkers off the top of usableMemory, since this is reserved for statistics collection.
-    final long memoryForWorkers = numWorkersInJvm * memoryPerWorker(maxMemoryInJvm, numWorkersInJvm);
-    final long memoryForBundles = usableMemory - memoryForWorkers;
+    // Need to subtract memoryForWorkers off the top of usableMemoryInJvm, since this is reserved for
+    // statistics collection.
+    final long memoryForWorkers = numWorkersInJvm * memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
+    final long memoryForBundles = usableMemoryInJvm - memoryForWorkers;
 
     // Divide up the usable memory per bundle.
     return memoryForBundles / bundleCount;
@@ -420,5 +436,47 @@ public class WorkerMemoryParameters
     // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
     // Requirement: one input frame per worker, one buffered output frame.
     return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
+  }
+
+  /**
+   * Amount of heap memory available for our usage.
+   */
+  private static long computeUsableMemoryInJvm(final Injector injector)
+  {
+    return (long) ((Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint(injector)) * USABLE_MEMORY_FRACTION);
+  }
+
+  /**
+   * Total estimated lookup footprint. Obtained by calling {@link LookupExtractor#estimateHeapFootprint()} on
+   * all available lookups.
+   */
+  private static long computeTotalLookupFootprint(final Injector injector)
+  {
+    // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
+    // we create this instance. Luckily, this is the typical mode of operation, since by default
+    // druid.lookup.enableLookupSyncOnStartup = true.
+    final LookupReferencesManager lookupManager = injector.getInstance(LookupReferencesManager.class);
+
+    int lookupCount = 0;
+    long lookupFootprint = 0;
+
+    for (final String lookupName : lookupManager.getAllLookupNames()) {
+      final LookupExtractorFactoryContainer container = lookupManager.get(lookupName).orElse(null);
+
+      if (container != null) {
+        try {
+          final LookupExtractor extractor = container.getLookupExtractorFactory().get();
+          lookupFootprint += extractor.estimateHeapFootprint();
+          lookupCount++;
+        }
+        catch (Exception e) {
+          log.noStackTrace().warn(e, "Failed to load lookup [%s] for size estimation. Skipping.", lookupName);
+        }
+      }
+    }
+
+    log.debug("Lookup footprint: %d lookups with %,d total bytes.", lookupCount, lookupFootprint);
+
+    return lookupFootprint;
   }
 }

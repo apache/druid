@@ -145,7 +145,7 @@ public class NoopTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     if (firehoseFactory != null) {
       log.info("Connecting firehose");

@@ -44,7 +44,9 @@ import org.apache.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = SegmentAllocateAction.TYPE, value = SegmentAllocateAction.class),
     @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class),
-    @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class)
+    @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class),
+    @JsonSubTypes.Type(name = "updateStatus", value = UpdateStatusAction.class),
+    @JsonSubTypes.Type(name = "updateLocation", value = UpdateLocationAction.class)
 })
 public interface TaskAction<RetType>
 {

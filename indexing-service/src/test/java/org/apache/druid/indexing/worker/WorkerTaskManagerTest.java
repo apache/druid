@@ -95,7 +95,8 @@ public class WorkerTaskManagerTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -142,7 +143,9 @@ public class WorkerTaskManagerTest
                 new NoopOverlordClient(),
                 null,
                 null,
-                null
+                null,
+                null,
+                "1"
             ),
             taskConfig,
             location
@@ -274,7 +277,7 @@ public class WorkerTaskManagerTest
     Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         throw new Error("task failure test");
       }

@@ -42,7 +42,7 @@ public class WorkerMemoryParametersTest
         () -> compute(1_000_000_000, 1, 32, 1)
     );
 
-    Assert.assertEquals(new NotEnoughMemoryFault(1_000_000_000, 1, 32), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(1_000_000_000, 750_000_000, 1, 32), e.getFault());
   }
 
   @Test
@@ -80,14 +80,14 @@ public class WorkerMemoryParametersTest
   }
 
   @Test
-  public void test_oneWorkerInJvm_negativeMemory()
+  public void test_oneWorkerInJvm_negativeUsableMemory()
   {
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> compute(-100, 1, 32, 1)
+        () -> WorkerMemoryParameters.createInstance(100, -50, 1, 32, 1)
     );
 
-    Assert.assertEquals(new NotEnoughMemoryFault(-100, 1, 32), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(100, -50, 1, 32), e.getFault());
   }
 
   @Test
@@ -122,6 +122,7 @@ public class WorkerMemoryParametersTest
   {
     return WorkerMemoryParameters.createInstance(
         maxMemoryInJvm,
+        (long) (maxMemoryInJvm * WorkerMemoryParameters.USABLE_MEMORY_FRACTION),
         numWorkersInJvm,
         numProcessingThreadsInJvm,
         numInputWorkers

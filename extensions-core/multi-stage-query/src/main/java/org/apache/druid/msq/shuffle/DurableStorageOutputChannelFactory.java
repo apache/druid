@@ -20,7 +20,6 @@
 package org.apache.druid.msq.shuffle;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -28,31 +27,39 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
 
 public class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
+
+  private static final Logger LOG = new Logger(DurableStorageOutputChannelFactory.class);
+
   private final String controllerTaskId;
-  private final String workerTaskId;
+  private final int workerNumber;
   private final int stageNumber;
+  private final String taskId;
   private final int frameSize;
   private final StorageConnector storageConnector;
 
   public DurableStorageOutputChannelFactory(
       final String controllerTaskId,
-      final String workerTaskId,
+      final int workerNumber,
       final int stageNumber,
+      final String taskId,
       final int frameSize,
       final StorageConnector storageConnector
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
-    this.workerTaskId = Preconditions.checkNotNull(workerTaskId, "workerTaskId");
+    this.workerNumber = workerNumber;
     this.stageNumber = stageNumber;
+    this.taskId = taskId;
     this.frameSize = frameSize;
     this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
   }
@@ -63,16 +70,18 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
    */
   public static DurableStorageOutputChannelFactory createStandardImplementation(
       final String controllerTaskId,
-      final String workerTaskId,
+      final int workerNumber,
       final int stageNumber,
+      final String taskId,
       final int frameSize,
       final StorageConnector storageConnector
   )
   {
     return new DurableStorageOutputChannelFactory(
         controllerTaskId,
-        workerTaskId,
+        workerNumber,
         stageNumber,
+        taskId,
         frameSize,
         storageConnector
     );
@@ -81,7 +90,13 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getPartitionFileName(controllerTaskId, workerTaskId, stageNumber, partitionNumber);
+    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+        controllerTaskId,
+        stageNumber,
+        workerNumber,
+        taskId,
+        partitionNumber
+    );
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(
             FrameFileWriter.open(
@@ -101,7 +116,13 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
-    final String fileName = getPartitionFileName(controllerTaskId, workerTaskId, stageNumber, partitionNumber);
+    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+        controllerTaskId,
+        stageNumber,
+        workerNumber,
+        taskId,
+        partitionNumber
+    );
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
 
@@ -111,32 +132,30 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     catch (IOException e) {
       throw new ISE(
           e,
-          "Unable to create empty remote output of workerTask[%s] stage[%d] partition[%d]",
-          workerTaskId,
+          "Unable to create empty remote output of stage [%d], partition [%d] for worker [%d]",
           stageNumber,
-          partitionNumber
+          partitionNumber,
+          workerNumber
       );
     }
   }
 
-  public static String getControllerDirectory(final String controllerTaskId)
+  /**
+   * Creates a file with name __success and adds the worker's id which has successfully written its outputs. While reading
+   * this file can be used to find out the worker which has written its outputs completely.
+   * Rename operation is not very quick in cloud storage like S3 due to which this alternative
+   * route has been taken.
+   * If the success file is already present in the location, then this method is a noop
+   */
+  public void createSuccessFile(String taskId) throws IOException
   {
-    return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
-  }
-
-  public static String getPartitionFileName(
-      final String controllerTaskId,
-      final String workerTaskId,
-      final int stageNumber,
-      final int partitionNumber
-  )
-  {
-    return StringUtils.format(
-        "%s/worker_%s/stage_%d/part_%d",
-        getControllerDirectory(controllerTaskId),
-        IdUtils.validateId("worker task ID", workerTaskId),
-        stageNumber,
-        partitionNumber
-    );
+    String fileName = DurableStorageUtils.getSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
+    if (storageConnector.pathExists(fileName)) {
+      LOG.warn("Path [%s] already exists. Won't attempt to rewrite on top of it.", fileName);
+      return;
+    }
+    OutputStreamWriter os = new OutputStreamWriter(storageConnector.write(fileName), StandardCharsets.UTF_8);
+    os.write(taskId); // Add some dummy content in the file
+    os.close();
   }
 }

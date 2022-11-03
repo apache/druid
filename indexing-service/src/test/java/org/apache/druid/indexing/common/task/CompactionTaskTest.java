@@ -2030,7 +2030,8 @@ public class CompactionTaskTest
                 false,
                 false,
                 TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
+                null,
+                false
             )
         )
         .taskActionClient(taskActionClient)
@@ -2049,6 +2050,8 @@ public class CompactionTaskTest
         .appenderatorsManager(new TestAppenderatorsManager())
         .coordinatorClient(COORDINATOR_CLIENT)
         .segmentCacheManager(segmentCacheManager)
+        .taskLogPusher(null)
+        .attemptId("1")
         .build();
   }
 
@@ -2344,7 +2347,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       throw new UnsupportedOperationException();
     }

@@ -97,6 +97,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 |prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (https://prometheus.io/)|[link](./extensions-contrib/prometheus.md)|
+|kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-contrib/k8s-jobs.md)|
 
 ## Promoting community extensions to core extensions
 
