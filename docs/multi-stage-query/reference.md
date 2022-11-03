@@ -228,7 +228,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 
 | Code | Meaning | Additional fields |
 |---|---|---|
-| BroadcastTablesTooLarge | The size of the broadcast tables, used in right hand side of the joins, exceeded the memory reserved for them in a worker task.<br /><br />Try increasing the peon memory or reducing the size of the broadcast tables. | `maxBroadcastTablesSize`: Memory reserved for the broadcast tables, measured in bytes. |
+| BroadcastTablesTooLarge | The size of the broadcast tables used in the right hand side of the join exceeded the memory reserved for them in a worker task.<br /><br />Try increasing the peon memory or reducing the size of the broadcast tables. | `maxBroadcastTablesSize`: Memory reserved for the broadcast tables, measured in bytes. |
 | Canceled | The query was canceled. Common reasons for cancellation:<br /><br /><ul><li>User-initiated shutdown of the controller task via the `/druid/indexer/v1/task/{taskId}/shutdown` API.</li><li>Restart or failure of the server process that was running the controller task.</li></ul>| |
 | CannotParseExternalData | A worker task could not parse data from an external datasource. | `errorMessage`: More details on why parsing failed. |
 | ColumnNameRestricted| The query uses a restricted column name. | `columnName`: The restricted column name. |
