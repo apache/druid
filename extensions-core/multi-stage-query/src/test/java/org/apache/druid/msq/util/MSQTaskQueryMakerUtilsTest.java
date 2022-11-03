@@ -55,37 +55,129 @@ public class MSQTaskQueryMakerUtilsTest
   public void maskSensitiveJsonKeys()
   {
 
-    String sql1 = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
-    String sql2 = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\"  :{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
-    String sql3 = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":  {\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
-    String sql4 = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{  \\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
-    String sql5 = "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"  },\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"";
+    String sql1 = "\"REPLACE INTO table "
+                  + "OVERWRITE ALL\\n"
+                  + "WITH ext AS "
+                  + "(SELECT *\\nFROM TABLE(\\n  "
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+                  + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+                  + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+                  + "FROM ext\\n"
+                  + "PARTITIONED BY DAY\"";
+
+    String sql2 = "\"REPLACE INTO table "
+                  + "OVERWRITE ALL\\n"
+                  + "WITH ext AS "
+                  + "(SELECT *\\nFROM TABLE(\\n  "
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\"  :{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+                  + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+                  + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+                  + "FROM ext\\n"
+                  + "PARTITIONED BY DAY\"";
+
+    String sql3 = "\"REPLACE INTO table "
+                  + "OVERWRITE ALL\\n"
+                  + "WITH ext AS "
+                  + "(SELECT *\\nFROM TABLE(\\n  "
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":  {\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+                  + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+                  + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+                  + "FROM ext\\n"
+                  + "PARTITIONED BY DAY\"";
+
+    String sql4 = "\"REPLACE INTO table "
+                  + "OVERWRITE ALL\\n"
+                  + "WITH ext AS "
+                  + "(SELECT *\\nFROM TABLE(\\n  "
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{  \\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+                  + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+                  + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+                  + "FROM ext\\n"
+                  + "PARTITIONED BY DAY\"";
+
+    String sql5 = "\"REPLACE INTO table "
+                  + "OVERWRITE ALL\\n"
+                  + "WITH ext AS "
+                  + "(SELECT *\\nFROM TABLE(\\n  "
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"  },\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+                  + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+                  + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+                  + "FROM ext\\n"
+                  + "PARTITIONED BY DAY\"";
 
     Assert.assertEquals(
-        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        "\"REPLACE INTO table "
+        + "OVERWRITE ALL\\n"
+        + "WITH ext AS "
+        + "(SELECT *\\nFROM TABLE(\\n  "
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+        + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+        + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+        + "FROM ext\\n"
+        + "PARTITIONED BY DAY\"",
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql1)
     );
 
     Assert.assertEquals(
-        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\"  :<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        "\"REPLACE INTO table "
+        + "OVERWRITE ALL\\n"
+        + "WITH ext AS "
+        + "(SELECT *\\nFROM TABLE(\\n  "
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\"  :<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+        + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+        + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+        + "FROM ext\\n"
+        + "PARTITIONED BY DAY\"",
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql2)
     );
 
     Assert.assertEquals(
-        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":  <masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        "\"REPLACE INTO table "
+        + "OVERWRITE ALL\\n"
+        + "WITH ext AS "
+        + "(SELECT *\\nFROM TABLE(\\n  "
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":  <masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+        + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+        + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+        + "FROM ext\\n"
+        + "PARTITIONED BY DAY\"",
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql3)
     );
 
     Assert.assertEquals(
-        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        "\"REPLACE INTO table "
+        + "OVERWRITE ALL\\n"
+        + "WITH ext AS "
+        + "(SELECT *\\nFROM TABLE(\\n  "
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+        + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+        + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+        + "FROM ext\\n"
+        + "PARTITIONED BY DAY\"",
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql4)
     );
 
     Assert.assertEquals(
-        "\"REPLACE INTO table OVERWRITE ALL\\nWITH ext AS (SELECT *\\nFROM TABLE(\\n  EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n    '{\\\"type\\\":\\\"json\\\"}',\\n    '[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\nSELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country FROM ext\\nPARTITIONED BY DAY\"",
+        "\"REPLACE INTO table "
+        + "OVERWRITE ALL\\n"
+        + "WITH ext AS "
+        + "(SELECT *\\nFROM TABLE(\\n  "
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "'{\\\"type\\\":\\\"json\\\"}',\\n"
+        + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
+        + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
+        + "FROM ext\\n"
+        + "PARTITIONED BY DAY\"",
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql5)
     );
-
   }
-
 }
