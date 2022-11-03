@@ -224,6 +224,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
 
   private void flush() throws IOException
   {
+    if (numWritten == 0) {
+      return;
+    }
     int remainder = numWritten % bucketSize;
     resetScratch();
     int written;
