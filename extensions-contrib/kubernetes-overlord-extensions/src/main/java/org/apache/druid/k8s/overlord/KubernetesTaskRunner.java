@@ -155,6 +155,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     synchronized (tasks) {
       tasks.computeIfAbsent(
           task.getId(), k -> new K8sWorkItem(
+              client,
               task,
               exec.submit(() -> {
                 K8sTaskId k8sTaskId = new K8sTaskId(task);
@@ -375,7 +376,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
-        result.add(new K8sWorkItem(task, future, DateTimes.of(existingTask.getMetadata().getCreationTimestamp())));
+        result.add(new K8sWorkItem(
+            client,
+            task,
+            future,
+            DateTimes.of(existingTask.getMetadata().getCreationTimestamp())
+        ));
       }
       catch (IOException e) {
         log.error("Error deserializing task from pod: " + existingTask.getMetadata().getName());
@@ -457,7 +463,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       try {
         Task task = adapter.toTask(existingTask);
         ListenableFuture<TaskStatus> future = run(task);
-        result.add(new K8sWorkItem(task, future, DateTime.parse(existingTask.getMetadata().getCreationTimestamp())));
+        result.add(new K8sWorkItem(
+            client,
+            task,
+            future,
+            DateTime.parse(existingTask.getMetadata().getCreationTimestamp())
+        ));
       }
       catch (IOException e) {
         log.error("Error deserializing task from pod: " + existingTask.getMetadata().getName());
@@ -494,20 +505,28 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
   }
 
-  public class K8sWorkItem extends TaskRunnerWorkItem
+  public static class K8sWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
+    private KubernetesPeonClient client;
 
-    private K8sWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
+    public K8sWorkItem(KubernetesPeonClient client, Task task, ListenableFuture<TaskStatus> statusFuture)
     {
       super(task.getId(), statusFuture);
       this.task = task;
+      this.client = client;
     }
 
-    private K8sWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture, DateTime createdTime)
+    public K8sWorkItem(
+        KubernetesPeonClient client,
+        Task task,
+        ListenableFuture<TaskStatus> statusFuture,
+        DateTime createdTime
+    )
     {
       super(task.getId(), statusFuture, createdTime, createdTime);
       this.task = task;
+      this.client = client;
     }
 
     @Override

@@ -52,6 +52,7 @@ import org.apache.druid.k8s.overlord.common.DruidKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskAdapter;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
@@ -161,7 +162,10 @@ class KubernetesTaskRunnerTest
 
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
-    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
+    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(
+        job,
+        PeonPhase.SUCCEEDED
+    ));
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -214,7 +218,10 @@ class KubernetesTaskRunnerTest
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.fromNullable(null));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
-    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
+    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(
+        job,
+        PeonPhase.SUCCEEDED
+    ));
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -278,7 +285,10 @@ class KubernetesTaskRunnerTest
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
-    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
+    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(
+        job,
+        PeonPhase.SUCCEEDED
+    ));
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -339,7 +349,10 @@ class KubernetesTaskRunnerTest
     when(peonClient.jobExists(eq(k8sTaskId))).thenReturn(Optional.of(job));
     when(peonClient.launchJobAndWaitForStart(isA(Job.class), anyLong(), isA(TimeUnit.class))).thenReturn(peonPod);
     when(peonClient.getMainJobPod(eq(k8sTaskId))).thenReturn(peonPod);
-    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
+    when(peonClient.waitForJobCompletion(eq(k8sTaskId), anyLong(), isA(TimeUnit.class))).thenReturn(new JobResponse(
+        job,
+        PeonPhase.SUCCEEDED
+    ));
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
@@ -425,6 +438,31 @@ class KubernetesTaskRunnerTest
         mock(DruidKubernetesPeonClient.class),
         node
     ));
+  }
+
+  @Test
+  void testWorkItemGetLocation()
+  {
+    KubernetesPeonClient client = mock(KubernetesPeonClient.class);
+    Pod pod = mock(Pod.class);
+    PodStatus status = mock(PodStatus.class);
+    when(status.getPodIP()).thenReturn("tweak");
+    when(pod.getStatus()).thenReturn(status);
+
+    ObjectMeta metadata = mock(ObjectMeta.class);
+    when(metadata.getAnnotations()).thenReturn(ImmutableMap.of(DruidK8sConstants.TLS_ENABLED, "false"));
+
+    when(pod.getMetadata()).thenReturn(metadata);
+    when(client.getMainJobPod(any())).thenReturn(null).thenReturn(pod);
+
+    Task task = mock(Task.class);
+    when(task.getId()).thenReturn("butters");
+    KubernetesTaskRunner.K8sWorkItem k8sWorkItem = new KubernetesTaskRunner.K8sWorkItem(client, task, null);
+    TaskLocation location = k8sWorkItem.getLocation();
+    assertEquals(TaskLocation.unknown(), location);
+
+    TaskLocation realLocation = k8sWorkItem.getLocation();
+    assertEquals(TaskLocation.create("tweak", DruidK8sConstants.PORT, DruidK8sConstants.TLS_PORT, false), realLocation);
   }
 
   private Task makeTask()
