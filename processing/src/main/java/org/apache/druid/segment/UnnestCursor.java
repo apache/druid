@@ -275,11 +275,33 @@ public class UnnestCursor implements Cursor
   public void advanceUninterruptibly()
   {
     // check if dimension selector
-    boolean status = checkIfDimensionSelectorAndAdvance();
-    // if status is false check if column selector
-    if (!status) {
-      checkIfColumnSelectorAndAdvance();
+    boolean status;
+    do {
+      status = checkIfDimensionSelectorAndAdvance();
+      // if status is false check if column selector
+      if (!status) {
+        checkIfColumnSelectorAndAdvance();
+      }
+    } while (matchAndProceed(status));
+  }
+
+  private boolean matchAndProceed(boolean dimStatus)
+  {
+    boolean matchStatus;
+    if (dimStatus) {
+      if ((allowSet == null || allowSet.isEmpty()) && allowedBitSet.isEmpty()) {
+        matchStatus = true;
+      } else {
+        matchStatus = allowedBitSet.get(pos.get(index));
+      }
+    } else {
+      if (allowSet == null || allowSet.isEmpty()) {
+        matchStatus = true;
+      } else {
+        matchStatus = allowSet.contains((String) unnestList.get(index));
+      }
     }
+    return !baseCursor.isDone() && !matchStatus;
   }
 
   private void checkIfColumnSelectorAndAdvance()
@@ -374,6 +396,9 @@ public class UnnestCursor implements Cursor
   @Override
   public boolean isDoneOrInterrupted()
   {
+    if (needInitialization && baseCursor.isDoneOrInterrupted() == false) {
+      initialize();
+    }
     return baseCursor.isDoneOrInterrupted();
   }
 
