@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.TypeStrategy;
 
@@ -112,6 +113,12 @@ public class FixedIndexed<T> implements Indexed<T>
   @Override
   public T get(int index)
   {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
+    if (index >= size) {
+      throw new IAE("Index[%d] >= size[%d]", index, size);
+    }
     if (hasNull) {
       if (index == 0) {
         return null;
