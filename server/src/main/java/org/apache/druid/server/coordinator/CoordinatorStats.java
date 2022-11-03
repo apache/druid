@@ -42,8 +42,10 @@ public class CoordinatorStats
   public static final String ASSIGNED_COUNT = "assignedCount";
   public static final String DROPPED_COUNT = "droppedCount";
   public static final String DELETED_COUNT = "deletedCount";
-
+  public static final String UNNEEDED_COUNT = "unneededCount";
+  public static final String OVERSHADOWED_COUNT = "overshadowedCount";
   public static final String UNDER_REPLICATED_COUNT = "underReplicatedCount";
+
   public static final String ASSIGN_SKIP_COUNT = "assignSkip";
   public static final String DROP_SKIP_COUNT = "dropSkip";
 

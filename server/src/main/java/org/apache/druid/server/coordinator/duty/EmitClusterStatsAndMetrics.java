@@ -178,48 +178,19 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
       DruidCoordinatorRuntimeParams params
   )
   {
-    stats.forEachTieredStat(
-        CoordinatorStats.ASSIGNED_COUNT,
-        (final String tier, final long count) -> {
-          log.info(
-              "[%s] : Assigned %s segments among %,d servers",
-              tier,
-              count,
-              cluster.getNumHistoricalsInTier(tier)
-          );
-
-          emitMetricForTier("segment/assigned/count", tier, count);
-        }
-    );
-
-    stats.forEachTieredStat(
-        CoordinatorStats.DROPPED_COUNT,
-        (final String tier, final long count) -> {
-          log.info(
-              "[%s] : Dropped %s segments among %,d servers",
-              tier,
-              count,
-              cluster.getNumHistoricalsInTier(tier)
-          );
-
-          emitMetricForTier("segment/dropped/count", tier, count);
-        }
-    );
-
-    // Emit broadcast metrics
     emitDatasourceStats("segment/broadcastLoad/count", stats, CoordinatorStats.BROADCAST_LOADS);
     emitDatasourceStats("segment/broadcastDrop/count", stats, CoordinatorStats.BROADCAST_DROPS);
 
-    // Emit cancellation metrics
     emitTieredStats("segment/cancelLoad/count", stats, CoordinatorStats.CANCELLED_LOADS);
     emitTieredStats("segment/cancelMove/count", stats, CoordinatorStats.CANCELLED_MOVES);
 
-    emitTieredStats("segment/cost/raw", stats, "initialCost");
-    emitTieredStats("segment/cost/normalization", stats, "normalization");
-
+    emitTieredStats("segment/assigned/count", stats, CoordinatorStats.ASSIGNED_COUNT);
+    emitTieredStats("segment/dropped/count", stats, CoordinatorStats.DROPPED_COUNT);
     emitTieredStats("segment/moved/count", stats, CoordinatorStats.MOVED_COUNT);
     emitTieredStats("segment/unmoved/count", stats, CoordinatorStats.UNMOVED_COUNT);
     emitTieredStats("segment/deleted/count", stats, CoordinatorStats.DELETED_COUNT);
+    emitTieredStats("segment/unneeded/count", stats, CoordinatorStats.UNNEEDED_COUNT);
+    emitGlobalStat("segment/overShadowed/count", stats, CoordinatorStats.OVERSHADOWED_COUNT);
 
     final ReplicationThrottler replicationThrottler = params.getReplicationManager();
     if (replicationThrottler != null) {
@@ -229,26 +200,14 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
       );
     }
 
+    // Emit balancing cost stats
+    emitTieredStats("segment/cost/raw", stats, "initialCost");
+    emitTieredStats("segment/cost/normalization", stats, "normalization");
     stats.forEachTieredStat(
         "normalizedInitialCostTimesOneThousand",
         (tier, count) ->
             emitMetricForTier("segment/cost/normalized", tier, count / 1000d)
     );
-
-    stats.forEachTieredStat(
-        "unneededCount",
-        (final String tier, final long count) -> {
-          log.info(
-              "[%s] : Removed %s unneeded segments among %,d servers",
-              tier,
-              count,
-              cluster.getNumHistoricalsInTier(tier)
-          );
-          emitMetricForTier("segment/unneeded/count", tier, count);
-        }
-    );
-
-    emitGlobalStat("segment/overShadowed/count", stats, "overShadowedCount");
 
     // Log load queue status of all replication or broadcast targets
     log.info("Load Queues:");

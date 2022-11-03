@@ -19,6 +19,8 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.collect.Iterators;
+
 import java.util.Comparator;
 import java.util.Iterator;
 
@@ -35,13 +37,27 @@ public class SegmentTimeline extends VersionedIntervalTimeline<String, DataSegme
   public static SegmentTimeline forSegments(Iterator<DataSegment> segments)
   {
     final SegmentTimeline timeline = new SegmentTimeline();
-    VersionedIntervalTimeline.addSegments(timeline, segments);
+    timeline.addSegments(segments);
     return timeline;
   }
 
   public SegmentTimeline()
   {
     super(Comparator.naturalOrder());
+  }
+
+  public void addSegments(Iterator<DataSegment> segments)
+  {
+    addAll(
+        Iterators.transform(
+            segments,
+            segment -> new PartitionChunkEntry<>(
+                segment.getInterval(),
+                segment.getVersion(),
+                segment.getShardSpec().createChunk(segment)
+            )
+        )
+    );
   }
 
   public boolean isOvershadowed(DataSegment segment)

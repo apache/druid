@@ -66,8 +66,7 @@ public class RunRules implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    DruidCluster cluster = params.getDruidCluster();
-
+    final DruidCluster cluster = params.getDruidCluster();
     if (cluster.isEmpty()) {
       log.warn("Uh... I have no servers. Not assigning anything...");
       return params;
@@ -91,8 +90,8 @@ public class RunRules implements CoordinatorDuty
       List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSource.getName());
       for (Rule rule : rules) {
         // A datasource is considered a broadcast datasource if it has any broadcast rules.
-        // The set of broadcast datasources is used by BalanceSegments, so it's important that RunRules
-        // executes before BalanceSegments.
+        // The set of broadcast datasources is used by BalanceSegments and UnloadUnusedSegments,
+        // so it's important that RunRules executes before those duties
         if (rule instanceof BroadcastDistributionRule) {
           broadcastDatasources.add(dataSource.getName());
           break;
@@ -108,7 +107,7 @@ public class RunRules implements CoordinatorDuty
     );
     final SegmentLoader segmentLoader = new SegmentLoader(
         stateManager,
-        params.getDruidCluster(),
+        cluster,
         params.getSegmentReplicantLookup(),
         replicationThrottler,
         params.getBalancerStrategy()

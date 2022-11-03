@@ -106,22 +106,6 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     this.skipObjectsWithNoData = skipObjectsWithNoData;
   }
 
-  public static void addSegments(
-      VersionedIntervalTimeline<String, DataSegment> timeline,
-      Iterator<DataSegment> segments
-  )
-  {
-    timeline.addAll(
-        Iterators.transform(
-            segments,
-            segment -> new PartitionChunkEntry<>(
-                segment.getInterval(),
-                segment.getVersion(),
-                segment.getShardSpec().createChunk(segment)
-            )
-        ));
-  }
-
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
   {
     return allTimelineEntries;
