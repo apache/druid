@@ -167,23 +167,25 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
-      final Iterator<SegmentHolder> iter = queuedSegments.iterator();
+      final Iterator<SegmentHolder> queuedSegmentIterator = queuedSegments.iterator();
 
       final long currentTimeMillis = System.currentTimeMillis();
-      while (newRequests.size() < batchSize && iter.hasNext()) {
-        SegmentHolder holder = iter.next();
+      while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
+        final SegmentHolder holder = queuedSegmentIterator.next();
+        final DataSegment segment = holder.getSegment();
         if (hasRequestTimedOut(holder, currentTimeMillis)) {
           onRequestFailed(holder, "timed out");
-          iter.remove();
+          queuedSegmentIterator.remove();
           if (holder.isLoad()) {
-            segmentsToLoad.remove(holder.getSegment());
+            segmentsToLoad.remove(segment);
           } else {
-            segmentsToDrop.remove(holder.getSegment());
+            segmentsToDrop.remove(segment);
           }
+          activeRequestSegments.remove(segment);
         } else {
           newRequests.add(holder.getChangeRequest());
           holder.markRequestSentToServer();
-          activeRequestSegments.add(holder.getSegment());
+          activeRequestSegments.add(segment);
         }
       }
     }
@@ -368,16 +370,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (stopped) {
         return;
       }
-
+      log.info("Stopping load queue peon for server [%s].", serverId);
       stopped = true;
 
-      for (SegmentHolder holder : segmentsToDrop.values()) {
-        onRequestFailed(holder, "Stopping load queue peon.");
-      }
-
-      for (SegmentHolder holder : segmentsToLoad.values()) {
-        onRequestFailed(holder, "Stopping load queue peon.");
-      }
+      // Cancel all queued requests
+      queuedSegments.forEach(this::onRequestCancelled);
+      log.info("Cancelled [%d] requests queued on server [%s].", queuedSegments.size(), serverId);
 
       segmentsToDrop.clear();
       segmentsToLoad.clear();
