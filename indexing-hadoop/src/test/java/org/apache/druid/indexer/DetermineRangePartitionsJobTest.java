@@ -230,6 +230,74 @@ public class DetermineRangePartitionsJobTest
                     "2014102200,k.example.com,US,555"
                 ),
                 ImmutableList.of("host", "country")
+            },
+            {
+                false,
+                2,
+                "2014-10-20T00:00:00Z/P1D",
+                1,
+                new int[]{5},
+                new String[][][][]{
+                    {
+                        {null, {"c.example.com", null}},
+                        {{"c.example.com", null}, {"e.example.com", "US"}},
+                        {{"e.example.com", "US"}, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, {"i.example.com", null}},
+                        {{"i.example.com", null}, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,c.example.com,,200",
+                    "2014102000,c.example.com,,200",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,i.example.com,,963",
+                    "2014102000,i.example.com,,963",
+                    "2014102000,j.example.com,US,333",
+                    "2014102000,j.example.com,US,333"
+                ),
+                ImmutableList.of("host", "country")
+            },
+            {
+                true,
+                2,
+                "2014-10-20T00:00:00Z/P1D",
+                1,
+                new int[]{5},
+                new String[][][][]{
+                    {
+                        {null, {"c.example.com", null}},
+                        {{"c.example.com", null}, {"e.example.com", "US"}},
+                        {{"e.example.com", "US"}, {"g.example.com", "US"}},
+                        {{"g.example.com", "US"}, {"i.example.com", null}},
+                        {{"i.example.com", null}, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102000,a.example.com,CN,100",
+                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,c.example.com,,200",
+                    "2014102000,d.example.com,US,250",
+                    "2014102000,e.example.com,US,123",
+                    "2014102000,f.example.com,US,567",
+                    "2014102000,g.example.com,US,11",
+                    "2014102000,h.example.com,US,251",
+                    "2014102000,i.example.com,,963",
+                    "2014102000,j.example.com,US,333"
+                ),
+                ImmutableList.of("host", "country")
             }
         }
     );

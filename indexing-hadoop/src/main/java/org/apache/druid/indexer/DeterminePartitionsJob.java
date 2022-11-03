@@ -400,9 +400,7 @@ public class DeterminePartitionsJob implements Jobby
     protected void setup(Context context)
     {
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-      DimensionRangePartitionsSpec spec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
-      DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getDimensionsSpec();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getDimensionGroupingSet(dimensionsSpec));
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config);
     }
 
     @Override
@@ -432,9 +430,7 @@ public class DeterminePartitionsJob implements Jobby
     {
       super.setup(context);
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-      final DimensionRangePartitionsSpec spec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
-      final DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getDimensionsSpec();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getDimensionGroupingSet(dimensionsSpec));
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config);
       final HadoopTuningConfig tuningConfig = getConfig().getSchema().getTuningConfig();
       sample = tuningConfig.getSampleForDeterminePartitionJob();
     }
@@ -464,11 +460,16 @@ public class DeterminePartitionsJob implements Jobby
     private final HadoopDruidIndexerConfig config;
     private final List<List<String>> dimensionGroupingSet;
     private final Map<Long, Integer> intervalIndexes;
+    private final boolean supportNullValue;
 
-    DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, List<List<String>> dimensionGroupingSet)
+    DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config)
     {
       this.config = config;
-      this.dimensionGroupingSet = new ArrayList<>(dimensionGroupingSet);
+
+      DimensionRangePartitionsSpec spec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
+      final DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getDimensionsSpec();
+      this.dimensionGroupingSet = new ArrayList<>(spec.getDimensionGroupingSet(dimensionsSpec));
+      this.supportNullValue = spec.supportNullValue();
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
@@ -513,6 +514,8 @@ public class DeterminePartitionsJob implements Jobby
           final Iterable<String> dimValues = dims.get(dimension);
           if (dimValues != null && Iterables.size(dimValues) == 1) {
             values[i] = Iterables.getOnlyElement(dimValues);
+          } else if (supportNullValue && (dimValues == null || Iterables.isEmpty(dimValues))) {
+            //just let values[i] be null
           } else {
             // This dimension is unsuitable for partitioning. Poison it by emitting a negative value.
             numRow = -1;

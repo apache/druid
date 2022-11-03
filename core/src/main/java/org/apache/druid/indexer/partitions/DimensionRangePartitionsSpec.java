@@ -153,6 +153,11 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
     return Collections.singletonList(partitionDimensions);
   }
 
+  public boolean supportNullValue()
+  {
+    return true;
+  }
+
   public DimensionRangeShardSpec createShardSpec(
       List<String> dimensions,
       @Nullable StringTuple start,

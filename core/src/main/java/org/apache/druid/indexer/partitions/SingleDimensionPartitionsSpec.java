@@ -169,6 +169,12 @@ public class SingleDimensionPartitionsSpec extends DimensionRangePartitionsSpec
   }
 
   @Override
+  public boolean supportNullValue()
+  {
+    return false;
+  }
+
+  @Override
   public DimensionRangeShardSpec createShardSpec(
       List<String> dimensions,
       @Nullable StringTuple start,
