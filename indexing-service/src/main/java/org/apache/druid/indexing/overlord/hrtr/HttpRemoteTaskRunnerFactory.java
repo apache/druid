@@ -56,6 +56,7 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private final TaskStorage taskStorage;
   private final ServiceEmitter emitter;
+  private HttpRemoteTaskRunner runner;
 
   // ZK_CLEANUP_TODO : Remove these when RemoteTaskRunner and WorkerTaskMonitor are removed.
   @Nullable //Null if zk is disabled
@@ -99,7 +100,7 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
   @Override
   public HttpRemoteTaskRunner build()
   {
-    return new HttpRemoteTaskRunner(
+    runner = new HttpRemoteTaskRunner(
         smileMapper,
         httpRemoteTaskRunnerConfig,
         httpClient,
@@ -111,5 +112,12 @@ public class HttpRemoteTaskRunnerFactory implements TaskRunnerFactory<HttpRemote
         indexerZkConfig,
         emitter
     );
+    return runner;
+  }
+
+  @Override
+  public HttpRemoteTaskRunner get()
+  {
+    return runner;
   }
 }

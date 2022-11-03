@@ -257,7 +257,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         null
     );
@@ -657,7 +658,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
 
     objectMapper.setInjectableValues(
@@ -707,7 +709,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 false,
                 false,
                 TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
+                null,
+                false
             )
         )
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -741,6 +744,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .supervisorTaskClientProvider(new LocalParallelIndexTaskClientProvider(taskRunner, transientApiCallFailureRate))
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
+        .taskLogPusher(null)
+        .attemptId("1")
         .build();
   }
 
