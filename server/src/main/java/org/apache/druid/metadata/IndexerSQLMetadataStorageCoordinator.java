@@ -75,6 +75,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -229,25 +230,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
 
-    final ResultIterator<byte[]> dbSegments =
+    final ResultIterator<PendingSegmentsRecord> dbSegments =
         handle.createQuery(
             StringUtils.format(
-                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
+                "SELECT start, %2$send%2$s, payload FROM %1$s "
+                + "WHERE dataSource = :dataSource "
+                + "AND start <= :end and %2$send%2$s >= :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
+              .map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r, jsonMapper))
               .iterator();
 
     while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
-
-      if (interval.overlaps(identifier.getInterval())) {
-        identifiers.add(identifier);
+      final PendingSegmentsRecord record = dbSegments.next();
+      if (interval.overlaps(record.getInterval())) {
+        // Deserialize the payload only if this record is eligible
+        identifiers.add(
+            jsonMapper.readValue(record.getPayload(), SegmentIdWithShardSpec.class)
+        );
       }
     }
 
@@ -584,7 +588,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    insertToMetastore(
+    insertPendingSegment(
         handle,
         newIdentifier,
         dataSource,
@@ -662,7 +666,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     // always insert empty previous sequence id
-    insertToMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+    insertPendingSegment(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
 
     log.info("Allocated pending segment [%s] for sequence[%s] in DB", newIdentifier, sequenceName);
 
@@ -742,7 +746,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private void insertToMetastore(
+  private void insertPendingSegment(
       Handle handle,
       SegmentIdWithShardSpec newIdentifier,
       String dataSource,
@@ -943,7 +947,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
         return new SegmentIdWithShardSpec(
             dataSource,
-            overallMaxId.getInterval(),
+            interval,
             Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
             partialShardSpec.complete(
                 jsonMapper,
@@ -1467,5 +1471,42 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           return IntStream.of(result).sum();
         }
     );
+  }
+
+  private static class PendingSegmentsRecord
+  {
+    private final Interval interval;
+    private final byte[] payload;
+
+    static PendingSegmentsRecord fromResultSet(ResultSet resultSet, ObjectMapper mapper)
+    {
+      try {
+        DateTime startTime = DateTimes.of(resultSet.getString(1));
+        DateTime endTime = DateTimes.of(resultSet.getString(2));
+        return new PendingSegmentsRecord(
+            new Interval(startTime.toInstant(), endTime.toInstant()),
+            resultSet.getBytes(3)
+        );
+      }
+      catch (SQLException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    PendingSegmentsRecord(Interval interval, byte[] payload)
+    {
+      this.interval = interval;
+      this.payload = payload;
+    }
+
+    public byte[] getPayload()
+    {
+      return payload;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
   }
 }
