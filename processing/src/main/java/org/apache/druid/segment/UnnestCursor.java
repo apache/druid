@@ -126,12 +126,7 @@ public class UnnestCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if(firstInSegment && !allowedBitSet.isEmpty()){
-              if(!allowedBitSet.get(pos.get(index))){
-                advance();
-              }
-              firstInSegment = false;
-            }
+
             if (pos != null) {
               if (allowedBitSet.isEmpty()) {
                 if (allowSet == null || allowSet.isEmpty()) {
@@ -224,12 +219,7 @@ public class UnnestCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if(firstInSegment && !allowSet.isEmpty()){
-              if(!allowSet.contains((String) unnestList.get(index))){
-                advance();
-              }
-              firstInSegment = false;
-            }
+
             if (pos != null) {
               if (allowedBitSet.isEmpty()) {
                 // when bitset is empty for a segment
@@ -380,6 +370,12 @@ public class UnnestCursor implements Cursor
       if (dimSelector.getObject() instanceof List) {
         this.pos = dimSelector.getRow();
       }
+      if(firstInSegment && !allowedBitSet.isEmpty()){
+        if(!allowedBitSet.get(pos.get(index))){
+          advance();
+        }
+        firstInSegment = false;
+      }
     }
     if (columnValueSelector != null) {
       this.currentVal = this.columnValueSelector.getObject();
@@ -392,6 +388,14 @@ public class UnnestCursor implements Cursor
           unnestList = (List<Object>) currentVal;
         } else if (currentVal.getClass().equals(String.class)) {
           unnestList.add(currentVal);
+        }
+      }
+      if(allowSet != null) {
+        if (firstInSegment && !allowSet.isEmpty()) {
+          if (!allowSet.contains((String) unnestList.get(index))) {
+            advance();
+          }
+          firstInSegment = false;
         }
       }
     }
