@@ -49,6 +49,13 @@ public interface ModelProperties
     String name();
     String typeName();
     void validate(Object value, ObjectMapper jsonMapper);
+
+    /**
+     * Merge a property value with an update. Validation of the update
+     * is typically done later, once all the updates are applied. The most
+     * typical merge is just: use the new value if provided, else the old
+     * value.
+     */
     Object merge(Object existing, Object update);
     T decode(Object value, ObjectMapper jsonMapper);
   }

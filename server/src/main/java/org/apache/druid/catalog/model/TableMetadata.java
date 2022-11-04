@@ -118,16 +118,6 @@ public class TableMetadata
     );
   }
 
-  public static TableMetadata newSegmentTable(
-      String name,
-      TableSpec defn
-  )
-  {
-    return newTable(
-        TableId.datasource(name),
-        defn);
-  }
-
   public static TableMetadata of(
       TableId id,
       TableSpec spec

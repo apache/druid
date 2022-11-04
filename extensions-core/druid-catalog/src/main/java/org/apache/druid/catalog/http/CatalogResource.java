@@ -107,9 +107,9 @@ public class CatalogResource
    *     This form enforces optimistic locking.</li>
    * </ul>
    *
-   * @param dbSchema The name of the Druid schema, which must be writable
+   * @param schemaName The name of the Druid schema, which must be writable
    *        and the user must have at least read access.
-   * @param name The name of the table definition to modify. The user must
+   * @param tableName The name of the table definition to modify. The user must
    *        have write access to the table.
    * @param spec The new table definition.
    * @param version the expected version of an existing table. The version must
@@ -124,8 +124,8 @@ public class CatalogResource
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response postTable(
-      @PathParam("schema") String dbSchema,
-      @PathParam("name") String name,
+      @PathParam("schema") String schemaName,
+      @PathParam("name") String tableName,
       TableSpec spec,
       @QueryParam("version") long version,
       @QueryParam("overwrite") boolean overwrite,
@@ -133,11 +133,11 @@ public class CatalogResource
   )
   {
     try {
-      final SchemaSpec schema = validateSchema(dbSchema, true);
-      validateTableName(name);
-      authorizeTable(schema, name, Action.WRITE, req);
+      final SchemaSpec schema = validateSchema(schemaName, true);
+      validateTableName(tableName);
+      authorizeTable(schema, tableName, Action.WRITE, req);
       validateTableSpec(schema, spec);
-      final TableMetadata table = TableMetadata.newTable(TableId.of(dbSchema, name), spec);
+      final TableMetadata table = TableMetadata.newTable(TableId.of(schemaName, tableName), spec);
       try {
         catalog.validate(table);
       }
@@ -180,8 +180,8 @@ public class CatalogResource
    * even if there is no datasource of the same name (typically occurs when
    * the definition is created before the datasource itself.)
    *
-   * @param dbSchema The Druid schema. The user must have read access.
-   * @param name The name of the table within the schema. The user must have
+   * @param schemaName The Druid schema. The user must have read access.
+   * @param tableName The name of the table within the schema. The user must have
    *        read access.
    * @param req the HTTP request used for authorization.
    * @return the definition for the table, if any.
@@ -190,15 +190,15 @@ public class CatalogResource
   @Path("/schemas/{schema}/tables/{name}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getTable(
-      @PathParam("schema") String dbSchema,
-      @PathParam("name") String name,
+      @PathParam("schema") String schemaName,
+      @PathParam("name") String tableName,
       @Context final HttpServletRequest req
   )
   {
     try {
-      final SchemaSpec schema = validateSchema(dbSchema, false);
-      authorizeTable(schema, name, Action.READ, req);
-      final TableMetadata table = catalog.tables().read(new TableId(dbSchema, name));
+      final SchemaSpec schema = validateSchema(schemaName, false);
+      authorizeTable(schema, tableName, Action.READ, req);
+      final TableMetadata table = catalog.tables().read(new TableId(schemaName, tableName));
       return Response.ok().entity(table).build();
     }
     catch (CatalogException e) {
@@ -210,23 +210,23 @@ public class CatalogResource
    * Deletes the table definition (but not the underlying table or datasource)
    * for the given schema and table.
    *
-   * @param dbSchema The name of the schema that holds the table.
-   * @param name The name of the table definition to delete. The user must have
+   * @param schemaName The name of the schema that holds the table.
+   * @param tableName The name of the table definition to delete. The user must have
    *             write access.
    */
   @DELETE
   @Path("/schemas/{schema}/tables/{name}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteTable(
-      @PathParam("schema") String dbSchema,
-      @PathParam("name") String name,
+      @PathParam("schema") String schemaName,
+      @PathParam("name") String tableName,
       @Context final HttpServletRequest req
   )
   {
     try {
-      final SchemaSpec schema = validateSchema(dbSchema, true);
-      authorizeTable(schema, name, Action.WRITE, req);
-      catalog.tables().delete(new TableId(dbSchema, name));
+      final SchemaSpec schema = validateSchema(schemaName, true);
+      authorizeTable(schema, tableName, Action.WRITE, req);
+      catalog.tables().delete(new TableId(schemaName, tableName));
       return ok();
     }
     catch (CatalogException e) {
@@ -247,8 +247,8 @@ public class CatalogResource
    * the table spec changed between the time it was retrieve and the edit operation
    * is submitted.
    *
-   * @param dbSchema The name of the schema that holds the table.
-   * @param name The name of the table definition to delete. The user must have
+   * @param schemaName The name of the schema that holds the table.
+   * @param tableName The name of the table definition to delete. The user must have
    *             write access.
    * @param editRequest The operation to perform. See the classes for details.
    */
@@ -257,16 +257,16 @@ public class CatalogResource
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response editTable(
-      @PathParam("schema") String dbSchema,
-      @PathParam("name") String name,
+      @PathParam("schema") String schemaName,
+      @PathParam("name") String tableName,
       TableEditRequest editRequest,
       @Context final HttpServletRequest req
   )
   {
     try {
-      final SchemaSpec schema = validateSchema(dbSchema, true);
-      authorizeTable(schema, name, Action.WRITE, req);
-      final long newVersion = new TableEditor(catalog, TableId.of(dbSchema, name), editRequest).go();
+      final SchemaSpec schema = validateSchema(schemaName, true);
+      authorizeTable(schema, tableName, Action.WRITE, req);
+      final long newVersion = new TableEditor(catalog, TableId.of(schemaName, tableName), editRequest).go();
       return okWithVersion(newVersion);
     }
     catch (CatalogException e) {
@@ -318,7 +318,8 @@ public class CatalogResource
    * which will probably differ from the list of actual tables. For example, for
    * the read-only schemas, there will be no table definitions.
    *
-   * @param schema The Druid schema to query. The user must have read access.
+   * @param schemaName The name of the Druid schema to query. The user must
+   *        have read access.
    * @param format the format of the response. See the code for the
    *        available formats
    */
@@ -326,13 +327,13 @@ public class CatalogResource
   @Path("/schemas/{schema}/tables")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSchemaTables(
-      @PathParam("schema") String dbSchema,
+      @PathParam("schema") String schemaName,
       @QueryParam("format") String format,
       @Context final HttpServletRequest req
   )
   {
     try {
-      SchemaSpec schema = validateSchema(dbSchema, false);
+      SchemaSpec schema = validateSchema(schemaName, false);
       format = Strings.isNullOrEmpty(format) ? NAME_FORMAT : StringUtils.toLowerCase(format);
       switch (format) {
         case NAME_FORMAT:
@@ -368,14 +369,14 @@ public class CatalogResource
   @Path(SCHEMA_SYNC)
   @Produces(MediaType.APPLICATION_JSON)
   public Response syncSchema(
-      @PathParam("schema") String dbSchema,
+      @PathParam("schema") String schemaName,
       @Context final HttpServletRequest req
   )
   {
     // Same as the list schemas endpoint for now. This endpoint reserves the right to change
     // over time as needed, while the user endpoint cannot easily change.
     try {
-      SchemaSpec schema = validateSchema(dbSchema, false);
+      SchemaSpec schema = validateSchema(schemaName, false);
       return Response.ok().entity(getTableMetadataForSchema(schema, req)).build();
     }
     catch (CatalogException e) {
@@ -394,17 +395,16 @@ public class CatalogResource
   @Path(TABLE_SYNC)
   @Produces(MediaType.APPLICATION_JSON)
   public Response syncTable(
-      @PathParam("schema") String dbSchema,
-      @PathParam("name") String name,
+      @PathParam("schema") String schemaName,
+      @PathParam("name") String tableName,
       @Context final HttpServletRequest req
   )
   {
-    return getTable(dbSchema, name, req);
+    return getTable(schemaName, tableName, req);
   }
 
   // ---------------------------------------------------------------------
   // Helper methods
-
 
   /**
    * Retrieves the list of all Druid table names for which the user has at
@@ -539,40 +539,45 @@ public class CatalogResource
     }
   }
 
-  private SchemaSpec validateSchema(String dbSchema, boolean forWrite) throws CatalogException
+  private SchemaSpec validateSchema(String schemaName, boolean forWrite) throws CatalogException
   {
-    if (Strings.isNullOrEmpty(dbSchema)) {
+    if (Strings.isNullOrEmpty(schemaName)) {
       throw CatalogException.badRequest("Schema name is required");
     }
-    SchemaSpec schema = catalog.resolveSchema(dbSchema);
+    SchemaSpec schema = catalog.resolveSchema(schemaName);
     if (schema == null) {
-      throw new NotFoundException("Unknown schema %s", dbSchema);
+      throw new NotFoundException("Unknown schema %s", schemaName);
     }
 
     if (forWrite && !schema.writable()) {
       throw CatalogException.badRequest(
           "Cannot modify schema %s",
-          dbSchema
+          schemaName
       );
     }
     return schema;
   }
 
-  private static ResourceAction resourceAction(SchemaSpec schema, String name, Action action)
+  private static ResourceAction resourceAction(SchemaSpec schema, String tableName, Action action)
   {
-    return new ResourceAction(new Resource(name, schema.securityResource()), action);
+    return new ResourceAction(new Resource(tableName, schema.securityResource()), action);
   }
 
-  private void authorizeTable(SchemaSpec schema, String name, Action action, HttpServletRequest request) throws CatalogException
+  private void authorizeTable(
+      final SchemaSpec schema,
+      final String tableName,
+      final Action action,
+      final HttpServletRequest request
+  ) throws CatalogException
   {
-    if (Strings.isNullOrEmpty(name)) {
+    if (Strings.isNullOrEmpty(tableName)) {
       throw CatalogException.badRequest("Table name is required");
     }
     if (action == Action.WRITE && !schema.writable()) {
       throw new ForbiddenException(
           "Cannot create table definitions in schema: " + schema.name());
     }
-    authorize(schema.securityResource(), name, action, request);
+    authorize(schema.securityResource(), tableName, action, request);
   }
 
   private void authorize(String resource, String key, Action action, HttpServletRequest request)

@@ -52,6 +52,10 @@ public class Columns
         .put(VARCHAR, ColumnType.STRING)
         .build();
 
+  private Columns()
+  {
+  }
+
   public static boolean isTimestamp(String type)
   {
     return TIMESTAMP.equalsIgnoreCase(type.trim());
@@ -75,11 +79,7 @@ public class Columns
     if (type == null) {
       return;
     }
-    if (Columns.TIME_COLUMN.equals(name)) {
-      if (!Columns.isTimestamp(type)) {
-        throw new IAE("__time column must have type TIMESTAMP");
-      }
-    } else if (!Columns.isScalar(type)) {
+    if (!Columns.isScalar(type)) {
       throw new IAE("Not a supported SQL type: " + type);
     }
   }

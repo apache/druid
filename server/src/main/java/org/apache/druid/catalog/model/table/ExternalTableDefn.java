@@ -63,7 +63,7 @@ public abstract class ExternalTableDefn extends TableDefn
   {
     public static final String FORMAT_PROPERTY = "format";
 
-    private Map<String, InputFormatDefn> formats;
+    private final Map<String, InputFormatDefn> formats;
 
     public FormattedExternalTableDefn(
         final String name,
@@ -183,7 +183,6 @@ public abstract class ExternalTableDefn extends TableDefn
   private final List<ParameterDefn> parameterList;
   private final Map<String, ParameterDefn> parameterMap;
 
-
   public ExternalTableDefn(
       final String name,
       final String typeValue,
@@ -218,6 +217,11 @@ public abstract class ExternalTableDefn extends TableDefn
     return parameterMap.get(key);
   }
 
+  /**
+   * Merge parameters provided by a SQL table function with the catalog information
+   * provided in the resolved table to produce a new resolved table used for a
+   * specific query.
+   */
   public abstract ResolvedTable mergeParameters(ResolvedTable table, Map<String, Object> values);
 
   public ExternalTableSpec convertToExtern(ResolvedTable table)
@@ -229,12 +233,20 @@ public abstract class ExternalTableDefn extends TableDefn
     );
   }
 
+  /**
+   * Convert a resolved table to the Druid internal {@link InputSource}
+   * object required by an MSQ query.
+   */
+  protected abstract InputSource convertSource(ResolvedTable table);
+
+  /**
+   * Convert a resolved table to the Druid internal {@link InputFormat}
+   * object required by an MSQ query. Not all input sources require a format.
+   */
   protected InputFormat convertFormat(ResolvedTable table)
   {
     return null;
   }
-
-  protected abstract InputSource convertSource(ResolvedTable table);
 
   protected InputSource convertObject(
       final ObjectMapper jsonMapper,
@@ -254,11 +266,6 @@ public abstract class ExternalTableDefn extends TableDefn
   {
     ResolvedTable revised = mergeParameters(table, parameters);
     return convertToExtern(revised);
-  }
-
-  public static boolean isInputTable(ResolvedTable table)
-  {
-    return table.defn() instanceof ExternalTableDefn;
   }
 
   public static Set<String> tableTypes()

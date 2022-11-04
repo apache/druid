@@ -35,9 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -97,14 +95,17 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
   {
     private final SchemaSpec schema;
     private long version = NOT_FETCHED;
-    private final Map<String, TableEntry> cache = new TreeMap<>();
+    private final ConcurrentHashMap<String, TableEntry> cache = new ConcurrentHashMap<>();
 
     protected SchemaEntry(SchemaSpec schema)
     {
       this.schema = schema;
     }
 
-    protected synchronized TableMetadata resolveTable(TableId tableId)
+    /**
+     * High-frequency by-name table lookup called for every table in every SQL query.
+     */
+    protected TableMetadata resolveTable(TableId tableId)
     {
       TableEntry entry = cache.computeIfAbsent(
           tableId.name(),
@@ -113,25 +114,31 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       return entry.table;
     }
 
-    public synchronized List<TableMetadata> tables()
+    /**
+     * Low-frequency list of tables sorted by name.
+     */
+    public List<TableMetadata> tables()
     {
       if (version == UNDEFINED) {
         return Collections.emptyList();
       }
       if (version == NOT_FETCHED) {
-        List<TableMetadata> catalogTables = base.tablesForSchema(schema.name());
-        for (TableMetadata table : catalogTables) {
-          cache.put(table.id().name(), new TableEntry(table));
+        synchronized (this) {
+          List<TableMetadata> catalogTables = base.tablesForSchema(schema.name());
+          for (TableMetadata table : catalogTables) {
+            cache.put(table.id().name(), new TableEntry(table));
+          }
         }
       }
+      List<TableMetadata> orderedTables = new ArrayList<>();
 
       // Get the list of actual tables; excluding any cached "misses".
-      List<TableMetadata> orderedTables = new ArrayList<>(cache.size());
-      for (TableEntry entry : cache.values()) {
-        if (entry.table != null) {
-          orderedTables.add(entry.table);
+      cache.forEach((k, v) -> {
+        if (v.table != null) {
+          orderedTables.add(v.table);
         }
-      }
+      });
+      orderedTables.sort((e1, e2) -> e1.id().name().compareTo(e2.id().name()));
       return orderedTables;
     }
 

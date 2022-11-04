@@ -53,7 +53,17 @@ public class AbstractDatasourceDefn extends TableDefn
    * If unset, then the system setting is used.
    */
   public static final String TARGET_SEGMENT_ROWS_PROPERTY = "targetSegmentRows";
+
+  /**
+   * The clustering column names and sort order for each new segment.
+   */
   public static final String CLUSTER_KEYS_PROPERTY = "clusterKeys";
+
+  /**
+   * The set of existing columns to "delete" (actually, just hide) from the
+   * SQL layer. Used to "remove" unwanted columns to avoid the need to rewrite
+   * existing segments to accomplish the task.
+   */
   public static final String HIDDEN_COLUMNS_PROPERTY = "hiddenColumns";
 
   public static class SegmentGranularityFieldDefn extends GranularityPropertyDefn
@@ -123,11 +133,6 @@ public class AbstractDatasourceDefn extends TableDefn
         ),
         columnDefns
     );
-  }
-
-  public static boolean isDatasource(String tableType)
-  {
-    return DatasourceDefn.TABLE_TYPE.equals(tableType);
   }
 
   public static boolean isDatasource(ResolvedTable table)

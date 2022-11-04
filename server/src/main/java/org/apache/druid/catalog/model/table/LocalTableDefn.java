@@ -35,6 +35,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Definition for a catalog table object that represents a Druid
+ * {@link LocalInputSource}.
+ */
 public class LocalTableDefn extends FormattedExternalTableDefn implements ParameterizedDefn
 {
   public static final String TABLE_TYPE = LocalInputSource.TYPE_KEY;

@@ -26,6 +26,14 @@ import javax.annotation.Nullable;
 
 import java.util.Objects;
 
+/**
+ * Description of one clustering key (column) for a datasource. Clustering is
+ * the process of physically sorting data by a sort key. This class represents
+ * one column of that sort key. The key consists of a name and a sort direction.
+ * Sort direction is optional: omitted, ascending is assumed.
+ * (In Druid, clustering is always {@code NULLS LOW} in SQL parlance, so that attribute
+ * does not appear here.
+ */
 public class ClusterKeySpec
 {
   private final String expr;
@@ -38,7 +46,7 @@ public class ClusterKeySpec
   )
   {
     this.expr = expr;
-    this.desc = desc != null && desc == true;
+    this.desc = desc != null && desc;
   }
 
   @JsonProperty("column")

@@ -56,7 +56,7 @@ public class ColumnSpec
   /**
    * The data type of the column expressed as a supported SQL type. The data type here must
    * directly match a Druid storage type. So, {@code BIGINT} for {code long}, say.
-   * This usage does not support Druid's usual "fudging": one cannot use {@link INTEGER}
+   * This usage does not support Druid's usual "fudging": one cannot use {@code INTEGER}
    * to mean {@code long}. The type will likely encode complex and aggregation types
    * in the future, though that is not yet supported. The set of valid mappings is
    * defined in the {@link Columns} class.

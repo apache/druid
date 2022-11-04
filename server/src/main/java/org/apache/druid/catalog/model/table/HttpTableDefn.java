@@ -60,7 +60,11 @@ import java.util.regex.Pattern;
 public class HttpTableDefn extends FormattedExternalTableDefn implements ParameterizedDefn
 {
   public static final String TABLE_TYPE = HttpInputSource.TYPE_KEY;
-  public static final String URI_TEMPLATE_PROPERTY = "template";
+
+  // Catalog properties that map to fields in the HttpInputSource. See
+  // that class for the meaning of these properties.
+
+  public static final String URI_TEMPLATE_PROPERTY = "uriTemplate";
   public static final String USER_PROPERTY = "user";
   public static final String PASSWORD_PROPERTY = "password";
   public static final String PASSWORD_ENV_VAR_PROPERTY = "passwordEnvVar";

@@ -22,6 +22,9 @@ package org.apache.druid.catalog.model.table;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.ColumnDefn;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Collections;
 
@@ -53,6 +56,16 @@ public class DatasourceDefn extends AbstractDatasourceDefn
     {
       super.validate(spec, jsonMapper);
       validateScalarColumn(spec);
+      if (Columns.isTimeColumn(spec.name()) &&
+          spec.sqlType() != null &&
+          !Columns.TIMESTAMP.equalsIgnoreCase(spec.sqlType())) {
+        throw new IAE(StringUtils.format(
+            "%s column must have no SQL type or SQL type %s",
+            Columns.TIME_COLUMN,
+            Columns.TIMESTAMP
+            )
+        );
+      }
     }
   }
 
