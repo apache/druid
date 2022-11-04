@@ -3071,7 +3071,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
@@ -3195,7 +3196,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 

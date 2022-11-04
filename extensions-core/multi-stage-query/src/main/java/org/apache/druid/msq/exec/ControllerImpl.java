@@ -90,6 +90,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -174,7 +175,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -956,7 +957,7 @@ public class ControllerImpl implements Controller
       if (dataSegments.isEmpty()) {
         return Optional.empty();
       } else {
-        return Optional.of(VersionedIntervalTimeline.forSegments(dataSegments));
+        return Optional.of(SegmentTimeline.forSegments(dataSegments));
       }
     };
   }
@@ -1817,9 +1818,9 @@ public class ControllerImpl implements Controller
     int runningTasks = 1;
 
     if (taskLauncher != null) {
-      Pair<Integer, Integer> workerTaskStatus = taskLauncher.getWorkerTaskStatus();
-      pendingTasks = workerTaskStatus.lhs;
-      runningTasks = workerTaskStatus.rhs + 1; // To account for controller.
+      WorkerCount workerTaskCount = taskLauncher.getWorkerTaskCount();
+      pendingTasks = workerTaskCount.getPendingWorkerCount();
+      runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
     }
     return new MSQStatusReport(
         taskState,

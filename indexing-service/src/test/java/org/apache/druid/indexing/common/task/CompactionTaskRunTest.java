@@ -1696,7 +1696,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 false,
                 false,
                 TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
+                null,
+                false
             )
         )
         .taskActionClient(createActionClient(task))
@@ -1715,6 +1716,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .appenderatorsManager(new TestAppenderatorsManager())
         .overlordClient(overlordClient)
         .coordinatorClient(coordinatorClient)
+        .taskLogPusher(null)
+        .attemptId("1")
         .build();
   }
 
