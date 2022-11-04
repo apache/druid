@@ -114,7 +114,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
     dataSources.forEach((String dataSource, SegmentTimeline timeline) -> {
-      boolean allToFinerGranularityCompaction = false;
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
@@ -134,8 +133,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             if (Intervals.ETERNITY.equals(segment.getInterval())
                 && !Granularities.ALL.equals(configuredSegmentGranularity)) {
               log.warn("Cannot compact segments from ALL to finer granularity for datasource[%s]", dataSource);
-              allToFinerGranularityCompaction = true;
-              continue;
+              return;
             }
             for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
               intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
@@ -169,9 +167,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           // to get the original ShardSpec and original version back (when converting the segment back to return from this iterator).
           originalTimeline = timeline;
           timeline = timelineWithConfiguredSegmentGranularity;
-        }
-        if (allToFinerGranularityCompaction) {
-          return;
         }
         final List<Interval> searchIntervals =
             findInitialSearchInterval(dataSource, timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
