@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -261,6 +262,32 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       ctr++;
     }
     Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+  }
+
+  @Test
+  public void testFrontCodedOnlyNull() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
+    List<String> theList = Collections.singletonList(null);
+    fillBuffer(buffer, theList, 4);
+
+    buffer.position(0);
+    FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+        buffer,
+        buffer.order()
+    ).get();
+
+    Assert.assertNull(codedUtf8Indexed.get(0));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+
+    Assert.assertEquals(0, codedUtf8Indexed.indexOf(null));
+    Assert.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+
+    Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
+    Assert.assertTrue(utf8Iterator.hasNext());
+    Assert.assertNull(utf8Iterator.next());
+    Assert.assertFalse(utf8Iterator.hasNext());
   }
 
   private static long fillBuffer(ByteBuffer buffer, Iterable<String> sortedIterable, int bucketSize) throws IOException
