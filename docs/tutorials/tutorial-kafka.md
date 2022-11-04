@@ -66,19 +66,18 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 In this section, you download sample data to the tutorial's directory and send the data to your Kafka topic.
 
-1. In your Druid root directory, run the following commands to navigate to the `tutorials` directory, download and unzip the sample data file:
+1. Run the following commands from your Druid root directory to download and extract the sample spec:
 
    ```bash
-   cd quickstart/tutorial
-   curl https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz -o kttm-nested-data.json.gz
-   gunzip -c kttm-nested-data.json.gz > kttm-nested-data.json
+   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-nested-data.json.gz
+   tar -xzf kttm-nested-data.json.gz
    ```
 
 2. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic. Replace `{PATH_TO_DRUID}` with the path to your Druid root directory:
 
    ```bash
    export KAFKA_OPTS="-Dfile.encoding=UTF-8" 
-   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < {PATH_TO_DRUID}/quickstart/tutorial/kttm-nested-data.json
+   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < {PATH_TO_DRUID}/kttm-nested-data.json
    ```
 
 ## Load data into Druid
