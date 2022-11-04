@@ -132,6 +132,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             // of 2020-01/2020-02 and 2020-02/2020-03.
             if (Intervals.ETERNITY.equals(segment.getInterval())
                 && !Granularities.ALL.equals(configuredSegmentGranularity)) {
+              // This is to prevent the coordinator from crashing as raised in https://github.com/apache/druid/issues/13208
               log.warn("Cannot compact segments from ALL to finer granularity for datasource[%s]", dataSource);
               return;
             }

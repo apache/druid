@@ -166,6 +166,8 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
 }
 ```
 
+Please note that auto-compaction currently skips ALL granularity intervals when the target segment granularity is finer.
+
 ### Update partitioning scheme
 
 For your `wikipedia` datasource, you want to optimize segment access when regularly ingesting data without compromising compute time when querying the data. Your ingestion spec for batch append uses [dynamic partitioning](../ingestion/native-batch.md#dynamic-partitioning) to optimize for write-time operations, while your stream ingestion partitioning is configured by the stream service. You want to implement auto-compaction to reorganize the data with a suitable read-time partitioning using [multi-dimension range partitioning](../ingestion/native-batch.md#multi-dimension-range-partitioning). Based on the dimensions frequently accessed in queries, you wish to partition on the following dimensions: `channel`, `countryName`, `namespace`.
