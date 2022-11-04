@@ -25,6 +25,9 @@ import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
 
+/**
+ * Defines if and when {@link SeekableStreamSupervisor} can become idle.
+ */
 public class IdleConfig
 {
   private final boolean enabled;

@@ -1152,7 +1152,10 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.supervisor.taskUnhealthinessThreshold`|The number of consecutive task failures before the supervisor is considered unhealthy.|3|
 |`druid.supervisor.storeStackTrace`|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint.|false|
 |`druid.supervisor.maxStoredExceptionEvents`|The maximum number of exception events that can be returned through the supervisor `/status` endpoint.|`max(healthinessThreshold, unhealthinessThreshold)`|
+|`druid.supervisor.idleConfig.enabled`|If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
+|`druid.supervisor.idleConfig.inactiveAfterMillis`|Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
 
+idleConfig here becomes the default behaviour for the entire cluster. See [Idle Configuration in KafkaSupervisorIOConfig](../development/extensions-core/kafka-supervisor-reference.md/#KafkaSupervisorIOConfig) to override it on individual basis.
 #### Overlord Dynamic Configuration
 
 The Overlord can dynamically change worker behavior.
