@@ -23,8 +23,6 @@ sidebar_label: Nested columns
   ~ under the License.
   -->
 
-> Nested columns is an experimental feature available starting in Apache Druid 24.0. Like most experimental features, functionality documented on this page is subject to change in future releases. However, the COMPLEX column type includes versioning to provide backward compatible support in future releases. We strongly encourage you to experiment with nested columns in your development environment to evaluate that they meet your use case. If so, you can use them in production scenarios. Review the release notes and this page to stay up to date with changes.
-
 Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
 Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#json-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
@@ -216,6 +214,84 @@ FROM (
 )
 PARTITIONED BY ALL
 ```
+
+## Streaming ingestion
+
+You can ingest nested data into Druid using the [streaming method](../ingestion/index.md#streaming)&mdash;for example, from a Kafka topic.
+
+When you [define your supervisor spec](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec), include a dimension with type `json` for each nested column. For example, the following supervisor spec from the [Kafka ingestion tutorial](../tutorials/tutorial-kafka.md) contains dimensions for the nested columns `event`, `agent`, and `geo_ip` in datasource `kttm-kafka`.
+
+```json
+{
+   "type": "kafka",
+   "spec": {
+      "ioConfig": {
+         "type": "kafka",
+         "consumerProperties": {
+           "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "kttm",
+      "inputFormat": {
+         "type": "json"
+      },
+      "useEarliestOffset": true
+   },
+   "tuningConfig": {
+     "type": "kafka"
+   },
+   "dataSchema": {
+      "dataSource": "kttm-kafka",
+      "timestampSpec": {
+         "column": "timestamp",
+         "format": "iso"
+      },
+      "dimensionsSpec": {
+         "dimensions": [
+            "session",
+             "number",
+             "client_ip",
+             "language",
+             "adblock_list",
+             "app_version",
+             "path",
+             "loaded_image",
+             "referrer",
+             "referrer_host",
+             "server_ip",
+             "screen",
+             "window",
+             {
+               "type": "long",
+               "name": "session_length"
+             },
+             "timezone",
+             "timezone_offset",
+             {
+               "type": "json",
+               "name": "event"
+             },
+             {
+               "type": "json",
+               "name": "agent"
+             },
+             {
+               "type": "json",
+               "name": "geo_ip"
+             }
+           ]
+         },
+      "granularitySpec": {
+         "queryGranularity": "none",
+         "rollup": false,
+         "segmentGranularity": "day"
+      }
+    }
+  }
+}
+```
+
+
+The [Kafka tutorial](../tutorials/tutorial-kafka.md) guides you through the steps to load sample nested data into a Kafka topic, then ingest the data into Druid.
 
 ### Transform data during SQL-based ingestion
 
