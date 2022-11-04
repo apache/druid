@@ -37,6 +37,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -86,7 +87,7 @@ public class DruidSchemaInternRowSignatureBenchmark
           serverView,
           segmentManager,
           joinableFactory,
-          config,
+          SegmentMetadataCacheConfig.create(),
           escalator,
           brokerInternalQueryConfig
       );

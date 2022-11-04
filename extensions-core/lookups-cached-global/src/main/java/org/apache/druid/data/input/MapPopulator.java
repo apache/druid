@@ -245,7 +245,8 @@ public class MapPopulator<K, V>
   {
     if (null != o) {
       if (o.getClass().getName().equals(STRING_CLASS_NAME)) {
-        return ((String) (o)).length();
+        // Each String object has ~40 bytes of overhead
+        return ((long) ((String) (o)).length() * Character.BYTES) + 40;
       } else if (o.getClass().getName().equals(DOUBLE_CLASS_NAME)) {
         return 8;
       } else if (o.getClass().getName().equals(FLOAT_CLASS_NAME)) {

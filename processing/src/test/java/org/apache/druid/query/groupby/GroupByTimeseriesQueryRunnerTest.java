@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.groupby;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -47,6 +49,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -104,6 +107,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         @Override
         public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
+          final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
           QueryRunner<ResultRow> newRunner = factory.mergeRunners(
               Execs.directExecutor(), ImmutableList.of(runner)
@@ -133,7 +137,15 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
             );
 
             theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timeDimension);
-            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+            try {
+              theContext.put(
+                  GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+                  jsonMapper.writeValueAsString(granularity)
+              );
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
             theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
           }
 

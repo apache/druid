@@ -229,7 +229,7 @@ public class DataSourcePlan
     return forExternal(
         new ExternalDataSource(
             dataString.isEmpty() ? NilInputSource.instance() : new InlineInputSource(dataString),
-            new JsonInputFormat(null, null, null),
+            new JsonInputFormat(null, null, null, null, null),
             signature
         ),
         broadcast
@@ -315,9 +315,9 @@ public class DataSourcePlan
           clause.getPrefix(),
           clause.getCondition(),
           clause.getJoinType(),
-
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
-          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null
+          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
+          dataSource.getJoinableFactoryWrapper()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));

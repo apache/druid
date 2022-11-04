@@ -21,21 +21,27 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
 public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 {
+  private static final Logger log = new Logger(MarkAsUnusedOvershadowedSegments.class);
+
   private final DruidCoordinator coordinator;
 
   public MarkAsUnusedOvershadowedSegments(DruidCoordinator coordinator)
@@ -48,13 +54,20 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
   {
     // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
     if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
+      log.info("Skipping MarkAsUnused as coordinator is not leading enough time.");
+      return params;
+    }
+
+    final Set<DataSegment> allOvershadowedSegments = params.getDataSourcesSnapshot().getOvershadowedSegments();
+    if (allOvershadowedSegments.isEmpty()) {
+      log.info("Skipping MarkAsUnused as there are no overshadowed segments.");
       return params;
     }
 
     CoordinatorStats stats = new CoordinatorStats();
 
     DruidCluster cluster = params.getDruidCluster();
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
@@ -70,31 +83,30 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     // to prevent unpublished segments from prematurely overshadowing segments.
 
     // Mark all segments as unused in db that are overshadowed by served segments
-    for (DataSegment dataSegment : params.getUsedSegments()) {
-      VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-      if (timeline != null
-          && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion(), dataSegment)) {
-        coordinator.markSegmentAsUnused(dataSegment);
+    final Map<String, Set<SegmentId>> datasourceToUnusedSegments = new HashMap<>();
+    for (DataSegment dataSegment : allOvershadowedSegments) {
+      SegmentTimeline timeline = timelines.get(dataSegment.getDataSource());
+      if (timeline != null && timeline.isOvershadowed(dataSegment)) {
+        datasourceToUnusedSegments.computeIfAbsent(dataSegment.getDataSource(), ds -> new HashSet<>())
+                                  .add(dataSegment.getId());
         stats.addToGlobalStat("overShadowedCount", 1);
       }
     }
+    datasourceToUnusedSegments.forEach(coordinator::markSegmentsAsUnused);
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 
   private void addSegmentsFromServer(
       ServerHolder serverHolder,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines
+      Map<String, SegmentTimeline> timelines
   )
   {
     ImmutableDruidServer server = serverHolder.getServer();
 
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      VersionedIntervalTimeline<String, DataSegment> timeline = timelines
-          .computeIfAbsent(
-              dataSource.getName(),
-              dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
-          );
+      SegmentTimeline timeline = timelines
+          .computeIfAbsent(dataSource.getName(), dsName -> new SegmentTimeline());
       VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
     }
   }

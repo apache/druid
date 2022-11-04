@@ -141,6 +141,16 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
   @Override
+  public Function<GenericRecord, Object> makeJsonTreeExtractor(List<String> nodes)
+  {
+    if (nodes.size() == 1) {
+      return (GenericRecord record) -> getRootField(record, nodes.get(0));
+    }
+
+    throw new UnsupportedOperationException("Avro + nested tree extraction not supported");
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return avroJsonProvider;

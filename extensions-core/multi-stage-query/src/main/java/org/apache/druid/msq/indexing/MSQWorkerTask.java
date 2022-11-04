@@ -98,7 +98,7 @@ public class MSQWorkerTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     final WorkerContext context = IndexerWorkerContext.createProductionInstance(toolbox, injector);
     worker = new WorkerImpl(this, context);

@@ -25,6 +25,12 @@
     width: 600px;
   }
 
+  .loader {
+    position: relative;
+    height: 60vh;
+    width: 100%;
+  }
+
   .#{$bp-ns}-dialog-body {
     max-height: 70vh;
 

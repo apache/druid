@@ -118,6 +118,7 @@ InputSource
 InputSources
 Integer.MAX_VALUE
 ioConfig
+Istio
 JBOD
 JDBC
 JDK
@@ -182,6 +183,7 @@ S3
 SDK
 SIGAR
 SPNEGO
+Splunk
 SqlInputSource
 SQLServer
 SSD
@@ -216,6 +218,7 @@ aggregators
 ambari
 analytics
 arrayElement
+assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
 async
@@ -237,6 +240,7 @@ blobstore
 boolean
 breakpoint
 broadcasted
+bucketSize
 checksums
 classpath
 clickstream
@@ -316,16 +320,20 @@ isAllowList
 jackson-jq
 javadoc
 joinable
+jsonCompression
 json_keys
 json_object
 json_paths
 json_query
 json_value
+karlkfi
 kerberos
 keystore
 keytool
 keytab
 kubernetes
+kubexit
+k8s
 laning
 lifecycle
 localhost
@@ -373,6 +381,7 @@ pathParts
 performant
 plaintext
 pluggable
+podSpec
 postgres
 postgresql
 pre-aggregated
@@ -434,6 +443,7 @@ secondaryPartitionPruning
 seekable-stream
 servlet
 setProcessingThreadNames
+sigterm
 simple-client-sslcontext
 sharded
 sharding
@@ -446,6 +456,7 @@ ssl
 sslmode
 stdout
 storages
+stringDictionaryEncoding
 stringified
 subarray
 subnet
@@ -489,6 +500,7 @@ unsetting
 untrusted
 useFilterCNF
 useJqSyntax
+useJsonNodeReader
 useSSL
 uptime
 uris
@@ -627,6 +639,8 @@ multiStageQuery.payload.status
 multiStageQuery.payload.status.status
 multiStageQuery.payload.status.startTime 
 multiStageQuery.payload.status.durationMs
+multiStageQuery.payload.status.pendingTasks
+multiStageQuery.payload.status.runningTasks
 multiStageQuery.payload.status.errorReport
 multiStageQuery.payload.status.errorReport.taskId
 multiStageQuery.payload.status.errorReport.host
@@ -687,7 +701,8 @@ WorkerRpcFailed
 # MSQ context parameters
 maxNumTasks 
 taskAssignment 
-finalizeAggregations 
+finalizeAggregations
+indexSpec
 rowsInMemory 
 segmentSortOrder 
 rowsPerSegment 
@@ -752,7 +767,7 @@ v9
 DskipTests
 Papache-release
 Pdist
-Ddruid.console.skip
+Dweb.console.skip
 yaml
 Phadoop3
 dist-hadoop3
@@ -1231,6 +1246,7 @@ column_1
 column_n
 com.opencsv
 ctrl
+descriptorString
 headerFormat
 headerLabelPrefix
 jsonLowercase

@@ -183,6 +183,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -286,6 +291,15 @@
             </activation>
             <properties>
                 <it.category>AzureDeepStorage</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-MultiStageQuery</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>MultiStageQuery</it.category>
             </properties>
         </profile>
         <profile>

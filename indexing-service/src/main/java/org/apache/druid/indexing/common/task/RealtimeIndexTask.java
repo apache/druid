@@ -208,7 +208,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     runThread = Thread.currentThread();
 

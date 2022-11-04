@@ -42,7 +42,7 @@
         <dependency>
             <!-- This is needed to bundle the web console -->
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-console</artifactId>
+            <artifactId>web-console</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
@@ -594,6 +594,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-kubernetes-overlord-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
                                         <argument>-c</argument>

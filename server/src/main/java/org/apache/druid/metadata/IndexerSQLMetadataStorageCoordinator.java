@@ -50,8 +50,8 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -157,7 +157,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return connector.retryWithHandle(
         handle -> {
           if (visibility == Segments.ONLY_VISIBLE) {
-            final VersionedIntervalTimeline<String, DataSegment> timeline =
+            final SegmentTimeline timeline =
                 getTimelineForIntervalsWithHandle(handle, dataSource, intervals);
             return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
@@ -256,7 +256,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return identifiers;
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalsWithHandle(
+  private SegmentTimeline getTimelineForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
@@ -265,7 +265,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try (final CloseableIterator<DataSegment> iterator =
              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
                                      .retrieveUsedSegments(dataSource, intervals)) {
-      return VersionedIntervalTimeline.forSegments(iterator);
+      return SegmentTimeline.forSegments(iterator);
     }
   }
 
@@ -323,7 +323,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = new HashSet<>();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
-        VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
+        SegmentTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
     for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());

@@ -45,6 +45,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -96,64 +97,53 @@ public interface Query<T>
   DateTimeZone getTimezone();
 
   /**
-   * Use {@link #getQueryContext()} instead.
+   * Returns the context as an (immutable) map.
    */
-  @Deprecated
   Map<String, Object> getContext();
 
   /**
-   * Returns QueryContext for this query. This type distinguishes between user provided, system default, and system
-   * generated query context keys so that authorization may be employed directly against the user supplied context
-   * values.
-   *
-   * This method is marked @Nullable, but is only so for backwards compatibility with Druid versions older than 0.23.
-   * Callers should check if the result of this method is null, and if so, they are dealing with a legacy query
-   * implementation, and should fall back to using {@link #getContext()} and {@link #withOverriddenContext(Map)} to
-   * manipulate the query context.
-   *
-   * Note for query context serialization and deserialization.
-   * Currently, once a query is serialized, its queryContext can be different from the original queryContext
-   * after the query is deserialized back. If the queryContext has any {@link QueryContext#defaultParams} or
-   * {@link QueryContext#systemParams} in it, those will be found in {@link QueryContext#userParams}
-   * after it is deserialized. This is because {@link BaseQuery#getContext()} uses
-   * {@link QueryContext#getMergedParams()} for serialization, and queries accept a map for deserialization.
+   * Returns the query context as a {@link QueryContext}, which provides
+   * convenience methods for accessing typed context values. The returned
+   * instance is a view on top of the context provided by {@link #getContext()}.
+   * <p>
+   * The default implementation is for backward compatibility. Derived classes should
+   * store and return the {@link QueryContext} directly.
    */
-  @Nullable
-  default QueryContext getQueryContext()
+  default QueryContext context()
   {
-    return null;
+    return QueryContext.of(getContext());
   }
 
   /**
    * Get context value and cast to ContextType in an unsafe way.
    *
-   * For safe conversion, it's recommended to use following methods instead
+   * For safe conversion, it's recommended to use following methods instead:
+   * <p>
+   * {@link QueryContext#getBoolean(String)} <br/>
+   * {@link QueryContext#getString(String)} <br/>
+   * {@link QueryContext#getInt(String)} <br/>
+   * {@link QueryContext#getLong(String)} <br/>
+   * {@link QueryContext#getFloat(String)} <br/>
+   * {@link QueryContext#getEnum(String, Class, Enum)} <br/>
+   * {@link QueryContext#getHumanReadableBytes(String, HumanReadableBytes)}
    *
-   * {@link QueryContext#getAsBoolean(String)}
-   * {@link QueryContext#getAsString(String)}
-   * {@link QueryContext#getAsInt(String)}
-   * {@link QueryContext#getAsLong(String)}
-   * {@link QueryContext#getAsFloat(String, float)}
-   * {@link QueryContext#getAsEnum(String, Class, Enum)}
-   * {@link QueryContext#getAsHumanReadableBytes(String, HumanReadableBytes)}
+   * @deprecated use {@code queryContext().get<Type>()} instead
    */
+  @Deprecated
+  @SuppressWarnings("unchecked")
   @Nullable
   default <ContextType> ContextType getContextValue(String key)
   {
-    if (getQueryContext() == null) {
-      return null;
-    } else {
-      return (ContextType) getQueryContext().get(key);
-    }
+    return (ContextType) context().get(key);
   }
 
+  /**
+   * @deprecated use {@code queryContext().getBoolean()} instead.
+   */
+  @Deprecated
   default boolean getContextBoolean(String key, boolean defaultValue)
   {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsBoolean(key, defaultValue);
-    }
+    return context().getBoolean(key, defaultValue);
   }
 
   /**
@@ -164,14 +154,12 @@ public interface Query<T>
    * @param key          The context key value being looked up
    * @param defaultValue The default to return if the key value doesn't exist or the context is null.
    * @return {@link HumanReadableBytes}
+   * @deprecated use {@code queryContext().getContextHumanReadableBytes()} instead.
    */
-  default HumanReadableBytes getContextAsHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  @Deprecated
+  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
   {
-    if (getQueryContext() == null) {
-      return defaultValue;
-    } else {
-      return getQueryContext().getAsHumanReadableBytes(key, defaultValue);
-    }
+    return context().getHumanReadableBytes(key, defaultValue);
   }
 
   boolean isDescending();
@@ -230,7 +218,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return getQueryContext().getAsString(BaseQuery.SQL_QUERY_ID);
+    return context().getString(BaseQuery.SQL_QUERY_ID);
   }
 
   /**
