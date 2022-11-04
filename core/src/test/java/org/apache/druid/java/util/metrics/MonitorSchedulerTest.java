@@ -73,7 +73,7 @@ public class MonitorSchedulerTest
     EasyMock.expectLastCall().times(1);
 
     EasyMock.replay(emitter);
-t
+
     scheduler.removeMonitor(monitor);
 
     EasyMock.verify(emitter);

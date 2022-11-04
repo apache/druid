@@ -359,7 +359,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
                         List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
-                        log.debug("Successfully handed off [%d] segments.", segments.size());
+                        log.info("Successfully handed off [%d] segments.", segments.size());
                         metrics.reportMaxSegmentHandoffTime(System.currentTimeMillis() - handoffStartTime);
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
