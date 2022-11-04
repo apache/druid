@@ -746,6 +746,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
+  private IdleConfig idleConfig;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -3290,8 +3291,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
-    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
-    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
+    if (idleConfig == null) {
+      idleConfig = java.util.Optional.ofNullable(spec.getIoConfig().getIdleConfig())
+                                     .orElse(
+                                         new IdleConfig(
+                                             spec.supervisorStateManagerConfig.isIdleConfigEnabled(),
+                                             spec.supervisorStateManagerConfig.getInactiveAfterMillis()
+                                         )
+                                     );
+    }
+
+    if (!idleConfig.isEnabled() || spec.isSuspended()) {
       return;
     }
 
