@@ -701,6 +701,7 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/ansi\-regex@.*$</packageUrl>
      <vulnerabilityName>1084697</vulnerabilityName>
+     <cve>CVE-2021-3807</cve>
    </suppress>
    <suppress>
      <notes><![CDATA[
@@ -708,6 +709,7 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/glob\-parent@.*$</packageUrl>
      <vulnerabilityName>1081884</vulnerabilityName>
+     <cve>CVE-2020-28469</cve>
    </suppress>
    <suppress>
      <notes><![CDATA[
@@ -722,5 +724,6 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/y18n@.*$</packageUrl>
      <vulnerabilityName>1070209</vulnerabilityName>
+     <cve>CVE-2020-7774</cve>
    </suppress>
 </suppressions>
