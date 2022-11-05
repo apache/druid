@@ -1589,10 +1589,11 @@ public class NewestSegmentFirstPolicyTest
   public void testAllToFinerGranularity()
   {
     CompactionSegmentIterator iterator = policy.reset(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"),
-                                                            new UserCompactionTaskGranularityConfig(Granularities.DAY,
-                                                                                                    null,
-                                                                                                    null))
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P1D"),
+                                               new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
+                        )
         ),
         ImmutableMap.of(
             DATA_SOURCE,

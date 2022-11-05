@@ -166,7 +166,7 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
 }
 ```
 
-Please note that auto-compaction currently skips ALL granularity intervals when the target segment granularity is finer.
+> Auto-compaction skips datasources containing ALL granularity segments when the target granularity is different.
 
 ### Update partitioning scheme
 
