@@ -143,8 +143,10 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String column)
   {
-    //intercept
-    return baseAdapter.getDimensionCardinality(column);
+    if (outputColumnName.equals(dimensionToUnnest)) {
+      return baseAdapter.getDimensionCardinality(column);
+    }
+    return baseAdapter.getDimensionCardinality(dimensionToUnnest);
   }
 
   @Override
@@ -163,23 +165,30 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String column)
   {
-    //intercept
-    return baseAdapter.getMinValue(column);
+    if (outputColumnName.equals(dimensionToUnnest)) {
+      return baseAdapter.getMinValue(column);
+    }
+    return baseAdapter.getMinValue(dimensionToUnnest);
   }
 
   @Nullable
   @Override
   public Comparable getMaxValue(String column)
   {
-    //intercept
-    return baseAdapter.getMaxValue(column);
+    if (outputColumnName.equals(dimensionToUnnest)) {
+      return baseAdapter.getMaxValue(column);
+    }
+    return baseAdapter.getMaxValue(dimensionToUnnest);
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return baseAdapter.getColumnCapabilities(column);
+    if (outputColumnName.equals(dimensionToUnnest)) {
+      return baseAdapter.getColumnCapabilities(column);
+    }
+    return baseAdapter.getColumnCapabilities(dimensionToUnnest);
   }
 
   @Override
