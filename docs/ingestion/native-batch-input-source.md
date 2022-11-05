@@ -46,7 +46,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -81,7 +81,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -101,7 +101,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -122,7 +122,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "s3",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "uris": ["s3://foo/bar/file.json", "s3://bar/foo/file2.json"],
         "properties": {
           "accessKeyId": "KLJ78979SDFdS2",
@@ -226,7 +226,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "uris": ["gs://foo/bar/file.json", "gs://bar/foo/file2.json"]
       },
       "inputFormat": {
@@ -261,7 +261,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "google",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "foo", "path": "bar/file1.json"},
           { "bucket": "bar", "path": "foo/file2.json"}
@@ -342,7 +342,7 @@ Sample specs:
       "type": "index_parallel",
       "inputSource": {
         "type": "azure",
-        "objectGlob": "*.json",
+        "objectGlob": "**.json",
         "objects": [
           { "bucket": "container", "path": "prefix1/file1.json"},
           { "bucket": "container", "path": "prefix2/file2.json"}
