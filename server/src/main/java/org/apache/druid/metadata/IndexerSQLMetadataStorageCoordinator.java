@@ -235,7 +235,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             StringUtils.format(
                 "SELECT start, %2$send%2$s, payload FROM %1$s "
                 + "WHERE dataSource = :dataSource "
-                + "AND start <= :end and %2$send%2$s >= :start",
+                + "AND start < :end and %2$send%2$s > :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
