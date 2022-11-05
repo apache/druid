@@ -123,7 +123,7 @@ public abstract class MonitorScheduler
       started = false;
       List<Monitor> monitorsCopy = new ArrayList<>(monitors);
       for (Monitor monitor : monitorsCopy) {
-        monitor.stop();
+        removeMonitor(monitor);
       }
     }
   }
