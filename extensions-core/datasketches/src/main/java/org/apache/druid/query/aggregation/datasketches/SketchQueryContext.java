@@ -17,36 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.lookup.cache.polling;
+package org.apache.druid.query.aggregation.datasketches;
 
-import java.util.List;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-public interface PollingCache<K, V>
+public class SketchQueryContext
 {
-  /**
-   * @param key Given key to lookup its value from the cache.
-   *
-   * @return Returns the value associated to the {@code key} or {@code null} if no value exist.
-   */
-  V get(K key);
+  public static final String CTX_FINALIZE_OUTER_SKETCHES = "sqlFinalizeOuterSketches";
+  public static final boolean DEFAULT_FINALIZE_OUTER_SKETCHES = false;
 
-  /**
-   * @param value Given value to reverse lookup its keys.
-   *
-   * @return Returns a {@link List} of keys associated to the given {@code value} otherwise {@link java.util.Collections.EmptyList}
-   */
-  List<K> getKeys(V value);
-
-  /**
-   * close and clean the resources used by the cache
-   */
-  void close();
-
-  /**
-   * Estimated heap footprint of this object.
-   */
-  default long estimateHeapFootprint()
+  public static boolean isFinalizeOuterSketches(final PlannerContext plannerContext)
   {
-    return 0;
+    return QueryContexts.getAsBoolean(
+        CTX_FINALIZE_OUTER_SKETCHES,
+        plannerContext.queryContextMap().get(CTX_FINALIZE_OUTER_SKETCHES),
+        DEFAULT_FINALIZE_OUTER_SKETCHES
+    );
   }
 }

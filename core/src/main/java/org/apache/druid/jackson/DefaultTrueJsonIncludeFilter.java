@@ -17,36 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.lookup.cache.polling;
+package org.apache.druid.jackson;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
-public interface PollingCache<K, V>
+/**
+ * {@link JsonInclude} filter for boolean values that default to true.
+ *
+ * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
+ * exclusions (see spotbugs-exclude.xml).
+ */
+@SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+public class DefaultTrueJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
 {
-  /**
-   * @param key Given key to lookup its value from the cache.
-   *
-   * @return Returns the value associated to the {@code key} or {@code null} if no value exist.
-   */
-  V get(K key);
-
-  /**
-   * @param value Given value to reverse lookup its keys.
-   *
-   * @return Returns a {@link List} of keys associated to the given {@code value} otherwise {@link java.util.Collections.EmptyList}
-   */
-  List<K> getKeys(V value);
-
-  /**
-   * close and clean the resources used by the cache
-   */
-  void close();
-
-  /**
-   * Estimated heap footprint of this object.
-   */
-  default long estimateHeapFootprint()
+  @Override
+  public boolean equals(Object obj)
   {
-    return 0;
+    return obj == null || (obj instanceof Boolean && (boolean) obj);
   }
 }

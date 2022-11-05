@@ -94,7 +94,8 @@ public class HllSketchSetUnionOperatorConversion implements SqlOperatorConversio
           plannerContext,
           rowSignature,
           operand,
-          postAggregatorVisitor
+          postAggregatorVisitor,
+          true
       );
       if (convertedPostAgg == null) {
         if (operandCounter == 0) {
