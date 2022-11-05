@@ -4054,6 +4054,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
+    Thread.sleep(1000);
+
     Assert.assertEquals(failsToResumePausedTask.getId(), shutdownTaskId.getValue());
 
     verifyAll();
