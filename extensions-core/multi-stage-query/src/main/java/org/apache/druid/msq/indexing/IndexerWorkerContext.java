@@ -44,6 +44,9 @@ import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.rpc.CoordinatorServiceClient;
+import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -71,6 +74,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
   private final ServiceClientFactory clientFactory;
+  private final long availableHeapMemory;
 
   @GuardedBy("this")
   private OverlordClient overlordClient;
@@ -83,7 +87,8 @@ public class IndexerWorkerContext implements WorkerContext
       final Injector injector,
       final IndexIO indexIO,
       final TaskDataSegmentProvider dataSegmentProvider,
-      final ServiceClientFactory clientFactory
+      final ServiceClientFactory clientFactory,
+      final long availableHeapMemory
   )
   {
     this.toolbox = toolbox;
@@ -91,6 +96,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
     this.clientFactory = clientFactory;
+    this.availableHeapMemory = availableHeapMemory;
   }
 
   public static IndexerWorkerContext createProductionInstance(final TaskToolbox toolbox, final Injector injector)
@@ -109,7 +115,8 @@ public class IndexerWorkerContext implements WorkerContext
         injector,
         indexIO,
         new TaskDataSegmentProvider(coordinatorServiceClient, segmentCacheManager, indexIO),
-        serviceClientFactory
+        serviceClientFactory,
+        computeAvailableHeapMemory(injector)
     );
   }
 
@@ -227,17 +234,6 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    final int numWorkersInJvm;
-
-    // Determine the max number of workers in JVM for memory allocations.
-    if (toolbox.getAppenderatorsManager() instanceof UnifiedIndexerAppenderatorsManager) {
-      // CliIndexer
-      numWorkersInJvm = injector.getInstance(WorkerConfig.class).getCapacity();
-    } else {
-      // CliPeon
-      numWorkersInJvm = 1;
-    }
-
     final IntSet inputStageNumbers =
         InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
     final int numInputWorkers =
@@ -250,8 +246,8 @@ public class IndexerWorkerContext implements WorkerContext
         indexIO,
         dataSegmentProvider,
         WorkerMemoryParameters.compute(
-            Runtime.getRuntime().maxMemory(),
-            numWorkersInJvm,
+            availableHeapMemory,
+            computeNumWorkersInJvm(),
             processorBouncer().getMaxCount(),
             numInputWorkers
         )
@@ -276,6 +272,20 @@ public class IndexerWorkerContext implements WorkerContext
     return injector.getInstance(Bouncer.class);
   }
 
+  /**
+   * Number of workers that may run in the current JVM, including the current worker.
+   */
+  private int computeNumWorkersInJvm()
+  {
+    if (toolbox.getAppenderatorsManager() instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer
+      return injector.getInstance(WorkerConfig.class).getCapacity();
+    } else {
+      // CliPeon
+      return 1;
+    }
+  }
+
   private synchronized OverlordClient makeOverlordClient()
   {
     if (overlordClient == null) {
@@ -292,5 +302,47 @@ public class IndexerWorkerContext implements WorkerContext
     }
 
     return controllerLocator;
+  }
+
+  /**
+   * Amount of memory available for our usage.
+   */
+  private static long computeAvailableHeapMemory(final Injector injector)
+  {
+    return Runtime.getRuntime().maxMemory() - computeTotalLookupFootprint(injector);
+  }
+
+  /**
+   * Total estimated lookup footprint. Obtained by calling {@link LookupExtractor#estimateHeapFootprint()} on
+   * all available lookups.
+   */
+  private static long computeTotalLookupFootprint(final Injector injector)
+  {
+    // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
+    // we create this instance. Luckily, this is the typical mode of operation, since by default
+    // druid.lookup.enableLookupSyncOnStartup = true.
+    final LookupReferencesManager lookupManager = injector.getInstance(LookupReferencesManager.class);
+
+    int lookupCount = 0;
+    long lookupFootprint = 0;
+
+    for (final String lookupName : lookupManager.getAllLookupNames()) {
+      final LookupExtractorFactoryContainer container = lookupManager.get(lookupName).orElse(null);
+
+      if (container != null) {
+        try {
+          final LookupExtractor extractor = container.getLookupExtractorFactory().get();
+          lookupFootprint += extractor.estimateHeapFootprint();
+          lookupCount++;
+        }
+        catch (Exception e) {
+          log.noStackTrace().warn(e, "Failed to load lookup [%s] for size estimation. Skipping.", lookupName);
+        }
+      }
+    }
+
+    log.debug("Lookup footprint: %d lookups with %,d total bytes.", lookupCount, lookupFootprint);
+
+    return lookupFootprint;
   }
 }

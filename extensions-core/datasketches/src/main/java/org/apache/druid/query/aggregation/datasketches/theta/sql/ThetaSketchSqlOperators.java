@@ -17,36 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.server.lookup.cache.polling;
+package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
-import java.util.List;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
-public interface PollingCache<K, V>
+public class ThetaSketchSqlOperators
 {
-  /**
-   * @param key Given key to lookup its value from the cache.
-   *
-   * @return Returns the value associated to the {@code key} or {@code null} if no value exist.
-   */
-  V get(K key);
-
-  /**
-   * @param value Given value to reverse lookup its keys.
-   *
-   * @return Returns a {@link List} of keys associated to the given {@code value} otherwise {@link java.util.Collections.EmptyList}
-   */
-  List<K> getKeys(V value);
-
-  /**
-   * close and clean the resources used by the cache
-   */
-  void close();
-
-  /**
-   * Estimated heap footprint of this object.
-   */
-  default long estimateHeapFootprint()
-  {
-    return 0;
-  }
+  public static final SqlReturnTypeInference RETURN_TYPE_INFERENCE =
+      opBinding -> RowSignatures.makeComplexType(
+          opBinding.getTypeFactory(),
+          ColumnType.ofComplex(SketchModule.THETA_SKETCH),
+          true
+      );
 }
