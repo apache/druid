@@ -729,4 +729,32 @@
      <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java\-util@.*$</packageUrl>
      <cve>CVE-2022-3171</cve>
    </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: ansi-regex:5.0.0
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/ansi\-regex@.*$</packageUrl>
+     <vulnerabilityName>1084697</vulnerabilityName>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: glob-parent:5.1.1
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/glob\-parent@.*$</packageUrl>
+     <vulnerabilityName>1081884</vulnerabilityName>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: minimatch:3.0.4
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/minimatch@.*$</packageUrl>
+     <vulnerabilityName>1084765</vulnerabilityName>
+   </suppress>
+   <suppress>
+     <notes><![CDATA[
+     file name: y18n:4.0.0
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/y18n@.*$</packageUrl>
+     <vulnerabilityName>1070209</vulnerabilityName>
+   </suppress>
 </suppressions>
