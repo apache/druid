@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class ColumnarValueUnnestCursor extends UnnestCursor
+public class ColumnarValueUnnestCursor implements UnnestCursor
 {
   private final Cursor baseCursor;
   private final ColumnSelectorFactory baseColumSelectorFactory;

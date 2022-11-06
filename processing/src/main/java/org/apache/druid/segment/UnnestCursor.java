@@ -25,7 +25,7 @@ package org.apache.druid.segment;
  * -- DimensionUnnestCursor which is called if the column is disctionary encoded
  * -- ColumnarValueCursor otherwise
  */
-public abstract class UnnestCursor implements Cursor
+public interface UnnestCursor extends Cursor
 {
 
   /**
@@ -34,7 +34,7 @@ public abstract class UnnestCursor implements Cursor
    * This would also create a bitset for dictonary encoded columns to
    * check for matching values specified in allowedList of UnnestDataSource.
    */
-  abstract void initialize();
+  void initialize();
 
   /**
    * This advances the cursor to move to the next element to be unnested.
@@ -42,7 +42,7 @@ public abstract class UnnestCursor implements Cursor
    * to move the base cursor to the next row for unnesting and repopulates
    * the data structures, created during initialize(), to point to the new row
    */
-  abstract void advanceAndUpdate();
+  void advanceAndUpdate();
 
   /**
    * This advances the unnest cursor in cases where an allowList is specified
@@ -51,6 +51,6 @@ public abstract class UnnestCursor implements Cursor
    *
    * @return a boolean to indicate whether to stay or move cursor
    */
-  abstract boolean matchAndProceed();
+  boolean matchAndProceed();
 
 }

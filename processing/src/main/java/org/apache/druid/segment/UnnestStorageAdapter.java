@@ -94,14 +94,15 @@ public class UnnestStorageAdapter implements StorageAdapter
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
+          UnnestCursor retUnnestCursor;
           ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
           if (capabilities.isDictionaryEncoded() == ColumnCapabilities.Capable.TRUE
               && capabilities.areDictionaryValuesUnique() == ColumnCapabilities.Capable.TRUE) {
-            retVal = new DimensionUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
+            retUnnestCursor = new DimensionUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
           } else {
-            retVal = new ColumnarValueUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
+            retUnnestCursor = new ColumnarValueUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
           }
-          return retVal;
+          return retUnnestCursor;
         }
     );
   }
