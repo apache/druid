@@ -437,6 +437,38 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     Assert.assertEquals(k, 9);
   }
 
+  @Test
+  public void test_list_unnest_cursors_user_supplied_list_three_level_arrays_and_methods()
+  {
+    List<Object> inputList = Arrays.asList(
+        Arrays.asList("a", "b", "c"),
+        Arrays.asList("e", "f", "g", "h", "i"),
+        Arrays.asList("j", Arrays.asList("a", "b"))
+    );
+
+    List<Object> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", "j", Arrays.asList("a", "b"));
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector(OUTPUT_NAME);
+    DimensionSelector dimensionSelector = unnestCursor.getColumnSelectorFactory()
+                                                      .makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      Assert.assertEquals(valueSelectorVal.toString(), expectedResults.get(k).toString());
+      k++;
+      unnestCursor.advance();
+    }
+    Assert.assertEquals(k, 10);
+    unnestCursor.reset();
+    Assert.assertFalse(unnestCursor.isDoneOrInterrupted());
+    Assert.assertEquals(dimensionSelector.getObject().toString(), Arrays.asList("a", "b", "c").toString());
+  }
 
 }
 

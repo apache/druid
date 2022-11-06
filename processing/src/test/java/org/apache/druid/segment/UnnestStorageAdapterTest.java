@@ -275,6 +275,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         Assert.assertNotNull(dimSelector.idLookup());
         Assert.assertNotNull(dimSelector.lookupName(0));
         Assert.assertNotNull(dimSelector.defaultGetObject());
+        Assert.assertFalse(dimSelector.isNull());
         if (dimSelectorVal == null) {
           Assert.assertNull(dimSelectorVal);
         }
