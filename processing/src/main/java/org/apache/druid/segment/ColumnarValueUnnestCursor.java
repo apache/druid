@@ -40,7 +40,7 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
   private final LinkedHashSet<String> allowSet;
   private int index;
   private Object currentVal;
-  private List<Object> unnestList;
+  private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
 
   public ColumnarValueUnnestCursor(
@@ -125,11 +125,11 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
           @Override
           public Object getObject()
           {
-            if (!unnestList.isEmpty()) {
+            if (!unnestListForCurrentRow.isEmpty()) {
               if (allowSet == null || allowSet.isEmpty()) {
-                return unnestList.get(index);
-              } else if (allowSet.contains((String) unnestList.get(index))) {
-                return unnestList.get(index);
+                return unnestListForCurrentRow.get(index);
+              } else if (allowSet.contains((String) unnestListForCurrentRow.get(index))) {
+                return unnestListForCurrentRow.get(index);
               }
             }
             return null;
@@ -207,20 +207,20 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
   {
     if (columnValueSelector != null) {
       this.currentVal = this.columnValueSelector.getObject();
-      this.unnestList = new ArrayList<>();
+      this.unnestListForCurrentRow = new ArrayList<>();
       if (currentVal == null) {
-        unnestList = new ArrayList<>();
-        unnestList.add(null);
+        unnestListForCurrentRow = new ArrayList<>();
+        unnestListForCurrentRow.add(null);
       } else {
         if (currentVal instanceof List) {
-          unnestList = (List<Object>) currentVal;
+          unnestListForCurrentRow = (List<Object>) currentVal;
         } else if (currentVal.getClass().equals(String.class)) {
-          unnestList.add(currentVal);
+          unnestListForCurrentRow.add(currentVal);
         }
       }
       if (allowSet != null) {
         if (!allowSet.isEmpty()) {
-          if (!allowSet.contains((String) unnestList.get(index))) {
+          if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
             advance();
           }
         }
@@ -232,22 +232,22 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
   @Override
   public void advanceAndUpdate()
   {
-    if (unnestList.isEmpty() || index >= unnestList.size() - 1) {
+    if (unnestListForCurrentRow.isEmpty() || index >= unnestListForCurrentRow.size() - 1) {
       index = 0;
       baseCursor.advance();
       // get the next row
       if (!baseCursor.isDone()) {
         currentVal = columnValueSelector.getObject();
         if (currentVal == null) {
-          unnestList = new ArrayList<>();
-          unnestList.add(null);
+          unnestListForCurrentRow = new ArrayList<>();
+          unnestListForCurrentRow.add(null);
         } else {
           if (currentVal instanceof List) {
             //convert array into array list
-            unnestList = (List<Object>) currentVal;
+            unnestListForCurrentRow = (List<Object>) currentVal;
           } else if (currentVal instanceof String) {
-            unnestList = new ArrayList<>();
-            unnestList.add(currentVal);
+            unnestListForCurrentRow = new ArrayList<>();
+            unnestListForCurrentRow.add(currentVal);
           }
         }
       }
@@ -263,7 +263,7 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
     if (allowSet == null || allowSet.isEmpty()) {
       matchStatus = true;
     } else {
-      matchStatus = allowSet.contains((String) unnestList.get(index));
+      matchStatus = allowSet.contains((String) unnestListForCurrentRow.get(index));
     }
     return !baseCursor.isDone() && !matchStatus;
   }

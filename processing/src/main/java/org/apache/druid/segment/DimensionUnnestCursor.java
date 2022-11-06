@@ -43,7 +43,7 @@ public class DimensionUnnestCursor implements UnnestCursor
   private final BitSet allowedBitSet;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
-  private IndexedInts pos;
+  private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
 
   public DimensionUnnestCursor(
@@ -93,7 +93,7 @@ public class DimensionUnnestCursor implements UnnestCursor
               @Override
               public boolean matches()
               {
-                return lookupName(pos.get(index)).equals(value);
+                return lookupName(indexedIntsForCurrentRow.get(index)).equals(value);
               }
 
               @Override
@@ -122,13 +122,13 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public Object getObject()
           {
-            if (pos != null) {
+            if (indexedIntsForCurrentRow != null) {
               if (allowedBitSet.isEmpty()) {
                 if (allowSet == null || allowSet.isEmpty()) {
-                  return lookupName(pos.get(index));
+                  return lookupName(indexedIntsForCurrentRow.get(index));
                 }
-              } else if (allowedBitSet.get(pos.get(index))) {
-                return lookupName(pos.get(index));
+              } else if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
+                return lookupName(indexedIntsForCurrentRow.get(index));
               }
             } else {
               return null;
@@ -224,14 +224,14 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public Object getObject()
           {
-            if (pos != null) {
+            if (indexedIntsForCurrentRow != null) {
               if (allowedBitSet.isEmpty()) {
                 if (allowSet == null || allowSet.isEmpty()) {
-                  return dimSelector.lookupName(pos.get(index));
+                  return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
                 }
               } else {
-                if (allowedBitSet.get(pos.get(index))) {
-                  return dimSelector.lookupName(pos.get(index));
+                if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
+                  return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
                 }
               }
             }
@@ -318,10 +318,10 @@ public class DimensionUnnestCursor implements UnnestCursor
         }
       }
       if (dimSelector.getObject() != null) {
-        this.pos = dimSelector.getRow();
+        this.indexedIntsForCurrentRow = dimSelector.getRow();
       }
       if (!allowedBitSet.isEmpty()) {
-        if (!allowedBitSet.get(pos.get(index))) {
+        if (!allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
           advance();
         }
       }
@@ -332,17 +332,23 @@ public class DimensionUnnestCursor implements UnnestCursor
   @Override
   public void advanceAndUpdate()
   {
-    if (this.dimSelector != null && pos != null) {
-      if (index >= pos.size() - 1) {
-        if (!baseCursor.isDone()) {
-          baseCursor.advanceUninterruptibly();
+    if (indexedIntsForCurrentRow != null) {
+      if (this.dimSelector != null) {
+        if (index >= indexedIntsForCurrentRow.size() - 1) {
+          if (!baseCursor.isDone()) {
+            baseCursor.advanceUninterruptibly();
+          }
+          if (!baseCursor.isDone()) {
+            indexedIntsForCurrentRow = dimSelector.getRow();
+          }
+          index = 0;
+        } else {
+          ++index;
         }
-        if (!baseCursor.isDone()) {
-          pos = dimSelector.getRow();
-        }
-        index = 0;
-      } else {
-        ++index;
+      }
+    } else {
+      if (!baseCursor.isDone()) {
+        baseCursor.advanceUninterruptibly();
       }
     }
   }
@@ -354,7 +360,7 @@ public class DimensionUnnestCursor implements UnnestCursor
     if ((allowSet == null || allowSet.isEmpty()) && allowedBitSet.isEmpty()) {
       matchStatus = true;
     } else {
-      matchStatus = allowedBitSet.get(pos.get(index));
+      matchStatus = allowedBitSet.get(indexedIntsForCurrentRow.get(index));
     }
     return !baseCursor.isDone() && !matchStatus;
   }
