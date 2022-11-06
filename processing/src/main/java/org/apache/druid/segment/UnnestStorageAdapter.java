@@ -96,8 +96,7 @@ public class UnnestStorageAdapter implements StorageAdapter
           Cursor retVal = cursor;
           ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
           if (capabilities.isDictionaryEncoded() == ColumnCapabilities.Capable.TRUE
-              && capabilities.areDictionaryValuesUnique() == ColumnCapabilities.Capable.TRUE
-              && capabilities.areDictionaryValuesSorted() == ColumnCapabilities.Capable.TRUE) {
+              && capabilities.areDictionaryValuesUnique() == ColumnCapabilities.Capable.TRUE) {
             retVal = new DimensionUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
           } else {
             retVal = new ColumnarValueUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);

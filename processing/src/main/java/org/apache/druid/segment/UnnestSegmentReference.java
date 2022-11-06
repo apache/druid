@@ -108,9 +108,4 @@ public class UnnestSegmentReference implements SegmentReference
   {
     baseSegment.close();
   }
-
-  public String getDimension()
-  {
-    return dimension;
-  }
 }

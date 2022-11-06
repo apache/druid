@@ -145,8 +145,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-        DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-        ColumnValueSelector valueSelector = factory.makeColumnValueSelector(columnName);
+        DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+        ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME);
 
 
         while (!cursor.isDone()) {
@@ -169,39 +169,39 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   {
     final String columnName = "multi-string1";
 
-      Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
-          null,
-          UNNEST_STORAGE_ADAPTER1.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER1.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
 
 
-      cursorSequence.accumulate(null, (accumulated, cursor) -> {
-        ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-        DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-        ColumnValueSelector valueSelector = factory.makeColumnValueSelector(columnName);
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME);
 
 
-        while (!cursor.isDone()) {
-          Object dimSelectorVal = dimSelector.getObject();
-          Object valueSelectorVal = valueSelector.getObject();
-          if (dimSelectorVal == null) {
-            Assert.assertNull(dimSelectorVal);
-          } else if (valueSelectorVal == null) {
-            Assert.assertNull(valueSelectorVal);
-          }
-          cursor.advance();
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        Object valueSelectorVal = valueSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        } else if (valueSelectorVal == null) {
+          Assert.assertNull(valueSelectorVal);
         }
-        return null;
-      });
+        cursor.advance();
+      }
+      return null;
+    });
   }
 
   @Test
-  public void test_unnest_adapters_methods()
+  public void test_dim_unnest_adapters()
   {
     final String columnName = "multi-string1";
 
@@ -215,24 +215,68 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     );
     UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER1;
     Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
-    Assert.assertEquals(adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(), ColumnCapabilities.Capable.TRUE);
+    Assert.assertEquals(
+        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
+        ColumnCapabilities.Capable.TRUE
+    );
     Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
     Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
 
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(columnName);
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
 
 
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
-        Object valueSelectorVal = valueSelector.getObject();
         if (dimSelectorVal == null) {
           Assert.assertNull(dimSelectorVal);
-        } else if (valueSelectorVal == null) {
-          Assert.assertNull(valueSelectorVal);
+        }
+        cursor.advance();
+      }
+      return null;
+    });
+  }
+
+  @Test
+  public void test_dim_unnest_adapters_methods()
+  {
+    final String columnName = "multi-string1";
+
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER1.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER1;
+    Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
+    Assert.assertEquals(
+        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
+        ColumnCapabilities.Capable.TRUE
+    );
+    Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
+    Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+
+
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        Assert.assertNotNull(dimSelector.getRow());
+        Assert.assertNotNull(dimSelector.getValueCardinality());
+        Assert.assertNotNull(dimSelector.makeValueMatcher(OUTPUT_COLUMN_NAME));
+        Assert.assertNotNull(dimSelector.idLookup());
+        Assert.assertNotNull(dimSelector.lookupName(0));
+        Assert.assertNotNull(dimSelector.defaultGetObject());
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
         }
         cursor.advance();
       }

@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.LinkedHashSet;
 
-public class DimensionUnnestCursor implements UnnestCursor
+public class DimensionUnnestCursor extends UnnestCursor
 {
   private final Cursor baseCursor;
   private final DimensionSelector dimSelector;

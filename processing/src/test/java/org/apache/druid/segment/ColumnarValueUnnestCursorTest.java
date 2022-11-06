@@ -29,7 +29,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class UnnestCursorTest extends InitializedNullHandlingTest
+public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
 {
   private static String OUTPUT_NAME = "unnested-column";
   private static LinkedHashSet<String> IGNORE_SET = null;
@@ -415,7 +415,7 @@ public class UnnestCursorTest extends InitializedNullHandlingTest
         Collections.singletonList("9")
     );
 
-    List<Long> expectedResults = Arrays.asList(1l, 2l, 3l, 4l, 5l, 6l, 7l, 8l, 9l);
+    List<Long> expectedResults = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L);
 
     //Create base cursor
     ListCursor listCursor = new ListCursor(inputList);
@@ -436,5 +436,7 @@ public class UnnestCursorTest extends InitializedNullHandlingTest
     }
     Assert.assertEquals(k, 9);
   }
+
+
 }
 
