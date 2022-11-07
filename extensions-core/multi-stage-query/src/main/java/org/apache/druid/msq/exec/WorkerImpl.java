@@ -1062,6 +1062,7 @@ public class WorkerImpl implements Worker
           clusterBy,
           processorOutputChannels,
           exec,
+          memoryParameters.getPartitionStatisticsMaxRetainedBytes(),
           cancellationId,
           kernelManipulationQueue
       );
@@ -1102,6 +1103,7 @@ public class WorkerImpl implements Worker
       final ClusterBy clusterBy,
       final OutputChannels processorOutputChannels,
       final FrameProcessorExecutor exec,
+      final int partitionStatisticsMaxRetainedBytes,
       final String cancellationId,
       final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue
   )
@@ -1119,7 +1121,7 @@ public class WorkerImpl implements Worker
               channel.writable(),
               stageDefinition.getFrameReader(),
               clusterBy,
-              stageDefinition.createResultKeyStatisticsCollector()
+              stageDefinition.createResultKeyStatisticsCollector(partitionStatisticsMaxRetainedBytes)
           )
       );
     }
@@ -1127,7 +1129,7 @@ public class WorkerImpl implements Worker
     final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
         exec.runAllFully(
             Sequences.simple(processors),
-            stageDefinition.createResultKeyStatisticsCollector(),
+            stageDefinition.createResultKeyStatisticsCollector(partitionStatisticsMaxRetainedBytes),
             ClusterByStatisticsCollector::addAll,
             // Run all processors simultaneously. They are lightweight and this keeps things moving.
             processors.size(),

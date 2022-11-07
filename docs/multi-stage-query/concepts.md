@@ -257,8 +257,8 @@ On Peons launched by Middle Managers, the bulk of the JVM heap (75%, less any sp
 [lookups](../querying/lookups.md)) is split up into two bundles of equal size: one processor bundle and one worker
 bundle. Each one comprises 37.5% of the available JVM heap, less any space used by [lookups](../querying/lookups.md).
 
-Depending on the type of query, each worker and controller task can use a sketch for generating partition boundaries.
-Each sketch uses at most approximately 300 MB.
+Depending on the type of query, controller and worker tasks may use sketches for determining partition boundaries.
+The heap footprint of these sketches is capped at 10% of available memory, or 300 MB, whichever is lower.
 
 The processor memory bundle is used for query processing and segment generation. Each processor bundle must also
 provides space to buffer I/O between stages. Specifically, each downstream stage requires 1 MB of buffer space for each
