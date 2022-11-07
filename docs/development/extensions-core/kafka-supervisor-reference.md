@@ -87,7 +87,7 @@ This topic contains configuration reference information for the Apache Kafka sup
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enabled` | If `true`, Kafka supervisor will become idle if there is no data on input stream/topic for some time. | no (default == false) |
-| `inactiveAfterMillis` | Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == 600_000) |
+| `inactiveAfterMillis` | Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == `600_000`) |
 
 The following example demonstrates supervisor spec with `lagBased` autoScaler and idle config enabled:
 ```json
