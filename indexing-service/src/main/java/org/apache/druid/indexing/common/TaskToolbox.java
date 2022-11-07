@@ -64,6 +64,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -127,6 +128,10 @@ public class TaskToolbox
   private final ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
   private final ShuffleClient shuffleClient;
 
+  private final TaskLogPusher taskLogPusher;
+  private final String attemptId;
+
+
   public TaskToolbox(
       TaskConfig config,
       DruidNode taskExecutorNode,
@@ -164,7 +169,9 @@ public class TaskToolbox
       OverlordClient overlordClient,
       CoordinatorClient coordinatorClient,
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
-      ShuffleClient shuffleClient
+      ShuffleClient shuffleClient,
+      TaskLogPusher taskLogPusher,
+      String attemptId
   )
   {
     this.config = config;
@@ -205,6 +212,8 @@ public class TaskToolbox
     this.coordinatorClient = coordinatorClient;
     this.supervisorTaskClientProvider = supervisorTaskClientProvider;
     this.shuffleClient = shuffleClient;
+    this.taskLogPusher = taskLogPusher;
+    this.attemptId = attemptId;
   }
 
   public TaskConfig getConfig()
@@ -461,6 +470,16 @@ public class TaskToolbox
     return shuffleClient;
   }
 
+  public TaskLogPusher getTaskLogPusher()
+  {
+    return taskLogPusher;
+  }
+
+  public String getAttemptId()
+  {
+    return attemptId;
+  }
+
   public static class Builder
   {
     private TaskConfig config;
@@ -500,6 +519,8 @@ public class TaskToolbox
     private IntermediaryDataManager intermediaryDataManager;
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
+    private TaskLogPusher taskLogPusher;
+    private String attemptId;
 
     public Builder()
     {
@@ -727,6 +748,18 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder taskLogPusher(final TaskLogPusher taskLogPusher)
+    {
+      this.taskLogPusher = taskLogPusher;
+      return this;
+    }
+
+    public Builder attemptId(final String attemptId)
+    {
+      this.attemptId = attemptId;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -766,7 +799,9 @@ public class TaskToolbox
           overlordClient,
           coordinatorClient,
           supervisorTaskClientProvider,
-          shuffleClient
+          shuffleClient,
+          taskLogPusher,
+          attemptId
       );
     }
   }

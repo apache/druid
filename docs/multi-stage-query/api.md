@@ -202,7 +202,7 @@ Keep the following in mind when using the task API to view reports:
 - The task report for an entire job is associated with the `query_controller` task. The `query_worker` tasks do not have
   their own reports; their information is incorporated into the controller report.
 - The task report API may report `404 Not Found` temporarily while the task is in the process of starting up.
-- As an experimental feature, the SQL task engine supports running SELECT queries. SELECT query results are written into
+- As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
 
@@ -553,6 +553,8 @@ The following table describes the response fields when you retrieve a report for
 |multiStageQuery.payload.status.status|RUNNING, SUCCESS, or FAILED.|
 |multiStageQuery.payload.status.startTime|Start time of the query in ISO format. Only present if the query has started running.|
 |multiStageQuery.payload.status.durationMs|Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet.|
+|multiStageQuery.payload.status.pendingTasks|Number of tasks that are not fully started. -1 denotes that the number is currently unknown.|
+|multiStageQuery.payload.status.runningTasks|Number of currently running tasks. Should be at least 1 since the controller is included.|
 |multiStageQuery.payload.status.errorReport|Error object. Only present if there was an error.|
 |multiStageQuery.payload.status.errorReport.taskId|The task that reported the error, if known. May be a controller task or a worker task.|
 |multiStageQuery.payload.status.errorReport.host|The hostname and port of the task that reported the error, if known.|

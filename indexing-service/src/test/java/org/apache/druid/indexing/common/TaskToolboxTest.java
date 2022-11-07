@@ -120,7 +120,8 @@ public class TaskToolboxTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
@@ -156,7 +157,9 @@ public class TaskToolboxTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 

@@ -38,7 +38,7 @@ Spatial dimensions are string columns that contain coordinates separated by a co
 In the ingestion spec, you configure spatial dimensions in the `dimensionsSpec` object of the `dataSchema` component.
 
 You can provide spatial dimensions in any of the [data formats](../ingestion/data-formats.md) supported by Druid.
-The following example shows an ingestion spec with a spatial dimension named `coordinates`, which is constructed from the input fields `lat` and `long`:
+The following example shows an ingestion spec with a spatial dimension named `coordinates`, which is constructed from the input fields `x` and `y`:
 
 ```json
 {
@@ -95,7 +95,7 @@ For general information on loading data in Druid, see [Ingestion](../ingestion/i
 A [filter](../querying/filters.md) is a JSON object indicating which rows of data should be included in the computation for a query.
 You can filter on spatial structures, such as rectangles and polygons, using the spatial filter.
 
-The spatial filter has the following structure:
+Spatial filters have the following structure:
 
 ```json
 "filter": {
@@ -103,6 +103,19 @@ The spatial filter has the following structure:
   "dimension": <name_of_spatial_dimension>,
   "bound": <bound_type>
 }
+```
+
+The following example shows a spatial filter with a rectangular bound type:
+
+```json
+"filter" : {
+    "type": "spatial",
+    "dimension": "spatialDim",
+    "bound": {
+        "type": "rectangular",
+        "minCoords": [10.0, 20.0],
+        "maxCoords": [30.0, 40.0]
+    }
 ```
 
 The order of the dimension coordinates in the spatial filter must be equal to the order of the dimension coordinates in the `spatialDimensions` array.

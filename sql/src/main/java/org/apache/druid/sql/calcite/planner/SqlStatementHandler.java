@@ -28,6 +28,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -52,6 +53,7 @@ public interface SqlStatementHandler
     SqlEngine engine();
     CalcitePlanner planner();
     QueryContext queryContext();
+    Map<String, Object> queryContextMap();
     SchemaPlus defaultSchema();
     ObjectMapper jsonMapper();
     DateTimeZone timeZone();

@@ -106,7 +106,7 @@ public class MSQControllerTask extends AbstractTask
     this.sqlQueryContext = sqlQueryContext;
     this.sqlTypeNames = sqlTypeNames;
 
-    if (MultiStageQueryContext.isDurableStorageEnabled(querySpec.getQuery().getContext())) {
+    if (MultiStageQueryContext.isDurableStorageEnabled(querySpec.getQuery().context())) {
       this.remoteFetchExecutorService =
           Executors.newCachedThreadPool(Execs.makeThreadFactory(getId() + "-remote-fetcher-%d"));
     } else {
@@ -176,7 +176,7 @@ public class MSQControllerTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     final ServiceClientFactory clientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));

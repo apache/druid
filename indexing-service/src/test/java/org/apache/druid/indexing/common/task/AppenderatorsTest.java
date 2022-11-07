@@ -246,7 +246,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -261,7 +261,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
 
           break;
@@ -277,7 +277,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
           break;
         default:

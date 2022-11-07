@@ -93,6 +93,13 @@ Configure the JSON `inputFormat` to load JSON data as follows:
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [`flattenSpec`](#flattenspec) for more info. | no |
 | featureSpec | JSON Object | [JSON parser features](https://github.com/FasterXML/jackson-core/wiki/JsonParser-Features) supported by Jackson, a JSON processor for Java. The features control parsing of the input JSON data. To enable a feature, map the feature name to a Boolean value of "true". For example: `"featureSpec": {"ALLOW_SINGLE_QUOTES": true, "ALLOW_UNQUOTED_FIELD_NAMES": true}` | no |
 
+The following properties are specialized properties that only apply when the JSON `inputFormat` is used in streaming ingestion, and they are related to how parsing exceptions are handled. In streaming ingestion, multi-line JSON events can be ingested (i.e. where a single JSON event spans multiple lines). However, if a parsing exception occurs, all JSON events that are present in the same streaming record will be discarded.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| assumeNewlineDelimited | Boolean | If the input is known to be newline delimited JSON (each individual JSON event is contained in a single line, separated by newlines), setting this option to true allows for more flexible parsing exception handling. Only the lines with invalid JSON syntax will be discarded, while lines containing valid JSON events will still be ingested. | no (Default false) |
+| useJsonNodeReader | Boolean | When ingesting multi-line JSON events, enabling this option will enable the use of a JSON parser which will retain any valid JSON events encountered within a streaming record prior to when a parsing exception occurred. | no (Default false) |
+
 For example:
 ```json
 "ioConfig": {
@@ -224,7 +231,7 @@ Configure the ORC `inputFormat` to load ORC data as follows:
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | Set value to `orc`. | yes |
-| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. See [`flattenSpec`](#flattenspec) for more info. | no |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested ORC data. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). See [`flattenSpec`](#flattenspec) for more info. | no |
 | binaryAsString | Boolean | Specifies if the binary orc column which is not logically marked as a string should be treated as a UTF-8 encoded string. | no (default = false) |
 
 For example:
@@ -254,11 +261,11 @@ To use the Parquet input format load the Druid Parquet extension ([`druid-parque
 
 Configure the Parquet `inputFormat` to load Parquet data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| Set value to `parquet`.| yes |
-|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+| Field | Type | Description                                                                                                                                                   | Required |
+|-------|------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `parquet`.                                                                                                                                       | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). | no (default will auto-discover 'root' level properties) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string.                     | no (default = false) |
 
 For example:
 ```json
@@ -502,12 +509,12 @@ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section 
 
 Configure the Avro OCF `inputFormat` to load Avro OCF data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String|  Set value to `avro_ocf`. | yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|schema| JSON Object |Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data. | no (default will decode using the writer schema contained in the OCF file) |
-| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+| Field | Type | Description                                                                                                                                                 | Required |
+|-------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `avro_ocf`.                                                                                                                                    | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from Avro records. Only 'path' expressions are supported ('jq' and 'tree' are unavailable). | no (default will auto-discover 'root' level properties) |
+|schema| JSON Object | Define a reader schema to be used when parsing Avro records. This is useful when parsing multiple versions of Avro OCF file data.                           | no (default will decode using the writer schema contained in the OCF file) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string.                   | no (default = false) |
 
 For example:
 ```json
@@ -551,11 +558,11 @@ For example:
 
 Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-|type| String| Set value to `protobuf`. | yes |
-|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
-|`protoBytesDecoder`| JSON Object |Specifies how to decode bytes to Protobuf record. | yes |
+| Field | Type | Description                                                                                                                                                              | Required |
+|-------|------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|
+|type| String| Set value to `protobuf`.                                                                                                                                                 | yes |
+|flattenSpec| JSON Object | Define a [`flattenSpec`](#flattenspec) to extract nested values from a Protobuf record. Note that only 'path' expression are supported ('jq' and 'tree' is unavailable). | no (default will auto-discover 'root' level properties) |
+|`protoBytesDecoder`| JSON Object | Specifies how to decode bytes to Protobuf record.                                                                                                                        | yes |
 
 For example:
 ```json
@@ -602,6 +609,7 @@ For example:
   "fields": [
     { "name": "baz", "type": "root" },
     { "name": "foo_bar", "type": "path", "expr": "$.foo.bar" },
+    { "name": "foo_other_bar", "type": "tree", "nodes": ["foo", "other", "bar"] },
     { "name": "first_food", "type": "jq", "expr": ".thing.food[1]" }
   ]
 }
@@ -616,9 +624,10 @@ Each entry in the `fields` list can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Options are as follows:<br /><br /><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li></ul> | none (required) |
+| type | Options are as follows:<br /><br /><ul><li>`root`, referring to a field at the root level of the record. Only really useful if `useFieldDiscovery` is false.</li><li>`path`, referring to a field using [JsonPath](https://github.com/jayway/JsonPath) notation. Supported by most data formats that offer nesting, including `avro`, `json`, `orc`, and `parquet`.</li><li>`jq`, referring to a field using [jackson-jq](https://github.com/eiiches/jackson-jq) notation. Only supported for the `json` format.</li><li>`tree`, referring to a nested field from the root level of the record. Useful and more efficient than `path` or `jq` if a simple hierarchical fetch is required. Only supported for the `json` format.</li></ul> | none (required) |
 | name | Name of the field after flattening. This name can be referred to by the [`timestampSpec`](./ingestion-spec.md#timestampspec), [`transformSpec`](./ingestion-spec.md#transformspec), [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec), and [`metricsSpec`](./ingestion-spec.md#metricsspec).| none (required) |
 | expr | Expression for accessing the field while flattening. For type `path`, this should be [JsonPath](https://github.com/jayway/JsonPath). For type `jq`, this should be [jackson-jq](https://github.com/eiiches/jackson-jq) notation. For other types, this parameter is ignored. | none (required for types `path` and `jq`) |
+| nodes | For `tree` only. Multiple-expression field for accessing the field while flattening, representing the hierarchy of field names to read. For other types, this parameter must not be provided. | none (required for type `tree`) |
 
 #### Notes on flattening
 
@@ -683,7 +692,8 @@ See [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Reso
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
 An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
+field types, which can be used to read nested Avro records. The "jq" and "tree" field type is not currently supported
+for Avro.
 
 For example, using Avro Hadoop parser with custom reader's schema file:
 
@@ -1201,7 +1211,7 @@ This parser is for [stream ingestion](./index.md#streaming) and reads Avro data 
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
 An Avro parseSpec can contain a [`flattenSpec`](#flattenspec) using either the "root" or "path"
-field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
+field types, which can be used to read nested Avro records. The "jq" and "tree" field type is not currently supported for Avro.
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
 
@@ -1297,6 +1307,26 @@ Sample spec:
 "protoBytesDecoder": {
   "type": "file",
   "descriptor": "file:///tmp/metrics.desc",
+  "protoMessageType": "Metrics"
+}
+```
+
+#### Inline Descriptor Protobuf Bytes Decoder
+
+This Protobuf bytes decoder allows the user to provide the contents of a Protobuf descriptor file inline, encoded as a Base64 string, and then parse it to get schema used to decode the Protobuf record from bytes.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `inline`. | yes |
+| descriptorString | String | A compiled Protobuf descriptor, encoded as a Base64 string. | yes |
+| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted. The parser uses the first message type found in the descriptor if not specified. | no |
+
+Sample spec:
+
+```json
+"protoBytesDecoder": {
+  "type": "inline",
+  "descriptorString": <Contents of a Protobuf descriptor file encoded as Base64 string>,
   "protoMessageType": "Metrics"
 }
 ```

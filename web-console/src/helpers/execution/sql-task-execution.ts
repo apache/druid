@@ -28,6 +28,7 @@ import {
   queryDruidSql,
   QueryManager,
 } from '../../utils';
+import { maybeGetClusterCapacity } from '../capacity';
 
 const WAIT_FOR_SEGMENTS_TIMEOUT = 180000; // 3 minutes to wait until segments appear
 
@@ -176,8 +177,9 @@ export async function getTaskExecution(
   }
 
   if ((taskPayloadResp || taskPayloadOverride) && taskReportResp) {
+    let execution: Execution | undefined;
     try {
-      return Execution.fromTaskPayloadAndReport(
+      execution = Execution.fromTaskPayloadAndReport(
         taskPayloadResp ? taskPayloadResp.data : taskPayloadOverride,
         taskReportResp.data,
       );
@@ -188,6 +190,17 @@ export async function getTaskExecution(
         `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
       );
       console.log('Report response:', taskReportResp.data);
+    }
+
+    if (execution) {
+      if (execution?.hasPotentiallyStuckStage()) {
+        const capacityInfo = await maybeGetClusterCapacity();
+        if (capacityInfo) {
+          execution = execution.changeCapacityInfo(capacityInfo);
+        }
+      }
+
+      return execution;
     }
   }
 

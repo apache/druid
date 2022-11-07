@@ -42,8 +42,8 @@ import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -359,7 +359,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (waitForNewVersion) {
       ITRetryUtil.retryUntilTrue(
           () -> {
-            final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+            final SegmentTimeline timeline = SegmentTimeline.forSegments(
                 coordinator.getAvailableSegments(dataSourceName)
             );
 

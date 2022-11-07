@@ -157,7 +157,7 @@ describe('WorkbenchQuery', () => {
             '[{"name":"timestamp","type":"string"}]'
           )
         )
-        ORDER BY FLOOR(__time TO HOUR), browser, session
+        ORDER BY FLOOR("__time" TO HOUR), browser, session
       `);
     });
   });
@@ -422,6 +422,20 @@ describe('WorkbenchQuery', () => {
         },
         sqlPrefixLines: 0,
       });
+    });
+
+    it('works with sql with ISSUE comment', () => {
+      const sql = sane`
+        SELECT *
+        --:ISSUE: There is something wrong with this query.
+        FROM wikipedia
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+
+      expect(() => workbenchQuery.getApiQuery(makeQueryId)).toThrow(
+        `This query contains an ISSUE comment: There is something wrong with this query. (Please resolve the issue in the comment, delete the ISSUE comment and re-run the query.)`,
+      );
     });
   });
 

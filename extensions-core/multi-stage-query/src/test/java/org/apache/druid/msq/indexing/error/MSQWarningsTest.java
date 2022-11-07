@@ -66,7 +66,7 @@ public class MSQWarningsTest extends MSQTestBase
   public void setUp3() throws IOException
   {
     toRead = getResourceAsTemporaryFile("/unparseable.gz");
-    toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     rowSignature = RowSignature.builder()
                                .add("__time", ColumnType.LONG)
@@ -82,7 +82,7 @@ public class MSQWarningsTest extends MSQTestBase
                                            toRead.getAbsoluteFile()
                                        )
                                    ),
-                                   new JsonInputFormat(null, null, null),
+                                   new JsonInputFormat(null, null, null, null, null),
                                    RowSignature.builder()
                                                .add("timestamp", ColumnType.STRING)
                                                .add("page", ColumnType.STRING)
@@ -139,7 +139,7 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFault(new TooManyWarningsFault(0, CannotParseExternalDataFault.CODE))
+                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
                      .verifyResults();
   }
 
@@ -318,7 +318,7 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFault(new TooManyWarningsFault(0, CannotParseExternalDataFault.CODE))
+                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
                      .verifyResults();
   }
 
@@ -340,7 +340,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedMSQFault(new TooManyWarningsFault(0, CannotParseExternalDataFault.CODE))
+                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
                      .verifyResults();
   }
 
@@ -359,7 +359,7 @@ public class MSQWarningsTest extends MSQTestBase
                              + ") group by 1  PARTITIONED by day ")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new TooManyWarningsFault(0, CannotParseExternalDataFault.CODE))
+                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
                      .verifyResults();
 
     // Temporary directory should not contain any controller-related folders
