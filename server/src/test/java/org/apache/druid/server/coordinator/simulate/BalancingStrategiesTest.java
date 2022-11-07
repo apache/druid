@@ -183,7 +183,4 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
       Assert.assertEquals(250, historical.getTotalSegments());
     }
   }
-
 }
-
-
