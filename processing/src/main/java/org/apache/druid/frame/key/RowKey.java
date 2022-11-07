@@ -31,6 +31,7 @@ import java.util.Arrays;
 public class RowKey
 {
   private static final RowKey EMPTY_KEY = new RowKey(new byte[0]);
+  private static final int OBJECT_OVERHEAD_SIZE_BYTES = 44; // Constant to account for hashcode and object overhead
 
   private final byte[] key;
 
@@ -113,8 +114,8 @@ public class RowKey
    * Estimate number of bytes taken by an object of {@link RowKey}. Only returns an estimate and does not account for
    * platform or JVM specific implementation.
    */
-  public int estimatedObjectSize()
+  public int estimatedObjectSizeBytes()
   {
-    return 44 + array().length; // Constant to account for hashcode and object overhead
+    return OBJECT_OVERHEAD_SIZE_BYTES + array().length;
   }
 }

@@ -195,13 +195,13 @@ public class QuantilesSketchKeyCollectorTest
 
 
     collector.add(smallKey, 3);
-    Assert.assertEquals(smallKey.estimatedObjectSize(), collector.getAverageKeyLength(), 0);
+    Assert.assertEquals(smallKey.estimatedObjectSizeBytes(), collector.getAverageKeyLength(), 0);
 
     other.add(largeKey, 5);
-    Assert.assertEquals(largeKey.estimatedObjectSize(), other.getAverageKeyLength(), 0);
+    Assert.assertEquals(largeKey.estimatedObjectSizeBytes(), other.getAverageKeyLength(), 0);
 
     collector.addAll(other);
-    Assert.assertEquals((smallKey.estimatedObjectSize() * 3 + largeKey.estimatedObjectSize() * 5) / 8.0, collector.getAverageKeyLength(), 0);
+    Assert.assertEquals((smallKey.estimatedObjectSizeBytes() * 3 + largeKey.estimatedObjectSizeBytes() * 5) / 8.0, collector.getAverageKeyLength(), 0);
   }
 
   @Test
