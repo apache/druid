@@ -69,9 +69,9 @@ public class ExpressionVectorInputBinding implements Expr.VectorInputBinding
   }
 
   @Override
-  public <T> T[] getObjectVector(String name)
+  public Object[] getObjectVector(String name)
   {
-    return (T[]) objects.getOrDefault(name, nilSelector).getObjectVector();
+    return objects.getOrDefault(name, nilSelector).getObjectVector();
   }
 
   @Override

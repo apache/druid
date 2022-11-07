@@ -38,10 +38,10 @@ export function getSpecDatasourceName(spec: IngestionSpec): string {
 function convertFilter(filter: any): SqlExpression {
   switch (filter.type) {
     case 'selector':
-      return SqlRef.columnWithQuotes(filter.dimension).equal(filter.value);
+      return SqlRef.column(filter.dimension).equal(filter.value);
 
     case 'in':
-      return SqlRef.columnWithQuotes(filter.dimension).in(filter.values);
+      return SqlRef.column(filter.dimension).in(filter.values);
 
     case 'not':
       return convertFilter(filter.field).not();
@@ -102,45 +102,55 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     );
   }
 
+  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
+  if (!Array.isArray(transforms)) {
+    throw new Error(`spec.dataSchema.transformSpec.transforms is not an array`);
+  }
+
   let timeExpression: string;
   const column = timestampSpec.column || 'timestamp';
   const columnRef = SqlRef.column(column);
   const format = timestampSpec.format || 'auto';
-  switch (format) {
-    case 'auto':
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `CASE WHEN CAST(${columnRef} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${columnRef} AS BIGINT)) ELSE TIME_PARSE(${columnRef}) END`;
-      break;
+  const timeTransform = transforms.find(t => t.name === '__time');
+  if (timeTransform) {
+    timeExpression = `REWRITE_[${timeTransform.expression}]_TO_SQL`;
+  } else {
+    switch (format) {
+      case 'auto':
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `CASE WHEN CAST(${columnRef} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${columnRef} AS BIGINT)) ELSE TIME_PARSE(${columnRef}) END`;
+        break;
 
-    case 'iso':
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `TIME_PARSE(${columnRef})`;
-      break;
+      case 'iso':
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `TIME_PARSE(${columnRef})`;
+        break;
 
-    case 'posix':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} * 1000)`;
-      break;
+      case 'posix':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} * 1000)`;
+        break;
 
-    case 'millis':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef})`;
-      break;
+      case 'millis':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef})`;
+        break;
 
-    case 'micro':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000)`;
-      break;
+      case 'micro':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000)`;
+        break;
 
-    case 'nano':
-      columns.unshift({ name: column, type: 'long' });
-      timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000000)`;
-      break;
+      case 'nano':
+        columns.unshift({ name: column, type: 'long' });
+        timeExpression = `MILLIS_TO_TIMESTAMP(${columnRef} / 1000000)`;
+        break;
 
-    default:
-      columns.unshift({ name: column, type: 'string' });
-      timeExpression = `TIME_PARSE(${columnRef}, ${SqlLiteral.create(format)})`;
-      break;
+      default:
+        columns.unshift({ name: column, type: 'string' });
+        timeExpression = `TIME_PARSE(${columnRef}, ${SqlLiteral.create(format)})`;
+        break;
+    }
   }
 
   if (timestampSpec.missingValue) {
@@ -238,19 +248,24 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   lines.push(`SELECT`);
 
-  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
-  if (!Array.isArray(transforms))
-    throw new Error(`spec.dataSchema.transformSpec.transforms is not an array`);
   if (transforms.length) {
-    lines.push(`  -- The spec contained transforms that could not be automatically converted.`);
+    lines.push(
+      `  --:ISSUE: The spec contained transforms that could not be automatically converted.`,
+    );
   }
 
-  const dimensionExpressions = [`  ${timeExpression} AS __time,`].concat(
+  const dimensionExpressions = [
+    `  ${timeExpression} AS __time,${
+      timeTransform ? ` --:ISSUE: Transform for __time could not be converted` : ''
+    }`,
+  ].concat(
     dimensions.flatMap((dimension: DimensionSpec) => {
       const dimensionName = dimension.name;
       const relevantTransform = transforms.find(t => t.name === dimensionName);
-      return `  ${SqlRef.columnWithQuotes(dimensionName)},${
-        relevantTransform ? ` -- Relevant transform: ${JSONBig.stringify(relevantTransform)}` : ''
+      return `  ${
+        relevantTransform ? `REWRITE_[${relevantTransform.expression}]_TO_SQL AS ` : ''
+      }${SqlRef.column(dimensionName)},${
+        relevantTransform ? ` --:ISSUE: Transform for dimension could not be converted` : ''
       }`;
     }),
   );
@@ -275,9 +290,9 @@ export function convertSpecToSql(spec: any): QueryWithContext {
       lines.push(`WHERE ${convertFilter(filter)}`);
     } catch {
       lines.push(
-        `-- The spec contained a filter that could not be automatically converted: ${JSONBig.stringify(
+        `WHERE REWRITE_[${JSONBig.stringify(
           filter,
-        )}`,
+        )}]_TO_SQL --:ISSUE: The spec contained a filter that could not be automatically converted, please convert it manually`,
       );
     }
   }
@@ -301,9 +316,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     partitionsSpec.partitionDimensions ||
     (partitionsSpec.partitionDimension ? [partitionsSpec.partitionDimension] : undefined);
   if (Array.isArray(partitionDimensions)) {
-    lines.push(
-      `CLUSTERED BY ${partitionDimensions.map(d => SqlRef.columnWithQuotes(d)).join(', ')}`,
-    );
+    lines.push(`CLUSTERED BY ${partitionDimensions.map(d => SqlRef.column(d)).join(', ')}`);
   }
 
   return {
@@ -384,7 +397,7 @@ function metricSpecToSqlExpression(metricSpec: MetricSpec): string | undefined {
   }
 
   if (!metricSpec.fieldName) return;
-  const ref = SqlRef.columnWithQuotes(metricSpec.fieldName);
+  const ref = SqlRef.column(metricSpec.fieldName);
 
   switch (metricSpec.type) {
     case 'longSum':

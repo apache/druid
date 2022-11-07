@@ -31,7 +31,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -59,7 +58,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -161,7 +159,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final boolean skipIncrementalSegment = query.getContextValue(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
+    final boolean skipIncrementalSegment = query.context().getBoolean(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.
@@ -170,17 +168,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        cpuTimeAccumulator,
-        analysis.getBaseQuery().orElse(query)
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource()
+                                                                        .createSegmentMapFunction(
+                                                                            query,
+                                                                            cpuTimeAccumulator
+                                                                        );
+
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
-    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
-                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
-                                            : Optional.of(StringUtils.EMPTY_BYTES);
+    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,

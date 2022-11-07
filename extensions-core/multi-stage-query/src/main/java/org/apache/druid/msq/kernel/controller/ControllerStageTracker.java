@@ -85,7 +85,8 @@ class ControllerStageTracker
 
   private ControllerStageTracker(
       final StageDefinition stageDef,
-      final WorkerInputs workerInputs
+      final WorkerInputs workerInputs,
+      final int partitionStatisticsMaxRetainedBytes
   )
   {
     this.stageDef = stageDef;
@@ -95,7 +96,8 @@ class ControllerStageTracker
     initializeWorkerState(workerCount);
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.resultKeyStatisticsCollector = stageDef.createResultKeyStatisticsCollector();
+      this.resultKeyStatisticsCollector =
+          stageDef.createResultKeyStatisticsCollector(partitionStatisticsMaxRetainedBytes);
     } else {
       this.resultKeyStatisticsCollector = null;
       generateResultPartitionsAndBoundaries();
@@ -116,11 +118,12 @@ class ControllerStageTracker
       final StageDefinition stageDef,
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final int partitionStatisticsMaxRetainedBytes
   )
   {
     final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy);
-    return new ControllerStageTracker(stageDef, workerInputs);
+    return new ControllerStageTracker(stageDef, workerInputs, partitionStatisticsMaxRetainedBytes);
   }
 
   /**
@@ -290,6 +293,10 @@ class ControllerStageTracker
    */
   void finish()
   {
+    if (resultKeyStatisticsCollector != null) {
+      resultKeyStatisticsCollector.clear();
+    }
+
     transitionTo(ControllerStagePhase.FINISHED);
   }
 

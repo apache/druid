@@ -22,10 +22,13 @@ title: "Ingestion"
   ~ under the License.
   -->
 
-Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data into Druid, Druid reads the data from your source system and stores it in data files called _segments_. In general, segment files contain a few million rows.
+Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data into Druid, Druid reads the data from
+your source system and stores it in data files called [_segments_](../design/architecture.md#datasources-and-segments).
+In general, segment files contain a few million rows each.
 
-For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the [Indexer](../design/indexer.md) processes load your source data. One exception is
-Hadoop-based ingestion, which uses a Hadoop MapReduce job on YARN MiddleManager or Indexer processes to start and monitor Hadoop jobs. 
+For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the
+[Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
+uses a Hadoop MapReduce job on YARN.
 
 During ingestion Druid creates segments and stores them in [deep storage](../dependencies/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. See the [Storage design](../design/architecture.md#storage-design) section of the Druid design documentation for more information.
 
@@ -46,41 +49,32 @@ page.
 
 ### Streaming
 
-The most recommended, and most popular, method of streaming ingestion is the
-[Kafka indexing service](../development/extensions-core/kafka-ingestion.md) that reads directly from Kafka. Alternatively, the Kinesis
-indexing service works with Amazon Kinesis Data Streams.
-
-Streaming ingestion uses an ongoing process called a supervisor that reads from the data stream to ingest data into Druid.
-
-This table compares the options:
+There are two available options for streaming ingestion. Streaming ingestion is controlled by a continuously-running
+supervisor.
 
 | **Method** | [Kafka](../development/extensions-core/kafka-ingestion.md) | [Kinesis](../development/extensions-core/kinesis-ingestion.md) |
 |---|-----|--------------|
 | **Supervisor type** | `kafka` | `kinesis`|
 | **How it works** | Druid reads directly from Apache Kafka. | Druid reads directly from Amazon Kinesis.|
-| **Can ingest late data?** | Yes | Yes |
-| **Exactly-once guarantees?** | Yes | Yes |
+| **Can ingest late data?** | Yes. | Yes. |
+| **Exactly-once guarantees?** | Yes. | Yes. |
 
 ### Batch
 
-When doing batch loads from files, you should use one-time [tasks](tasks.md), and you have three options: `index_parallel` (native batch; parallel), `index_hadoop` (Hadoop-based),
-or `index` (native batch; single-task).
+There are three available options for batch ingestion. Batch ingestion jobs are associated with a controller task that
+runs for the duration of the job.
 
-In general, we recommend native batch whenever it meets your needs, since the setup is simpler (it does not depend on
-an external Hadoop cluster). However, there are still scenarios where Hadoop-based batch ingestion might be a better choice,
-for example when you already have a running Hadoop cluster and want to
-use the cluster resource of the existing cluster for batch ingestion.
-
-This table compares the three available options:
-
-| **Method** | [Native batch (parallel)](./native-batch.md) | [Hadoop-based](hadoop.md) | [Native batch (simple)](./native-batch-simple-task.md) |
+| **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based](hadoop.md) |
 |---|-----|--------------|------------|
-| **Task type** | `index_parallel` | `index_hadoop` | `index`  |
-| **Parallel?** | Yes, if `inputFormat` is splittable and `maxNumConcurrentSubTasks` > 1 in `tuningConfig`. See [data format documentation](./data-formats.md) for details. | Yes, always. | No. Each task is single-threaded. |
-| **Can append or overwrite?** | Yes, both. | Overwrite only. | Yes, both. |
-| **External dependencies** | None. | Hadoop cluster (Druid submits Map/Reduce jobs). | None. |
-| **Input locations** | Any [`inputSource`](./native-batch-input-source.md). | Any Hadoop FileSystem or Druid datasource. | Any [`inputSource`](./native-batch-input-source.md). |
-| **File formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. | Any [`inputFormat`](./data-formats.md#input-format). |
-| **[Rollup modes](./rollup.md)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig). |
-| **Partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). | Dynamic and hash-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details. |
+| **Controller task type** | `index_parallel` | `query_controller` | `index_hadoop` |
+| **How you submit it** | Send an `index_parallel` spec to the [task API](../operations/api-reference.md#tasks). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../multi-stage-query/api.md#submit-a-query). | Send an `index_hadoop` spec to the [task API](../operations/api-reference.md#tasks). |
+| **Parallelism** | Using subtasks, if [`maxNumConcurrentSubTasks`](native-batch.md#tuningconfig) is greater than 1. | Using `query_worker` subtasks. | Using YARN. |
+| **Fault tolerance** | Workers automatically relaunched upon failure. Controller task failure leads to job failure. | Controller or worker task failure leads to job failure. | YARN containers automatically relaunched upon failure. Controller task failure leads to job failure. |
+| **Can append?** | Yes. | Yes (INSERT). | No. |
+| **Can overwrite?** | Yes. | Yes (REPLACE). | Yes. |
+| **External dependencies** | None. | None. | Hadoop cluster. |
+| **Input sources** | Any [`inputSource`](./native-batch-input-source.md). | Any [`inputSource`](./native-batch-input-source.md) (using [EXTERN](../multi-stage-query/concepts.md#extern)) or Druid datasource (using FROM). | Any Hadoop FileSystem or Druid datasource. |
+| **Input formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. |
+| **Secondary partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Range partitioning ([CLUSTERED BY](../multi-stage-query/concepts.md#clustering)). |  Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
+| **[Rollup modes](./rollup.md#perfect-rollup-vs-best-effort-rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Always perfect. |
 

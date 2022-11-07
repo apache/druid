@@ -258,7 +258,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -281,7 +281,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
 
           break;
@@ -305,7 +305,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              true
+              false
           );
           break;
         default:
@@ -581,7 +581,8 @@ public class BatchAppenderatorsTest
                   false,
                   false,
                   mode.name(),
-                  null
+                  null,
+                  false
               )
           )
           .joinableFactory(NoopJoinableFactory.INSTANCE)
@@ -592,7 +593,10 @@ public class BatchAppenderatorsTest
           .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
           .chatHandlerProvider(new NoopChatHandlerProvider())
           .appenderatorsManager(new TestAppenderatorsManager())
+          .taskLogPusher(null)
+          .attemptId("1")
           .build();
+
     }
   }
 }

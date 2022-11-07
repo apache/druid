@@ -28,7 +28,9 @@
 #
 # Additional env vars:
 # - DRUID_LOG4J -- set the entire log4j.xml verbatim
-# - DRUID_LOG_LEVEL -- override the default log level in default log4j
+# - DRUID_LOG_LEVEL -- override the default log level in default log4j. This presently works only if the existing log level is INFO
+# - DRUID_SERVICE_LOG4J -- set the entire service specific log4j.xml verbatim
+# - DRUID_SERVICE_LOG_LEVEL -- override the default log level in the service specific log4j. This presently works only if the existing log level is INFO
 # - DRUID_XMX -- set Java Xmx
 # - DRUID_XMS -- set Java Xms
 # - DRUID_MAXNEWSIZE -- set Java max new size
@@ -176,10 +178,22 @@ then
     echo "$DRUID_LOG4J" >$COMMON_CONF_DIR/log4j2.xml
 fi
 
+# Service level log options can be used when the log4j2.xml file is setup in the service config directory
+# instead of the common config directory
+if [ -n "$DRUID_SERVICE_LOG_LEVEL" ]
+then
+    sed -ri 's/"info"/"'$DRUID_SERVICE_LOG_LEVEL'"/g' $SERVICE_CONF_DIR/log4j2.xml
+fi
+
+if [ -n "$DRUID_SERVICE_LOG4J" ]
+then
+    echo "$DRUID_SERVICE_LOG4J" >$SERVICE_CONF_DIR/log4j2.xml
+fi
+
 DRUID_DIRS_TO_CREATE=${DRUID_DIRS_TO_CREATE-'var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache'}
 if [ -n "${DRUID_DIRS_TO_CREATE}" ]
 then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi
 
-exec java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@
+exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main server $@

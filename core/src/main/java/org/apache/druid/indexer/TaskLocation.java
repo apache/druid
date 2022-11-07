@@ -21,6 +21,7 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
@@ -40,6 +41,11 @@ public class TaskLocation
   public static TaskLocation create(String host, int port, int tlsPort)
   {
     return new TaskLocation(host, port, tlsPort);
+  }
+
+  public static TaskLocation create(String host, int port, int tlsPort, boolean isTls)
+  {
+    return isTls ? new TaskLocation(host, -1, tlsPort) : new TaskLocation(host, port, -1);
   }
 
   public static TaskLocation unknown()
@@ -126,5 +132,13 @@ public class TaskLocation
   public int hashCode()
   {
     return Objects.hash(host, port, tlsPort);
+  }
+
+  public HostAndPort toHostAndPort()
+  {
+    if (tlsPort >= 0) {
+      return HostAndPort.fromParts(host, tlsPort);
+    }
+    return HostAndPort.fromParts(host, port);
   }
 }

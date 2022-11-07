@@ -28,7 +28,6 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,7 +40,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
@@ -118,6 +116,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
@@ -129,7 +128,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -995,6 +993,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"a", "b"},
             new Object[]{"abc", "b"}
         )
+    );
+  }
+
+  @Test
+  public void testStringLatestGroupByWithAlwaysFalseCondition()
+  {
+    testQuery(
+        "SELECT LATEST(dim4, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("dim2", ColumnType.STRING)
+                        .build()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "dim2")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testStringLatestByGroupByWithAlwaysFalseCondition()
+  {
+    testQuery(
+        "SELECT LATEST_BY(dim4, __time, 10),dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN( 'something else') ) GROUP BY dim2",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(InlineDataSource.fromIterable(
+                    ImmutableList.of(),
+                    RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("dim2", ColumnType.STRING)
+                        .build()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0", "dim2")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of()
     );
   }
 
@@ -2258,20 +2306,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExactCountDistinctWithFilter() throws IOException
+  public void testExactCountDistinctWithFilter()
   {
-
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
     // When useApproximateCountDistinct=true and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
     try {
       testQuery(
           PLANNER_CONFIG_NO_HLL.withOverrides(
-              new QueryContext(
-                  ImmutableMap.of(
-                      PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                      "false"
-                  )
+              ImmutableMap.of(
+                  PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                  "false"
               )
           ), // Enable exact count distinct
           sqlQuery,
@@ -2288,11 +2333,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     requireMergeBuffers(3);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         sqlQuery,
@@ -3901,7 +3944,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           "(\"dim1\" == \"j0.ROW_VALUE\")",
                           JoinType.INNER,
                           null,
-                          ExprMacroTable.nil()
+                          ExprMacroTable.nil(),
+                          CalciteTests.createJoinableFactoryWrapper()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -6450,16 +6494,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators() throws IOException
+  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators()
   {
     requireMergeBuffers(4);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
@@ -6706,7 +6748,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoubleNestedGroupBy() throws IOException
+  public void testDoubleNestedGroupBy()
   {
     requireMergeBuffers(3);
     testQuery(
@@ -6902,6 +6944,87 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{12L, 4L}
         )
+    );
+  }
+
+  @Test
+  public void testUseTimeFloorInsteadOfGranularityOnJoinResult()
+  {
+    cannotVectorize();
+
+    testQuery(
+        "WITH main AS (SELECT * FROM foo LIMIT 2)\n"
+        + "SELECT TIME_FLOOR(__time, 'PT1H') AS \"time\", dim1, COUNT(*)\n"
+        + "FROM main\n"
+        + "WHERE dim1 IN (SELECT dim1 FROM main GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 5)\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                        .columns("__time", "dim1")
+                                        .limit(2)
+                                        .build()
+                                ),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(
+                                                    new QueryDataSource(
+                                                        newScanQueryBuilder()
+                                                            .dataSource(CalciteTests.DATASOURCE1)
+                                                            .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                                            .columns("dim1")
+                                                            .limit(2)
+                                                            .build()
+                                                    )
+                                                )
+                                                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                                                .setGranularity(Granularities.ALL)
+                                                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                                .setLimitSpec(
+                                                    new DefaultLimitSpec(
+                                                        ImmutableList.of(
+                                                            new OrderByColumnSpec(
+                                                                "a0",
+                                                                Direction.DESCENDING,
+                                                                StringComparators.NUMERIC
+                                                            )
+                                                        ),
+                                                        5
+                                                    )
+                                                )
+                                                .build()
+                                ),
+                                "j0.",
+                                "(\"dim1\" == \"j0.d0\")",
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+                                ColumnType.LONG
+                            )
+                        )
+                        .setDimensions(dimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                            new DefaultDimensionSpec("dim1", "d1")
+                        ))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(new Object[]{946684800000L, "", 1L}, new Object[]{946771200000L, "10.1", 1L})
+        : ImmutableList.of(new Object[]{946771200000L, "10.1", 1L})
     );
   }
 
@@ -7373,7 +7496,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         ))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                                expressionPostAgg("p0", "((1 - (\"a1\" / \"a0\")) * 100)")
+                                expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)")
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -8295,17 +8418,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename() throws IOException
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     cannotVectorize();
     requireMergeBuffers(3);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
-            new QueryContext(
-                ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
-                    "true"
-                )
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
             )
         ),
         "SELECT\n"
@@ -10271,7 +10392,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupingAggregatorDifferentOrder() throws IOException
+  public void testGroupingAggregatorDifferentOrder()
   {
     requireMergeBuffers(3);
 
@@ -12462,7 +12583,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12491,7 +12612,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12522,7 +12643,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         //Since adding a zero period does not change the timestamp, just compare the stamp with the orignal
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{row.getTimestampFromEpoch()})
                           .collect(Collectors.toList())
     );
@@ -12560,7 +12681,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .build()),
 
         // verify if query results match the given
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(r -> new Object[]{periodGranularity.increment(r.getTimestamp()).getMillis()})
                           .collect(Collectors.toList())
     );
@@ -12589,7 +12710,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         // verify if query results match the given
         // "cnt" for each row is 1
-        CalciteTests.ROWS1.stream()
+        TestDataBuilder.ROWS1.stream()
                           .map(row -> new Object[]{periodGranularity.increment(row.getTimestamp()).getMillis()})
                           .collect(Collectors.toList())
     );
@@ -12970,7 +13091,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    "(\"__time\" == \"j0.__time\")",
                                    JoinType.INNER,
                                    null,
-                                   ExprMacroTable.nil()
+                                   ExprMacroTable.nil(),
+                                   CalciteTests.createJoinableFactoryWrapper()
                                ))
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .granularity(Granularities.ALL)
@@ -13671,7 +13793,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   /**
-   * see {@link CalciteTests#RAW_ROWS1_WITH_NUMERIC_DIMS} for the input data source of this test
+   * see {@link TestDataBuilder#RAW_ROWS1_WITH_NUMERIC_DIMS}
+   * for the input data source of this test
    */
   @Test
   public void testHumanReadableFormatFunction()
@@ -13807,7 +13930,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                              .virtualColumns(
                                  expressionVirtualColumn("v0", "'none'", ColumnType.STRING),
                                  expressionVirtualColumn("v1", "0", ColumnType.LONG),
-                                 expressionVirtualColumn("v2", "0", ColumnType.DOUBLE)
+                                 expressionVirtualColumn("v2", "0.0", ColumnType.DOUBLE)
                              )
                              .dimension(
                                  new DefaultDimensionSpec("v0", "d0")
@@ -14127,29 +14250,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
     // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
-    // Such a query should fail since it will create a huge amount of time grains which can lead to OOM or a very very
-    // high query time.
-    Assert.assertThrows(IAE.class, () ->
-        testQuery(
-            "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from \"foo\"\n"
-            + "WHERE __time > CURRENT_TIMESTAMP - INTERVAL '3' MONTH  AND 'bar'='baz'\n"
-            + "GROUP BY 1\n"
-            + "ORDER BY 1 DESC",
-            ImmutableList.of(
-                Druids.newTimeseriesQueryBuilder()
-                      .dataSource(
-                          InlineDataSource.fromIterable(
-                              ImmutableList.of(),
-                              RowSignature.builder().addTimeColumn().add("m1", ColumnType.STRING).build()
-                          ))
-                      .intervals(ImmutableList.of(Intervals.ETERNITY))
-                      .descending(true)
-                      .granularity(Granularities.MONTH)
-                      .aggregators(new LongMaxAggregatorFactory("a0", "m1"))
-                      .build()
-            ),
-            ImmutableList.of()
-        )
+    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
+    // with granularity MONTH, to avoid excessive materialization of time grains.
+    //
+    // See DruidQuery#canUseQueryGranularity for the relevant check.
+
+    cannotVectorize();
+
+    testQuery(
+        "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from \"foo\"\n"
+        + "WHERE __time > CURRENT_TIMESTAMP - INTERVAL '3' MONTH  AND 'bar'='baz'\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY 1 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(InlineDataSource.fromIterable(
+                            ImmutableList.of(),
+                            RowSignature.builder()
+                                        .addTimeColumn()
+                                        .add("m1", ColumnType.FLOAT)
+                                        .build()
+                        ))
+                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "timestamp_floor(\"__time\",'P1m',null,'UTC')",
+                            ColumnType.LONG
+                        ))
+                        .setGranularity(Granularities.ALL)
+                        .addDimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
+                        .addAggregator(new FloatMaxAggregatorFactory("a0", "m1"))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.NUMERIC)
+                                ),
+                                null
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of()
     );
   }
 }

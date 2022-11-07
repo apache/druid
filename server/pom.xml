@@ -50,13 +50,6 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <!-- This is needed to bundle the web console -->
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-console</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
             <version>${project.parent.version}</version>
@@ -462,6 +455,8 @@
                     <excludes>
                         <!-- There are UTs for this class but it is very difficult to get required branch coverage -->
                         <exclude>org/apache/druid/metadata/BasicDataSourceExt.class</exclude>
+                        <!-- Tested in the SQL layer, but, oddly, not in this module. -->
+                        <exclude>org/apache/druid/server/QueryResponse.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>

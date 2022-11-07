@@ -309,6 +309,6 @@ export interface QueryExplanation {
 
 export function formatSignature(queryExplanation: QueryExplanation): string {
   return queryExplanation.signature
-    .map(({ name, type }) => `${SqlRef.column(name)}::${type}`)
+    .map(({ name, type }) => `${SqlRef.columnWithoutQuotes(name)}::${type}`)
     .join(', ');
 }

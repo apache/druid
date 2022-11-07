@@ -20,7 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
@@ -28,16 +28,25 @@ public class QuantilesSketchKeyCollectorSnapshot implements KeyCollectorSnapshot
 {
   private final String encodedSketch;
 
+  private final double averageKeyLength;
+
   @JsonCreator
-  public QuantilesSketchKeyCollectorSnapshot(String encodedSketch)
+  public QuantilesSketchKeyCollectorSnapshot(@JsonProperty("encodedSketch") String encodedSketch, @JsonProperty("averageKeyLength") double averageKeyLength)
   {
     this.encodedSketch = encodedSketch;
+    this.averageKeyLength = averageKeyLength;
   }
 
-  @JsonValue
+  @JsonProperty("encodedSketch")
   public String getEncodedSketch()
   {
     return encodedSketch;
+  }
+
+  @JsonProperty("averageKeyLength")
+  public double getAverageKeyLength()
+  {
+    return averageKeyLength;
   }
 
   @Override
@@ -50,12 +59,13 @@ public class QuantilesSketchKeyCollectorSnapshot implements KeyCollectorSnapshot
       return false;
     }
     QuantilesSketchKeyCollectorSnapshot that = (QuantilesSketchKeyCollectorSnapshot) o;
-    return Objects.equals(encodedSketch, that.encodedSketch);
+    return Objects.equals(encodedSketch, that.encodedSketch)
+           && Double.compare(that.averageKeyLength, averageKeyLength) == 0;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(encodedSketch);
+    return Objects.hash(encodedSketch, averageKeyLength);
   }
 }

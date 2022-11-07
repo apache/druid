@@ -75,6 +75,7 @@ import java.util.stream.Collectors;
 public class ControllerQueryKernel
 {
   private final QueryDefinition queryDef;
+  private final int partitionStatisticsMaxRetainedBytes;
 
   /**
    * Stage ID -> tracker for that stage. An extension of the state of this kernel.
@@ -123,9 +124,10 @@ public class ControllerQueryKernel
                                                                   WorkerRpcFailedFault.CODE
   );
 
-  public ControllerQueryKernel(final QueryDefinition queryDef)
+  public ControllerQueryKernel(final QueryDefinition queryDef,final int partitionStatisticsMaxRetainedBytes)
   {
     this.queryDef = queryDef;
+    this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
     this.inflowMap = ImmutableMap.copyOf(computeStageInflowMap(queryDef));
     this.outflowMap = ImmutableMap.copyOf(computeStageOutflowMap(queryDef));
 
@@ -283,7 +285,8 @@ public class ControllerQueryKernel
           stageDef,
           stageWorkerCountMap,
           slicer,
-          assignmentStrategy
+          assignmentStrategy,
+          partitionStatisticsMaxRetainedBytes
       );
       stageTracker.put(nextStage, stageKernel);
     }
@@ -635,4 +638,3 @@ public class ControllerQueryKernel
   }
 
 }
-

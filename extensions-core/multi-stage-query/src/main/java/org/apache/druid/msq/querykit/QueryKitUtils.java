@@ -191,7 +191,7 @@ public class QueryKitUtils
   public static VirtualColumn makeSegmentGranularityVirtualColumn(final Query<?> query)
   {
     final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(query.getContext());
-    final String timeColumnName = query.getContextValue(QueryKitUtils.CTX_TIME_COLUMN_NAME);
+    final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;

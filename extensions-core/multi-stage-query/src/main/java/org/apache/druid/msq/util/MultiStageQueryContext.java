@@ -25,18 +25,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.IndexSpec;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -59,7 +58,7 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
-  private static final String DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = "false";
+  private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
@@ -73,52 +72,39 @@ public class MultiStageQueryContext
    * CLUSTERED BY clause) but it can be overridden.
    */
   public static final String CTX_SORT_ORDER = "segmentSortOrder";
-  private static final String DEFAULT_SORT_ORDER = null;
+
+  public static final String CTX_INDEX_SPEC = "indexSpec";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
-  public static String getMSQMode(QueryContext queryContext)
+  public static String getMSQMode(final QueryContext queryContext)
   {
-    return (String) MultiStageQueryContext.getValueFromPropertyMap(
-        queryContext.getMergedParams(),
+    return queryContext.getString(
         CTX_MSQ_MODE,
-        null,
         DEFAULT_MSQ_MODE
     );
   }
 
-  public static boolean isDurableStorageEnabled(Map<String, Object> propertyMap)
+  public static boolean isDurableStorageEnabled(final QueryContext queryContext)
   {
-    return Boolean.parseBoolean(
-        String.valueOf(
-            getValueFromPropertyMap(
-                propertyMap,
-                CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
-                null,
-                DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
-            )
-        )
+    return queryContext.getBoolean(
+        CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
+        DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
     );
   }
 
   public static boolean isFinalizeAggregations(final QueryContext queryContext)
   {
-    return Numbers.parseBoolean(
-        getValueFromPropertyMap(
-            queryContext.getMergedParams(),
-            CTX_FINALIZE_AGGREGATIONS,
-            null,
-            DEFAULT_FINALIZE_AGGREGATIONS
-        )
+    return queryContext.getBoolean(
+        CTX_FINALIZE_AGGREGATIONS,
+        DEFAULT_FINALIZE_AGGREGATIONS
     );
   }
 
   public static WorkerAssignmentStrategy getAssignmentStrategy(final QueryContext queryContext)
   {
-    String assignmentStrategyString = (String) getValueFromPropertyMap(
-        queryContext.getMergedParams(),
+    String assignmentStrategyString = queryContext.getString(
         CTX_TASK_ASSIGNMENT_STRATEGY,
-        null,
         DEFAULT_TASK_ASSIGNMENT_STRATEGY
     );
 
@@ -127,87 +113,53 @@ public class MultiStageQueryContext
 
   public static int getMaxNumTasks(final QueryContext queryContext)
   {
-    return Numbers.parseInt(
-        getValueFromPropertyMap(
-            queryContext.getMergedParams(),
-            CTX_MAX_NUM_TASKS,
-            null,
-            DEFAULT_MAX_NUM_TASKS
-        )
+    return queryContext.getInt(
+        CTX_MAX_NUM_TASKS,
+        DEFAULT_MAX_NUM_TASKS
     );
   }
 
   public static Object getDestination(final QueryContext queryContext)
   {
-    return getValueFromPropertyMap(
-        queryContext.getMergedParams(),
+    return queryContext.get(
         CTX_DESTINATION,
-        null,
         DEFAULT_DESTINATION
     );
   }
 
   public static int getRowsPerSegment(final QueryContext queryContext, int defaultRowsPerSegment)
   {
-    return Numbers.parseInt(
-        getValueFromPropertyMap(
-            queryContext.getMergedParams(),
-            CTX_ROWS_PER_SEGMENT,
-            null,
-            defaultRowsPerSegment
-        )
+    return queryContext.getInt(
+        CTX_ROWS_PER_SEGMENT,
+        defaultRowsPerSegment
     );
   }
 
   public static int getRowsInMemory(final QueryContext queryContext, int defaultRowsInMemory)
   {
-    return Numbers.parseInt(
-        getValueFromPropertyMap(
-            queryContext.getMergedParams(),
-            CTX_ROWS_IN_MEMORY,
-            null,
-            defaultRowsInMemory
-        )
+    return queryContext.getInt(
+        CTX_ROWS_IN_MEMORY,
+        defaultRowsInMemory
     );
+  }
+
+  public static List<String> getSortOrder(final QueryContext queryContext)
+  {
+    return MultiStageQueryContext.decodeSortOrder(queryContext.getString(CTX_SORT_ORDER));
   }
 
   @Nullable
-  public static Object getValueFromPropertyMap(
-      Map<String, Object> propertyMap,
-      String key,
-      @Nullable List<String> aliases,
-      @Nullable Object defaultValue
-  )
+  public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
-    if (propertyMap.get(key) != null) {
-      return propertyMap.get(key);
-    }
-
-    if (aliases != null) {
-      for (String legacyKey : aliases) {
-        if (propertyMap.get(legacyKey) != null) {
-          return propertyMap.get(legacyKey);
-        }
-      }
-    }
-
-    return defaultValue;
-  }
-
-  public static String getSortOrder(final QueryContext queryContext)
-  {
-    return (String) getValueFromPropertyMap(
-        queryContext.getMergedParams(),
-        CTX_SORT_ORDER,
-        null,
-        DEFAULT_SORT_ORDER
-    );
+    return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
   }
 
   /**
    * Decodes {@link #CTX_SORT_ORDER} from either a JSON or CSV string.
    */
-  public static List<String> decodeSortOrder(@Nullable final String sortOrderString)
+  @Nullable
+  @VisibleForTesting
+  static List<String> decodeSortOrder(@Nullable final String sortOrderString)
   {
     if (sortOrderString == null) {
       return Collections.emptyList();
@@ -218,7 +170,7 @@ public class MultiStageQueryContext
         return new ObjectMapper().readValue(sortOrderString, new TypeReference<List<String>>() {});
       }
       catch (JsonProcessingException e) {
-        throw new IAE("Invalid JSON provided for [%s]", CTX_SORT_ORDER);
+        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
       }
     } else {
       final RFC4180Parser csvParser = new RFC4180ParserBuilder().withSeparator(',').build();
@@ -230,8 +182,29 @@ public class MultiStageQueryContext
                      .collect(Collectors.toList());
       }
       catch (IOException e) {
-        throw new IAE("Invalid CSV provided for [%s]", CTX_SORT_ORDER);
+        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
       }
+    }
+  }
+
+  /**
+   * Decodes {@link #CTX_INDEX_SPEC} from either a JSON-encoded string, or POJOs.
+   */
+  @Nullable
+  @VisibleForTesting
+  static IndexSpec decodeIndexSpec(@Nullable final Object indexSpecObject, final ObjectMapper objectMapper)
+  {
+    try {
+      if (indexSpecObject == null) {
+        return null;
+      } else if (indexSpecObject instanceof String) {
+        return objectMapper.readValue((String) indexSpecObject, IndexSpec.class);
+      } else {
+        return objectMapper.convertValue(indexSpecObject, IndexSpec.class);
+      }
+    }
+    catch (Exception e) {
+      throw QueryContexts.badValueException(CTX_INDEX_SPEC, "an indexSpec", indexSpecObject);
     }
   }
 }

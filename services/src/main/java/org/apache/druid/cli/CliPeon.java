@@ -46,6 +46,7 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
+import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -58,6 +59,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
@@ -123,8 +125,8 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -140,18 +142,15 @@ import java.util.Set;
 public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
-  @Arguments(description = "task.json status.json report.json")
   @Required
+  @Arguments(description = "taskDirPath attemptId")
   public List<String> taskAndStatusFile;
 
-  // path to store the task's stdout log
-  private String taskLogPath;
+  // path to the task Directory
+  private String taskDirPath;
 
-  // path to store the task's TaskStatus
-  private String taskStatusPath;
-
-  // path to store the task's TaskReport objects
-  private String taskReportPath;
+  // the attemptId
+  private String attemptId;
 
   /**
    * Still using --nodeType as the flag for backward compatibility, although the concept is now more precisely called
@@ -193,20 +192,21 @@ public class CliPeon extends GuiceRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
+        new IndexingServiceTaskLogsModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
           @Override
           public void configure(Binder binder)
           {
-            taskLogPath = taskAndStatusFile.get(0);
-            taskStatusPath = taskAndStatusFile.get(1);
-            taskReportPath = taskAndStatusFile.get(2);
+            taskDirPath = taskAndStatusFile.get(0);
+            attemptId = taskAndStatusFile.get(1);
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+            binder.bindConstant().annotatedWith(AttemptId.class).to(attemptId);
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
@@ -218,14 +218,22 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
-            binder.bind(ExecutorLifecycleConfig.class).toInstance(
-                new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskLogPath))
-                    .setStatusFile(new File(taskStatusPath))
-            );
+            ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
+                .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
+
+            if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
+              log.info("Running peon in k8s mode");
+              executorLifecycleConfig.setParentStreamDefined(false);
+            }
+
+            binder.bind(ExecutorLifecycleConfig.class).toInstance(executorLifecycleConfig);
 
             binder.bind(TaskReportFileWriter.class)
-                  .toInstance(new SingleFileTaskReportFileWriter(new File(taskReportPath)));
+                  .toInstance(
+                      new SingleFileTaskReportFileWriter(
+                          Paths.get(taskDirPath, "attempt", attemptId, "report.json").toFile()
+                      ));
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);

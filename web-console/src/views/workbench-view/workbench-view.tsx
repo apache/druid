@@ -52,14 +52,14 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import { ColumnTree } from '../query-view/column-tree/column-tree';
-import { ExplainDialog } from '../query-view/explain-dialog/explain-dialog';
 
+import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
 import { getDemoQueries } from './demo-queries';
 import { ExecutionDetailsDialog } from './execution-details-dialog/execution-details-dialog';
 import { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
 import { ExecutionSubmitDialog } from './execution-submit-dialog/execution-submit-dialog';
+import { ExplainDialog } from './explain-dialog/explain-dialog';
 import { MetadataChangeDetector } from './metadata-change-detector';
 import { QueryTab } from './query-tab/query-tab';
 import { RecentQueryTaskPanel } from './recent-query-task-panel/recent-query-task-panel';

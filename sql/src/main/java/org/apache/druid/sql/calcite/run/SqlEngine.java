@@ -23,8 +23,9 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+
+import java.util.Map;
 
 /**
  * Engine for running SQL queries.
@@ -45,7 +46,7 @@ public interface SqlEngine
    * Validates a provided query context. Returns quietly if the context is OK; throws {@link ValidationException}
    * if the context has a problem.
    */
-  void validateContext(QueryContext queryContext) throws ValidationException;
+  void validateContext(Map<String, Object> queryContext) throws ValidationException;
 
   /**
    * SQL row type that would be emitted by the {@link QueryMaker} from {@link #buildQueryMakerForSelect}.

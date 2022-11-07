@@ -110,7 +110,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL SELECT "
                              + "  floor(TIME_PARSE(\"timestamp\") to hour) AS __time, "
@@ -148,7 +148,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("user", ColumnType.STRING).build();
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE WHERE __time >= TIMESTAMP '2016-06-27 01:00:00.00' AND __time < TIMESTAMP '2016-06-27 02:00:00.00' "
                              + " SELECT "
@@ -187,7 +187,7 @@ public class MSQReplaceTest extends MSQTestBase
                          CoreMatchers.allOf(
                              CoreMatchers.instanceOf(SqlPlanningException.class),
                              ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "Missing time chunk information in OVERWRITE clause for REPLACE, set it to OVERWRITE WHERE <__time based condition> or set it to overwrite the entire table with OVERWRITE ALL."))
+                                 "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
                          )
                      )
                      .verifyPlanningErrors();
@@ -326,7 +326,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless sqlInsertSegmentGranularity is \"all\""))
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
                      .verifyPlanningErrors();
   }

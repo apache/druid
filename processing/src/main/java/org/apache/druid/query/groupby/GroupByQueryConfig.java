@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.utils.JvmUtils;
@@ -335,25 +336,26 @@ public class GroupByQueryConfig
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
-    newConfig.defaultStrategy = query.getContextValue(CTX_KEY_STRATEGY, getDefaultStrategy());
-    newConfig.singleThreaded = query.getContextBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
+    final QueryContext queryContext = query.context();
+    newConfig.defaultStrategy = queryContext.getString(CTX_KEY_STRATEGY, getDefaultStrategy());
+    newConfig.singleThreaded = queryContext.getBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
     newConfig.maxIntermediateRows = Math.min(
-        query.getContextValue(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
+        queryContext.getInt(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
         getMaxIntermediateRows()
     );
     newConfig.maxResults = Math.min(
-        query.getContextValue(CTX_KEY_MAX_RESULTS, getMaxResults()),
+        queryContext.getInt(CTX_KEY_MAX_RESULTS, getMaxResults()),
         getMaxResults()
     );
     newConfig.bufferGrouperMaxSize = Math.min(
-        query.getContextValue(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
+        queryContext.getInt(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
     );
-    newConfig.bufferGrouperMaxLoadFactor = query.getContextValue(
+    newConfig.bufferGrouperMaxLoadFactor = queryContext.getFloat(
         CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR,
         getBufferGrouperMaxLoadFactor()
     );
-    newConfig.bufferGrouperInitialBuckets = query.getContextValue(
+    newConfig.bufferGrouperInitialBuckets = queryContext.getInt(
         CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
         getBufferGrouperInitialBuckets()
     );
@@ -362,33 +364,33 @@ public class GroupByQueryConfig
     // choose a default value lower than the max allowed when the context key is missing in the client query.
     newConfig.maxOnDiskStorage = HumanReadableBytes.valueOf(
         Math.min(
-            query.getContextHumanReadableBytes(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage()).getBytes(),
+            queryContext.getHumanReadableBytes(CTX_KEY_MAX_ON_DISK_STORAGE, getDefaultOnDiskStorage()).getBytes(),
             getMaxOnDiskStorage().getBytes()
         )
     );
     newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
     newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
-    newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
-    newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
+    newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
         isApplyLimitPushDownToSegment()
     );
-    newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
-    newConfig.forcePushDownNestedQuery = query.getContextBoolean(
+    newConfig.forceHashAggregation = queryContext.getBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
+    newConfig.forcePushDownNestedQuery = queryContext.getBoolean(
         CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
         isForcePushDownNestedQuery()
     );
-    newConfig.intermediateCombineDegree = query.getContextValue(
+    newConfig.intermediateCombineDegree = queryContext.getInt(
         CTX_KEY_INTERMEDIATE_COMBINE_DEGREE,
         getIntermediateCombineDegree()
     );
-    newConfig.numParallelCombineThreads = query.getContextValue(
+    newConfig.numParallelCombineThreads = queryContext.getInt(
         CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
         getNumParallelCombineThreads()
     );
-    newConfig.mergeThreadLocal = query.getContextBoolean(CTX_KEY_MERGE_THREAD_LOCAL, isMergeThreadLocal());
-    newConfig.vectorize = query.getContextBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
-    newConfig.enableMultiValueUnnesting = query.getContextBoolean(
+    newConfig.mergeThreadLocal = queryContext.getBoolean(CTX_KEY_MERGE_THREAD_LOCAL, isMergeThreadLocal());
+    newConfig.vectorize = queryContext.getBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
+    newConfig.enableMultiValueUnnesting = queryContext.getBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );

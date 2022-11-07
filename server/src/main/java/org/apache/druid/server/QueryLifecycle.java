@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.DateTimes;
@@ -61,7 +62,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collections;
+
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -102,6 +104,8 @@ public class QueryLifecycle
 
   @MonotonicNonNull
   private Query<?> baseQuery;
+  @MonotonicNonNull
+  private Set<String> userContextKeys;
 
   public QueryLifecycle(
       final QueryToolChestWarehouse warehouse,
@@ -128,7 +132,6 @@ public class QueryLifecycle
     this.startNs = startNs;
   }
 
-
   /**
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
    * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
@@ -140,8 +143,7 @@ public class QueryLifecycle
    *
    * @return results
    */
-  @SuppressWarnings("unchecked")
-  public <T> QueryResponse runSimple(
+  public <T> QueryResponse<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
       final Access authorizationResult
@@ -151,7 +153,7 @@ public class QueryLifecycle
 
     final Sequence<T> results;
 
-    final QueryResponse queryResponse;
+    final QueryResponse<T> queryResponse;
     try {
       preAuthorized(authenticationResult, authorizationResult);
       if (!authorizationResult.isAllowed()) {
@@ -172,7 +174,7 @@ public class QueryLifecycle
      * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
      * was discovered while just trying to expose HTTP response headers
      */
-    return new QueryResponse(
+    return new QueryResponse<T>(
         Sequences.wrap(
             results,
             new SequenceWrapper()
@@ -193,22 +195,19 @@ public class QueryLifecycle
    *
    * @param baseQuery the query
    */
-  @SuppressWarnings("unchecked")
-  public void initialize(final Query baseQuery)
+  public void initialize(final Query<?> baseQuery)
   {
     transition(State.NEW, State.INITIALIZED);
 
-    if (baseQuery.getQueryContext() == null) {
-      QueryContext context = new QueryContext(baseQuery.getContext());
-      context.addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
-      context.addDefaultParams(defaultQueryConfig.getContext());
-
-      this.baseQuery = baseQuery.withOverriddenContext(context.getMergedParams());
-    } else {
-      baseQuery.getQueryContext().addDefaultParam(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
-      baseQuery.getQueryContext().addDefaultParams(defaultQueryConfig.getContext());
-      this.baseQuery = baseQuery;
+    userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    String queryId = baseQuery.getId();
+    if (Strings.isNullOrEmpty(queryId)) {
+      queryId = UUID.randomUUID().toString();
     }
+
+    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(defaultQueryConfig.getContext(), baseQuery.getContext());
+    mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
+    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
     this.toolChest = warehouse.getToolChest(this.baseQuery);
   }
 
@@ -223,23 +222,15 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    final Set<String> contextKeys;
-    if (baseQuery.getQueryContext() == null) {
-      contextKeys = baseQuery.getContext().keySet();
-    } else {
-      contextKeys = baseQuery.getQueryContext().getUserParams().keySet();
-    }
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
-        authConfig.authorizeQueryContextParams()
-        ? Iterables.transform(
-            contextKeys,
+        Iterables.transform(
+            authConfig.contextKeysToAuthorize(userContextKeys),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
-        : Collections.emptyList()
     );
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
@@ -282,17 +273,18 @@ public class QueryLifecycle
    *
    * @return result sequence and response context
    */
-  public QueryResponse execute()
+  public <T> QueryResponse<T> execute()
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
-    final Sequence<?> res = QueryPlus.wrap(baseQuery)
+    @SuppressWarnings("unchecked")
+    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
-    return new QueryResponse(res == null ? Sequences.empty() : res, responseContext);
+    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
   }
 
   /**
@@ -355,7 +347,7 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (QueryContexts.isDebug(baseQuery)) {
+        if (baseQuery.context().isDebug()) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
@@ -405,9 +397,10 @@ public class QueryLifecycle
 
   private boolean isSerializeDateTimeAsLong()
   {
-    final boolean shouldFinalize = QueryContexts.isFinalize(baseQuery, true);
-    return QueryContexts.isSerializeDateTimeAsLong(baseQuery, false)
-           || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(baseQuery, false));
+    final QueryContext queryContext = baseQuery.context();
+    final boolean shouldFinalize = queryContext.isFinalize(true);
+    return queryContext.isSerializeDateTimeAsLong(false)
+           || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
 
   public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)

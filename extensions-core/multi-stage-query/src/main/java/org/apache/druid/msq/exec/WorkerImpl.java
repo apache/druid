@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -67,12 +68,14 @@ import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -100,6 +103,7 @@ import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -107,6 +111,7 @@ import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
 
@@ -127,6 +132,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -178,7 +184,9 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getContext());
+    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
+        QueryContext.of(task.getContext())
+    );
   }
 
   @Override
@@ -204,7 +212,12 @@ public class WorkerImpl implements Worker
       }
       catch (Throwable e) {
         maybeErrorReport = Optional.of(
-            MSQErrorReport.fromException(id(), MSQTasks.getHostFromSelfNode(selfDruidNode), null, e)
+            MSQErrorReport.fromException(
+                id(),
+                MSQTasks.getHostFromSelfNode(selfDruidNode),
+                null,
+                e
+            )
         );
       }
 
@@ -235,6 +248,7 @@ public class WorkerImpl implements Worker
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
+
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
     closer.register(workerClient::close);
 
@@ -261,13 +275,38 @@ public class WorkerImpl implements Worker
       }
     });
 
+    long maxAllowedParseExceptions = Long.parseLong(task.getContext().getOrDefault(
+        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+        Long.MAX_VALUE
+    ).toString());
+
+    long maxVerboseParseExceptions;
+    if (maxAllowedParseExceptions == -1L) {
+      maxVerboseParseExceptions = Limits.MAX_VERBOSE_PARSE_EXCEPTIONS;
+    } else {
+      maxVerboseParseExceptions = Math.min(maxAllowedParseExceptions, Limits.MAX_VERBOSE_PARSE_EXCEPTIONS);
+    }
+
+    Set<String> criticalWarningCodes;
+    if (maxAllowedParseExceptions == 0) {
+      criticalWarningCodes = ImmutableSet.of(CannotParseExternalDataFault.CODE);
+    } else {
+      criticalWarningCodes = ImmutableSet.of();
+    }
+
     final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
         new MSQWarningReportSimplePublisher(
             id(),
             controllerClient,
             id(),
             MSQTasks.getHostFromSelfNode(selfDruidNode)
-        )
+        ),
+        Limits.MAX_VERBOSE_WARNINGS,
+        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
+        criticalWarningCodes,
+        controllerClient,
+        id(),
+        MSQTasks.getHostFromSelfNode(selfDruidNode)
     );
 
     closer.register(msqWarningReportPublisher);
@@ -561,7 +600,6 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          workerTaskList,
           MSQTasks.makeStorageConnector(context.injector()),
           closer
       );
@@ -579,8 +617,9 @@ public class WorkerImpl implements Worker
     if (durableStageStorageEnabled) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
-          id(),
+          task().getWorkerNumber(),
           stageNumber,
+          task().getId(),
           frameSize,
           MSQTasks.makeStorageConnector(context.injector())
       );
@@ -687,18 +726,18 @@ public class WorkerImpl implements Worker
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
       if (durableStageStorageEnabled) {
-        final String fileName = DurableStorageOutputChannelFactory.getPartitionFileName(
+        final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
             task.getControllerTaskId(),
-            task.getId(),
             stageId.getStageNumber(),
-            partition
+            task.getWorkerNumber(),
+            task.getId()
         );
         try {
-          MSQTasks.makeStorageConnector(context.injector()).deleteFile(fileName);
+          MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
         }
         catch (Exception e) {
           // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
-          log.warn(e, "Error while cleaning up temporary files at path " + fileName);
+          log.warn(e, "Error while cleaning up folder at path " + folderName);
         }
       }
     }
@@ -866,7 +905,38 @@ public class WorkerImpl implements Worker
             for (OutputChannel channel : outputChannels.getAllChannels()) {
               stageOutputs.computeIfAbsent(stageDef.getId(), ignored1 -> new ConcurrentHashMap<>())
                           .computeIfAbsent(channel.getPartitionNumber(), ignored2 -> channel.getReadableChannel());
+
             }
+
+            if (durableStageStorageEnabled) {
+              // Once the outputs channels have been resolved and are ready for reading, the worker appends the filename
+              // with a special marker flag and adds it to the
+              DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
+                  DurableStorageOutputChannelFactory.createStandardImplementation(
+                      task.getControllerTaskId(),
+                      task().getWorkerNumber(),
+                      stageDef.getStageNumber(),
+                      task().getId(),
+                      frameContext.memoryParameters().getStandardFrameSize(),
+                      MSQTasks.makeStorageConnector(context.injector())
+                  );
+              try {
+                durableStorageOutputChannelFactory.createSuccessFile(task.getId());
+              }
+              catch (IOException e) {
+                throw new ISE(
+                    e,
+                    "Unable to create the success file [%s] at the location [%s]",
+                    DurableStorageUtils.SUCCESS_MARKER_FILENAME,
+                    DurableStorageUtils.getSuccessFilePath(
+                        task.getControllerTaskId(),
+                        stageDef.getStageNumber(),
+                        task().getWorkerNumber()
+                    )
+                );
+              }
+            }
+
             kernelManipulationQueue.add(holder -> holder.getStageKernelMap()
                                                         .get(stageDef.getId())
                                                         .setResultsComplete(resultObject));
@@ -1002,6 +1072,7 @@ public class WorkerImpl implements Worker
           clusterBy,
           processorOutputChannels,
           exec,
+          memoryParameters.getPartitionStatisticsMaxRetainedBytes(),
           cancellationId,
           kernelManipulationQueue
       );
@@ -1042,6 +1113,7 @@ public class WorkerImpl implements Worker
       final ClusterBy clusterBy,
       final OutputChannels processorOutputChannels,
       final FrameProcessorExecutor exec,
+      final int partitionStatisticsMaxRetainedBytes,
       final String cancellationId,
       final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue
   )
@@ -1059,7 +1131,7 @@ public class WorkerImpl implements Worker
               channel.writable(),
               stageDefinition.getFrameReader(),
               clusterBy,
-              stageDefinition.createResultKeyStatisticsCollector()
+              stageDefinition.createResultKeyStatisticsCollector(partitionStatisticsMaxRetainedBytes)
           )
       );
     }
@@ -1067,7 +1139,7 @@ public class WorkerImpl implements Worker
     final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
         exec.runAllFully(
             Sequences.simple(processors),
-            stageDefinition.createResultKeyStatisticsCollector(),
+            stageDefinition.createResultKeyStatisticsCollector(partitionStatisticsMaxRetainedBytes),
             ClusterByStatisticsCollector::addAll,
             // Run all processors simultaneously. They are lightweight and this keeps things moving.
             processors.size(),

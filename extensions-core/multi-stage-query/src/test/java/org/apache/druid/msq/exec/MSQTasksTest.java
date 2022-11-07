@@ -153,6 +153,7 @@ public class MSQTasksTest
         controllerContext,
         (task, fault) -> {},
         false,
+        -1L,
         TimeUnit.SECONDS.toMillis(5)
     );
 

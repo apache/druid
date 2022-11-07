@@ -80,7 +80,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertOnExternalDataSource() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -305,7 +305,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testRollUpOnExternalDataSource() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -341,7 +341,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testRollUpOnExternalDataSourceWithCompositeKey() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -439,7 +439,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "CLUSTERED BY found before PARTITIONED BY. In druid, the CLUSTERED BY clause has to be specified after the PARTITIONED BY clause"))
+                             "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
                      ))
                      .verifyPlanningErrors();
   }
@@ -496,7 +496,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertWithTooLargeRowShouldThrowException() throws IOException
   {
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryJsonMapper.writeValueAsString(toRead.getAbsolutePath());
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();
 
@@ -531,7 +531,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless sqlInsertSegmentGranularity is \"all\""))
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
                      .verifyPlanningErrors();
   }
