@@ -1888,6 +1888,9 @@ public class ControllerImpl implements Controller
   private static boolean isTaskLockPreemptedException(Exception e)
   {
     final String exceptionMsg = e.getMessage();
+    if (exceptionMsg == null) {
+      return false;
+    }
     final List<String> validExceptionExcerpts = ImmutableList.of(
         "are not covered by locks" /* From TaskLocks */,
         "is preempted and no longer valid" /* From SegmentAllocateAction */
