@@ -222,7 +222,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. |dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
 |`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator|dataSource.|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource| < 1s. |
-|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10s |
+|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
 
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
