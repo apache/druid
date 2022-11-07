@@ -106,7 +106,7 @@ public class QuantilesSketchKeyCollectorFactory
       int serializedSize = Integer.BYTES * items.length;
 
       for (final RowKey key : items) {
-        serializedSize += key.getNumberOfBytes();
+        serializedSize += key.estimatedObjectSize();
       }
 
       final byte[] serializedBytes = new byte[serializedSize];

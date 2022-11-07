@@ -109,8 +109,12 @@ public class RowKey
     return Arrays.toString(key);
   }
 
-  public int getNumberOfBytes()
+  /**
+   * Estimate number of bytes taken by an object of {@link RowKey}. Only returns an estimate and does not account for
+   * platform or JVM specific implementation.
+   */
+  public int estimatedObjectSize()
   {
-    return array().length;
+    return 44 + array().length; // Constant to account for hashcode and object overhead
   }
 }
