@@ -1586,12 +1586,76 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testAllToFinerGranularity()
+  public void testSkipAllGranularityToDefault()
   {
     CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE,
                         createCompactionConfig(10000,
-                                               new Period("P1D"),
+                                               new Period("P0D"),
+                                               null
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                Intervals.ETERNITY,
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipAllToAllGranularity()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               new UserCompactionTaskGranularityConfig(Granularities.ALL, null, null)
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                Intervals.ETERNITY,
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipAllToFinerGranularity()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
                                                new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
                         )
         ),
