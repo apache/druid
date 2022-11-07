@@ -2115,7 +2115,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenSuspended() throws Exception
   {
-    Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "true",
+    Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "false",
                                                  "idleConfig.inactiveAfterMillis", "200");
     supervisorConfig = OBJECT_MAPPER.convertValue(config, SupervisorStateManagerConfig.class);
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -2126,7 +2126,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         false,
-        null
+        new IdleConfig(true, null)
     );
     addSomeEvents(1);
 

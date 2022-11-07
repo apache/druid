@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 public class IdleConfig
 {
   private final boolean enabled;
-  private final long inactiveAfterMillis;
+  private final Long inactiveAfterMillis;
 
   @JsonCreator
   public IdleConfig(
@@ -39,13 +39,12 @@ public class IdleConfig
       @Nullable @JsonProperty("inactiveAfterMillis") Long inactiveAfterMillis
   )
   {
+    Preconditions.checkArgument(
+        inactiveAfterMillis == null || inactiveAfterMillis > 0,
+        "inactiveAfterMillis should be a postive number"
+    );
     this.enabled = enabled != null && enabled;
-    this.inactiveAfterMillis = inactiveAfterMillis != null
-                               ? inactiveAfterMillis
-                               : 600_000L;
-
-    Preconditions.checkArgument(this.inactiveAfterMillis > 0,
-                                "inactiveAfterMillis should be a postive number");
+    this.inactiveAfterMillis = inactiveAfterMillis;
   }
 
   @JsonProperty
@@ -55,7 +54,7 @@ public class IdleConfig
   }
 
   @JsonProperty
-  public long getInactiveAfterMillis()
+  public Long getInactiveAfterMillis()
   {
     return this.inactiveAfterMillis;
   }

@@ -805,8 +805,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
     }
 
-    if (spec.getIoConfig().getIdleConfig() != null) {
-      idleConfig = spec.getIoConfig().getIdleConfig();
+    IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
+    if (specIdleConfig != null) {
+      if (specIdleConfig.getInactiveAfterMillis() != null) {
+        idleConfig = specIdleConfig;
+      } else {
+        idleConfig = new IdleConfig(
+            specIdleConfig.isEnabled(),
+            spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+        );
+      }
     } else {
       idleConfig = new IdleConfig(
           spec.getSupervisorStateManagerConfig().isIdleConfigEnabled(),
