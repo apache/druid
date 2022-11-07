@@ -69,6 +69,7 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
@@ -218,7 +219,7 @@ public class WorkerImpl implements Worker
           }
         });
 
-        return TaskStatus.failure(id(), errorReport.getFault().getCodeWithMessage());
+        return TaskStatus.failure(id(), MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
       } else {
         return TaskStatus.success(id());
       }
@@ -471,11 +472,12 @@ public class WorkerImpl implements Worker
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
 
+    // Dont add to queue if workerOrder already present.
     kernelManipulationQueue.add(
         kernelHolder ->
-            kernelHolder.getStageKernelMap().computeIfAbsent(
+            kernelHolder.getStageKernelMap().putIfAbsent(
                 workOrder.getStageDefinition().getId(),
-                ignored -> WorkerStageKernel.create(workOrder)
+                WorkerStageKernel.create(workOrder)
             )
     );
   }
@@ -493,10 +495,18 @@ public class WorkerImpl implements Worker
         kernelHolder -> {
           final WorkerStageKernel stageKernel = kernelHolder.getStageKernelMap().get(stageId);
 
-          // Ignore the update if we don't have a kernel for this stage.
           if (stageKernel != null) {
-            stageKernel.setResultPartitionBoundaries(stagePartitionBoundaries);
+            if (!stageKernel.hasResultPartitionBoundaries()) {
+              stageKernel.setResultPartitionBoundaries(stagePartitionBoundaries);
+            } else {
+              // Ignore if partition boundaries are already set.
+              log.warn(
+                  "Stage[%s] already has result partition boundaries set. Ignoring the latest partition boundaries recieved.",
+                  stageId
+              );
+            }
           } else {
+            // Ignore the update if we don't have a kernel for this stage.
             log.warn("Ignored result partition boundaries call for unknown stage [%s]", stageId);
           }
         }

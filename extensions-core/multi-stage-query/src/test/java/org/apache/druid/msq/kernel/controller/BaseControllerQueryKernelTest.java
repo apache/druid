@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 {
@@ -108,21 +109,25 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       createAndGetNewStageNumbers(false);
 
       // Initial phase would always be new as we can call this method only once for each
+      StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
       switch (controllerStagePhase) {
         case NEW:
           break;
 
         case READING_INPUT:
-          controllerQueryKernel.startStage(new StageId(queryDefinition.getQueryId(), stageNumber));
+          controllerQueryKernel.startStage(stageId);
+          for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
+            controllerQueryKernel.workOrdersSentForWorker(stageId, i);
+          }
           break;
 
         case POST_READING:
           setupStage(stageNumber, ControllerStagePhase.READING_INPUT, true);
 
           if (queryDefinition.getStageDefinition(stageNumber).mustGatherResultKeyStatistics()) {
-            for (int i = 0; i < numWorkers; ++i) {
+            for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
               controllerQueryKernel.addResultKeyStatisticsForStageAndWorker(
-                  new StageId(queryDefinition.getQueryId(), stageNumber),
+                  stageId,
                   i,
                   ClusterByStatisticsSnapshot.empty()
               );
@@ -139,9 +144,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           } else {
             setupStage(stageNumber, ControllerStagePhase.READING_INPUT, true);
           }
-          for (int i = 0; i < numWorkers; ++i) {
+          for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
             controllerQueryKernel.setResultsCompleteForStageAndWorker(
-                new StageId(queryDefinition.getQueryId(), stageNumber),
+                stageId,
                 i,
                 new Object()
             );
@@ -150,11 +155,11 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 
         case FINISHED:
           setupStage(stageNumber, ControllerStagePhase.RESULTS_READY, true);
-          controllerQueryKernel.finishStage(new StageId(queryDefinition.getQueryId(), stageNumber), false);
+          controllerQueryKernel.finishStage(stageId, false);
           break;
 
         case FAILED:
-          controllerQueryKernel.failStage(new StageId(queryDefinition.getQueryId(), stageNumber));
+          controllerQueryKernel.failStage(stageId);
           break;
       }
       if (!recursiveCall) {
@@ -232,6 +237,15 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       controllerQueryKernel.startStage(new StageId(queryDefinition.getQueryId(), stageNumber));
     }
 
+    public void startWorkOrder(int stageNumber)
+    {
+      StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      Preconditions.checkArgument(initialized);
+      IntStream.range(0, queryDefinition.getStageDefinition(stageId).getMaxWorkerCount())
+               .forEach(n -> controllerQueryKernel.workOrdersSentForWorker(stageId, n));
+
+    }
+
 
     public void finishStage(int stageNumber)
     {
@@ -270,8 +284,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public void setResultsCompleteForStageAndWorker(int stageNumber, int workerNumber)
     {
       Preconditions.checkArgument(initialized);
+      final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
       controllerQueryKernel.setResultsCompleteForStageAndWorker(
-          new StageId(queryDefinition.getQueryId(), stageNumber),
+          stageId,
           workerNumber,
           new Object()
       );
@@ -315,6 +330,20 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       return stageIds.stream()
                      .map(StageId::getStageNumber)
                      .collect(Collectors.toSet());
+    }
+
+    public void sendWorkOrdersForWorker(int stageNumber, int worker)
+    {
+      Preconditions.checkArgument(initialized);
+      final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      controllerQueryKernel.workOrdersSentForWorker(stageId, worker);
+    }
+
+    public void sendPartitionBoundariesForStageAndWorker(int stageNumber, int worker)
+    {
+      Preconditions.checkArgument(initialized);
+      final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      controllerQueryKernel.partitionBoundariesSentForWorker(stageId, worker);
     }
   }
 }

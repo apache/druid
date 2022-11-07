@@ -58,4 +58,14 @@ public class Limits
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
    */
   public static final int MAX_KERNEL_MANIPULATION_QUEUE_SIZE = 100_000;
+
+  /**
+   * Maximum retries across all workers.
+   */
+  public static final int TOTAL_RETRY_LIMIT = 30;
+
+  /**
+   * Maximum worker retries. Initial run is not a retry. The worker will be spawned 1 + retryNumber of times before erroring out;
+   */
+  public static int WORKER_RETRY_LIMIT = 2;
 }

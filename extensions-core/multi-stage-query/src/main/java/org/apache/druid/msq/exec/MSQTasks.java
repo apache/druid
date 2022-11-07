@@ -31,6 +31,7 @@ import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -65,9 +66,9 @@ public class MSQTasks
   /**
    * Returns a worker task ID given a SQL query id.
    */
-  public static String workerTaskId(final String controllerTaskId, final int workerNumber)
+  public static String workerTaskId(final String controllerTaskId, final int workerNumber, final int retryCount)
   {
-    return StringUtils.format("%s-worker%d", controllerTaskId, workerNumber);
+    return StringUtils.format("%s-worker%d_%d", controllerTaskId, workerNumber, retryCount);
   }
 
   /**
@@ -194,7 +195,7 @@ public class MSQTasks
       logMessage.append("; host ").append(errorReport.getHost());
     }
 
-    logMessage.append(": ").append(errorReport.getFault().getCodeWithMessage());
+    logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
       if (errorReport.getFault() instanceof UnknownFault) {

@@ -22,6 +22,8 @@ package org.apache.druid.msq.kernel.controller;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntSortedMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -38,16 +40,18 @@ import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * Controller-side state machine for each stage. Used by {@link ControllerQueryKernel} to form the overall state
  * machine for an entire query.
- *
+ * <p>
  * Package-private: stage trackers are an internal implementation detail of {@link ControllerQueryKernel}, not meant
  * for separate use.
  */
@@ -57,8 +61,8 @@ class ControllerStageTracker
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
-  private final IntSet workersWithResultKeyStatistics = new IntAVLTreeSet();
-  private final IntSet workersWithResultsComplete = new IntAVLTreeSet();
+  private final Int2ObjectMap<WorkerStagePhase> workerStagePhases = new Int2ObjectOpenHashMap<>();
+
 
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
 
@@ -88,12 +92,19 @@ class ControllerStageTracker
     this.workerCount = workerInputs.workerCount();
     this.workerInputs = workerInputs;
 
+    initializeWorkerState(workerCount);
+
     if (stageDef.mustGatherResultKeyStatistics()) {
       this.resultKeyStatisticsCollector = stageDef.createResultKeyStatisticsCollector();
     } else {
       this.resultKeyStatisticsCollector = null;
       generateResultPartitionsAndBoundaries();
     }
+  }
+
+  private void initializeWorkerState(int workerCount)
+  {
+    IntStream.range(0, workerCount).forEach(wokerNumber -> workerStagePhases.put(wokerNumber, WorkerStagePhase.NEW));
   }
 
   /**
@@ -162,10 +173,73 @@ class ControllerStageTracker
     }
   }
 
+
+  IntSet getWorkersForPartitionBoundaries()
+  {
+    if (!getStageDefinition().doesShuffle()) {
+      throw new ISE("Result partition information is not relevant to this stage because it does not shuffle");
+    }
+    IntAVLTreeSet workers = new IntAVLTreeSet();
+    for (Integer worker : workerStagePhases.keySet()) {
+      if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(workerStagePhases.get(worker))) {
+        workers.add(worker);
+      }
+    }
+    return workers;
+  }
+
+  void workOrderSentForWorker(int worker)
+  {
+
+    workerStagePhases.compute(worker, (wk, state) -> {
+      if (state == null) {
+        throw new ISE("Worker[%d] not found for stage[%s]", wk, stageDef.getStageNumber());
+      }
+      if (!WorkerStagePhase.READING_INPUT.canTransitionFrom(state)) {
+        throw new ISE(
+            "Worker[%d] cannot transistion from state[%s] to state[%s] while sending work order",
+            worker,
+            state,
+            WorkerStagePhase.READING_INPUT
+        );
+      }
+      return WorkerStagePhase.READING_INPUT;
+    });
+    if (phase != ControllerStagePhase.READING_INPUT) {
+      if (allWorkOrderSent()) {
+        // if all the work orders are sent, change state to reading input from retrying
+        transitionTo(ControllerStagePhase.READING_INPUT);
+      }
+    }
+
+  }
+
+
+  void partitionBoundariesSentForWorker(int worker)
+  {
+
+    workerStagePhases.compute(worker, (wk, state) -> {
+      if (state == null) {
+        throw new ISE("Worker[%d] not found for stage[%s]", wk, stageDef.getStageNumber());
+      }
+      if (!WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT.canTransitionFrom(state)) {
+        throw new ISE(
+            "Worker[%d] cannot transistion from state[%s] to state[%s] while sending partition boundaries",
+            worker,
+            state,
+            WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT
+        );
+      }
+      return WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT;
+    });
+
+  }
+
+
   /**
    * Whether the result key statistics collector for this stage has encountered any multi-valued input at
    * any key position.
-   *
+   * <p>
    * This method exists because {@link org.apache.druid.timeline.partition.DimensionRangeShardSpec} does not
    * support partitioning on multi-valued strings, so we need to know if any multi-valued strings exist in order
    * to decide whether we can use this kind of shard spec.
@@ -247,22 +321,42 @@ class ControllerStageTracker
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
-    if (phase != ControllerStagePhase.READING_INPUT) {
+    if (phase != ControllerStagePhase.READING_INPUT && phase != ControllerStagePhase.RETRYING) {
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
 
+    WorkerStagePhase currentPhase = workerStagePhases.get(workerNumber);
+
+    if (currentPhase == null) {
+      throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
+    }
+
     try {
-      if (workersWithResultKeyStatistics.add(workerNumber)) {
+      if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.canTransitionFrom(currentPhase)) {
+        workerStagePhases.put(workerNumber, WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
         resultKeyStatisticsCollector.addAll(snapshot);
 
-        if (workersWithResultKeyStatistics.size() == workerCount) {
+        if (allPartitionStatisticsPresent()) {
           generateResultPartitionsAndBoundaries();
+
+//                    for (int worker : workerStagePhases.keySet()) {
+//            workerStagePhases.compute(worker, (wk, state) -> WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT);
+//          }
 
           // Phase can become FAILED after generateResultPartitionsAndBoundaries, if there were too many partitions.
           if (phase != ControllerStagePhase.FAILED) {
             transitionTo(ControllerStagePhase.POST_READING);
           }
         }
+      } else {
+        throw new ISE(
+            "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
+            workerNumber,
+            (stageDef.getStageNumber()),
+            WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES,
+            currentPhase
+
+        );
       }
     }
     catch (Exception e) {
@@ -289,12 +383,20 @@ class ControllerStageTracker
       throw new NullPointerException("resultObject must not be null");
     }
 
+    WorkerStagePhase currentPhase = workerStagePhases.get(workerNumber);
+    if (currentPhase == null) {
+      throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
+    }
+
     // This is unidirectional flow of data. While this works in the current state of MSQ where partial fault tolerance
     // is implemented and a query flows in one direction only, rolling back of workers' state and query kernel's
     // phase should be allowed to fully support fault tolerance in cases such as:
     //  1. Rolling back worker's state in case it fails (and then retries)
     //  2. Rolling back query kernel's phase in case the results are lost (and needs workers to retry the computation)
-    if (workersWithResultsComplete.add(workerNumber)) {
+
+
+    if (WorkerStagePhase.RESULTS_READY.canTransitionFrom(currentPhase)) {
+      workerStagePhases.put(workerNumber, WorkerStagePhase.RESULTS_READY);
       if (this.resultObject == null) {
         this.resultObject = resultObject;
       } else {
@@ -302,13 +404,28 @@ class ControllerStageTracker
         this.resultObject = getStageDefinition().getProcessorFactory()
                                                 .mergeAccumulatedResult(this.resultObject, resultObject);
       }
+    } else {
+      throw new ISE(
+          "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
+          workerNumber,
+          (stageDef.getStageNumber()), WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT, currentPhase
+
+      );
     }
 
-    if (workersWithResultsComplete.size() == workerCount) {
+    if (allResultsPresent()) {
       transitionTo(ControllerStagePhase.RESULTS_READY);
       return true;
     }
     return false;
+  }
+
+  private boolean allResultsPresent()
+  {
+    return workerStagePhases.values()
+                            .stream()
+                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.RESULTS_READY))
+                            .count() == workerCount;
   }
 
   /**
@@ -333,7 +450,7 @@ class ControllerStageTracker
 
   /**
    * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries}.
-   *
+   * <p>
    * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method cannot be called until after
    * statistics have been provided to {@link #addResultKeyStatisticsForWorker} for all workers.
    */
@@ -346,7 +463,7 @@ class ControllerStageTracker
     final int stageNumber = stageDef.getStageNumber();
 
     if (stageDef.doesShuffle()) {
-      if (stageDef.mustGatherResultKeyStatistics() && workersWithResultKeyStatistics.size() != workerCount) {
+      if (stageDef.mustGatherResultKeyStatistics() && !allPartitionStatisticsPresent()) {
         throw new ISE("Cannot generate result partitions without all worker statistics");
       }
 
@@ -385,6 +502,25 @@ class ControllerStageTracker
     }
   }
 
+  private boolean allPartitionStatisticsPresent()
+  {
+    return workerStagePhases.values()
+                            .stream()
+                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES))
+                            .count()
+           == workerCount;
+  }
+
+  private boolean allWorkOrderSent()
+  {
+    return workerStagePhases.values()
+                            .stream()
+                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
+                                                  || stagePhase.equals(WorkerStagePhase.READING_INPUT))
+                            .count()
+           == workerCount;
+  }
+
   /**
    * Marks the stage as failed and sets the reason for the same.
    *
@@ -401,7 +537,7 @@ class ControllerStageTracker
     }
   }
 
-  void transitionTo(final ControllerStagePhase newPhase)
+  private void transitionTo(final ControllerStagePhase newPhase)
   {
     if (newPhase.canTransitionFrom(phase)) {
       phase = newPhase;
@@ -409,4 +545,32 @@ class ControllerStageTracker
       throw new IAE("Cannot transition from [%s] to [%s]", phase, newPhase);
     }
   }
+
+  public boolean retryIfNeeded(int workerNumber)
+  {
+    if (phase.equals(ControllerStagePhase.FINISHED) || phase.equals(ControllerStagePhase.RESULTS_READY)) {
+      // do nothing
+      return false;
+    }
+    if (!isTrackingWorker(workerNumber)) {
+      // not tracking this worker
+      return false;
+    }
+
+    if (workerStagePhases.get(workerNumber).equals(WorkerStagePhase.RESULTS_READY)
+        || workerStagePhases.get(workerNumber).equals(WorkerStagePhase.FINISHED)) {
+      // do nothing
+      return false;
+    }
+    workerStagePhases.put(workerNumber, WorkerStagePhase.NEW);
+    transitionTo(ControllerStagePhase.RETRYING);
+    return true;
+  }
+
+
+  public boolean isTrackingWorker(int workerNumber)
+  {
+    return workerStagePhases.get(workerNumber) != null;
+  }
+
 }

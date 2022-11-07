@@ -25,7 +25,7 @@ import java.util.Set;
 
 /**
  * Phases that a stage can be in, as far as the controller is concerned.
- *
+ * <p>
  * Used by {@link ControllerStageTracker}.
  */
 public enum ControllerStagePhase
@@ -35,7 +35,16 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return false;
+      return true;
+    }
+  },
+
+
+  RETRYING {
+    @Override
+    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
+    {
+      return priorPhase == READING_INPUT || priorPhase == POST_READING || priorPhase == RETRYING;
     }
   },
 
@@ -44,7 +53,7 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == NEW;
+      return priorPhase == RETRYING || priorPhase == NEW;
     }
   },
 
@@ -55,7 +64,7 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == READING_INPUT;
+      return priorPhase == RETRYING || priorPhase == READING_INPUT;
     }
   },
 

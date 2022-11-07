@@ -43,10 +43,10 @@ public class IndexerWorkerManagerClient implements WorkerManagerClient
   }
 
   @Override
-  public String run(String controllerId, MSQWorkerTask task)
+  public String run(String taskId, MSQWorkerTask task)
   {
-    FutureUtils.getUnchecked(overlordClient.runTask(controllerId, task), true);
-    return controllerId;
+    FutureUtils.getUnchecked(overlordClient.runTask(taskId, task), true);
+    return taskId;
   }
 
   @Override

@@ -35,9 +35,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyWorkerRetriesFault;
+import org.apache.druid.msq.indexing.error.TotalRetryLimitExceededFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -46,6 +49,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -67,6 +72,7 @@ public class MSQWorkerTaskLauncher
   private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
   private static final long SHUTDOWN_TIMEOUT_MS = Duration.ofMinutes(1).toMillis();
+  private AtomicInteger currentRetryCount = new AtomicInteger();
 
   // States for "state" variable.
   private enum State
@@ -101,15 +107,30 @@ public class MSQWorkerTaskLauncher
 
   // Mutable state accessible only to the main loop. LinkedHashMap since order of key set matters. Tasks are added
   // here once they are submitted for running, but before they are fully started up.
+  // taskId -> taskTracker
   private final Map<String, TaskTracker> taskTrackers = new LinkedHashMap<>();
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
 
+
+  // tasks to clean up due to retries
+  private final Set<String> tasksToCleanup = ConcurrentHashMap.newKeySet();
+
+  // retry worker set
+  private final Set<Integer> retryWorkerSet = ConcurrentHashMap.newKeySet();
+
+  private final Set<Integer> retryingWorkerSet = ConcurrentHashMap.newKeySet();
+
+
+  private final Map<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
+  private final RetryTask retryTask;
+
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
       final String dataSource,
       final ControllerContext context,
+      final RetryTask retryTask,
       final boolean durableStageStorageEnabled,
       final long maxTaskStartDelayMillis
   )
@@ -120,6 +141,8 @@ public class MSQWorkerTaskLauncher
     this.exec = Execs.singleThreaded(
         "multi-stage-query-task-launcher[" + StringUtils.encodeForFormat(controllerTaskId) + "]-%s"
     );
+
+    this.retryTask = retryTask;
     this.durableStageStorageEnabled = durableStageStorageEnabled;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
   }
@@ -185,7 +208,7 @@ public class MSQWorkerTaskLauncher
   /**
    * Get the list of currently-active tasks.
    */
-  public List<String> getTaskList()
+  public List<String> getActiveTasks()
   {
     synchronized (taskIds) {
       return ImmutableList.copyOf(taskIds);
@@ -214,6 +237,26 @@ public class MSQWorkerTaskLauncher
     }
   }
 
+
+  public void submitForRelaunch(int workerNumber)
+  {
+    retryWorkerSet.add(workerNumber);
+  }
+
+  public void waitUntilWorkersReady(Set<Integer> workerSet) throws InterruptedException
+  {
+    synchronized (taskIds) {
+      while (!fullyStartedTasks.containsAll(workerSet)) {
+        if (stopFuture.isDone() || stopFuture.isCancelled()) {
+          FutureUtils.getUnchecked(stopFuture, false);
+          throw new ISE("Stopped");
+        }
+        taskIds.wait();
+      }
+    }
+  }
+
+
   /**
    * Checks if the controller has canceled the input taskId. This method is used in {@link ControllerImpl}
    * to figure out if the worker taskId is canceled by the controller. If yes, the errors from that worker taskId
@@ -238,6 +281,8 @@ public class MSQWorkerTaskLauncher
           runNewTasks();
           updateTaskTrackersAndTaskIds();
           checkForErroneousTasks();
+          relaunchTasks();
+          cleanFailedTasks();
         }
         catch (Throwable e) {
           state.set(State.STOPPED);
@@ -321,10 +366,19 @@ public class MSQWorkerTaskLauncher
           controllerTaskId,
           dataSource,
           i,
-          taskContext
+          taskContext,
+          0
       );
 
-      taskTrackers.put(task.getId(), new TaskTracker(i));
+      taskTrackers.put(task.getId(), new TaskTracker(i, task));
+      workerToTaskIds.compute(i, (workerId, taskIds) -> {
+        if (taskIds == null) {
+          taskIds = new ArrayList<>();
+        }
+        taskIds.add(task.getId());
+        return taskIds;
+      });
+
       context.workerManager().run(task.getId(), task);
 
       synchronized (taskIds) {
@@ -374,33 +428,120 @@ public class MSQWorkerTaskLauncher
   /**
    * Used by the main loop to generate exceptions if any tasks have failed, have taken too long to start up, or
    * have gone inexplicably missing.
-   *
+   * <p>
    * Throws an exception if some task is erroneous.
    */
   private void checkForErroneousTasks()
   {
     final int numTasks = taskTrackers.size();
 
-    for (final Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
+    Iterator<Map.Entry<String, TaskTracker>> taskTrackerIterator = taskTrackers.entrySet().iterator();
+
+    while (taskTrackerIterator.hasNext()) {
+      final Map.Entry<String, TaskTracker> taskEntry = taskTrackerIterator.next();
       final String taskId = taskEntry.getKey();
       final TaskTracker tracker = taskEntry.getValue();
+      if (tracker.toRetry()) {
+        continue;
+      }
 
       if (tracker.status == null) {
-        throw new MSQException(UnknownFault.forMessage(StringUtils.format("Task [%s] status missing", taskId)));
-      }
-
-      if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
+        removeWorkerFromFullyStartedWorkers(tracker);
+        final String errorMessage = StringUtils.format("Task [%s] status missing", taskId);
+        log.info(errorMessage + ". Trying to relaunch the worker");
+        retryTask.shouldRetry(
+            tracker.msqWorkerTask,
+            UnknownFault.forMessage(errorMessage)
+        );
+        tracker.retry();
+      } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
+        removeWorkerFromFullyStartedWorkers(tracker);
         throw new MSQException(new TaskStartTimeoutFault(numTasks + 1));
+      } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
+        removeWorkerFromFullyStartedWorkers(tracker);
+        log.info("Task[%s] failed because %s", taskId, tracker.status.getErrorMsg());
+        retryTask.shouldRetry(tracker.msqWorkerTask, new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
+        tracker.retry();
       }
+    }
+  }
 
-      if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
-        throw new MSQException(new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
-      }
+  private void removeWorkerFromFullyStartedWorkers(TaskTracker tracker)
+  {
+    synchronized (taskIds) {
+      fullyStartedTasks.remove(tracker.msqWorkerTask.getWorkerNumber());
+    }
+  }
+
+
+  private void relaunchTasks()
+  {
+    Iterator<Integer> iterator = retryWorkerSet.iterator();
+
+    while (iterator.hasNext()) {
+      int worker = iterator.next();
+      workerToTaskIds.compute(worker, (workerId, taskHistory) -> {
+
+        if (retryingWorkerSet.contains(worker)) {
+          return taskHistory;
+        }
+
+        if (taskHistory == null || taskHistory.isEmpty()) {
+          throw new ISE("TaskHistory cannot by null for worker %d", workerId);
+        }
+        String latestTaskId = taskHistory.get(taskHistory.size() - 1);
+
+        TaskTracker tracker = taskTrackers.get(latestTaskId);
+        if (tracker == null) {
+          throw new ISE("Did not find taskTracker for latest taskId[%s]", latestTaskId);
+        }
+        if (!tracker.isComplete()) {
+          // if task is not failed donot retry
+          return taskHistory;
+        }
+
+        MSQWorkerTask toRetry = tracker.msqWorkerTask;
+
+        MSQWorkerTask retryTask = toRetry.getRetryTask();
+
+        if (toRetry.getRetryCount() > Limits.WORKER_RETRY_LIMIT) {
+          throw new MSQException(new TooManyWorkerRetriesFault(
+              Limits.WORKER_RETRY_LIMIT,
+              toRetry.getId(),
+              toRetry.getWorkerNumber(),
+              "123"
+          ));
+        }
+        if (currentRetryCount.get() > Limits.TOTAL_RETRY_LIMIT) {
+          throw new MSQException(new TotalRetryLimitExceededFault(
+              Limits.TOTAL_RETRY_LIMIT,
+              currentRetryCount.get(),
+              toRetry.getId(),
+              "null"
+          ));
+        }
+        taskTrackers.remove(latestTaskId);
+        currentRetryCount.addAndGet(1);
+        taskTrackers.put(retryTask.getId(), new TaskTracker(retryTask.getWorkerNumber(), retryTask));
+        context.workerManager().run(retryTask.getId(), retryTask);
+        taskHistory.add(retryTask.getId());
+        synchronized (taskIds) {
+          // replace taskId with the retry taskID for the same worker number
+          taskIds.set(toRetry.getWorkerNumber(), retryTask.getId());
+          fullyStartedTasks.remove(retryTask.getWorkerNumber());
+          taskIds.notifyAll();
+        }
+        return taskHistory;
+
+      });
+      iterator.remove();
     }
   }
 
   private void shutDownTasks()
   {
+
+    cleanFailedTasks();
     for (final Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
       final String taskId = taskEntry.getKey();
       final TaskTracker tracker = taskEntry.getValue();
@@ -409,6 +550,29 @@ public class MSQWorkerTaskLauncher
         canceledWorkerTasks.add(taskId);
         context.workerManager().cancel(taskId);
       }
+    }
+
+  }
+
+  private void cleanFailedTasks()
+  {
+    Iterator<String> tasksToCancel = tasksToCleanup.iterator();
+    while (tasksToCancel.hasNext()) {
+      String taskId = tasksToCancel.next();
+      try {
+        if (canceledWorkerTasks.add(taskId)) {
+          try {
+            context.workerManager().cancel(taskId);
+          }
+          catch (Exception ignore) {
+            //ignoring cancellation exception
+          }
+        }
+      }
+      finally {
+        tasksToCancel.remove();
+      }
+
     }
   }
 
@@ -454,12 +618,16 @@ public class MSQWorkerTaskLauncher
   {
     private final int workerNumber;
     private final long startTimeMs = System.currentTimeMillis();
+    private final MSQWorkerTask msqWorkerTask;
     private TaskStatus status;
     private TaskLocation initialLocation;
 
-    public TaskTracker(int workerNumber)
+    private boolean isRetrying = false;
+
+    public TaskTracker(int workerNumber, MSQWorkerTask msqWorkerTask)
     {
       this.workerNumber = workerNumber;
+      this.msqWorkerTask = msqWorkerTask;
     }
 
     public boolean unknownLocation()
@@ -482,6 +650,16 @@ public class MSQWorkerTaskLauncher
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
              && System.currentTimeMillis() - startTimeMs > maxTaskStartDelayMillis;
+    }
+
+    public void retry()
+    {
+      isRetrying = true;
+    }
+
+    public boolean toRetry()
+    {
+      return isRetrying;
     }
   }
 }

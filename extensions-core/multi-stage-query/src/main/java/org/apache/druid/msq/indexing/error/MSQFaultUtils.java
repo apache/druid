@@ -19,31 +19,28 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import javax.annotation.Nullable;
-
-/**
- * An unchecked exception that holds a {@link MSQFault}.
- */
-public class MSQException extends RuntimeException
+public class MSQFaultUtils
 {
-  private final MSQFault fault;
 
-  public MSQException(
-      @Nullable final Throwable cause,
-      final MSQFault fault
-  )
+  public static final String ERROR_CODE_DELIMITER = ": ";
+
+  public static String generateMessageWithErrorCode(MSQFault msqFault)
   {
-    super(MSQFaultUtils.generateMessageWithErrorCode(fault), cause);
-    this.fault = fault;
+    final String message = msqFault.getErrorMessage();
+
+    if (message != null && !message.isEmpty()) {
+      return msqFault.getErrorCode() + ERROR_CODE_DELIMITER + message;
+    } else {
+      return msqFault.getErrorCode();
+    }
   }
 
-  public MSQException(final MSQFault fault)
+  public static String getErrorCodeFromMessage(String message)
   {
-    this(null, fault);
+    if (message == null || message.isEmpty()) {
+      return UnknownFault.CODE;
+    }
+    return message.split(ERROR_CODE_DELIMITER, 2)[0];
   }
 
-  public MSQFault getFault()
-  {
-    return fault;
-  }
 }

@@ -17,33 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.error;
+package org.apache.druid.msq.indexing;
 
-import javax.annotation.Nullable;
+import org.apache.druid.msq.indexing.error.MSQFault;
 
-/**
- * An unchecked exception that holds a {@link MSQFault}.
- */
-public class MSQException extends RuntimeException
+public interface RetryTask
 {
-  private final MSQFault fault;
 
-  public MSQException(
-      @Nullable final Throwable cause,
-      final MSQFault fault
-  )
-  {
-    super(MSQFaultUtils.generateMessageWithErrorCode(fault), cause);
-    this.fault = fault;
-  }
-
-  public MSQException(final MSQFault fault)
-  {
-    this(null, fault);
-  }
-
-  public MSQFault getFault()
-  {
-    return fault;
-  }
+  void shouldRetry(MSQWorkerTask workerTask, MSQFault msqFault);
 }

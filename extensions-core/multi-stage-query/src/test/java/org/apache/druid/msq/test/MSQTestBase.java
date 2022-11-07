@@ -79,6 +79,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -861,8 +862,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
+              MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
+              MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault())
           );
           return;
         }
@@ -1020,8 +1021,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           Assert.assertEquals(
-              expectedMSQFault.getCodeWithMessage(),
-              msqErrorReport.getFault().getCodeWithMessage()
+              MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
+              MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault())
           );
           return null;
         }

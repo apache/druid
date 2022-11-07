@@ -27,6 +27,7 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
@@ -150,6 +151,7 @@ public class MSQTasksTest
         CONTROLLER_ID,
         "foo",
         controllerContext,
+        (task, fault) -> {},
         false,
         TimeUnit.SECONDS.toMillis(5)
     );
@@ -161,8 +163,8 @@ public class MSQTasksTest
     }
     catch (Exception e) {
       Assert.assertEquals(
-          new TaskStartTimeoutFault(numTasks + 1).getCodeWithMessage(),
-          ((MSQException) e.getCause()).getFault().getCodeWithMessage()
+          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(numTasks + 1)),
+          MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
     }
   }
@@ -220,7 +222,7 @@ public class MSQTasksTest
     }
 
     @Override
-    public synchronized String run(String controllerId, MSQWorkerTask task)
+    public synchronized String run(String taskId, MSQWorkerTask task)
     {
       allTasks.add(task.getId());
 

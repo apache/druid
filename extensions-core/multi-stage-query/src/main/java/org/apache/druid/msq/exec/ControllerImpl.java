@@ -26,12 +26,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -101,11 +105,13 @@ import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
+import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -215,11 +221,13 @@ public class ControllerImpl implements Controller
   private final MSQControllerTask task;
   private final ControllerContext context;
 
+  private final boolean isDurableStorageEnabled;
+
   /**
    * Queue of "commands" to run on the {@link ControllerQueryKernel}. Various threads insert into the queue
    * using {@link #addToKernelManipulationQueue}. The main thread running {@link RunQueryUntilDone#run()} reads
    * from the queue and executes the commands.
-   *
+   * <p>
    * This ensures that all manipulations on {@link ControllerQueryKernel}, and all core logic, are run in
    * a single-threaded manner.
    */
@@ -258,6 +266,9 @@ public class ControllerImpl implements Controller
 
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
+
+  // WorkerNumber -> WorkOrders
+  private final ConcurrentHashMap<Integer, Set<WorkOrder>> workOrdersToRetry = new ConcurrentHashMap<>();
   private volatile DateTime queryStartTime = null;
 
   private volatile DruidNode selfDruidNode;
@@ -273,6 +284,9 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
+    this.isDurableStorageEnabled =
+        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext());
+
   }
 
   @Override
@@ -490,14 +504,14 @@ public class ControllerImpl implements Controller
       return TaskStatus.success(id());
     } else {
       // errorForReport is nonnull when taskStateForReport != SUCCESS. Use that message.
-      return TaskStatus.failure(id(), errorForReport.getFault().getCodeWithMessage());
+      return TaskStatus.failure(id(), MSQFaultUtils.generateMessageWithErrorCode(errorForReport.getFault()));
     }
   }
 
   /**
    * Adds some logic to {@link #kernelManipulationQueue}, where it will, in due time, be executed by the main
    * controller loop in {@link RunQueryUntilDone#run()}.
-   *
+   * <p>
    * If the consumer throws an exception, the query fails.
    */
   private void addToKernelManipulationQueue(Consumer<ControllerQueryKernel> kernelConsumer)
@@ -517,8 +531,6 @@ public class ControllerImpl implements Controller
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
     closer.register(netClient::close);
 
-    final boolean isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().getContext());
 
     final QueryDefinition queryDef = makeQueryDefinition(
         id(),
@@ -531,10 +543,20 @@ public class ControllerImpl implements Controller
 
     log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
 
+
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
         context,
+        (failedTask, fault) -> {
+          addToKernelManipulationQueue((kernel) -> {
+            if (isDurableStorageEnabled) {
+              addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
+            } else {
+              throw new MSQException(fault);
+            }
+          });
+        },
         isDurableStorageEnabled,
 
         // 10 minutes +- 2 minutes jitter
@@ -555,6 +577,25 @@ public class ControllerImpl implements Controller
     );
 
     return queryDef;
+  }
+
+  private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
+  {
+    List<WorkOrder> retriableWorkOrders = kernel.getRetriableWorkOrders(worker, fault);
+    if (retriableWorkOrders.size() != 0) {
+      log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
+      workerTaskLauncher.submitForRelaunch(worker);
+      workOrdersToRetry.compute(worker, (workerNumber, workOrders) -> {
+        if (workOrders == null) {
+          Set<WorkOrder> orders = ConcurrentHashMap.newKeySet();
+          orders.addAll(retriableWorkOrders);
+          return orders;
+        } else {
+          workOrders.addAll(retriableWorkOrders);
+          return workOrders;
+        }
+      });
+    }
   }
 
   /**
@@ -596,6 +637,7 @@ public class ControllerImpl implements Controller
   @Override
   public void workerError(MSQErrorReport errorReport)
   {
+    // move inside kernel
     if (!workerTaskLauncher.isTaskCanceledByController(errorReport.getTaskId())) {
       workerErrorRef.compareAndSet(null, errorReport);
     }
@@ -897,7 +939,7 @@ public class ControllerImpl implements Controller
 
   /**
    * Returns a complete list of task ids, ordered by worker number. The Nth task has worker number N.
-   *
+   * <p>
    * If the currently-running set of tasks is incomplete, returns an absent Optional.
    */
   @Override
@@ -907,7 +949,7 @@ public class ControllerImpl implements Controller
       return Collections.emptyList();
     }
 
-    return workerTaskLauncher.getTaskList();
+    return workerTaskLauncher.getActiveTasks();
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -982,6 +1024,13 @@ public class ControllerImpl implements Controller
     final List<String> taskIds = getTaskIds();
     final List<ListenableFuture<Void>> taskFutures = new ArrayList<>(workers.size());
 
+    try {
+      workerTaskLauncher.waitUntilWorkersReady(workers);
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
     for (int workerNumber : workers) {
       final String taskId = taskIds.get(workerNumber);
       taskFutures.add(contactFn.contactTask(netClient, taskId, workerNumber));
@@ -989,6 +1038,7 @@ public class ControllerImpl implements Controller
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(taskFutures, true), true);
   }
+
 
   private void startWorkForStage(
       final QueryDefinition queryDef,
@@ -1005,35 +1055,100 @@ public class ControllerImpl implements Controller
     );
 
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
+    final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
+
+    Set<Pair<Integer, String>> workOrdersNotSent = ConcurrentHashMap.newKeySet();
 
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) -> netClient.postWorkOrder(taskId, workOrders.get(workerNumber)),
+        (netClient, taskId, workerNumber) -> {
+          queryKernel.workOrdersSentForWorker(stageId, workerNumber);
+          SettableFuture<Boolean> settableFuture = SettableFuture.create();
+          ListenableFuture<Void> future = netClient.postWorkOrder(taskId, workOrders.get(workerNumber));
+          Futures.addCallback(future, new FutureCallback<Void>()
+          {
+            @Override
+            public void onSuccess(@Nullable Void result)
+            {
+              settableFuture.set(true);
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              if (isDurableStorageEnabled) {
+                settableFuture.setException(new MSQException(t, new WorkerRpcFailedFault(taskId)));
+              } else {
+                workOrdersNotSent.add(new Pair<>(workerNumber, taskId));
+                settableFuture.set(false);
+              }
+            }
+          });
+
+          return settableFuture;
+        },
         workOrders.keySet()
     );
+
+
+    for (Pair<Integer, String> workerIdTask : workOrdersNotSent) {
+      addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
+    }
   }
 
   private void postResultPartitionBoundariesForStage(
+      final ControllerQueryKernel queryKernel,
       final QueryDefinition queryDef,
       final int stageNumber,
       final ClusterByPartitions resultPartitionBoundaries,
       final IntSet workers
   )
   {
+    final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
+
+    Set<Pair<Integer, String>> partitionBoundariesNotSent = ConcurrentHashMap.newKeySet();
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) ->
-            netClient.postResultPartitionBoundaries(
-                taskId,
-                new StageId(queryDef.getQueryId(), stageNumber),
-                resultPartitionBoundaries
-            ),
+        (netClient, taskId, workerNumber) -> {
+          queryKernel.partitionBoundariesSentForWorker(stageId, workerNumber);
+          SettableFuture<Boolean> settableFuture = SettableFuture.create();
+          ListenableFuture<Void> future = netClient.postResultPartitionBoundaries(
+              taskId,
+              new StageId(queryDef.getQueryId(), stageNumber),
+              resultPartitionBoundaries
+          );
+          Futures.addCallback(future, new FutureCallback<Void>()
+          {
+            @Override
+            public void onSuccess(@Nullable Void result)
+            {
+              settableFuture.set(true);
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              if (isDurableStorageEnabled) {
+                settableFuture.setException(new MSQException(t, new WorkerRpcFailedFault(taskId)));
+              } else {
+                partitionBoundariesNotSent.add(new Pair<>(workerNumber, taskId));
+                settableFuture.set(false);
+              }
+
+            }
+          });
+          return settableFuture;
+        },
         workers
     );
+
+    for (Pair<Integer, String> workerIdTask : partitionBoundariesNotSent) {
+      addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
+    }
   }
 
   /**
    * Publish the list of segments. Additionally, if {@link DataSourceMSQDestination#isReplaceTimeChunks()},
    * also drop all other segments within the replacement intervals.
-   *
+   * <p>
    * If any existing segments cannot be dropped because their intervals are not wholly contained within the
    * replacement parameter, throws a {@link MSQException} with {@link InsertCannotReplaceExistingSegmentFault}.
    */
@@ -1128,10 +1243,9 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getCountersFromAllTasks()
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
-    final List<String> taskList = workerTaskLauncher.getTaskList();
+    final List<String> taskList = getTaskIds();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
-
     for (String taskId : taskList) {
       futures.add(netClient.getCounters(taskId));
     }
@@ -1148,7 +1262,7 @@ public class ControllerImpl implements Controller
 
   private void postFinishToAllTasks()
   {
-    final List<String> taskList = workerTaskLauncher.getTaskList();
+    final List<String> taskList = getTaskIds();
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
@@ -1287,7 +1401,7 @@ public class ControllerImpl implements Controller
 
   /**
    * Clean up durable storage, if used for stage output.
-   *
+   * <p>
    * Note that this is only called by the controller task itself. It isn't called automatically by anything in
    * particular if the controller fails early without being able to run its cleanup routines. This can cause files
    * to be left in durable storage beyond their useful life.
@@ -1471,7 +1585,7 @@ public class ControllerImpl implements Controller
 
   /**
    * Checks that a {@link GroupByQuery} is grouping on the primary time column.
-   *
+   * <p>
    * The logic here is roundabout. First, we check which column in the {@link GroupByQuery} corresponds to the
    * output column {@link ColumnHolder#TIME_COLUMN_NAME}, using our {@link ColumnMappings}. Then, we check for the
    * presence of an optimization done in {@link DruidQuery#toGroupByQuery()}, where the context parameter
@@ -1491,9 +1605,9 @@ public class ControllerImpl implements Controller
 
   /**
    * Whether a native query represents an ingestion with rollup.
-   *
+   * <p>
    * Checks for three things:
-   *
+   * <p>
    * - The query must be a {@link GroupByQuery}, because rollup requires columns to be split into dimensions and
    * aggregations.
    * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
@@ -1832,7 +1946,7 @@ public class ControllerImpl implements Controller
    * Method that determines whether an exception was raised due to the task lock for the controller task being
    * preempted. Uses string comparison, because the relevant Overlord APIs do not have a more reliable way of
    * discerning the cause of errors.
-   *
+   * <p>
    * Error strings are taken from {@link org.apache.druid.indexing.common.actions.TaskLocks}
    * and {@link SegmentAllocateAction}.
    */
@@ -1922,6 +2036,7 @@ public class ControllerImpl implements Controller
         sendPartitionBoundaries();
         updateLiveReportMaps();
         cleanUpEffectivelyFinishedStages();
+        retryFailedTasks();
         runKernelCommands();
       }
 
@@ -1931,6 +2046,95 @@ public class ControllerImpl implements Controller
 
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    private void retryFailedTasks() throws InterruptedException
+    {
+      if (workOrdersToRetry.size() == 0) {
+        return;
+      }
+      Set<Integer> workersNeedToBeFullyStarted = new HashSet<>();
+
+      Map<StageId, Map<Integer, WorkOrder>> stageWorkerOrders = new HashMap<>();
+
+      for (Map.Entry<Integer, Set<WorkOrder>> workerStages : workOrdersToRetry.entrySet()) {
+        workersNeedToBeFullyStarted.add(workerStages.getKey());
+        for (WorkOrder workOrder : workerStages.getValue()) {
+          stageWorkerOrders.compute(
+              new StageId(queryDef.getQueryId(), workOrder.getStageNumber()),
+              (stageId, workOrders) -> {
+                if (workOrders == null) {
+                  workOrders = new HashMap<Integer, WorkOrder>();
+                }
+                workOrders.put(workerStages.getKey(), workOrder);
+                return workOrders;
+              }
+          );
+        }
+      }
+
+      workerTaskLauncher.waitUntilWorkersReady(workersNeedToBeFullyStarted);
+
+      for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
+
+
+        Set<Pair<Integer, String>> workOrdersNotSent = ConcurrentHashMap.newKeySet();
+        contactWorkersForStage(
+            (netClient, taskId, workerNumber) -> {
+              SettableFuture<Boolean> settableFuture = SettableFuture.create();
+              queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), workerNumber);
+              ListenableFuture<Void> future = netClient.postWorkOrder(
+                  taskId,
+                  stageWorkOrders.getValue().get(workerNumber)
+              );
+              Futures.addCallback(future, new FutureCallback<Void>()
+              {
+                @Override
+                public void onSuccess(@Nullable Void result)
+                {
+                  settableFuture.set(true);
+                }
+
+                @Override
+                public void onFailure(Throwable t)
+                {
+                  // durable storage flag will always be set if code reaches here. Skipping the check.
+                  workOrdersNotSent.add(new Pair<>(workerNumber, taskId));
+                  settableFuture.set(false);
+                }
+              });
+
+              return settableFuture;
+            },
+            new IntArraySet(stageWorkOrders.getValue().keySet())
+        );
+
+
+//        for (int worker : workOrdersSent) {
+//          queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), worker);
+//        }
+
+
+        // remove worker orders from retryQueue
+        for (Integer workerNumber : workersNeedToBeFullyStarted) {
+          workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
+            if (workOrderSet == null || workOrderSet.size() == 0 || !workOrderSet.remove(stageWorkOrders.getValue()
+                                                                                                        .get(
+                                                                                                            workerNumber))) {
+              throw new ISE("Worker[%d] orders not found", workerNumber);
+            }
+            if (workOrderSet.size() == 0) {
+              return null;
+            }
+            return workOrderSet;
+          });
+        }
+
+        for (Pair<Integer, String> workerIdTask : workOrdersNotSent) {
+          addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
+        }
+
+      }
     }
 
     /**
@@ -2054,31 +2258,37 @@ public class ControllerImpl implements Controller
       for (final StageId stageId : queryKernel.getActiveStages()) {
 
         if (queryKernel.getStageDefinition(stageId).mustGatherResultKeyStatistics()
-            && queryKernel.doesStageHaveResultPartitions(stageId)
-            && stageResultPartitionBoundariesSent.add(stageId)) {
+            && queryKernel.doesStageHaveResultPartitions(stageId)) {
+          IntSet workersToSendPartitionBoundaries = queryKernel.getWorkersToSendPartitionBoundaries(stageId);
+          if (workersToSendPartitionBoundaries.isEmpty()) {
+            return;
+          }
           if (log.isDebugEnabled()) {
             final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
             log.debug(
-                "Query [%s] sending out partition boundaries for stage %d: %s",
+                "Query [%s] sending out partition boundaries for stage %d: %s for workers %s",
                 stageId.getQueryId(),
                 stageId.getStageNumber(),
                 IntStream.range(0, partitions.size())
                          .mapToObj(i -> StringUtils.format("%s:%s", i, partitions.get(i)))
-                         .collect(Collectors.joining(", "))
+                         .collect(Collectors.joining(", ")),
+                workersToSendPartitionBoundaries.toString()
             );
           } else {
             log.info(
-                "Query [%s] sending out partition boundaries for stage %d.",
+                "Query [%s] sending out partition boundaries for stage %d for workers %s",
                 stageId.getQueryId(),
-                stageId.getStageNumber()
+                stageId.getStageNumber(),
+                workersToSendPartitionBoundaries.toString()
             );
           }
 
           postResultPartitionBoundariesForStage(
+              queryKernel,
               queryDef,
               stageId.getStageNumber(),
               queryKernel.getResultPartitionBoundariesForStage(stageId),
-              queryKernel.getWorkerInputsForStage(stageId).workers()
+              workersToSendPartitionBoundaries
           );
         }
       }
@@ -2164,8 +2374,8 @@ public class ControllerImpl implements Controller
   /**
    * Interface used by {@link #contactWorkersForStage}.
    */
-  private interface TaskContactFn
+  private interface TaskContactFn<T>
   {
-    ListenableFuture<Void> contactTask(WorkerClient client, String taskId, int workerNumber);
+    ListenableFuture<T> contactTask(WorkerClient client, String taskId, int workerNumber);
   }
 }
