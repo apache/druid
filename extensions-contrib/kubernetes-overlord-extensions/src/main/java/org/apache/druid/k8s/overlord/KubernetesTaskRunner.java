@@ -535,6 +535,9 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
       K8sTaskId taskId = new K8sTaskId(task.getId());
       try {
         Pod mainPod = client.getMainJobPod(new K8sTaskId(task.getId()));
+        if (mainPod.getStatus() == null || mainPod.getStatus().getPodIP() == null) {
+          return TaskLocation.unknown();
+        }
         boolean tlsEnabled = Boolean.parseBoolean(
             mainPod.getMetadata()
                    .getAnnotations()

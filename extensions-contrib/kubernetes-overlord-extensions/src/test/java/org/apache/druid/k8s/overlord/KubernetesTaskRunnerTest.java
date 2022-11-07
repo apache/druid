@@ -446,14 +446,14 @@ class KubernetesTaskRunnerTest
     KubernetesPeonClient client = mock(KubernetesPeonClient.class);
     Pod pod = mock(Pod.class);
     PodStatus status = mock(PodStatus.class);
-    when(status.getPodIP()).thenReturn("tweak");
+    when(status.getPodIP()).thenReturn(null).thenReturn("tweak");
     when(pod.getStatus()).thenReturn(status);
 
     ObjectMeta metadata = mock(ObjectMeta.class);
     when(metadata.getAnnotations()).thenReturn(ImmutableMap.of(DruidK8sConstants.TLS_ENABLED, "false"));
 
     when(pod.getMetadata()).thenReturn(metadata);
-    when(client.getMainJobPod(any())).thenReturn(null).thenReturn(pod);
+    when(client.getMainJobPod(any())).thenReturn(pod);
 
     Task task = mock(Task.class);
     when(task.getId()).thenReturn("butters");
