@@ -22,7 +22,7 @@ package org.apache.druid.frame.read.columnar;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.write.columnar.ComplexFrameColumnWriter;
+import org.apache.druid.frame.write.columnar.ComplexFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,10 +53,10 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
-    final int typeNameLength = memory.getInt(ComplexFrameColumnWriter.TYPE_NAME_LENGTH_POSITION);
+    final int typeNameLength = memory.getInt(ComplexFrameMaker.TYPE_NAME_LENGTH_POSITION);
     final byte[] typeNameBytes = new byte[typeNameLength];
 
-    memory.getByteArray(ComplexFrameColumnWriter.TYPE_NAME_POSITION, typeNameBytes, 0, typeNameLength);
+    memory.getByteArray(ComplexFrameMaker.TYPE_NAME_POSITION, typeNameBytes, 0, typeNameLength);
 
     final String typeName = StringUtils.fromUtf8(typeNameBytes);
     final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
@@ -84,7 +84,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
 
   private void validate(final Memory region, final int numRows)
   {
-    if (region.getCapacity() < ComplexFrameColumnWriter.TYPE_NAME_POSITION) {
+    if (region.getCapacity() < ComplexFrameMaker.TYPE_NAME_POSITION) {
       throw new ISE("Column is not big enough for a header");
     }
 
@@ -93,9 +93,9 @@ public class ComplexFrameColumnReader implements FrameColumnReader
       throw new ISE("Column does not have the correct type code");
     }
 
-    final int typeNameLength = region.getInt(ComplexFrameColumnWriter.TYPE_NAME_LENGTH_POSITION);
+    final int typeNameLength = region.getInt(ComplexFrameMaker.TYPE_NAME_LENGTH_POSITION);
     if (region.getCapacity() <
-        ComplexFrameColumnWriter.TYPE_NAME_POSITION + typeNameLength + (long) numRows * Integer.BYTES) {
+        ComplexFrameMaker.TYPE_NAME_POSITION + typeNameLength + (long) numRows * Integer.BYTES) {
       throw new ISE("Column is missing offset section");
     }
   }
@@ -198,7 +198,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
             startOfDataSection + memory.getInt(startOfOffsetSection + (long) Integer.BYTES * (physicalRow - 1));
       }
 
-      if (memory.getByte(startOffset) == ComplexFrameColumnWriter.NULL_MARKER) {
+      if (memory.getByte(startOffset) == ComplexFrameMaker.NULL_MARKER) {
         return null;
       } else {
         final int payloadLength = Ints.checkedCast(endOffset - startOffset - Byte.BYTES);
