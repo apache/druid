@@ -135,6 +135,11 @@ public class AbstractDatasourceDefn extends TableDefn
     );
   }
 
+  public static boolean isDatasource(String tableType)
+  {
+    return DatasourceDefn.TABLE_TYPE.equals(tableType);
+  }
+
   public static boolean isDatasource(ResolvedTable table)
   {
     return table.defn() instanceof AbstractDatasourceDefn;
