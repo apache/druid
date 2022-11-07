@@ -275,7 +275,8 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |------|-----------|----------|------------|
 |`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier.|Varies.|
 |`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
-|`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
+|`segment/unmoved/count`|Number of segments which were chosen for balancing but were already optimally placed.|tier.|Varies.|
+|`segment/dropped/count`|Number of segments dropped due to being over-replicated.|tier.|Varies.|
 |`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
 |`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|tier.|Varies.|
 |`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|tier.|Varies.|
@@ -287,7 +288,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overshadowed segments.| |Varies.|
+|`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|
