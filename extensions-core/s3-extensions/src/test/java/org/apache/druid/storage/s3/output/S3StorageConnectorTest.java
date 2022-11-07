@@ -164,11 +164,13 @@ public class S3StorageConnectorTest
     s3ObjectSummary.setBucketName(BUCKET);
     s3ObjectSummary.setKey(PREFIX + "/test/" + TEST_FILE);
 
-    EasyMock.expect(TEST_RESULT.getObjectSummaries()).andReturn(Collections.singletonList(s3ObjectSummary)).anyTimes();
+    EasyMock.expect(TEST_RESULT.getObjectSummaries()).andReturn(Collections.singletonList(s3ObjectSummary)).times(2);
     EasyMock.expect(TEST_RESULT.isTruncated()).andReturn(false);
-    EasyMock.expect(S3_CLIENT.listObjectsV2((ListObjectsV2Request) EasyMock.anyObject())).andReturn(TEST_RESULT);
+    EasyMock.expect(S3_CLIENT.listObjectsV2((ListObjectsV2Request) EasyMock.anyObject()))
+            .andReturn(TEST_RESULT);
+    EasyMock.replay(S3_CLIENT, TEST_RESULT);
 
-    List<String> listResults = storageConnector.listDir(PREFIX + "/test");
-    Assert.assertEquals(ImmutableList.of(TEST_FILE), listResults);
+    List<String> listDirResult = storageConnector.listDir("/");
+    Assert.assertEquals(ImmutableList.of(TEST_FILE), listDirResult);
   }
 }
