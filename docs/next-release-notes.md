@@ -111,9 +111,9 @@ Fixed a problem where Overlord leader election failed due to lock reacquisition 
 
 https://github.com/apache/druid/pull/13172
 
-### Add inline descriptor Protobuf bytes decoder
+### Support for inline protobuf descriptor
 
-Added a new `ProtobufBytesDecoder` implementation that allows a user to pass inline the contents of a Protobuf descriptor file, encoded as a Base64 string.
+Added a new `inline` type `protoBytesDecoder` that allows a user to pass inline the contents of a Protobuf descriptor file, encoded as a Base64 string.
 
 https://github.com/apache/druid/pull/13192
 
