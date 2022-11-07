@@ -31,7 +31,10 @@ import java.util.Arrays;
 public class RowKey
 {
   private static final RowKey EMPTY_KEY = new RowKey(new byte[0]);
-  private static final int OBJECT_OVERHEAD_SIZE_BYTES = 44; // Constant to account for hashcode and object overhead
+
+  // Constant to account for hashcode and object overhead
+  // 24 bytes (header) + 8 bytes (reference) + 8 bytes (hashCode long) + 4 bytes (safe estimate of hashCodeComputed)
+  private static final int OBJECT_OVERHEAD_SIZE_BYTES = 44;
 
   private final byte[] key;
 
