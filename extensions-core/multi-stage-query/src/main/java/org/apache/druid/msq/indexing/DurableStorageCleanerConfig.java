@@ -54,7 +54,7 @@ public class DurableStorageCleanerConfig
       @JsonProperty("delay") final Long delaySeconds
   )
   {
-    this.enabled = enabled != null && enabled;
+    this.enabled = enabled == null || enabled;
     this.initialDelaySeconds = initialDelaySeconds != null ? initialDelaySeconds : DEFAULT_INITIAL_DELAY_SECONDS;
     this.delaySeconds = delaySeconds != null ? delaySeconds : DEFAULT_DELAY_SECONDS;
 

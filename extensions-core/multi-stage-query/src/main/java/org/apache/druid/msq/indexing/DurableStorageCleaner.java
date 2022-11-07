@@ -26,6 +26,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
 import org.apache.druid.storage.StorageConnector;
 import org.joda.time.Duration;
@@ -54,7 +55,7 @@ public class DurableStorageCleaner implements OverlordHelper
   @Inject
   public DurableStorageCleaner(
       final DurableStorageCleanerConfig config,
-      final StorageConnector storageConnector,
+      final @MultiStageQuery StorageConnector storageConnector,
       final TaskRunner taskRunner
   )
   {
@@ -80,7 +81,7 @@ public class DurableStorageCleaner implements OverlordHelper
         Duration.standardSeconds(config.getDelaySeconds()),
         () -> {
           try {
-            Set<String> allDirectories = new HashSet<>(storageConnector.listDir(""));
+            Set<String> allDirectories = new HashSet<>(storageConnector.listDir("/"));
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()
                                                    .map(TaskRunnerWorkItem::getTaskId)
@@ -88,7 +89,7 @@ public class DurableStorageCleaner implements OverlordHelper
                                                    .collect(Collectors.toSet());
             Set<String> unknownDirectories = Sets.difference(allDirectories, runningTaskIds);
             LOG.info(
-                "Following directories donot have a corresponding MSQ task associated with it:\n%s\nThese will get cleaned up.",
+                "Following directories do not have a corresponding MSQ task associated with it:\n%s\nThese will get cleaned up.",
                 unknownDirectories
             );
             for (String unknownDirectory : unknownDirectories) {
