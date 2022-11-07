@@ -78,6 +78,7 @@ import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.TooManyWorkerRetriesFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -893,9 +894,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
+            String errorMessage = msqErrorReport.getFault() instanceof TooManyWorkerRetriesFault
+                                  ? ((TooManyWorkerRetriesFault) msqErrorReport.getFault()).getRootErrorMessage()
+                                  : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
                 MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
-                MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault())
+                errorMessage
             );
           }
           if (expectedMSQFaultClass != null) {
@@ -1061,9 +1065,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
+            String errorMessage = msqErrorReport.getFault() instanceof TooManyWorkerRetriesFault
+                                  ? ((TooManyWorkerRetriesFault) msqErrorReport.getFault()).getRootErrorMessage()
+                                  : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
                 MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
-                MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault())
+                errorMessage
             );
           }
           if (expectedMSQFaultClass != null) {

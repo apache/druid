@@ -533,7 +533,7 @@ public class MSQWorkerTaskLauncher
               Limits.WORKER_RETRY_LIMIT,
               toRetry.getId(),
               toRetry.getWorkerNumber(),
-              "123"
+              tracker.status.getErrorMsg()
           ));
         }
         if (currentRetryCount.get() > Limits.TOTAL_RETRY_LIMIT) {
@@ -541,7 +541,7 @@ public class MSQWorkerTaskLauncher
               Limits.TOTAL_RETRY_LIMIT,
               currentRetryCount.get(),
               toRetry.getId(),
-              "null"
+              tracker.status.getErrorMsg()
           ));
         }
         taskTrackers.remove(latestTaskId);

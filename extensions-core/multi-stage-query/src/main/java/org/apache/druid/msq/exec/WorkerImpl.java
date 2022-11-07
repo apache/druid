@@ -260,7 +260,7 @@ public class WorkerImpl implements Worker
     // Delete all the stage outputs
     closer.register(() -> {
       for (final StageId stageId : stageOutputs.keySet()) {
-        cleanStageOutput(stageId);
+        cleanStageOutput(stageId, false);
       }
     });
 
@@ -559,7 +559,7 @@ public class WorkerImpl implements Worker
     log.info("Cleanup order for stage: [%s] received", stageId);
     kernelManipulationQueue.add(
         holder -> {
-          cleanStageOutput(stageId);
+          cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
           holder.getStageKernelMap().get(stageId).setStageFinished();
         }
@@ -705,7 +705,7 @@ public class WorkerImpl implements Worker
    * the readable channels corresponding to all the partitions for that stage, and removes it from the {@code stageOutputs}
    * map
    */
-  private void cleanStageOutput(final StageId stageId)
+  private void cleanStageOutput(final StageId stageId, boolean removeDurableStorageFiles)
   {
     // This code is thread-safe because remove() on ConcurrentHashMap will remove and return the removed channel only for
     // one thread. For the other threads it will return null, therefore we will call doneReading for a channel only once
@@ -725,7 +725,7 @@ public class WorkerImpl implements Worker
       // temp directories where intermediate results were stored, it won't be the case for the external storage.
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
-      if (durableStageStorageEnabled) {
+      if (durableStageStorageEnabled && removeDurableStorageFiles) {
         final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
             task.getControllerTaskId(),
             stageId.getStageNumber(),
