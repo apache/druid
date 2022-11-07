@@ -235,11 +235,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 // This query might fail if the year has a different number of digits
                 // See https://github.com/apache/druid/pull/11582 for a similar issue
                 // Using long for these timestamps instead of varchar would give correct time comparisons
-                "SELECT start, %2$send%2$s, payload FROM %1$s "
-                + "WHERE dataSource = :dataSource "
-                + "AND start < :end and %2$send%2$s > :start",
-                dbTables.getPendingSegmentsTable(),
-                connector.getQuoteString()
+                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
+                dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
               .bind("dataSource", dataSource)
@@ -590,7 +587,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    insertPendingSegment(
+    insertPendingSegmentIntoMetastore(
         handle,
         newIdentifier,
         dataSource,
@@ -668,7 +665,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     // always insert empty previous sequence id
-    insertPendingSegment(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+    insertPendingSegmentIntoMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
 
     log.info("Allocated pending segment [%s] for sequence[%s] in DB", newIdentifier, sequenceName);
 
@@ -748,7 +745,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private void insertPendingSegment(
+  private void insertPendingSegmentIntoMetastore(
       Handle handle,
       SegmentIdWithShardSpec newIdentifier,
       String dataSource,
