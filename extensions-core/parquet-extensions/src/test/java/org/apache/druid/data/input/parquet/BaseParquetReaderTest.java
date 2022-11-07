@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
@@ -35,7 +36,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-class BaseParquetReaderTest
+class BaseParquetReaderTest extends InitializedNullHandlingTest
 {
   ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
 

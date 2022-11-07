@@ -36,15 +36,21 @@ public class FireDepartmentMetricsTest
   @Test
   public void testSnapshotBeforeProcessing()
   {
-    Assert.assertEquals(0L, metrics.snapshot().messageGap());
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    Assert.assertEquals(0L, snapshot.messageGap());
+    // invalid value
+    Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
 
   @Test
   public void testSnapshotAfterProcessingOver()
   {
     metrics.reportMessageMaxTimestamp(10);
+    metrics.reportMaxSegmentHandoffTime(7L);
     metrics.markProcessingDone(30L);
-    Assert.assertEquals(20, metrics.snapshot().messageGap());
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    Assert.assertEquals(20, snapshot.messageGap());
+    Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
   }
 
   @Test
@@ -60,9 +66,14 @@ public class FireDepartmentMetricsTest
   public void testProcessingOverAfterSnapshot()
   {
     metrics.reportMessageMaxTimestamp(10);
+    metrics.reportMaxSegmentHandoffTime(7L);
+    // Should reset to invalid value
     metrics.snapshot();
     metrics.markProcessingDone(20);
-    Assert.assertEquals(10, metrics.snapshot().messageGap());
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    Assert.assertEquals(10, snapshot.messageGap());
+    // value must be invalid
+    Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
 
   @Test

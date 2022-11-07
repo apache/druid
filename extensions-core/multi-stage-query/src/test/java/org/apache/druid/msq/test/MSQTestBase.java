@@ -101,6 +101,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -115,6 +116,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -231,12 +233,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private TestGroupByBuffers groupByBuffers;
-  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(WorkerMemoryParameters.compute(
-      WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-      2,
-      10,
-      2
-  ));
+  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
+      WorkerMemoryParameters.createInstance(
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          2,
+          10,
+          2
+      )
+  );
 
   @After
   public void tearDown2()
@@ -342,6 +347,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
         binder -> {
+          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
+          final LookupReferencesManager lookupReferencesManager =
+              EasyMock.createStrictMock(LookupReferencesManager.class);
+          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
+          EasyMock.replay(lookupReferencesManager);
+          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
+          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
+        },
+        binder -> {
           // Requirements of JoinableFactoryModule
           binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
@@ -414,7 +428,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     try {
       return ImmutableMap.<String, Object>builder()
                          .putAll(DEFAULT_MSQ_CONTEXT)
-                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryFramework().queryJsonMapper().writeValueAsString(signature))
+                         .put(
+                             DruidQuery.CTX_SCAN_SIGNATURE,
+                             queryFramework().queryJsonMapper().writeValueAsString(signature)
+                         )
                          .build();
     }
     catch (JsonProcessingException e) {
