@@ -109,14 +109,10 @@ Metrics may have additional dimensions beyond those listed above.
 
 ### Cache
 
-|Metric|Description|Normal Value|
-|------|-----------|------------|
-|`query/cache/delta/*`|Cache metrics since the last emission.||N/A|
-|`query/cache/total/*`|Total cache metrics.||N/A|
-
-
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
+|`query/cache/delta/*`|Cache metrics since the last emission.||N/A|
+|`query/cache/total/*`|Total cache metrics.||N/A|
 |`*/numEntries`|Number of cache entries.||Varies|
 |`*/sizeBytes`|Size in bytes of cache entries.||Varies|
 |`*/hits`|Number of cache hits.||Varies|
