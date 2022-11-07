@@ -38,10 +38,10 @@ export function getSpecDatasourceName(spec: IngestionSpec): string {
 function convertFilter(filter: any): SqlExpression {
   switch (filter.type) {
     case 'selector':
-      return SqlRef.columnWithQuotes(filter.dimension).equal(filter.value);
+      return SqlRef.column(filter.dimension).equal(filter.value);
 
     case 'in':
-      return SqlRef.columnWithQuotes(filter.dimension).in(filter.values);
+      return SqlRef.column(filter.dimension).in(filter.values);
 
     case 'not':
       return convertFilter(filter.field).not();
@@ -264,7 +264,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
       const relevantTransform = transforms.find(t => t.name === dimensionName);
       return `  ${
         relevantTransform ? `REWRITE_[${relevantTransform.expression}]_TO_SQL AS ` : ''
-      }${SqlRef.columnWithQuotes(dimensionName)},${
+      }${SqlRef.column(dimensionName)},${
         relevantTransform ? ` --:ISSUE: Transform for dimension could not be converted` : ''
       }`;
     }),
@@ -316,9 +316,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     partitionsSpec.partitionDimensions ||
     (partitionsSpec.partitionDimension ? [partitionsSpec.partitionDimension] : undefined);
   if (Array.isArray(partitionDimensions)) {
-    lines.push(
-      `CLUSTERED BY ${partitionDimensions.map(d => SqlRef.columnWithQuotes(d)).join(', ')}`,
-    );
+    lines.push(`CLUSTERED BY ${partitionDimensions.map(d => SqlRef.column(d)).join(', ')}`);
   }
 
   return {
@@ -399,7 +397,7 @@ function metricSpecToSqlExpression(metricSpec: MetricSpec): string | undefined {
   }
 
   if (!metricSpec.fieldName) return;
-  const ref = SqlRef.columnWithQuotes(metricSpec.fieldName);
+  const ref = SqlRef.column(metricSpec.fieldName);
 
   switch (metricSpec.type) {
     case 'longSum':

@@ -102,9 +102,9 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   }
 
   @Override
-  public double estimatedRetainedBytes()
+  public long estimatedRetainedBytes()
   {
-    return averageKeyLength * estimatedRetainedKeys();
+    return Math.round(averageKeyLength * estimatedRetainedKeys());
   }
 
   @Override
