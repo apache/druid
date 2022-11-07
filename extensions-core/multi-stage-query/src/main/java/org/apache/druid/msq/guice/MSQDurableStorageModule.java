@@ -29,6 +29,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.msq.indexing.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -78,7 +79,7 @@ public class MSQDurableStorageModule implements DruidModule
 
       Multibinder.newSetBinder(binder, OverlordHelper.class)
                  .addBinding()
-                 .to(OverlordHelper.class);
+                 .to(DurableStorageCleaner.class);
 
       JsonConfigProvider.bind(
           binder,

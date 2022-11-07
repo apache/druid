@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 public class DurableStorageCleanerConfig
 {
 
-  private static final long DEFAULT_INITIAL_DELAY_SECONDS = 86400L;
   private static final long DEFAULT_DELAY_SECONDS = 86400L;
 
   /**
@@ -34,12 +33,6 @@ public class DurableStorageCleanerConfig
    */
   @JsonProperty
   private final boolean enabled;
-
-  /**
-   * Initial delay in seconds post which the durable storage cleaner should run
-   */
-  @JsonProperty
-  private final long initialDelaySeconds;
 
   /**
    * The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs
@@ -50,26 +43,18 @@ public class DurableStorageCleanerConfig
   @JsonCreator
   public DurableStorageCleanerConfig(
       @JsonProperty("enabled") final Boolean enabled,
-      @JsonProperty("initialDelay") final Long initialDelaySeconds,
       @JsonProperty("delay") final Long delaySeconds
   )
   {
-    this.enabled = enabled == null || enabled;
-    this.initialDelaySeconds = initialDelaySeconds != null ? initialDelaySeconds : DEFAULT_INITIAL_DELAY_SECONDS;
+    this.enabled = enabled != null && enabled;
     this.delaySeconds = delaySeconds != null ? delaySeconds : DEFAULT_DELAY_SECONDS;
 
-    Preconditions.checkArgument(this.initialDelaySeconds > 0, "initialDelay must be greater than 0");
     Preconditions.checkArgument(this.delaySeconds > 0, "delay must be greater than 0");
   }
 
   public boolean isEnabled()
   {
     return enabled;
-  }
-
-  public long getInitialDelaySeconds()
-  {
-    return initialDelaySeconds;
   }
 
   public long getDelaySeconds()
@@ -82,7 +67,6 @@ public class DurableStorageCleanerConfig
   {
     return "DurableStorageCleanerConfig{" +
            "enabled=" + enabled +
-           ", initialDelaySeconds=" + initialDelaySeconds +
            ", delaySeconds=" + delaySeconds +
            '}';
   }

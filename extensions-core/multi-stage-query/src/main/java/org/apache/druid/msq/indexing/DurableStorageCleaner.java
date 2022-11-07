@@ -77,7 +77,8 @@ public class DurableStorageCleaner implements OverlordHelper
 
     ScheduledExecutors.scheduleWithFixedDelay(
         exec,
-        Duration.standardSeconds(config.getInitialDelaySeconds()),
+        Duration.standardSeconds(config.getDelaySeconds()),
+        // Added the initial delay explicitly so that we don't have to manually return the signal in the runnable
         Duration.standardSeconds(config.getDelaySeconds()),
         () -> {
           try {
