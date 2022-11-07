@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -36,27 +37,54 @@ import javax.annotation.Nullable;
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
 
+  /**
+   * Number of elements in the value set
+   */
   int size();
 
+  /**
+   * Get the value at specified position
+   */
   @CalledFromHotLoop
   @Nullable
   T get(int index);
 
   /**
    * Returns the index of "value" in this Indexed object, or a negative number if the value is not present.
-   * The negative number is not guaranteed to be any particular number. Subclasses may tighten this contract
-   * (GenericIndexed does this).
+   * The negative number is not guaranteed to be any particular number unless {@link #isSorted()} returns true, in
+   * which case it will be a negative number equal to (-(insertion point) - 1), in the manner of Arrays.binarySearch.
    *
    * @param value value to search for
    *
-   * @return index of value, or a negative number
+   * @return index of value, or a negative number (equal to (-(insertion point) - 1) if {@link #isSorted()})
    */
   int indexOf(@Nullable T value);
 
-  @FunctionalInterface
-  interface IndexedGetter<T>
+  /**
+   * Indicates if this value set is sorted, the implication being that the contract of {@link #indexOf} is strenthened
+   * to return a negative number equal to (-(insertion point) - 1) when the value is not present in the set.
+   */
+  default boolean isSorted()
   {
-    @Nullable
-    T get(int id);
+    return false;
+  }
+
+  /**
+   * Checks  if {@code index} is between 0 and {@code size}. Similar to Preconditions.checkElementIndex() except this
+   * method throws {@link IAE} with custom error message.
+   * <p>
+   * Used here to get existing behavior(same error message and exception) of V1 {@link GenericIndexed}.
+   *
+   * @param index identifying an element of an {@link Indexed}
+   * @param size size of the {@link Indexed}
+   */
+  static void checkIndex(int index, int size)
+  {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
+    if (index >= size) {
+      throw new IAE("Index[%d] >= size[%d]", index, size);
+    }
   }
 }

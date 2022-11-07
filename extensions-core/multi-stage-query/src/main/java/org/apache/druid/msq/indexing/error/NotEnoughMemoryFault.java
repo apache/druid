@@ -31,25 +31,29 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   static final String CODE = "NotEnoughMemory";
 
   private final long serverMemory;
+  private final long usableMemory;
   private final int serverWorkers;
   private final int serverThreads;
 
   @JsonCreator
   public NotEnoughMemoryFault(
       @JsonProperty("serverMemory") final long serverMemory,
+      @JsonProperty("usableMemory") final long usableMemory,
       @JsonProperty("serverWorkers") final int serverWorkers,
       @JsonProperty("serverThreads") final int serverThreads
   )
   {
     super(
         CODE,
-        "Not enough memory (available = %,d; server workers = %,d; server threads = %,d)",
+        "Not enough memory (total = %,d; usable = %,d; server workers = %,d; server threads = %,d)",
         serverMemory,
+        usableMemory,
         serverWorkers,
         serverThreads
     );
 
     this.serverMemory = serverMemory;
+    this.usableMemory = usableMemory;
     this.serverWorkers = serverWorkers;
     this.serverThreads = serverThreads;
   }
@@ -58,6 +62,12 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   public long getServerMemory()
   {
     return serverMemory;
+  }
+
+  @JsonProperty
+  public long getUsableMemory()
+  {
+    return usableMemory;
   }
 
   @JsonProperty
@@ -86,6 +96,7 @@ public class NotEnoughMemoryFault extends BaseMSQFault
     }
     NotEnoughMemoryFault that = (NotEnoughMemoryFault) o;
     return serverMemory == that.serverMemory
+           && usableMemory == that.usableMemory
            && serverWorkers == that.serverWorkers
            && serverThreads == that.serverThreads;
   }
@@ -93,7 +104,7 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), serverMemory, serverWorkers, serverThreads);
+    return Objects.hash(super.hashCode(), serverMemory, usableMemory, serverWorkers, serverThreads);
   }
 
   @Override
@@ -101,6 +112,7 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   {
     return "NotEnoughMemoryFault{" +
            "serverMemory=" + serverMemory +
+           ", usableMemory=" + usableMemory +
            ", serverWorkers=" + serverWorkers +
            ", serverThreads=" + serverThreads +
            '}';

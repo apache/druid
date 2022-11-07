@@ -137,4 +137,16 @@ public abstract class LookupExtractor
   {
     return false;
   }
+
+  /**
+   * Estimated heap footprint of this object. Not guaranteed to be accurate. For example, some implementations return
+   * zero even though they do use on-heap structures. However, the most common class, {@link MapLookupExtractor},
+   * does have a reasonable implementation.
+   *
+   * This API is provided for best-effort memory management and monitoring.
+   */
+  public long estimateHeapFootprint()
+  {
+    return 0;
+  }
 }

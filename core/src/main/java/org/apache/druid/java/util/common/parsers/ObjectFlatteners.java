@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
@@ -63,6 +64,9 @@ public class ObjectFlatteners
           break;
         case JQ:
           extractor = flattenerMaker.makeJsonQueryExtractor(fieldSpec.getExpr());
+          break;
+        case TREE:
+          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getNodes());
           break;
         default:
           throw new UOE("Unsupported field type[%s]", fieldSpec.getType());
@@ -208,6 +212,7 @@ public class ObjectFlatteners
     };
   }
 
+  @ExtensionPoint
   public interface FlattenerMaker<T>
   {
     JsonProvider getJsonProvider();
@@ -232,19 +237,27 @@ public class ObjectFlatteners
     Function<T, Object> makeJsonQueryExtractor(String expr);
 
     /**
+     * Create a "field" extractor for nested json expressions
+     */
+    default Function<T, Object> makeJsonTreeExtractor(List<String> nodes)
+    {
+      throw new UOE("makeJsonTreeExtractor has not been implemented.");
+    }
+
+    /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to
      * extract and convert data
      */
     default Map<String, Object> toMap(T obj)
     {
-      return (Map<String, Object>) toMapHelper(obj);
+      return (Map<String, Object>) toPlainJavaType(obj);
     }
 
     /**
      * Recursively traverse "json" object using a {@link JsonProvider}, converting to Java {@link Map} and {@link List},
      * potentially transforming via {@link #finalizeConversionForMap} as we go
      */
-    default Object toMapHelper(Object o)
+    default Object toPlainJavaType(Object o)
     {
       final JsonProvider jsonProvider = getJsonProvider();
       if (jsonProvider.isMap(o)) {
@@ -254,7 +267,7 @@ public class ObjectFlatteners
           if (field == null) {
             actualMap.put(key, null);
           } else if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
-            actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
+            actualMap.put(key, toPlainJavaType(finalizeConversionForMap(field)));
           } else {
             actualMap.put(key, finalizeConversionForMap(field));
           }
@@ -266,7 +279,7 @@ public class ObjectFlatteners
         for (int i = 0; i < length; i++) {
           Object element = jsonProvider.getArrayIndex(o, i);
           if (jsonProvider.isMap(element) || jsonProvider.isArray(element)) {
-            actualList.add(toMapHelper(finalizeConversionForMap(element)));
+            actualList.add(toPlainJavaType(finalizeConversionForMap(element)));
           } else {
             actualList.add(finalizeConversionForMap(element));
           }

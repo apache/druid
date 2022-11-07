@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
@@ -45,19 +46,28 @@ import java.util.stream.Collectors;
  */
 public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> extends AbstractInputSource
 {
+  private static final Logger LOG = new Logger(RecordSupplierInputSource.class);
+
   private final String topic;
   private final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private final boolean useEarliestOffset;
 
+  /**
+   * Maximum amount of time in which the entity iterator will return results. If null, no timeout is applied.
+   */
+  private final Integer iteratorTimeoutMs;
+
   public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
-      boolean useEarliestOffset
+      boolean useEarliestOffset,
+      Integer iteratorTimeoutMs
   )
   {
     this.topic = topic;
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
+    this.iteratorTimeoutMs = iteratorTimeoutMs;
     try {
       assignAndSeek(recordSupplier);
     }
@@ -123,13 +133,24 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       private Iterator<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> recordIterator;
       private Iterator<? extends ByteEntity> bytesIterator;
       private volatile boolean closed;
+      private final long createTime = System.currentTimeMillis();
+      private final Long terminationTime = iteratorTimeoutMs != null ? createTime + iteratorTimeoutMs : null;
 
       private void waitNextIteratorIfNecessary()
       {
         while (!closed && (bytesIterator == null || !bytesIterator.hasNext())) {
           while (!closed && (recordIterator == null || !recordIterator.hasNext())) {
+            if (terminationTime != null && System.currentTimeMillis() > terminationTime) {
+              LOG.info(
+                  "Configured sampler timeout [%s] has been exceeded, returning without a bytesIterator.",
+                  iteratorTimeoutMs
+              );
+              bytesIterator = null;
+              return;
+            }
             recordIterator = recordSupplier.poll(SeekableStreamSamplerSpec.POLL_TIMEOUT_MS).iterator();
           }
+
           if (!closed) {
             bytesIterator = recordIterator.next().getData().iterator();
           }
@@ -152,6 +173,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       @Override
       public void close()
       {
+        LOG.info("Closing entity iterator.");
         closed = true;
         recordSupplier.close();
       }

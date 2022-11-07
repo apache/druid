@@ -142,7 +142,7 @@ export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undef
   const modeAndNeedle = parseFilterModeAndNeedle(filter);
   if (!modeAndNeedle) return;
   const { mode, needle } = modeAndNeedle;
-  const column = SqlRef.columnWithQuotes(filter.id);
+  const column = SqlRef.column(filter.id);
   const needleLiteral = SqlLiteral.create(needle);
   switch (mode) {
     case '=':

@@ -90,7 +90,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cachePopulatorStats,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        useMaxMemoryEstimates
     );
     return realtimeAppenderator;
   }
@@ -121,7 +121,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        useMaxMemoryEstimates
     );
   }
 
@@ -181,7 +181,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        true
+        useMaxMemoryEstimates
     );
   }
 

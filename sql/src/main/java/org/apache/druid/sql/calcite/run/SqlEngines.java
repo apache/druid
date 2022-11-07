@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContext;
 
+import java.util.Map;
 import java.util.Set;
 
 public class SqlEngines
@@ -35,10 +35,10 @@ public class SqlEngines
    *
    * This is a helper function used by {@link SqlEngine#validateContext} implementations.
    */
-  public static void validateNoSpecialContextKeys(final QueryContext queryContext, final Set<String> specialContextKeys)
+  public static void validateNoSpecialContextKeys(final Map<String, Object> queryContext, final Set<String> specialContextKeys)
       throws ValidationException
   {
-    for (String contextParameterName : queryContext.getMergedParams().keySet()) {
+    for (String contextParameterName : queryContext.keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
         throw new ValidationException(
             StringUtils.format(

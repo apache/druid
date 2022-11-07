@@ -93,7 +93,7 @@ public class SqlSegmentsMetadataQuery
    * You cannot assume that segments returned by this call are actually active. Because there is some delay between
    * new segment publishing and the marking-unused of older segments, it is possible that some segments returned
    * by this call are overshadowed by other segments. To check for this, use
-   * {@link org.apache.druid.timeline.VersionedIntervalTimeline#forSegments(Iterator)}.
+   * {@link org.apache.druid.timeline.SegmentTimeline#forSegments(Iterable)}.
    *
    * This call does not return any information about realtime segments.
    *

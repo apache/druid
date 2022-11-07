@@ -206,7 +206,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
-        queryPlus.context())) {
+        queryContext
+    )) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -309,5 +310,12 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       super.closeWithError(e);
       state = State.CLOSED;
     }
+  }
+
+  @Override
+  public void closeQuietly()
+  {
+    sqlToolbox.sqlLifecycleManager.remove(sqlQueryId(), this);
+    super.closeQuietly();
   }
 }
