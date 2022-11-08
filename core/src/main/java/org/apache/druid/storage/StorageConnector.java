@@ -113,5 +113,5 @@ public interface StorageConnector
    * For example, for a S3 path such as s3://bucket/parent1/parent2/child, the filename returned for the path
    * "parent1/parent2" should be "child" and for "parent1" should be "parent2"
    */
-  List<String> listDir(String dirName) throws IOException;
+  List<String> listDir(String dirName);
 }
