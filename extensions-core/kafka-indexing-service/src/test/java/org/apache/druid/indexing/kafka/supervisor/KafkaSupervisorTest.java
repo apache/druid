@@ -3906,7 +3906,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskFromStorageMismatchedTuningConfig,
         taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    final Map<String, Task> taskMap = makeTaskIdMap(tasks);
+    final Map<String, Task> taskMap = supervisor.createActiveTaskMap(tasks);
 
     replayAll();
 
@@ -4616,15 +4616,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Collections.emptyMap(),
         OBJECT_MAPPER
     );
-  }
-
-  private Map<String, Task> makeTaskIdMap(List<Task> tasks)
-  {
-    Map<String, Task> taskMap = new HashMap<>();
-    for (Task task : tasks) {
-      taskMap.put(task.getId(), task);
-    }
-    return taskMap;
   }
 
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem

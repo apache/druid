@@ -1726,10 +1726,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    final Map<String, Task> activeTaskMap = new HashMap<>();
-    for (Task task : tasks) {
-      activeTaskMap.put(task.getId(), task);
-    }
+    final Map<String, Task> activeTaskMap = createActiveTaskMap(tasks);
 
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
@@ -2281,8 +2278,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * Determines whether a given task was created by the current version of the supervisor
-   * One can choose to pass a map of activeTasks. If the taskId doesn't correspond to any task in it, fallback to the db
+   * Determines whether a given task was created by the current version of the supervisor.
+   * Uses the Task object mapped to this taskId in the {@code activeTaskMap}.
+   * If not found in the map, fetch it from the metadata store.
    * @param taskGroupId task group id
    * @param taskId task id
    * @param activeTaskMap Set of active tasks that were pre-fetched
@@ -2291,22 +2289,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap)
   {
-    @SuppressWarnings("unchecked")
-    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task;
-
+    Task genericTask;
     if (activeTaskMap == null || !activeTaskMap.containsKey(taskId)) {
       Optional<Task> taskOptional = taskStorage.getTask(taskId);
       if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
         return false;
       }
-      task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
+      genericTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
     } else {
       if (!doesTaskTypeMatchSupervisor(activeTaskMap.get(taskId))) {
         return false;
       }
-      task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) activeTaskMap.get(taskId);
+      genericTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) activeTaskMap.get(taskId);
     }
 
+    @SuppressWarnings("unchecked")
+    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
+        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3257,10 +3256,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
     List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    Map<String, Task> activeTaskMap = new HashMap<>();
-    for (Task task : tasks) {
-      activeTaskMap.put(task.getId(), task);
-    }
+    Map<String, Task> activeTaskMap = createActiveTaskMap(tasks);
 
     List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = activelyReadingTaskGroups.entrySet().iterator();
@@ -3516,6 +3512,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
+    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
       SequenceOffsetType sequence = partitionOffsets.get(partitionId);
 
@@ -3527,7 +3524,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,
             metadataOffsets
@@ -3894,6 +3890,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     partitionIds.clear();
     partitionIds.addAll(partitionIdsForTests);
   }
+
+  public Map<String, Task> createActiveTaskMap(List<Task> tasks)
+  {
+    Map<String, Task> taskMap = new HashMap<>();
+    for (Task task : tasks) {
+      taskMap.put(task.getId(), task);
+    }
+    return taskMap;
+  }
+
 
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis

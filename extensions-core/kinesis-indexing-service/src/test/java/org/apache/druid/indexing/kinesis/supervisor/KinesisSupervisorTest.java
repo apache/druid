@@ -4045,7 +4045,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskFromStorageMismatchedTuningConfig,
         taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    Map<String, Task> taskMap = makeTaskIdMap(tasks);
+    Map<String, Task> taskMap = supervisor.createActiveTaskMap(tasks);
 
     replayAll();
 
@@ -4913,15 +4913,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
     Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
     Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
-  }
-
-  private Map<String, Task> makeTaskIdMap(List<Task> tasks)
-  {
-    Map<String, Task> taskMap = new HashMap<>();
-    for (Task task : tasks) {
-      taskMap.put(task.getId(), task);
-    }
-    return taskMap;
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(
