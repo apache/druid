@@ -1726,6 +1726,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    Map<String, Task> taskMap = new HashMap<>();
+    for (Task task : tasks) {
+      taskMap.put(task.getId(), task);
+    }
 
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
@@ -1873,7 +1877,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                           // make sure the task's io and tuning configs match with the supervisor config
                           // if it is current then only create corresponding taskGroup if it does not exist
-                          if (!isTaskCurrent(taskGroupId, taskId)) {
+                          if (!isTaskCurrent(taskGroupId, taskId, taskMap)) {
                             log.info(
                                 "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
@@ -2277,16 +2281,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  public boolean isTaskCurrent(int taskGroupId, String taskId)
+  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
   {
-    Optional<Task> taskOptional = taskStorage.getTask(taskId);
-    if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
+    if (!taskMap.containsKey(taskId)) {
       return false;
     }
 
     @SuppressWarnings("unchecked")
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
-        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
+        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskMap.get(taskId);
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3236,6 +3239,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
+    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    Map<String, Task> taskMap = new HashMap<>();
+    for (Task task : tasks) {
+      taskMap.put(task.getId(), task);
+    }
+
     List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = activelyReadingTaskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
@@ -3258,7 +3267,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         TaskData taskData = task.getValue();
 
         // stop and remove bad tasks from the task group
-        if (!isTaskCurrent(groupId, taskId)) {
+        if (!isTaskCurrent(groupId, taskId, taskMap)) {
           log.info("Stopping task [%s] which does not match the expected sequence range and ingestion spec", taskId);
           futures.add(stopTask(taskId, false));
           iTasks.remove();
@@ -3501,7 +3510,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partitionId);
+        final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
+        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
+            partitionId,
+            metadataOffsets
+        );
 
         if (offsetFromStorage != null) {
           builder.put(partitionId, offsetFromStorage);
@@ -3516,9 +3529,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * doesn't find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the
    * {@link SeekableStreamSupervisorIOConfig#useEarliestSequenceNumber}.
    */
-  private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(PartitionIdType partition)
+  private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(
+      PartitionIdType partition,
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets
+  )
   {
-    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     SequenceOffsetType sequence = metadataOffsets.get(partition);
     if (sequence != null) {
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
