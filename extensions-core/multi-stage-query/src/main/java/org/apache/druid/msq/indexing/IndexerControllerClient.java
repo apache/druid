@@ -122,12 +122,9 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerWarning(String workerId, List<MSQErrorReport> MSQErrorReports) throws IOException
+  public void postWorkerWarning(List<MSQErrorReport> MSQErrorReports) throws IOException
   {
-    final String path = StringUtils.format(
-        "/workerWarning/%s",
-        StringUtils.urlEncode(workerId)
-    );
+    final String path = "/workerWarning";
 
     doRequest(
         new RequestBuilder(HttpMethod.POST, path)

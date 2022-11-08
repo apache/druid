@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
+ * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
  * to the users of this class.
  */
 public class LocalFileStorageConnector implements StorageConnector
@@ -58,10 +58,6 @@ public class LocalFileStorageConnector implements StorageConnector
   /**
    * Reads the file present as basePath + path. Will throw an IO exception in case the file is not present.
    * Closing of the stream is the responsibility of the caller.
-   *
-   * @param path
-   * @return
-   * @throws IOException
    */
   @Override
   public InputStream read(String path) throws IOException

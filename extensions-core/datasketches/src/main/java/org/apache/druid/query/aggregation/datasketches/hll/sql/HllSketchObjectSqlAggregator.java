@@ -38,6 +38,11 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
   private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchSqlAggFunction();
   private static final String NAME = "DS_HLL";
 
+  public HllSketchObjectSqlAggregator()
+  {
+    super(false);
+  }
+
   @Override
   public SqlAggFunction calciteFunction()
   {

@@ -74,7 +74,6 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient taskClientFor(Controller controller);
-
   /**
    * Writes controller task report.
    */
