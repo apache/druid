@@ -177,7 +177,7 @@ Set the following properties:
 
 ## Drop rules
 
-Drop rules define when Druid drops segments from the cluster. Druid keeps dropped data in deep storage. Note that if you enable segment autokill, or you run a kill task, Druid deletes the data from deep storage. See [Data deletion](../data-management/delete.md) for more information on deleting data.
+Drop rules define when Druid drops segments from the cluster. Druid keeps dropped data in deep storage. Note that if you enable segment auto kill, or you run a kill task, Druid deletes the data from deep storage. See [Data deletion](../data-management/delete.md) for more information on deleting data.
 
 If you want to use a [load rule](#load-rules) to retain only data from a defined period of time, you must also define a drop rule. If you don't define a drop rule, Druid retains data that doesn't lie within your defined period according to the default rule, `loadForever`.
 
