@@ -68,7 +68,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, false);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Assert.assertEquals(64, fixedIndexed.size());
     for (int i = 0; i < LONGS.length; i++) {
       Assert.assertEquals(LONGS[i], fixedIndexed.get(i));
@@ -81,7 +82,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, false);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Iterator<Long> iterator = fixedIndexed.iterator();
     int i = 0;
     while (iterator.hasNext()) {
@@ -94,7 +96,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, true);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Assert.assertEquals(65, fixedIndexed.size());
     Assert.assertNull(fixedIndexed.get(0));
     for (int i = 0; i < LONGS.length; i++) {
@@ -108,7 +111,8 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
     fillBuffer(buffer, order, true);
-    FixedIndexed<Long> fixedIndexed = FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES);
+    FixedIndexed<Long> fixedIndexed =
+        FixedIndexed.<Long>read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES).get();
     Iterator<Long> iterator = fixedIndexed.iterator();
     Assert.assertNull(iterator.next());
     int i = 0;

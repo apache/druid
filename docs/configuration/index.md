@@ -994,7 +994,7 @@ You can configure automatic compaction through the following properties:
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#priority) of compaction task.|no (default = 25)|
-|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 100,000,000,000,000 i.e. 100TB)|
+|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime dataSources. See [Data handling with compaction](../data-management/compaction.md#data-handling-with-compaction).|no (default = "P1D")|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Automatic compaction tuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context) for compaction tasks.|no|

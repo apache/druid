@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.segment.IndexSpec;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -55,20 +56,25 @@ public class MSQTuningConfig
   @Nullable
   private final Integer rowsPerSegment;
 
+  @Nullable
+  private final IndexSpec indexSpec;
+
   public MSQTuningConfig(
       @JsonProperty("maxNumWorkers") @Nullable final Integer maxNumWorkers,
       @JsonProperty("maxRowsInMemory") @Nullable final Integer maxRowsInMemory,
-      @JsonProperty("rowsPerSegment") @Nullable final Integer rowsPerSegment
+      @JsonProperty("rowsPerSegment") @Nullable final Integer rowsPerSegment,
+      @JsonProperty("indexSpec") @Nullable final IndexSpec indexSpec
   )
   {
     this.maxNumWorkers = maxNumWorkers;
     this.maxRowsInMemory = maxRowsInMemory;
     this.rowsPerSegment = rowsPerSegment;
+    this.indexSpec = indexSpec;
   }
 
   public static MSQTuningConfig defaultConfig()
   {
-    return new MSQTuningConfig(null, null, null);
+    return new MSQTuningConfig(null, null, null, null);
   }
 
   @JsonProperty("maxNumWorkers")
@@ -92,6 +98,13 @@ public class MSQTuningConfig
     return rowsPerSegment;
   }
 
+  @JsonProperty("indexSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  IndexSpec getIndexSpecForSerialization()
+  {
+    return indexSpec;
+  }
+
   public int getMaxNumWorkers()
   {
     return maxNumWorkers != null ? maxNumWorkers : DEFAULT_MAX_NUM_TASKS;
@@ -107,6 +120,11 @@ public class MSQTuningConfig
     return rowsPerSegment != null ? rowsPerSegment : PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
   }
 
+  public IndexSpec getIndexSpec()
+  {
+    return indexSpec != null ? indexSpec : new IndexSpec();
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -119,13 +137,14 @@ public class MSQTuningConfig
     MSQTuningConfig that = (MSQTuningConfig) o;
     return Objects.equals(maxNumWorkers, that.maxNumWorkers)
            && Objects.equals(maxRowsInMemory, that.maxRowsInMemory)
-           && Objects.equals(rowsPerSegment, that.rowsPerSegment);
+           && Objects.equals(rowsPerSegment, that.rowsPerSegment)
+           && Objects.equals(indexSpec, that.indexSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxNumWorkers, maxRowsInMemory, rowsPerSegment);
+    return Objects.hash(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec);
   }
 
   @Override
@@ -135,6 +154,7 @@ public class MSQTuningConfig
            "maxNumWorkers=" + maxNumWorkers +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", rowsPerSegment=" + rowsPerSegment +
+           ", indexSpec=" + indexSpec +
            '}';
   }
 }
