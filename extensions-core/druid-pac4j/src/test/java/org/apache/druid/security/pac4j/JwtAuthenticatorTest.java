@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.pac4j;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.security.AuthConfig;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -34,7 +35,7 @@ import java.io.IOException;
 public class JwtAuthenticatorTest
 {
   @Test
-  public void testEmptyAuthHeader()
+  public void testBearerToken()
       throws IOException, ServletException
   {
     OIDCConfig configuration = EasyMock.createMock(OIDCConfig.class);
@@ -54,11 +55,36 @@ public class JwtAuthenticatorTest
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(filterChain);
 
+
     JwtAuthenticator jwtAuthenticator = new JwtAuthenticator("jwt", "allowAll", configuration);
     JwtAuthFilter authFilter = new JwtAuthFilter("allowAll", "jwt", configuration, tokenValidator);
     authFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
     Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
+    Assert.assertNull(jwtAuthenticator.getInitParameters());
+    Assert.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
+  }
+
+  @Test
+  public void testAuthenticatedRequest() throws ServletException, IOException
+  {
+    HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn("AlreadyAuthenticated");
+
+    EasyMock.replay(req);
+
+    HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
+    EasyMock.replay(resp);
+
+    FilterChain filterChain = EasyMock.createMock(FilterChain.class);
+    filterChain.doFilter(req, resp);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(filterChain);
+
+    JwtAuthFilter authFilter = new JwtAuthFilter("allowAll", "jwt", null, null);
+    authFilter.doFilter(req, resp, filterChain);
+
+    EasyMock.verify(req, resp, filterChain);
   }
 }
