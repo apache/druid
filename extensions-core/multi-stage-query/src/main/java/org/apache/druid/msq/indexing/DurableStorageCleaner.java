@@ -19,8 +19,12 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
+import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
@@ -50,18 +54,18 @@ public class DurableStorageCleaner implements OverlordHelper
 
   private final DurableStorageCleanerConfig config;
   private final StorageConnector storageConnector;
-  private final TaskRunner taskRunner;
+  private final Provider<TaskMaster> taskMasterProvider;
 
   @Inject
   public DurableStorageCleaner(
       final DurableStorageCleanerConfig config,
       final @MultiStageQuery StorageConnector storageConnector,
-      final TaskRunner taskRunner
+      @JacksonInject final Provider<TaskMaster> taskMasterProvider
   )
   {
     this.config = config;
     this.storageConnector = storageConnector;
-    this.taskRunner = taskRunner;
+    this.taskMasterProvider = taskMasterProvider;
   }
 
   @Override
@@ -83,6 +87,12 @@ public class DurableStorageCleaner implements OverlordHelper
         () -> {
           try {
             LOG.info("Starting the run of durable storage cleaner");
+            Optional<TaskRunner> taskRunnerOptional = taskMasterProvider.get().getTaskRunner();
+            if (!taskRunnerOptional.isPresent()) {
+              LOG.info("Durable storage cleaner not running since the node is not the leader");
+              return;
+            }
+            TaskRunner taskRunner = taskRunnerOptional.get();
             Set<String> allDirectories = new HashSet<>(storageConnector.listDir("/"));
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()

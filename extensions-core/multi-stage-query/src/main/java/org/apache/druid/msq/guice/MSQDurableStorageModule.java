@@ -48,18 +48,7 @@ public class MSQDurableStorageModule implements DruidModule
   public static final String MSQ_INTERMEDIATE_STORAGE_ENABLED =
       String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "enable");
 
-  @Inject
   private Properties properties;
-
-  // Dummy constructor so that it can get injected dynamically at runtime
-  public MSQDurableStorageModule()
-  {
-  }
-
-  public MSQDurableStorageModule(Properties properties)
-  {
-    this.properties = properties;
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -92,6 +81,12 @@ public class MSQDurableStorageModule implements DruidModule
           DurableStorageCleanerConfig.class
       );
     }
+  }
+
+  @Inject
+  public void setProperties(Properties properties)
+  {
+    this.properties = properties;
   }
 
   private boolean isDurableShuffleStorageEnabled()

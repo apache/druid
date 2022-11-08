@@ -19,9 +19,10 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.msq.shuffle.DurableStorageUtils;
@@ -31,17 +32,15 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Executors;
 
 
 public class DurableStorageCleanerTest
 {
 
+  private static final TaskMaster TASK_MASTER = EasyMock.mock(TaskMaster.class);
   private static final TaskRunner TASK_RUNNER = EasyMock.mock(TaskRunner.class);
   private static final StorageConnector STORAGE_CONNECTOR = EasyMock.mock(StorageConnector.class);
   private static final TaskRunnerWorkItem TASK_RUNNER_WORK_ITEM = EasyMock.mock(TaskRunnerWorkItem.class);
@@ -53,35 +52,14 @@ public class DurableStorageCleanerTest
   public void testSchedule() throws IOException, InterruptedException
   {
     EasyMock.reset(TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
-    DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig(true, 1L);
+    DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig();
+    durableStorageCleanerConfig.delaySeconds = 1L;
+    durableStorageCleanerConfig.enabled = true;
     DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(
         durableStorageCleanerConfig,
         STORAGE_CONNECTOR,
-        TASK_RUNNER
+        () -> TASK_MASTER
     );
-    List<TaskRunnerWorkItem> taskRunnerWorkItems = new ArrayList<>();
-    taskRunnerWorkItems.add(new TaskRunnerWorkItem(TASK_ID, SettableFuture.create())
-    {
-      @Override
-      public TaskLocation getLocation()
-      {
-        return TASK_LOCATION;
-      }
-
-      @Nullable
-      @Override
-      public String getTaskType()
-      {
-        return null;
-      }
-
-      @Override
-      public String getDataSource()
-      {
-        return "dummy";
-      }
-    });
-    Collection<? extends TaskRunnerWorkItem> list2 = taskRunnerWorkItems;
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID), "strayDirectory"))
             .anyTimes();
@@ -90,10 +68,11 @@ public class DurableStorageCleanerTest
     EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getRunningTasks())
             .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
             .anyTimes();
+    EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
     Capture<String> capturedArguments = EasyMock.newCapture();
     STORAGE_CONNECTOR.deleteRecursively(EasyMock.capture(capturedArguments));
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
+    EasyMock.replay(TASK_MASTER, TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
 
 
     durableStorageCleaner.schedule(Executors.newSingleThreadScheduledExecutor());

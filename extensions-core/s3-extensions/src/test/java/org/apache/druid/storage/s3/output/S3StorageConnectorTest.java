@@ -156,7 +156,7 @@ public class S3StorageConnectorTest
   }
 
   @Test
-  public void testListDir() throws IOException
+  public void testListDir()
   {
     EasyMock.reset(S3_CLIENT, TEST_RESULT);
 
