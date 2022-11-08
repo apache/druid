@@ -27,7 +27,7 @@ import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.joda.time.Duration;
 
@@ -86,7 +86,7 @@ public class DurableStorageCleaner implements OverlordHelper
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()
                                                    .map(TaskRunnerWorkItem::getTaskId)
-                                                   .map(DurableStorageOutputChannelFactory::getControllerDirectory)
+                                                   .map(DurableStorageUtils::getControllerDirectory)
                                                    .collect(Collectors.toSet());
             Set<String> unknownDirectories = Sets.difference(allDirectories, runningTaskIds);
             LOG.info(
