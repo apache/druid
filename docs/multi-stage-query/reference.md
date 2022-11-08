@@ -205,7 +205,7 @@ The following table lists the context parameters for the MSQ task engine:
 | indexSpec | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
 
 ## Durable Storage
-This section enumates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
+This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
