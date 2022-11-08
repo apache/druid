@@ -3906,10 +3906,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskFromStorageMismatchedTuningConfig,
         taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    Map<String, Task> taskMap = makeTaskIdMap(tasks);
-
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
-            .andReturn(tasks);
+    final Map<String, Task> taskMap = makeTaskIdMap(tasks);
 
     replayAll();
 

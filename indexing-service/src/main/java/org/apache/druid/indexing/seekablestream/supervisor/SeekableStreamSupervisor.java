@@ -1726,9 +1726,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    Map<String, Task> taskMap = new HashMap<>();
+    final Map<String, Task> activeTaskMap = new HashMap<>();
     for (Task task : tasks) {
-      taskMap.put(task.getId(), task);
+      activeTaskMap.put(task.getId(), task);
     }
 
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
@@ -1877,7 +1877,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                           // make sure the task's io and tuning configs match with the supervisor config
                           // if it is current then only create corresponding taskGroup if it does not exist
-                          if (!isTaskCurrent(taskGroupId, taskId, taskMap)) {
+                          if (!isTaskCurrent(taskGroupId, taskId, activeTaskMap)) {
                             log.info(
                                 "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
@@ -2280,16 +2280,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  /**
+   * Determines whether a given task was created by the current version of the supervisor
+   * One can choose to pass a map of activeTasks. If the taskId doesn't correspond to any task in it, fallback to the db
+   * @param taskGroupId task group id
+   * @param taskId task id
+   * @param activeTaskMap Set of active tasks that were pre-fetched
+   * @return true if the task was created by the current supervisor
+   */
   @VisibleForTesting
-  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
+  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap)
   {
-    if (!taskMap.containsKey(taskId)) {
-      return false;
+    @SuppressWarnings("unchecked")
+    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task;
+
+    if (activeTaskMap == null || !activeTaskMap.containsKey(taskId)) {
+      Optional<Task> taskOptional = taskStorage.getTask(taskId);
+      if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
+        return false;
+      }
+      task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
+    } else {
+      if (!doesTaskTypeMatchSupervisor(activeTaskMap.get(taskId))) {
+        return false;
+      }
+      task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) activeTaskMap.get(taskId);
     }
 
-    @SuppressWarnings("unchecked")
-    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
-        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskMap.get(taskId);
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3240,9 +3257,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
     List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    Map<String, Task> taskMap = new HashMap<>();
+    Map<String, Task> activeTaskMap = new HashMap<>();
     for (Task task : tasks) {
-      taskMap.put(task.getId(), task);
+      activeTaskMap.put(task.getId(), task);
     }
 
     List<ListenableFuture<?>> futures = new ArrayList<>();
@@ -3267,7 +3284,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         TaskData taskData = task.getValue();
 
         // stop and remove bad tasks from the task group
-        if (!isTaskCurrent(groupId, taskId, taskMap)) {
+        if (!isTaskCurrent(groupId, taskId, activeTaskMap)) {
           log.info("Stopping task [%s] which does not match the expected sequence range and ingestion spec", taskId);
           futures.add(stopTask(taskId, false));
           iTasks.remove();
