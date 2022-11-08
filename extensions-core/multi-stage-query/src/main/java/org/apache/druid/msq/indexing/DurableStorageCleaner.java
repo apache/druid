@@ -82,6 +82,7 @@ public class DurableStorageCleaner implements OverlordHelper
         Duration.standardSeconds(config.getDelaySeconds()),
         () -> {
           try {
+            LOG.info("Starting the run of durable storage cleaner");
             Set<String> allDirectories = new HashSet<>(storageConnector.listDir("/"));
             Set<String> runningTaskIds = taskRunner.getRunningTasks()
                                                    .stream()
