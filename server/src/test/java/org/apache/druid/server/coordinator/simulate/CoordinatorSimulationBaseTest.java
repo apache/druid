@@ -130,6 +130,12 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   @Override
+  public void addServer(DruidServer server)
+  {
+    sim.cluster().addServer(server);
+  }
+
+  @Override
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);
@@ -267,6 +273,7 @@ public abstract class CoordinatorSimulationBaseTest
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
+    static final String UNMOVED_COUNT = "segment/unmoved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
   }
@@ -280,6 +287,17 @@ public abstract class CoordinatorSimulationBaseTest
     static final List<DataSegment> WIKI_10X1D =
         CreateDataSegments.ofDatasource(DS.WIKI)
                           .forIntervals(1, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(10)
+                          .eachOfSizeInMb(500);
+
+    /**
+     * Segments of datasource {@link DS#WIKI}, size 500 MB each,
+     * spanning 100 days containing 10 partitions.
+     */
+    static final List<DataSegment> WIKI_10X100D =
+        CreateDataSegments.ofDatasource(DS.WIKI)
+                          .forIntervals(100, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
                           .eachOfSizeInMb(500);

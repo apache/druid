@@ -746,6 +746,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
+  private final IdleConfig idleConfig;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -802,6 +803,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       chatThreads = (this.tuningConfig.getChatThreads() != null
               ? this.tuningConfig.getChatThreads()
               : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    }
+
+    IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
+    if (specIdleConfig != null) {
+      if (specIdleConfig.getInactiveAfterMillis() != null) {
+        idleConfig = specIdleConfig;
+      } else {
+        idleConfig = new IdleConfig(
+            specIdleConfig.isEnabled(),
+            spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+        );
+      }
+    } else {
+      idleConfig = new IdleConfig(
+          spec.getSupervisorStateManagerConfig().isIdleConfigEnabled(),
+          spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+      );
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
@@ -3292,8 +3310,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
-    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
-    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
+    if (!idleConfig.isEnabled() || spec.isSuspended()) {
       return;
     }
 
