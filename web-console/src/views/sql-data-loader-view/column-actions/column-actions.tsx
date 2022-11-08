@@ -19,7 +19,7 @@
 import { Button, FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import { QueryResult, SqlExpression, SqlFunction } from 'druid-query-toolkit';
+import { F, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
 import { possibleDruidFormatForValues, TIME_COLUMN } from '../../../druid-models';
@@ -49,7 +49,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
 
     const expression = queryResult.sqlQuery?.getSelectExpressionForIndex(headerIndex);
 
-    if (sqlQuery.getEffectiveWhereExpression().containsColumn(header)) {
+    if (sqlQuery.getEffectiveWhereExpression().containsColumnName(header)) {
       removeFilterButton = (
         <Button
           icon={IconNames.FILTER_REMOVE}
@@ -147,7 +147,6 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
             };
 
             const underlyingSelectExpression = expression.getUnderlyingExpression();
-
             convertButton = (
               <Popover2
                 content={
@@ -159,9 +158,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                             text="Convert to SUM(...)"
                             onClick={() => {
                               convertToAggregate([
-                                SqlFunction.simple('SUM', [underlyingSelectExpression]).as(
-                                  `sum_${header}`,
-                                ),
+                                F('SUM', underlyingSelectExpression).as(`sum_${header}`),
                               ]);
                             }}
                           />
@@ -169,9 +166,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                             text="Convert to MIN(...)"
                             onClick={() => {
                               convertToAggregate([
-                                SqlFunction.simple('MIN', [underlyingSelectExpression]).as(
-                                  `min_${header}`,
-                                ),
+                                F('MIN', underlyingSelectExpression).as(`min_${header}`),
                               ]);
                             }}
                           />
@@ -179,9 +174,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                             text="Convert to MAX(...)"
                             onClick={() => {
                               convertToAggregate([
-                                SqlFunction.simple('MAX', [underlyingSelectExpression]).as(
-                                  `max_${header}`,
-                                ),
+                                F('MAX', underlyingSelectExpression).as(`max_${header}`),
                               ]);
                             }}
                           />
@@ -189,15 +182,9 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                             text="Convert to SUM(...), MIN(...), and MAX(...)"
                             onClick={() => {
                               convertToAggregate([
-                                SqlFunction.simple('SUM', [underlyingSelectExpression]).as(
-                                  `sum_${header}`,
-                                ),
-                                SqlFunction.simple('MIN', [underlyingSelectExpression]).as(
-                                  `min_${header}`,
-                                ),
-                                SqlFunction.simple('MAX', [underlyingSelectExpression]).as(
-                                  `max_${header}`,
-                                ),
+                                F('SUM', underlyingSelectExpression).as(`sum_${header}`),
+                                F('MIN', underlyingSelectExpression).as(`min_${header}`),
+                                F('MAX', underlyingSelectExpression).as(`max_${header}`),
                               ]);
                             }}
                           />
@@ -207,9 +194,9 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                         text="Convert to APPROX_COUNT_DISTINCT_DS_HLL(...)"
                         onClick={() => {
                           convertToAggregate([
-                            SqlFunction.simple('APPROX_COUNT_DISTINCT_DS_HLL', [
-                              underlyingSelectExpression,
-                            ]).as(`unique_${header}`),
+                            F('APPROX_COUNT_DISTINCT_DS_HLL', underlyingSelectExpression).as(
+                              `unique_${header}`,
+                            ),
                           ]);
                         }}
                       />
@@ -217,9 +204,9 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                         text="Convert to APPROX_COUNT_DISTINCT_DS_THETA(...)"
                         onClick={() => {
                           convertToAggregate([
-                            SqlFunction.simple('APPROX_COUNT_DISTINCT_DS_THETA', [
-                              underlyingSelectExpression,
-                            ]).as(`unique_${header}`),
+                            F('APPROX_COUNT_DISTINCT_DS_THETA', underlyingSelectExpression).as(
+                              `unique_${header}`,
+                            ),
                           ]);
                         }}
                       />
@@ -227,9 +214,9 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                         text="Convert to APPROX_COUNT_DISTINCT_BUILTIN(...)"
                         onClick={() => {
                           convertToAggregate([
-                            SqlFunction.simple('APPROX_COUNT_DISTINCT_BUILTIN', [
-                              underlyingSelectExpression,
-                            ]).as(`unique_${header}`),
+                            F('APPROX_COUNT_DISTINCT_BUILTIN', underlyingSelectExpression).as(
+                              `unique_${header}`,
+                            ),
                           ]);
                         }}
                       />

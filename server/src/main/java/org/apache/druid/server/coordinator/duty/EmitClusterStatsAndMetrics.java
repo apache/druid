@@ -188,6 +188,7 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitTieredStats(emitter, "segment/cost/normalization", stats, "normalization");
 
     emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
+    emitTieredStats(emitter, "segment/unmoved/count", stats, "unmovedCount");
 
     emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
 

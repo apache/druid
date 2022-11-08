@@ -2113,6 +2113,57 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testSupervisorIsIdleIfStreamInactiveWhenSuspended() throws Exception
+  {
+    Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "false",
+                                                 "idleConfig.inactiveAfterMillis", "200");
+    supervisorConfig = OBJECT_MAPPER.convertValue(config, SupervisorStateManagerConfig.class);
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, null)
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasksAndFewPendingTasks() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -4314,7 +4365,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            new SupervisorStateManagerConfig()
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
