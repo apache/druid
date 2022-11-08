@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -98,7 +99,7 @@ public class MSQWorkerTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     final WorkerContext context = IndexerWorkerContext.createProductionInstance(toolbox, injector);
     worker = new WorkerImpl(this, context);
@@ -111,5 +112,11 @@ public class MSQWorkerTask extends AbstractTask
     if (worker != null) {
       worker.stopGracefully();
     }
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 }

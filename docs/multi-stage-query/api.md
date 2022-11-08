@@ -553,6 +553,8 @@ The following table describes the response fields when you retrieve a report for
 |multiStageQuery.payload.status.status|RUNNING, SUCCESS, or FAILED.|
 |multiStageQuery.payload.status.startTime|Start time of the query in ISO format. Only present if the query has started running.|
 |multiStageQuery.payload.status.durationMs|Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet.|
+|multiStageQuery.payload.status.pendingTasks|Number of tasks that are not fully started. -1 denotes that the number is currently unknown.|
+|multiStageQuery.payload.status.runningTasks|Number of currently running tasks. Should be at least 1 since the controller is included.|
 |multiStageQuery.payload.status.errorReport|Error object. Only present if there was an error.|
 |multiStageQuery.payload.status.errorReport.taskId|The task that reported the error, if known. May be a controller task or a worker task.|
 |multiStageQuery.payload.status.errorReport.host|The hostname and port of the task that reported the error, if known.|

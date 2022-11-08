@@ -34,6 +34,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -114,7 +115,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -125,7 +127,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     }
 

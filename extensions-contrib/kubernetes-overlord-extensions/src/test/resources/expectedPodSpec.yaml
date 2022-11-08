@@ -1,0 +1,66 @@
+apiVersion: "batch/v1"
+kind: "Job"
+metadata:
+  annotations:
+    task.id: "task_id"
+    tls.enabled: "false"
+  labels:
+    druid.k8s.peons: "true"
+  name: "taskid"
+spec:
+  activeDeadlineSeconds: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      annotations:
+        task.id: "task_id"
+        tls.enabled: "false"
+      labels:
+        druid.k8s.peons: "true"
+    spec:
+      containers:
+        - args:
+            - "trap 'touch /usr/share/pod/done' EXIT; mkdir -p ${TASK_DIR}; echo ${TASK_JSON}\
+          \ | base64 -d | gzip -d > ${TASK_DIR}/task.json; "
+          command:
+            - "sh"
+            - "-c"
+          image: "one"
+          name: "main"
+          ports:
+            - containerPort: 8091
+              name: "druid-tls-port"
+              protocol: "TCP"
+            - containerPort: 8100
+              name: "druid-port"
+              protocol: "TCP"
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "1000000000"
+            requests:
+              cpu: "1000m"
+              memory: "1000000000"
+          volumeMounts:
+            - mountPath: "/usr/share/pod"
+              name: "peon-share"
+        - command:
+            - "tail -f /dev/null"
+          image: "two"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "while ! test -f /usr/share/pod/done; do echo 'Waiting for the main\
+                \ pod to finish...'; sleep 5; done; echo 'Agent pod finished, exiting';\
+                \ exit 0"
+          name: "sidecar"
+          volumeMounts:
+            - mountPath: "/usr/share/pod"
+              name: "peon-share"
+              readOnly: true
+      restartPolicy: "Never"
+      volumes:
+        - emptyDir: {}
+          name: "peon-share"
+  ttlSecondsAfterFinished: 7200

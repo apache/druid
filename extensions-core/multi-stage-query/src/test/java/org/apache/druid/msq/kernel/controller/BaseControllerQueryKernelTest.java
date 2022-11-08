@@ -80,7 +80,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public ControllerQueryKernelTester queryDefinition(QueryDefinition queryDefinition)
     {
       this.queryDefinition = Preconditions.checkNotNull(queryDefinition);
-      this.controllerQueryKernel = new ControllerQueryKernel(queryDefinition);
+      this.controllerQueryKernel = new ControllerQueryKernel(queryDefinition, 10_000_000);
       return this;
     }
 
@@ -220,12 +220,6 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       return controllerQueryKernel.isSuccess();
     }
 
-    public ControllerStagePhase getStagePhase(int stageNumber)
-    {
-      Preconditions.checkArgument(initialized);
-      return controllerQueryKernel.getStagePhase(new StageId(queryDefinition.getQueryId(), stageNumber));
-    }
-
     public void startStage(int stageNumber)
     {
       Preconditions.checkArgument(initialized);
@@ -250,7 +244,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 
       // Simulate 1000 keys being encountered in the data, so the kernel can generate some partitions.
       final ClusterByStatisticsCollector keyStatsCollector =
-          queryDefinition.getStageDefinition(stageNumber).createResultKeyStatisticsCollector();
+          queryDefinition.getStageDefinition(stageNumber).createResultKeyStatisticsCollector(10_000_000);
       for (int i = 0; i < 1000; i++) {
         final RowKey key = KeyTestUtils.createKey(
             MockQueryDefinitionBuilder.STAGE_SIGNATURE,

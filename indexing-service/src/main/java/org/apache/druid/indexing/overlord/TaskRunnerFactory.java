@@ -22,4 +22,6 @@ package org.apache.druid.indexing.overlord;
 public interface TaskRunnerFactory<T extends TaskRunner>
 {
   T build();
+
+  T get();
 }

@@ -1950,6 +1950,58 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // make sure the checkpoints are consistent with each other and with the metadata store
 
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+
+    // A pause from the previous Overlord's supervisor, immediately before leader change,
+    // can lead to tasks being in a state where they are active but do not read.
+    resumeAllActivelyReadingTasks();
+  }
+
+  /**
+   * If this is the first run, resume all tasks in the set of activelyReadingTaskGroups
+   * Paused tasks will be resumed
+   * Other tasks in this set are not affected adversely by the resume operation
+   */
+  private void resumeAllActivelyReadingTasks()
+  {
+    if (!getState().isFirstRunOnly()) {
+      return;
+    }
+
+    Map<String, ListenableFuture<Boolean>> tasksToResume = new HashMap<>();
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.tasks.keySet()) {
+        tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+      }
+    }
+
+    for (Map.Entry<String, ListenableFuture<Boolean>> entry : tasksToResume.entrySet()) {
+      String taskId = entry.getKey();
+      ListenableFuture<Boolean> future = entry.getValue();
+      future.addListener(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              try {
+                if (entry.getValue().get()) {
+                  log.info("Resumed task [%s] in first supervisor run.", taskId);
+                } else {
+                  log.warn("Failed to resume task [%s] in first supervisor run.", taskId);
+                  killTask(taskId,
+                           "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
+                }
+              }
+              catch (Exception e) {
+                log.warn(e, "Failed to resume task [%s] in first supervisor run.", taskId);
+                killTask(taskId,
+                         "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
+              }
+            }
+          },
+          workerExec
+      );
+    }
   }
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
@@ -2315,30 +2367,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  protected boolean shouldSkipIgnorablePartitions()
-  {
-    return false;
-  }
-
-  /**
-   * Use this method if skipIgnorablePartitions is true in the spec
-   *
-   * These partitions can be safely ignored for both ingestion task assignment and autoscaler limits
-   *
-   * @return set of ids of ignorable partitions
-   */
-  protected Set<PartitionIdType> computeIgnorablePartitionIds()
-  {
-    return ImmutableSet.of();
-  }
-
   public int getPartitionCount()
   {
-    int partitionCount = recordSupplier.getPartitionIds(ioConfig.getStream()).size();
-    if (shouldSkipIgnorablePartitions()) {
-      partitionCount -= computeIgnorablePartitionIds().size();
-    }
-    return partitionCount;
+    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
   }
 
   private boolean updatePartitionDataFromStream()
@@ -2348,9 +2379,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     recordSupplierLock.lock();
     try {
       partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
-      if (shouldSkipIgnorablePartitions()) {
-        partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
-      }
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -3036,7 +3064,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               log.info(
-                  "Setting endOffsets for tasks in taskGroup [%d] to %s and resuming",
+                  "Setting endOffsets for tasks in taskGroup [%d] to %s",
                   taskGroup.groupId,
                   endOffsets
               );
@@ -3055,6 +3083,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       taskId
                   );
                   taskGroup.tasks.remove(taskId);
+                } else {
+                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 }
               }
             }

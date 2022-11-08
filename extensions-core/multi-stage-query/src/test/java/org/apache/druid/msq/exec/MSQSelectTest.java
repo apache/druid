@@ -31,6 +31,7 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -62,6 +63,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -1202,6 +1205,54 @@ public class MSQSelectTest extends MSQTestBase
         )
         .verifyResults();
   }
+
+  @Test
+  public void testGroupByOnFooWithDurableStoragePathAssertions() throws IOException
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+    testSelectQuery()
+        .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration
+                                                                                        .eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(dimensions(
+                                                          new DefaultDimensionSpec(
+                                                              "cnt",
+                                                              "d0",
+                                                              ColumnType.LONG
+                                                          )
+                                                      ))
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
+                                                          "a0")))
+                                                      .setContext(DEFAULT_MSQ_CONTEXT)
+                                                      .build())
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cnt"),
+                                           new ColumnMapping("a0", "cnt1")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .verifyResults();
+    File successFile = new File(
+        localFileStorageDir,
+        DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
+    );
+
+    Mockito.verify(localFileStorageConnector, Mockito.times(2))
+               .write(ArgumentMatchers.endsWith("__success"));
+  }
+
 
   @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()
