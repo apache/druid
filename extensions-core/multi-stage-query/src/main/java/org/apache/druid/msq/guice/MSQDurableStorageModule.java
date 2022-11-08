@@ -51,6 +51,11 @@ public class MSQDurableStorageModule implements DruidModule
   @Inject
   private Properties properties;
 
+  // Dummy constructor so that it can get injected dynamically at runtime
+  public MSQDurableStorageModule()
+  {
+  }
+
   public MSQDurableStorageModule(Properties properties)
   {
     this.properties = properties;
