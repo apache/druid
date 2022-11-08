@@ -64,8 +64,8 @@ public class JwtAuthFilter implements Filter
   }
 
   @Override
-  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
-  ) throws IOException, ServletException
+  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+      throws IOException, ServletException
   {
     // Skip this filter if the request has already been authenticated
     if (servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
@@ -80,20 +80,22 @@ public class JwtAuthFilter implements Filter
       try {
         // Parses the JWT and performs the ID Token validation specified in the OpenID spec: https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation
         IDTokenClaimsSet claims = tokenValidator.validate(JWTParser.parse(idToken.get()), null);
-        Optional<String> claim = Optional.of(claims.getStringClaim(oidcConfig.getOidcClaim()));
+        if (claims != null) {
+          Optional<String> claim = Optional.of(claims.getStringClaim(oidcConfig.getOidcClaim()));
 
-        if (claim.isPresent()) {
-          LOG.debug("Authentication successful for " + oidcConfig.getClientID());
-          AuthenticationResult authenticationResult = new AuthenticationResult(
-              claim.get(),
-              authorizerName,
-              name,
-              null
-          );
-          servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-        } else {
-          LOG.error(
-              "Authentication failed! Please ensure the validity of the ID token and contains the configured claim.");
+          if (claim.isPresent()) {
+            LOG.debug("Authentication successful for " + oidcConfig.getClientID());
+            AuthenticationResult authenticationResult = new AuthenticationResult(
+                claim.get(),
+                authorizerName,
+                name,
+                null
+            );
+            servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+          } else {
+            LOG.error(
+                "Authentication failed! Please ensure the validity of the ID token and contains the configured claim.");
+          }
         }
       }
       catch (BadJOSEException | JOSEException | ParseException e) {

@@ -21,6 +21,7 @@ package org.apache.druid.security.pac4j;
 
 import org.apache.druid.server.security.AuthConfig;
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Test;
 import org.pac4j.oidc.profile.creator.TokenValidator;
 
@@ -53,9 +54,11 @@ public class JwtAuthenticatorTest
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(filterChain);
 
+    JwtAuthenticator jwtAuthenticator = new JwtAuthenticator("jwt", "allowAll", configuration);
     JwtAuthFilter authFilter = new JwtAuthFilter("allowAll", "jwt", configuration, tokenValidator);
     authFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
+    Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
   }
 }
