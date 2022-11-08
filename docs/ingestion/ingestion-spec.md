@@ -483,29 +483,28 @@ The `indexSpec` object can include the following properties:
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
 
-#### String Dictionary Encoding
+#### String dictionary encoding
 
-##### UTF8
-By default, `STRING` typed column store the values as uncompressed UTF8 encoded bytes.
-
-|Field|Description|Default|
-|-----|-----------|-------|
-|type|Must be `"utf8"` .|n/a|
-
-##### Front Coding
-`STRING` columns can be stored using an incremental encoding strategy called front coding.
-In the Druid implementation of front coding, the column values are first divided into buckets,
-and the first value in each bucket is stored as is. The remaining values in the bucket are stored
-using a number representing a prefix length and the remaining suffix bytes.
-This technique allows the prefix portion of the values in each bucket from being duplicated.
-The values are still UTF-8 encoded, but front coding can often result in much smaller segments at very little
-performance cost. Segments created with this encoding are not compatible with Druid versions older than 25.0.0.
+By default, Druid stores values in STRING-typed columns as uncompressed UTF-8 encoded bytes.
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|type|Must be `"frontCoded"` .|n/a|
-|bucketSize|The number of values to place in a bucket to perform delta encoding, must be a power of 2, maximum is 128. Larger buckets allow columns with a high degree of overlap to produce smaller segments at a slight cost to read and search performance which scales with bucket size.|4|
+|type|Must be `"utf8"`.|N/A|
 
+##### Front coding
+
+Starting in version 25.0, Druid can store STRING columns using an incremental encoding strategy called front coding. This allows Druid to create smaller UTF-8 encoded segments with very little performance cost.
+
+If you enable front coding, Druid divides the column values into buckets, storing the first value in each bucket as it is. Druid stores the remaining values using a number representing a prefix length and the remaining suffix bytes. 
+
+This technique prevents the prefix portion of the values in each bucket from being duplicated.
+
+> Segments created with front encoding enabled are not compatible with Druid versions older than 25.0.
+
+|Field|Description|Default|
+|-----|-----------|-------|
+|type|Must be `"frontCoded"`. |N/A|
+|bucketSize|The number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128. Larger buckets allow columns with a high degree of overlap to produce smaller segments at a slight cost to read and search performance which scales with bucket size.|4|
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.
