@@ -56,6 +56,7 @@ public class QueryContext
 
   private final Map<String, Object> context;
 
+
   public QueryContext(Map<String, Object> context)
   {
     // There is no semantic difference between an empty and a null context.
