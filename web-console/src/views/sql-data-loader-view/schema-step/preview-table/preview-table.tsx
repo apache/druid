@@ -76,8 +76,8 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
 
     return (
-      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
-      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
+      parsedQuery.getEffectiveWhereExpression().containsColumnName(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumnName(header)
     );
   }
 

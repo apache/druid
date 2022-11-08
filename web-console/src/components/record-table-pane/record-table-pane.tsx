@@ -66,8 +66,8 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
 
     return (
-      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
-      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
+      parsedQuery.getEffectiveWhereExpression().containsColumnName(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumnName(header)
     );
   }
 

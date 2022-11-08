@@ -17,12 +17,14 @@
  */
 
 import {
+  C,
+  F,
   filterMap,
+  L,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
   SqlQuery,
-  SqlRef,
   SqlStar,
 } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
@@ -120,9 +122,9 @@ export function summarizeExternalConfig(externalConfig: ExternalConfig): string 
 export function externalConfigToTableExpression(config: ExternalConfig): SqlExpression {
   return SqlExpression.parse(`TABLE(
   EXTERN(
-    ${SqlLiteral.create(JSONBig.stringify(config.inputSource))},
-    ${SqlLiteral.create(JSONBig.stringify(config.inputFormat))},
-    ${SqlLiteral.create(JSONBig.stringify(config.signature))}
+    ${L(JSONBig.stringify(config.inputSource))},
+    ${L(JSONBig.stringify(config.inputFormat))},
+    ${L(JSONBig.stringify(config.signature))}
   )
 )`);
 }
@@ -135,11 +137,8 @@ export function externalConfigToInitDimensions(
   return (timeExpression ? [timeExpression.as('__time')] : [])
     .concat(
       filterMap(config.signature, ({ name }, i) => {
-        if (timeExpression && timeExpression.containsColumn(name)) return;
-        return SqlRef.column(name).applyIf(
-          isArrays[i],
-          ex => SqlFunction.simple('MV_TO_ARRAY', [ex]).as(name) as any,
-        );
+        if (timeExpression && timeExpression.containsColumnName(name)) return;
+        return C(name).applyIf(isArrays[i], ex => F('MV_TO_ARRAY', ex).as(name) as any);
       }),
     )
     .slice(0, MULTI_STAGE_QUERY_MAX_COLUMNS);
