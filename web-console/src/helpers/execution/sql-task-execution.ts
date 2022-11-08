@@ -17,7 +17,7 @@
  */
 
 import { AxiosResponse, CancelToken } from 'axios';
-import { SqlLiteral } from 'druid-query-toolkit';
+import { L } from 'druid-query-toolkit';
 
 import { Execution, QueryContext } from '../../druid-models';
 import { Api } from '../../singletons';
@@ -227,7 +227,7 @@ export async function updateExecutionWithDatasourceExistsIfNeeded(
   COUNT(*) AS num_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0) AS loading_segments
 FROM sys.segments
-WHERE datasource = ${SqlLiteral.create(execution.destination.dataSource)} AND is_overshadowed = 0`,
+WHERE datasource = ${L(execution.destination.dataSource)} AND is_overshadowed = 0`,
   });
 
   const numSegments: number = deepGet(segmentCheck, '0.num_segments') || 0;

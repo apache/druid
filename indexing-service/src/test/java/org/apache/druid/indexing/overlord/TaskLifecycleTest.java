@@ -1160,9 +1160,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     publishCountDown = new CountDownLatch(1);
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
@@ -1240,9 +1240,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
 
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();

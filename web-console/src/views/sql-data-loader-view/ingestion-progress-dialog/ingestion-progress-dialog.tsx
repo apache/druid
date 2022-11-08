@@ -19,7 +19,7 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { Execution, QueryWithContext } from '../../../druid-models';
@@ -117,7 +117,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
                 onClick={() => {
                   if (!insertResultState.data) return;
                   goToQuery({
-                    queryString: `SELECT * FROM ${SqlTableRef.create(
+                    queryString: `SELECT * FROM ${T(
                       insertResultState.data.getIngestDatasource()!,
                     )}`,
                   });
