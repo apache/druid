@@ -72,6 +72,31 @@ import java.util.List;
 import static org.apache.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
 import static org.apache.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
 
+/**
+ * test data row:
+ * {
+ *  "timestamp": 1445801400000,
+ *  "eventType": "type-a",
+ *  "id": 1976491,
+ *  "someOtherId": 6568719896,
+ *  "isValid": true,
+ *  "someIntArray": [1, 2, 4, 8],
+ *  "someStringArray": ["8", "4", "2", "1"],
+ *  "someIntValueMap": {"8": 8, "1": 1, "2": 2, "4": 4},
+ *  "someStringValueMap": {"8": "8", "1": "1", "2": "2", "4": "4"},
+ *  "someUnion": "string as union",
+ *  "someMultiMemberUnion": 1,
+ *  "someNull": null,
+ *  "someFixed": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+ *  "someBytes": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+ *  "someEnum": "ENUM1",
+ *  "someRecord": {"subInt": 4892, "subLong": 1543698},
+ *  "someLong": 679865987569912369,
+ *  "someInt": 1,
+ *  "someFloat": 0.23555,
+ *  "someRecordArray": [{"nestedString": "string in record"}]
+ *  }
+ */
 public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 {
   private static final String EVENT_TYPE = "eventType";
@@ -220,7 +245,7 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testParseTransform() throws SchemaValidationException, IOException
+  public void testParseTransformNested() throws SchemaValidationException, IOException
   {
     Repository repository = new InMemoryRepository(null);
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
@@ -258,50 +283,36 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 
     final ByteEntity entity = new ByteEntity(ByteBuffer.wrap(out.toByteArray()));
 
-    /**
-     * {
-     *  "timestamp": 1445801400000,
-     *  "eventType": "type-a",
-     *  "id": 1976491,
-     *  "someOtherId": 6568719896,
-     *  "isValid": true,
-     *  "someIntArray": [1, 2, 4, 8],
-     *  "someStringArray": ["8", "4", "2", "1"],
-     *  "someIntValueMap": {"8": 8, "1": 1, "2": 2, "4": 4},
-     *  "someStringValueMap": {"8": "8", "1": "1", "2": "2", "4": "4"},
-     *  "someUnion": "string as union",
-     *  "someMultiMemberUnion": 1,
-     *  "someNull": null,
-     *  "someFixed": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     *  "someBytes": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
-     *  "someEnum": "ENUM1",
-     *  "someRecord": {"subInt": 4892, "subLong": 1543698},
-     *  "someLong": 679865987569912369,
-     *  "someInt": 1,
-     *  "someFloat": 0.23555,
-     *  "someRecordArray": [{"nestedString": "string in record"}]
-     *  }
-     */
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
-      ImmutableList.of(
-          new NestedDataDimensionSchema("someIntValueMap"),
-          new NestedDataDimensionSchema("someStringValueMap"),
-          new NestedDataDimensionSchema("someRecord"),
-          new NestedDataDimensionSchema("someRecordArray"),
-          new LongDimensionSchema("tSomeIntValueMap8"),
-          new StringDimensionSchema("tSomeStringValueMap8"),
-          new LongDimensionSchema("tSomeRecordSubLong"),
-          new NestedDataDimensionSchema("tSomeRecordArray0"),
-          new StringDimensionSchema("tSomeRecordArray0nestedString")
-      )
+        ImmutableList.of(
+            new NestedDataDimensionSchema("someIntValueMap"),
+            new NestedDataDimensionSchema("someStringValueMap"),
+            new NestedDataDimensionSchema("someRecord"),
+            new NestedDataDimensionSchema("someRecordArray"),
+            new LongDimensionSchema("tSomeIntValueMap8"),
+            new LongDimensionSchema("tSomeIntValueMap8_2"),
+            new StringDimensionSchema("tSomeStringValueMap8"),
+            new LongDimensionSchema("tSomeRecordSubLong"),
+            new NestedDataDimensionSchema("tSomeRecordArray0"),
+            new StringDimensionSchema("tSomeRecordArray0nestedString")
+        )
     );
-    InputEntityReader reader = inputFormat2.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null);
+    InputEntityReader reader = inputFormat2.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    );
     TransformSpec transformSpec = new TransformSpec(
         null,
         ImmutableList.of(
             new ExpressionTransform(
                 "tSomeIntValueMap8",
                 "json_value(someIntValueMap, '$.8')",
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionTransform(
+                "tSomeIntValueMap8_2",
+                "json_value(json_query(someIntValueMap, '$'), '$.8')",
                 TestExprMacroTable.INSTANCE
             ),
             new ExpressionTransform(
@@ -351,6 +362,7 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(8L, inputRow.getRaw("tSomeIntValueMap8"));
+    Assert.assertEquals(8L, inputRow.getRaw("tSomeIntValueMap8_2"));
     Assert.assertEquals("8", inputRow.getRaw("tSomeStringValueMap8"));
     Assert.assertEquals(1543698L, inputRow.getRaw("tSomeRecordSubLong"));
     Assert.assertEquals(
