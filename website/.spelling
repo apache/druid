@@ -32,6 +32,7 @@ AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
 Actian
 Authorizer
+autokill
 Avatica
 Avro
 Azul
@@ -80,6 +81,7 @@ EMRFS
 ETL
 Elasticsearch
 Enums
+finetune
 FirehoseFactory
 FlattenSpec
 Float.NEGATIVE_INFINITY
