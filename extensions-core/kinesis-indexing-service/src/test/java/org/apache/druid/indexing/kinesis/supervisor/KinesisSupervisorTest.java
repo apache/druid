@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
-import com.amazonaws.services.kinesis.model.SequenceNumberRange;
-import com.amazonaws.services.kinesis.model.Shard;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -103,12 +101,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -174,6 +170,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskRunner = createMock(TaskRunner.class);
     indexerMetadataStorageCoordinator = createMock(IndexerMetadataStorageCoordinator.class);
     taskClient = createMock(KinesisIndexTaskClient.class);
+    EasyMock.expect(taskClient.resumeAsync(EasyMock.anyString())).andReturn(Futures.immediateFuture(true)).anyTimes();
     taskQueue = createMock(TaskQueue.class);
     supervisorRecordSupplier = createMock(KinesisRecordSupplier.class);
 
@@ -185,7 +182,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -199,7 +195,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
-        null,
         null,
         null,
         null,
@@ -3948,7 +3943,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3970,7 +3964,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         42, // This property is different from tuningConfig
-        null,
         null,
         null,
         null,
@@ -4927,55 +4920,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
   }
 
-  @Test
-  public void testGetIgnorablePartitionIds()
-  {
-    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
-    supervisor.setupRecordSupplier();
-    supervisor.tryInit();
-    String stream = supervisor.getKinesisSupervisorSpec().getSource();
-    SequenceNumberRange openShardRange = new SequenceNumberRange().withEndingSequenceNumber(null);
-    SequenceNumberRange closedShardRange = new SequenceNumberRange().withEndingSequenceNumber("non-null");
-
-    Shard openShard = new Shard().withShardId("openShard")
-                                 .withSequenceNumberRange(openShardRange);
-    Shard emptyClosedShard = new Shard().withShardId("emptyClosedShard")
-                                        .withSequenceNumberRange(closedShardRange);
-    Shard nonEmptyClosedShard = new Shard().withShardId("nonEmptyClosedShard")
-                                           .withSequenceNumberRange(closedShardRange);
-
-    EasyMock.expect(supervisorRecordSupplier.getShards(stream))
-            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once()
-            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once()
-            .andReturn(ImmutableSet.of(openShard, emptyClosedShard)).once()
-            .andReturn(ImmutableSet.of(openShard)).once()
-            .andReturn(ImmutableSet.of(openShard, nonEmptyClosedShard, emptyClosedShard)).once();
-
-    // The following calls happen twice, once during the first call since there was no cache,
-    // and once during the last since the cache was cleared prior to it
-    EasyMock.expect(supervisorRecordSupplier.isClosedShardEmpty(stream, emptyClosedShard.getShardId()))
-            .andReturn(true).times(2);
-    EasyMock.expect(supervisorRecordSupplier.isClosedShardEmpty(stream, nonEmptyClosedShard.getShardId()))
-            .andReturn(false).times(2);
-
-    EasyMock.replay(supervisorRecordSupplier);
-
-    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
-    // {empty-closed, nonEmpty-closed} added to cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
-    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
-    // ActiveShards = {open, empty-closed}, IgnorableShards = {empty-closed}
-    // {nonEmpty-closed} removed from cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
-    // ActiveShards = {open}, IgnorableShards = {}
-    // {empty-closed} removed from cache
-    Assert.assertEquals(new HashSet<>(), supervisor.computeIgnorablePartitionIds());
-    // ActiveShards = {open, empty-closed, nonEmpty-closed}, IgnorableShards = {empty-closed}
-    // {empty-closed, nonEmpty-closed} re-added to cache
-    Assert.assertEquals(Collections.singleton(emptyClosedShard.getShardId()), supervisor.computeIgnorablePartitionIds());
-  }
-
   private TestableKinesisSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
@@ -5061,7 +5005,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -5075,7 +5018,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
-        null,
         null,
         null,
         null,

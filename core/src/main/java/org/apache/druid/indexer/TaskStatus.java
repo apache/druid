@@ -66,6 +66,11 @@ public class TaskStatus
     return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, null);
   }
 
+  public static TaskStatus success(String taskId, TaskLocation location)
+  {
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, location);
+  }
+
   /**
    * This method is deprecated for production because it does not handle the error message of failed task status properly.
    * Use {@link #success(String)} or {@link #failure(String, String)} instead.

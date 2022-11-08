@@ -235,7 +235,7 @@ public class ClockDriftSafeMonitorSchedulerTest
         ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(), ArgumentMatchers.any(CronTask.class));
     Mockito.verify(executor, Mockito.times(1)).submit(ArgumentMatchers.any(Callable.class));
-    Mockito.verify(monitor, Mockito.times(1)).monitor(ArgumentMatchers.any());
+    Mockito.verify(monitor, Mockito.times(2)).monitor(ArgumentMatchers.any());
     Mockito.verify(monitor, Mockito.times(1)).stop();
     scheduler.stop();
   }

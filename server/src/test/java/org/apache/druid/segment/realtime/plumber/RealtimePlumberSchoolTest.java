@@ -68,7 +68,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -118,6 +120,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
   private DataSchema schema2;
   private FireDepartmentMetrics metrics;
   private File tmpDir;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public RealtimePlumberSchoolTest(
       RejectionPolicyFactory rejectionPolicy,
@@ -207,7 +212,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
+        temporaryFolder.newFolder(),
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,

@@ -24,12 +24,12 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 public class CacheUtil
@@ -108,9 +108,9 @@ public class CacheUtil
       ServerType serverType
   )
   {
-    return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
-           && QueryContexts.isUseCache(query)
-           && cacheConfig.isUseCache();
+    return cacheConfig.isUseCache()
+           && query.context().isUseCache()
+           && isQueryCacheable(query, cacheStrategy, cacheConfig, serverType);
   }
 
   /**
@@ -129,7 +129,7 @@ public class CacheUtil
   )
   {
     return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
-           && QueryContexts.isPopulateCache(query)
+           && query.context().isPopulateCache()
            && cacheConfig.isPopulateCache();
   }
 
@@ -149,7 +149,7 @@ public class CacheUtil
   )
   {
     return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
-           && QueryContexts.isUseResultLevelCache(query)
+           && query.context().isUseResultLevelCache()
            && cacheConfig.isUseResultLevelCache();
   }
 
@@ -169,7 +169,7 @@ public class CacheUtil
   )
   {
     return isQueryCacheable(query, cacheStrategy, cacheConfig, serverType)
-           && QueryContexts.isPopulateResultLevelCache(query)
+           && query.context().isPopulateResultLevelCache()
            && cacheConfig.isPopulateResultLevelCache();
   }
 

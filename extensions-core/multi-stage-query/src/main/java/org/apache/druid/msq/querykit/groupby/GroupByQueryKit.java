@@ -37,7 +37,6 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -205,7 +204,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   static boolean isFinalize(final GroupByQuery query)
   {
-    return QueryContexts.isFinalize(query, true);
+    return query.context().isFinalize(true);
   }
 
   /**

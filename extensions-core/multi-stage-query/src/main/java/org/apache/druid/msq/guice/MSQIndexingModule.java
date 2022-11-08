@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.LazySingleton;
@@ -81,6 +84,8 @@ import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFact
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.DruidProcessingConfig;
+
+import javax.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -188,14 +193,33 @@ public class MSQIndexingModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self final Set<NodeRole> nodeRoles)
+  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, Injector injector)
   {
-    if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
+    Set<NodeRole> nodeRoles = getNodeRoles(injector);
+    if (null == nodeRoles || (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER))) {
       // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected
       // resource usage pattern for CliPeon-based tasks (one task / one working thread per JVM).
       return new Bouncer(1);
     } else {
       return new Bouncer(processingConfig.getNumThreads());
+    }
+  }
+
+  @Nullable
+  private static Set<NodeRole> getNodeRoles(Injector injector)
+  {
+    try {
+      return injector.getInstance(
+          Key.get(
+              new TypeLiteral<Set<NodeRole>>()
+              {
+              },
+              Self.class
+          )
+      );
+    }
+    catch (Exception e) {
+      return null;
     }
   }
 }
