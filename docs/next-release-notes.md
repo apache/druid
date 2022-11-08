@@ -75,18 +75,6 @@ When data requires "flattening" during processing, the operator now takes in an 
 
 https://github.com/apache/druid/pull/13085
 
-### Fix JSON_VALUE bug
-
-Fixed JSON_VALUE SQL planning with decimal type, and fixed vectorized expression math null value handling in default mode.
-
-https://github.com/apache/druid/pull/13214
-
-### Fix issue with nested columns NULL value index
-
-Fixed queries using IS NULL or IS NOT NULL filters on nested columns that do not contain a null value in every segment, which presented as having a single value per segment matched and returned in the results.
-
-https://github.com/apache/druid/pull/13211
-
 
 ## Ingestion
 
@@ -254,7 +242,7 @@ The web console now allows you to add to existing filters for a selected column.
 
 https://github.com/apache/druid/pull/13169
 
-### Add issue comments
+### Ability to add issue comments
 
 You can now add an issue comment in SQL, for example `--:ISSUE: this is an issue` that is rendered in red and prevents the SQL from running.  The comments are used by the spec-to-SQL converter to indicate that something could not be converted.
 
