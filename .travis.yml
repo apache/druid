@@ -130,8 +130,7 @@ jobs:
     - &analyze_dependencies
       name: "analyze dependencies"
       script: |-
-        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true
-        -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} || { echo "
+        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${HADOOP_PROFILE} || { echo "
 
         The dependency analysis has found a dependency that is either:
 
