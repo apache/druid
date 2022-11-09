@@ -20,7 +20,6 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -30,10 +29,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
@@ -43,6 +40,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -103,6 +101,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -113,11 +112,11 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -143,7 +142,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -162,7 +161,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -222,6 +220,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
+  protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
   private ObjectMapper objectMapper;
   private MSQTestOverlordServiceClient indexingServiceClient;
@@ -234,12 +233,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private TestGroupByBuffers groupByBuffers;
-  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(WorkerMemoryParameters.compute(
-      WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-      2,
-      10,
-      2
-  ));
+  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
+      WorkerMemoryParameters.createInstance(
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          2,
+          10,
+          2
+      )
+  );
 
   @After
   public void tearDown2()
@@ -253,8 +255,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
     groupByBuffers = TestGroupByBuffers.createDefault();
 
     SqlTestFramework qf = queryFramework();
-    Injector secondInjector = GuiceInjectors.makeStartupInjector();
-
+    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> {
+              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+            }
+        )
+    );
 
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
     indexIO = new IndexIO(secondMapper, () -> 0);
@@ -271,70 +279,81 @@ public class MSQTestBase extends BaseCalciteQueryTest
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
 
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
+        binder -> {
+          DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
-            DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
+            @Override
+            public String getFormatString()
             {
-              @Override
-              public String getFormatString()
-              {
-                return "test";
-              }
-            };
-
-            GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-
-            binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-            binder.bind(new TypeLiteral<Set<NodeRole>>()
-            {
-            }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-            binder.bind(QueryProcessingPool.class)
-                  .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
-            binder.bind(DataSegmentProvider.class)
-                  .toInstance((dataSegment, channelCounters) ->
-                                  new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-            binder.bind(IndexIO.class).toInstance(indexIO);
-            binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
-
-            binder.bind(GroupByStrategySelector.class)
-                  .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                                    .getStrategySelector());
-
-            LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-            try {
-              config.storageDirectory = tmpFolder.newFolder("localsegments");
+              return "test";
             }
-            catch (IOException e) {
-              throw new ISE(e, "Unable to create folder");
-            }
-            binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-                new LocalDataSegmentPusher(config),
-                segmentManager
-            ));
-            binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-            binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
-            // Client is not used in tests
-            binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
-                  .toProvider(Providers.of(null));
-            // fault tolerance module
-            try {
-              JsonConfigProvider.bind(
-                  binder,
-                  MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
-                  StorageConnectorProvider.class,
-                  MultiStageQuery.class
-              );
-              localFileStorageDir = tmpFolder.newFolder("fault");
-              binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-                    .toProvider(new LocalFileStorageConnectorProvider(localFileStorageDir));
-            }
-            catch (IOException e) {
-              throw new ISE(e, "Unable to create setup storage connector");
-            }
+          };
+
+          GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+
+
+          binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
+          binder.bind(new TypeLiteral<Set<NodeRole>>()
+          {
+          }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
+          binder.bind(QueryProcessingPool.class)
+                .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
+          binder.bind(DataSegmentProvider.class)
+                .toInstance((dataSegment, channelCounters) ->
+                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
+          binder.bind(IndexIO.class).toInstance(indexIO);
+          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
+
+          binder.bind(GroupByStrategySelector.class)
+                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
+                                                  .getStrategySelector());
+
+          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+          try {
+            config.storageDirectory = tmpFolder.newFolder("localsegments");
           }
+          catch (IOException e) {
+            throw new ISE(e, "Unable to create folder");
+          }
+          binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
+              new LocalDataSegmentPusher(config),
+              segmentManager
+          ));
+          binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
+          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
+          // Client is not used in tests
+          binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
+                .toProvider(Providers.of(null));
+          // fault tolerance module
+          try {
+            JsonConfigProvider.bind(
+                binder,
+                MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
+                StorageConnectorProvider.class,
+                MultiStageQuery.class
+            );
+            localFileStorageDir = tmpFolder.newFolder("fault");
+            localFileStorageConnector = Mockito.spy(
+                new LocalFileStorageConnector(localFileStorageDir)
+            );
+            binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
+                  .toProvider(() -> localFileStorageConnector);
+          }
+          catch (IOException e) {
+            throw new ISE(e, "Unable to create setup storage connector");
+          }
+
+          binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+          binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+        },
+        binder -> {
+          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
+          final LookupReferencesManager lookupReferencesManager =
+              EasyMock.createStrictMock(LookupReferencesManager.class);
+          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
+          EasyMock.replay(lookupReferencesManager);
+          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
+          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
         },
         binder -> {
           // Requirements of JoinableFactoryModule
@@ -393,7 +412,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
@@ -408,7 +428,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     try {
       return ImmutableMap.<String, Object>builder()
                          .putAll(DEFAULT_MSQ_CONTEXT)
-                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryFramework().queryJsonMapper().writeValueAsString(signature))
+                         .put(
+                             DruidQuery.CTX_SCAN_SIGNATURE,
+                             queryFramework().queryJsonMapper().writeValueAsString(signature)
+                         )
                          .build();
     }
     catch (JsonProcessingException e) {
@@ -568,14 +591,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                "compaction"
                                                            )
                                                        ).registerSubtypes(ExternalDataSource.class));
-    mapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ObjectMapper.class, mapper)
-            .addValue(Injector.class, injector)
-            .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
-            .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
-            .addValue(ExprMacroTable.class, CalciteTests.createExprMacroTable())
-    );
+    DruidSecondaryModule.setupJackson(injector, mapper);
 
     mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
 

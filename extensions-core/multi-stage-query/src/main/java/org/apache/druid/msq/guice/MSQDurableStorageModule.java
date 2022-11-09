@@ -24,9 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.msq.indexing.DurableStorageCleaner;
+import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
@@ -44,17 +48,7 @@ public class MSQDurableStorageModule implements DruidModule
   public static final String MSQ_INTERMEDIATE_STORAGE_ENABLED =
       String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "enable");
 
-  @Inject
   private Properties properties;
-
-  public MSQDurableStorageModule()
-  {
-  }
-
-  public MSQDurableStorageModule(Properties properties)
-  {
-    this.properties = properties;
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -76,7 +70,23 @@ public class MSQDurableStorageModule implements DruidModule
       binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
             .toProvider(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
             .in(LazySingleton.class);
+
+      Multibinder.newSetBinder(binder, OverlordHelper.class)
+                 .addBinding()
+                 .to(DurableStorageCleaner.class);
+
+      JsonConfigProvider.bind(
+          binder,
+          String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "cleaner"),
+          DurableStorageCleanerConfig.class
+      );
     }
+  }
+
+  @Inject
+  public void setProperties(Properties properties)
+  {
+    this.properties = properties;
   }
 
   private boolean isDurableShuffleStorageEnabled()

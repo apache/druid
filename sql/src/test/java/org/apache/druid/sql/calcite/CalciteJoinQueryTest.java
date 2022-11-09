@@ -142,7 +142,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         "(\"_d0\" == \"j0.d0\")",
                         JoinType.INNER,
                         null,
-                        ExprMacroTable.nil()
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
                     )
                 )
                 .columns("_d0")
@@ -199,7 +200,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         "(\"dim4\" == \"j0._d0\")",
                         JoinType.INNER,
                         null,
-                        ExprMacroTable.nil()
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
                     )
                 )
                 .context(context)
@@ -590,7 +592,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothig(Map<String, Object> queryContext)
+  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothing(Map<String, Object> queryContext)
 
   {
     // Cannot vectorize JOIN operator.
@@ -3248,7 +3250,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         "(\"dim2\" == \"j0.dim2\")",
                         JoinType.LEFT,
                         null,
-                        ExprMacroTable.nil()
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper()
                     )
                 )
                 .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -5088,7 +5091,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           "(\"l1\" == \"j0.ROW_VALUE\")",
                           JoinType.INNER,
                           null,
-                          ExprMacroTable.nil()
+                          ExprMacroTable.nil(),
+                          CalciteTests.createJoinableFactoryWrapper()
                       )
                   )
                   .columns("l1")

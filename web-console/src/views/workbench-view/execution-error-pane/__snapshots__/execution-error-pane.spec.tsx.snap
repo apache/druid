@@ -19,7 +19,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   <div>
     Failed task ID: 
     <Memo(ClickToCopy)
-      text="query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb"
+      text="query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a"
     />
      (on host: 
     <Memo(ClickToCopy)

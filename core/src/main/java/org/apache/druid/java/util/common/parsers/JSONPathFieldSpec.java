@@ -22,7 +22,9 @@ package org.apache.druid.java.util.common.parsers;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.utils.CollectionUtils;
 
+import java.util.List;
 import java.util.Objects;
 
 public class JSONPathFieldSpec
@@ -30,23 +32,47 @@ public class JSONPathFieldSpec
   private final JSONPathFieldType type;
   private final String name;
   private final String expr;
+  private final List<String> nodes;
 
   @JsonCreator
   public JSONPathFieldSpec(
       @JsonProperty("type") JSONPathFieldType type,
       @JsonProperty("name") String name,
-      @JsonProperty("expr") String expr
+      @JsonProperty("expr") String expr,
+      @JsonProperty("nodes") List<String> nodes
   )
   {
     this.type = type;
     this.name = Preconditions.checkNotNull(name, "Missing 'name' in field spec");
 
-    // If expr is null and type is root, use the name as the expr too.
-    if (expr == null && type == JSONPathFieldType.ROOT) {
-      this.expr = name;
-    } else {
-      this.expr = Preconditions.checkNotNull(expr, "Missing 'expr' for field[%s]", name);
+    // Validate required fields are present
+    switch (type) {
+      case ROOT:
+        this.expr = (expr == null) ? name : expr;
+        this.nodes = null;
+        break;
+
+      case TREE:
+        this.expr = null;
+        Preconditions.checkArgument(
+                !CollectionUtils.isNullOrEmpty(nodes),
+                "Missing 'nodes' for field[%s], was [%s]", name, nodes);
+        this.nodes = nodes;
+        break;
+
+      default:
+        this.expr = Preconditions.checkNotNull(expr, "Missing 'expr' for field[%s]", name);
+        this.nodes = null;
     }
+  }
+
+  public JSONPathFieldSpec(
+      JSONPathFieldType type,
+      String name,
+      String expr
+  )
+  {
+    this(type, name, expr, null);
   }
 
   @JsonProperty
@@ -65,6 +91,12 @@ public class JSONPathFieldSpec
   public String getExpr()
   {
     return expr;
+  }
+
+  @JsonProperty
+  public List<String> getNodes()
+  {
+    return nodes;
   }
 
   @JsonCreator
@@ -88,6 +120,11 @@ public class JSONPathFieldSpec
     return new JSONPathFieldSpec(JSONPathFieldType.ROOT, name, null);
   }
 
+  public static JSONPathFieldSpec createTreeField(String name, List<String> nodes)
+  {
+    return new JSONPathFieldSpec(JSONPathFieldType.TREE, name, null, nodes);
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -100,13 +137,14 @@ public class JSONPathFieldSpec
     final JSONPathFieldSpec that = (JSONPathFieldSpec) o;
     return type == that.type &&
            Objects.equals(name, that.name) &&
-           Objects.equals(expr, that.expr);
+           Objects.equals(expr, that.expr) &&
+           Objects.equals(nodes, that.nodes);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(type, name, expr);
+    return Objects.hash(type, name, expr, nodes);
   }
 
   @Override
@@ -116,6 +154,7 @@ public class JSONPathFieldSpec
            "type=" + type +
            ", name='" + name + '\'' +
            ", expr='" + expr + '\'' +
+           ", nodes='" + nodes + '\'' +
            '}';
   }
 }

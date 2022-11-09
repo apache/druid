@@ -75,7 +75,7 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerWarning(String workerId, List<MSQErrorReport> MSQErrorReports)
+  public void postWorkerWarning(List<MSQErrorReport> MSQErrorReports)
   {
     controller.workerWarning(MSQErrorReports);
   }

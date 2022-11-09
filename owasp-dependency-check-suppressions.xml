@@ -654,4 +654,16 @@
     <cve>CVE-2022-39135</cve>
   </suppress>
 
+  <suppress>
+    <!-- package-lock.json?d3-color -->
+    <notes><![CDATA[
+   file name: d3-color:2.0.0
+   ]]></notes>
+    <!--
+    Not vulnerable to this as, we use d3-color on the client only.
+    -->
+    <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
+    <vulnerabilityName>1084597</vulnerabilityName>
+  </suppress>
+
 </suppressions>

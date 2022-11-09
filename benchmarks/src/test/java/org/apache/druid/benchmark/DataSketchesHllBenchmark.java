@@ -64,6 +64,7 @@ public class DataSketchesHllBenchmark
       "hll",
       null,
       null,
+      null,
       false
   );
 

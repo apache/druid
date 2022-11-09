@@ -86,6 +86,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -746,6 +747,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
+  private final IdleConfig idleConfig;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -802,6 +804,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       chatThreads = (this.tuningConfig.getChatThreads() != null
               ? this.tuningConfig.getChatThreads()
               : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    }
+
+    IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
+    if (specIdleConfig != null) {
+      if (specIdleConfig.getInactiveAfterMillis() != null) {
+        idleConfig = specIdleConfig;
+      } else {
+        idleConfig = new IdleConfig(
+            specIdleConfig.isEnabled(),
+            spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+        );
+      }
+    } else {
+      idleConfig = new IdleConfig(
+          spec.getSupervisorStateManagerConfig().isIdleConfigEnabled(),
+          spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+      );
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
@@ -1950,6 +1969,58 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // make sure the checkpoints are consistent with each other and with the metadata store
 
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
+
+    // A pause from the previous Overlord's supervisor, immediately before leader change,
+    // can lead to tasks being in a state where they are active but do not read.
+    resumeAllActivelyReadingTasks();
+  }
+
+  /**
+   * If this is the first run, resume all tasks in the set of activelyReadingTaskGroups
+   * Paused tasks will be resumed
+   * Other tasks in this set are not affected adversely by the resume operation
+   */
+  private void resumeAllActivelyReadingTasks()
+  {
+    if (!getState().isFirstRunOnly()) {
+      return;
+    }
+
+    Map<String, ListenableFuture<Boolean>> tasksToResume = new HashMap<>();
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.tasks.keySet()) {
+        tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+      }
+    }
+
+    for (Map.Entry<String, ListenableFuture<Boolean>> entry : tasksToResume.entrySet()) {
+      String taskId = entry.getKey();
+      ListenableFuture<Boolean> future = entry.getValue();
+      future.addListener(
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              try {
+                if (entry.getValue().get()) {
+                  log.info("Resumed task [%s] in first supervisor run.", taskId);
+                } else {
+                  log.warn("Failed to resume task [%s] in first supervisor run.", taskId);
+                  killTask(taskId,
+                           "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
+                }
+              }
+              catch (Exception e) {
+                log.warn(e, "Failed to resume task [%s] in first supervisor run.", taskId);
+                killTask(taskId,
+                         "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.");
+              }
+            }
+          },
+          workerExec
+      );
+    }
   }
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
@@ -2315,30 +2386,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  protected boolean shouldSkipIgnorablePartitions()
-  {
-    return false;
-  }
-
-  /**
-   * Use this method if skipIgnorablePartitions is true in the spec
-   *
-   * These partitions can be safely ignored for both ingestion task assignment and autoscaler limits
-   *
-   * @return set of ids of ignorable partitions
-   */
-  protected Set<PartitionIdType> computeIgnorablePartitionIds()
-  {
-    return ImmutableSet.of();
-  }
-
   public int getPartitionCount()
   {
-    int partitionCount = recordSupplier.getPartitionIds(ioConfig.getStream()).size();
-    if (shouldSkipIgnorablePartitions()) {
-      partitionCount -= computeIgnorablePartitionIds().size();
-    }
-    return partitionCount;
+    return recordSupplier.getPartitionIds(ioConfig.getStream()).size();
   }
 
   private boolean updatePartitionDataFromStream()
@@ -2348,9 +2398,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     recordSupplierLock.lock();
     try {
       partitionIdsFromSupplier = recordSupplier.getPartitionIds(ioConfig.getStream());
-      if (shouldSkipIgnorablePartitions()) {
-        partitionIdsFromSupplier.removeAll(computeIgnorablePartitionIds());
-      }
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -3036,7 +3083,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               log.info(
-                  "Setting endOffsets for tasks in taskGroup [%d] to %s and resuming",
+                  "Setting endOffsets for tasks in taskGroup [%d] to %s",
                   taskGroup.groupId,
                   endOffsets
               );
@@ -3055,6 +3102,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       taskId
                   );
                   taskGroup.tasks.remove(taskId);
+                } else {
+                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 }
               }
             }
@@ -3262,8 +3311,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
-    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
-    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
+    if (!idleConfig.isEnabled() || spec.isSuspended()) {
       return;
     }
 
@@ -4045,9 +4093,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle())) {
-      // don't emit metrics if supervisor is suspended or not in a healthy running state
-      // (lag should still available in status report)
+    SupervisorStateManager.State basicState = stateManager.getSupervisorState().getBasicState();
+    boolean unhealthySupervisorOrTasks = SupervisorStateManager.BasicState.UNHEALTHY_TASKS.equals(basicState)
+                                         || SupervisorStateManager.BasicState.UNHEALTHY_SUPERVISOR.equals(basicState);
+
+    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle() || unhealthySupervisorOrTasks)) {
+      // Don't emit metrics if the supervisor is suspended. Also,
+      // to emit metrics, the state must be in {healthy steady state, idle or UNHEALTHY_TASKS or UNHEALTHY_SUPERVISOR}
+      // (lag should still be available in the status report)
       return;
     }
     try {
@@ -4065,19 +4118,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         LagStats lagStats = computeLags(partitionLags);
+        for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
+          emitter.emit(
+              ServiceMetricEvent.builder()
+                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                .setDimension(DruidMetrics.PARTITION, entry.getKey())
+                                .build(
+                                    StringUtils.format("ingest/%s/partitionLag%s", type, suffix),
+                                    entry.getValue()
+                                )
+          );
+        }
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };

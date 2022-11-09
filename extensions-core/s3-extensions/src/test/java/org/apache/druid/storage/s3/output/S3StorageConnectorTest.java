@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -43,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class S3StorageConnectorTest
@@ -153,4 +155,22 @@ public class S3StorageConnectorTest
     EasyMock.reset(S3_CLIENT, TEST_RESULT);
   }
 
+  @Test
+  public void testListDir()
+  {
+    EasyMock.reset(S3_CLIENT, TEST_RESULT);
+
+    S3ObjectSummary s3ObjectSummary = new S3ObjectSummary();
+    s3ObjectSummary.setBucketName(BUCKET);
+    s3ObjectSummary.setKey(PREFIX + "/test/" + TEST_FILE);
+
+    EasyMock.expect(TEST_RESULT.getObjectSummaries()).andReturn(Collections.singletonList(s3ObjectSummary)).times(2);
+    EasyMock.expect(TEST_RESULT.isTruncated()).andReturn(false);
+    EasyMock.expect(S3_CLIENT.listObjectsV2((ListObjectsV2Request) EasyMock.anyObject()))
+            .andReturn(TEST_RESULT);
+    EasyMock.replay(S3_CLIENT, TEST_RESULT);
+
+    List<String> listDirResult = storageConnector.listDir("/");
+    Assert.assertEquals(ImmutableList.of(TEST_FILE), listDirResult);
+  }
 }
