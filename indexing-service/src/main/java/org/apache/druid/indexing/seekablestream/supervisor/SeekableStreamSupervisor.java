@@ -86,6 +86,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -4095,6 +4096,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         LagStats lagStats = computeLags(partitionLags);
+        for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
+          emitter.emit(
+              ServiceMetricEvent.builder()
+                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                .setDimension(DruidMetrics.PARTITION, entry.getKey())
+                                .build(
+                                    StringUtils.format("ingest/%s/partitionLag%s", type, suffix),
+                                    entry.getValue()
+                                )
+          );
+        }
         emitter.emit(
             ServiceMetricEvent.builder()
                               .setDimension("dataSource", dataSource)
