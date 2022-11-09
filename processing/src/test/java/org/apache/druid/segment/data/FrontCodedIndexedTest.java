@@ -347,7 +347,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 
     Assert.assertThrows(
         IAE.class,
-        () ->  new FrontCodedIndexedWriter(
+        () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
             0
@@ -356,7 +356,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 
     Assert.assertThrows(
         IAE.class,
-        () ->  new FrontCodedIndexedWriter(
+        () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
             15
@@ -365,7 +365,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 
     Assert.assertThrows(
         IAE.class,
-        () ->  new FrontCodedIndexedWriter(
+        () -> new FrontCodedIndexedWriter(
             medium,
             ByteOrder.nativeOrder(),
             256
