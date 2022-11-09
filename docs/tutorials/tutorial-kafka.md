@@ -112,7 +112,7 @@ To use the console data loader:
 
    ![Data loader parse time](../assets/tutorial-kafka-data-loader-04.png "Data loader parse time")
 
-   Druid's architecture requires that you specify a primary timestamp column. Druid stores the timestamp in the `__time`) column in your Druid datasource.
+   Druid's architecture requires that you specify a primary timestamp column. Druid stores the timestamp in the `__time` column in your Druid datasource.
    In a production environment, if you don't have a timestamp in your data, you can select **Parse timestamp from:** `none` to use a placeholder value. 
 
    For the sample data, the data loader selects the `timestamp` column in the raw data as the primary time column.
