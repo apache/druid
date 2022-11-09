@@ -228,4 +228,14 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   {
     return Objects.hash(baseDir, filter, files);
   }
+
+  @Override
+  public String toString()
+  {
+    return "LocalInputSource{" +
+        "baseDir=\"" + baseDir +
+        "\", filter=" + filter +
+        ", files=" + files +
+        "}";
+  }
 }

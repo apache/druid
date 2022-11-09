@@ -19,18 +19,9 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-
 public class CompressedBigDecimalMinSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {
   private static final String FUNCTION_NAME = CompressedBigDecimalMinSqlAggregator.NAME;
-
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalMinSqlAggregator()), ImmutableSet.of());
-  }
 
   @Override
   public void testCompressedBigDecimalAggWithNumberParse()

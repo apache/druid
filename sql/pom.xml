@@ -278,7 +278,7 @@
         <executions>
           <execution>
             <id>unpack-parser-template</id>
-            <phase>initialize</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>unpack</goal>
             </goals>
@@ -299,6 +299,30 @@
         </executions>
       </plugin>
 
+      <!-- Edit the parser. Add an additional clause to the table function
+           rule. This produces a new parser, DruidParser.jj.
+           -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+           <id>edit-parser</id>
+           <phase>generate-sources</phase>
+           <goals>
+             <goal>exec</goal>
+           </goals>
+           <configuration>
+             <executable>python3</executable>
+             <workingDirectory>${project.basedir}</workingDirectory>
+             <arguments>
+               <argument>edit-parser.py</argument>
+             </arguments>
+           </configuration>
+         </execution>
+        </executions>
+      </plugin>
+
       <!-- Copy the templates present in the codegen directory of druid-sql containing custom SQL rules to
         ${project.build.directory}/codegen -->
       <plugin>
@@ -306,7 +330,7 @@
         <executions>
           <execution>
             <id>copy-fmpp-resources</id>
-            <phase>initialize</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>copy-resources</goal>
             </goals>
@@ -337,14 +361,14 @@
             </goals>
             <configuration>
               <cfgFile>${project.build.directory}/codegen/config.fmpp</cfgFile>
-              <outputDirectory>${project.build.directory}/generated-sources/annotations</outputDirectory>
+              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
               <templateDirectory>${project.build.directory}/codegen/templates</templateDirectory>
             </configuration>
           </execution>
         </executions>
       </plugin>
 
-      <!-- Creates a Java class for the custom parser from the Parser.jj -->
+      <!-- Creates a Java class for the custom parser from Parser.jj -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>javacc-maven-plugin</artifactId>
@@ -356,13 +380,13 @@
               <goal>javacc</goal>
             </goals>
             <configuration>
-              <sourceDirectory>${project.build.directory}/generated-sources/annotations</sourceDirectory>
+              <sourceDirectory>${project.build.directory}/generated-sources/javacc</sourceDirectory>
               <includes>
-                <include>**/Parser.jj</include>
+                <include>Parser.jj</include>
               </includes>
               <lookAhead>2</lookAhead>
               <isStatic>false</isStatic>
-              <outputDirectory>${project.build.directory}/generated-sources/annotations</outputDirectory>
+              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -381,7 +405,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>src/generated-sources/annotations</source>
+                <source>src/generated-sources</source>
               </sources>
             </configuration>
           </execution>

@@ -90,6 +90,7 @@ public class QueryTestBuilder
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
+  protected String expectedLogicalPlan;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -212,6 +213,12 @@ public class QueryTestBuilder
   public QueryTestBuilder plannerFixture(PlannerFixture plannerFixture)
   {
     this.plannerFixture = plannerFixture;
+    return this;
+  }
+
+  public QueryTestBuilder expectedLogicalPlan(String expectedLogicalPlan)
+  {
+    this.expectedLogicalPlan = expectedLogicalPlan;
     return this;
   }
 

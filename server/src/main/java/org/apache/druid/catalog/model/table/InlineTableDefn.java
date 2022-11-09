@@ -19,16 +19,20 @@
 
 package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,17 +47,41 @@ public class InlineTableDefn extends FormattedExternalTableDefn
   public static final String TABLE_TYPE = InlineInputSource.TYPE_KEY;
   public static final String DATA_PROPERTY = "data";
 
+  /**
+   * Special handling of the data property which, in SQL, is a null-delimited
+   * list of rows. The user will usually provide a trailing newline which should
+   * not be interpreted as an empty data row.
+   */
+  private static class DataPropertyDefn extends StringListPropertyDefn
+  {
+    public DataPropertyDefn(
+        final Map<String, Object> attribs
+    )
+    {
+      super(DATA_PROPERTY, attribs);
+    }
+
+    @Override
+    public List<String> decodeSqlValue(Object value, ObjectMapper jsonMapper)
+    {
+      if (!(value instanceof String)) {
+        throw new IAE(StringUtils.format("Argument [%s] is not a VARCHAR", value));
+      }
+      String[] values = ((String) value).trim().split("\n");
+      return Arrays.asList(values);
+    }
+  }
+
   public InlineTableDefn()
   {
     super(
         "Inline input table",
         TABLE_TYPE,
         Collections.singletonList(
-            new StringListPropertyDefn(DATA_PROPERTY)
+            new DataPropertyDefn(PropertyAttributes.SQL_FN_PARAM)
         ),
         Collections.singletonList(INPUT_COLUMN_DEFN),
-        InputFormats.ALL_FORMATS,
-        null
+        InputFormats.ALL_FORMATS
     );
   }
 

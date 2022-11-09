@@ -19,6 +19,8 @@
 
 package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ModelProperties.BooleanPropertyDefn;
@@ -26,6 +28,7 @@ import org.apache.druid.catalog.model.ModelProperties.IntPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.SimplePropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringPropertyDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -127,8 +130,8 @@ public class InputFormats
           typeTag,
           CatalogUtils.concatLists(
               Arrays.asList(
-                  new StringPropertyDefn(LIST_DELIMITER_PROPERTY),
-                  new IntPropertyDefn(SKIP_ROWS_PROPERTY)
+                  new StringPropertyDefn(LIST_DELIMITER_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
+                  new IntPropertyDefn(SKIP_ROWS_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM)
               ),
               properties
           )
@@ -200,7 +203,7 @@ public class InputFormats
           "Delimited Text",
           DELIMITED_FORMAT_TYPE,
           Collections.singletonList(
-              new StringPropertyDefn(DELIMITER_PROPERTY)
+              new StringPropertyDefn(DELIMITER_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM)
           )
       );
     }
@@ -236,7 +239,7 @@ public class InputFormats
           "JSON",
           JSON_FORMAT_TYPE,
           Collections.singletonList(
-              new BooleanPropertyDefn(KEEP_NULLS_PROPERTY)
+              new BooleanPropertyDefn(KEEP_NULLS_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM)
           )
       );
     }
@@ -262,13 +265,37 @@ public class InputFormats
     public static final String INPUT_FORMAT_SPEC_PROPERTY = "inputFormatSpec";
     public static final String FORMAT_KEY = "generic";
 
+    private static class FormatPropertyDefn extends SimplePropertyDefn<InputFormat>
+    {
+      public FormatPropertyDefn()
+      {
+        super(
+            INPUT_FORMAT_SPEC_PROPERTY,
+            InputFormat.class,
+            PropertyAttributes.merge(
+                ImmutableMap.of(
+                    PropertyAttributes.SQL_JAVA_TYPE,
+                    String.class
+                ),
+                PropertyAttributes.OPTIONAL_SQL_FN_PARAM
+            )
+        );
+      }
+
+      @Override
+      public InputFormat decodeSqlValue(Object value, ObjectMapper jsonMapper)
+      {
+        return decodeJson(value, jsonMapper);
+      }
+    }
+
     public GenericFormatDefn()
     {
       super(
           "Generic",
           FORMAT_KEY,
           Collections.singletonList(
-              new SimplePropertyDefn<InputFormat>(INPUT_FORMAT_SPEC_PROPERTY, InputFormat.class)
+              new FormatPropertyDefn()
           )
       );
     }

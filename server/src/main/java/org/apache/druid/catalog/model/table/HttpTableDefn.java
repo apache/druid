@@ -25,6 +25,7 @@ import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringPropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.data.input.InputSource;
@@ -52,7 +53,7 @@ import java.util.regex.Pattern;
  * properties as the {@link HttpInputSource}, but as top-level properties
  * that can be mapped to SQL function parameters. Property names are
  * cleaned up for ease-of-use. The HTTP input source has multiple quirks,
- * the conversion method smooths over those quirks for a simpler catalog
+ * the conversion method smoothes over those quirks for a simpler catalog
  * experience. Provides a parameterized
  * form where the user provides the partial URLs to use for a particular
  * query.
@@ -65,11 +66,13 @@ public class HttpTableDefn extends FormattedExternalTableDefn implements Paramet
   // that class for the meaning of these properties.
 
   public static final String URI_TEMPLATE_PROPERTY = "uriTemplate";
-  public static final String USER_PROPERTY = "user";
+
+  // Note, cannot be the simpler "user" since USER is a reserved word in SQL
+  // and we don't want to require users to quote "user" each time it is used.
+  public static final String USER_PROPERTY = "userName";
   public static final String PASSWORD_PROPERTY = "password";
   public static final String PASSWORD_ENV_VAR_PROPERTY = "passwordEnvVar";
   public static final String URIS_PROPERTY = "uris";
-  public static final String URIS_PARAMETER = "uris";
 
   public HttpTableDefn()
   {
@@ -77,27 +80,24 @@ public class HttpTableDefn extends FormattedExternalTableDefn implements Paramet
         "HTTP input table",
         TABLE_TYPE,
         Arrays.asList(
-            new StringListPropertyDefn(URIS_PROPERTY),
-            new StringPropertyDefn(USER_PROPERTY),
-            new StringPropertyDefn(PASSWORD_PROPERTY),
-            new StringPropertyDefn(PASSWORD_ENV_VAR_PROPERTY),
-            new StringPropertyDefn(URI_TEMPLATE_PROPERTY)
+            new StringListPropertyDefn(URIS_PROPERTY, PropertyAttributes.SQL_AND_TABLE_PARAM),
+            new StringPropertyDefn(USER_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
+            new StringPropertyDefn(PASSWORD_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
+            new StringPropertyDefn(PASSWORD_ENV_VAR_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
+            new StringPropertyDefn(URI_TEMPLATE_PROPERTY, null)
         ),
         Collections.singletonList(INPUT_COLUMN_DEFN),
-        InputFormats.ALL_FORMATS,
-        Collections.singletonList(
-            new ParameterImpl(URIS_PARAMETER, String.class)
-        )
+        InputFormats.ALL_FORMATS
     );
   }
 
   @Override
   public ResolvedTable mergeParameters(ResolvedTable table, Map<String, Object> values)
   {
-    String urisValue = CatalogUtils.safeGet(values, URIS_PARAMETER, String.class);
+    String urisValue = CatalogUtils.safeGet(values, URIS_PROPERTY, String.class);
     List<String> uriValues = CatalogUtils.stringToList(urisValue);
     if (CollectionUtils.isNullOrEmpty(uriValues)) {
-      throw new IAE("One or more values are required for parameter %s", URIS_PARAMETER);
+      throw new IAE("One or more values are required for parameter %s", URIS_PROPERTY);
     }
     String uriTemplate = table.stringProperty(URI_TEMPLATE_PROPERTY);
     if (Strings.isNullOrEmpty(uriTemplate)) {

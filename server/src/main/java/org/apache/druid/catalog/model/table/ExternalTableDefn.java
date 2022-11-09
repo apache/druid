@@ -26,9 +26,10 @@ import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnDefn;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ModelProperties;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
-import org.apache.druid.catalog.model.ParameterizedDefn.ParameterDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.table.InputFormats.InputFormatDefn;
@@ -36,13 +37,13 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Definition of an external input source, primarily for ingestion.
@@ -70,16 +71,14 @@ public abstract class ExternalTableDefn extends TableDefn
         final String typeValue,
         final List<PropertyDefn<?>> properties,
         final List<ColumnDefn> columnDefns,
-        final List<InputFormatDefn> formats,
-        final List<ParameterDefn> parameters
+        final List<InputFormatDefn> formats
     )
     {
       super(
           name,
           typeValue,
           addFormatProperties(properties, formats),
-          columnDefns,
-          parameters
+          columnDefns
       );
       ImmutableMap.Builder<String, InputFormatDefn> builder = ImmutableMap.builder();
       for (InputFormatDefn format : formats) {
@@ -99,6 +98,8 @@ public abstract class ExternalTableDefn extends TableDefn
     )
     {
       List<PropertyDefn<?>> toAdd = new ArrayList<>();
+      PropertyDefn<?> formatProp = new ModelProperties.StringPropertyDefn(FORMAT_PROPERTY, PropertyAttributes.SQL_FN_PARAM);
+      toAdd.add(formatProp);
       Map<String, PropertyDefn<?>> formatProps = new HashMap<>();
       for (InputFormatDefn format : formats) {
         for (PropertyDefn<?> prop : format.properties()) {
@@ -180,41 +181,32 @@ public abstract class ExternalTableDefn extends TableDefn
   }
 
   protected static final ExternalColumnDefn INPUT_COLUMN_DEFN = new ExternalColumnDefn();
-  private final List<ParameterDefn> parameterList;
-  private final Map<String, ParameterDefn> parameterMap;
+
+  private final List<PropertyDefn<?>> fields;
 
   public ExternalTableDefn(
       final String name,
       final String typeValue,
       final List<PropertyDefn<?>> fields,
-      final List<ColumnDefn> columnDefns,
-      final List<ParameterDefn> parameters
+      final List<ColumnDefn> columnDefns
   )
   {
     super(name, typeValue, fields, columnDefns);
-    if (CollectionUtils.isNullOrEmpty(parameters)) {
-      this.parameterMap = null;
-      this.parameterList = null;
-    } else {
-      this.parameterList = parameters;
-      Map<String, ParameterDefn> params = new HashMap<>();
-      for (ParameterDefn param : parameters) {
-        if (params.put(param.name(), param) != null) {
-          throw new ISE("Duplicate parameter: %s", param.name());
-        }
-      }
-      this.parameterMap = ImmutableMap.copyOf(params);
-    }
+    this.fields = fields;
   }
 
-  public List<ParameterDefn> parameters()
+  public List<PropertyDefn<?>> parameters()
   {
-    return parameterList;
+    return fields.stream()
+        .filter(f -> PropertyAttributes.isExternTableParameter(f))
+        .collect(Collectors.toList());
   }
 
-  public ParameterDefn parameter(String key)
+  public List<PropertyDefn<?>> tableFunctionParameters()
   {
-    return parameterMap.get(key);
+    return fields.stream()
+        .filter(f -> PropertyAttributes.isSqlFunctionParameter(f))
+        .collect(Collectors.toList());
   }
 
   /**
