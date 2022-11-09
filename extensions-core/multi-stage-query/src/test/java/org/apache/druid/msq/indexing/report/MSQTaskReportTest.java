@@ -43,7 +43,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -175,7 +174,6 @@ public class MSQTaskReportTest
   }
 
   @Test
-  @Ignore("requires https://github.com/apache/druid/pull/12938")
   public void testWriteTaskReport() throws Exception
   {
     final MSQTaskReport report = new MSQTaskReport(
@@ -204,7 +202,9 @@ public class MSQTaskReportTest
 
     final Map<String, TaskReport> reportMap = mapper.readValue(
         reportFile,
-        new TypeReference<Map<String, TaskReport>>() {}
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
     );
 
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);

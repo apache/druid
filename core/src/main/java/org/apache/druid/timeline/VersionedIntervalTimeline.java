@@ -106,6 +106,17 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     this.skipObjectsWithNoData = skipObjectsWithNoData;
   }
 
+  public static <VersionType, ObjectType extends Overshadowable<ObjectType>> Iterable<ObjectType> getAllObjects(
+      final List<TimelineObjectHolder<VersionType, ObjectType>> holders
+  )
+  {
+    return () ->
+        holders.stream()
+               .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+               .map(PartitionChunk::getObject)
+               .iterator();
+  }
+
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
   {
     return allTimelineEntries;

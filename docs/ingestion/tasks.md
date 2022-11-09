@@ -332,7 +332,7 @@ Each task type has a different default lock priority. The below table shows the 
 |task type|default priority|
 |---------|----------------|
 |Realtime index task|75|
-|Batch index task|50|
+|Batch index tasks, including [native batch](native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](hadoop.md)|50|
 |Merge/Append/Compaction task|25|
 |Other tasks|0|
 
