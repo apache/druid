@@ -2289,18 +2289,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap)
   {
-    Task genericTask;
-    if (activeTaskMap == null || !activeTaskMap.containsKey(taskId)) {
-      Optional<Task> taskOptional = taskStorage.getTask(taskId);
-      if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
-        return false;
-      }
-      genericTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
+    final Task genericTask;
+
+    if (activeTaskMap != null && activeTaskMap.containsKey(taskId)) {
+      genericTask = activeTaskMap.get(taskId);
     } else {
-      if (!doesTaskTypeMatchSupervisor(activeTaskMap.get(taskId))) {
-        return false;
-      }
-      genericTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) activeTaskMap.get(taskId);
+      genericTask = taskStorage.getTask(taskId).orNull();
+    }
+
+    if (genericTask == null || !doesTaskTypeMatchSupervisor(genericTask)) {
+      return false;
     }
 
     @SuppressWarnings("unchecked")
