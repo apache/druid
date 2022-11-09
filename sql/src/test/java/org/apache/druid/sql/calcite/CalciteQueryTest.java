@@ -14367,7 +14367,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEvalWrongInputs()
+  public void testEvalMissingInput()
   {
     testQueryThrows(
         "SELECT"
@@ -14389,7 +14389,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " from druid.foo",
         exception -> {
           exception.expect(SqlPlanningException.class);
-          exception.expectMessage("EVAL function must be supplied with all required inputs as arguments, missing [dim2]");
+          exception.expectMessage("EVAL function arguments must be identifiers, no expressions or literals allowed");
         }
     );
   }
