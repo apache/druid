@@ -50,7 +50,8 @@ public class SleepSqlTest extends BaseCalciteQueryTest
   {
     return new DruidOperatorTable(
         ImmutableSet.of(),
-        ImmutableSet.of(new SleepOperatorConversion())
+        ImmutableSet.of(new SleepOperatorConversion()),
+        createMacroTable()
     );
   }
 

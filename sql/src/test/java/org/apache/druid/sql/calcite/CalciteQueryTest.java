@@ -14293,4 +14293,58 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of()
     );
   }
+
+  @Test
+  public void testEval()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT"
+        + " EVAL('m1 + m2', m1, m2),"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, dim2),"
+        + " EVAL('to_json_string(dim1)', dim1)"
+        + " from druid.foo",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "m1 + m2",
+                          ColumnType.DOUBLE
+                      ),
+                      expressionVirtualColumn(
+                          "v1",
+                          "concat(dim1, 'hello', dim2)",
+                          ColumnType.STRING
+                      ),
+                      expressionVirtualColumn(
+                          "v2",
+                          "to_json_string(dim1)",
+                          ColumnType.STRING
+                      )
+                  )
+                  .columns("v0", "v1", "v2")
+                  .legacy(false)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{2.0, "helloa", NullHandling.defaultStringValue()},
+            new Object[]{4.0, "10.1hello", "\"10.1\""},
+            new Object[]{6.0, "2hello", "\"2\""},
+            new Object[]{8.0, "1helloa", "\"1\""},
+            new Object[]{10.0, "defhelloabc", "\"def\""},
+            new Object[]{12.0, "abchello", "\"abc\""}
+        ) : ImmutableList.of(
+            new Object[]{2.0, "helloa", "\"\""},
+            new Object[]{4.0, null, "\"10.1\""},
+            new Object[]{6.0, "2hello", "\"2\""},
+            new Object[]{8.0, "1helloa", "\"1\""},
+            new Object[]{10.0, "defhelloabc", "\"def\""},
+            new Object[]{12.0, null, "\"abc\""}
+        )
+    );
+  }
 }

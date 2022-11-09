@@ -70,7 +70,7 @@ import java.util.List;
 
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
+  private final DruidOperatorTable operatorTable = new DruidOperatorTable(
       ImmutableSet.of(
           new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
           new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
@@ -79,7 +79,8 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
           new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
           new BaseVarianceSqlAggregator.StdDevSqlAggregator()
       ),
-      ImmutableSet.of()
+      ImmutableSet.of(),
+      createMacroTable()
   );
 
   @Override
@@ -135,7 +136,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return OPERATOR_TABLE;
+    return operatorTable;
   }
 
   public void addToHolder(VarianceAggregatorCollector holder, Object raw)

@@ -66,7 +66,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableSet.of(
             new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(new BuiltinApproxCountDistinctSqlAggregator()))
         ),
-        ImmutableSet.of(new BloomFilterOperatorConversion())
+        ImmutableSet.of(new BloomFilterOperatorConversion()),
+        createMacroTable()
     );
   }
 

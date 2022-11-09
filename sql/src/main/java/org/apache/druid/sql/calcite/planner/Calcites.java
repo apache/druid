@@ -38,6 +38,7 @@ import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -263,6 +264,40 @@ public class Calcites
     );
 
     return dataType;
+  }
+
+  /**
+   * Construct a {@link RelDataType} for a native Druid {@link ColumnType} with the help of a {@link RelDataTypeFactory}
+   */
+  public static RelDataType getRelDataTypeForColumnType(final ColumnType columnType, final RelDataTypeFactory typeFactory)
+  {
+    final RelDataType type;
+    final boolean nullNumeric = !NullHandling.replaceWithDefault();
+    switch (columnType.getType()) {
+      case STRING:
+        // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+        break;
+      case LONG:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
+        break;
+      case FLOAT:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
+        break;
+      case DOUBLE:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
+        break;
+      case ARRAY:
+        RelDataType elementType = getRelDataTypeForColumnType((ColumnType) columnType.getElementType(), typeFactory);
+        type = Calcites.createSqlArrayTypeWithNullability(typeFactory, elementType.getSqlTypeName(), true);
+        break;
+      case COMPLEX:
+        type = RowSignatures.makeComplexType(typeFactory, columnType, true);
+        break;
+      default:
+        throw new ISE("valueType[%s] not translatable", columnType);
+    }
+    return type;
   }
 
   /**

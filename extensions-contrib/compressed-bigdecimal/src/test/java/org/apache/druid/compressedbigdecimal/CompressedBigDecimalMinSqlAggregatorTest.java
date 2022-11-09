@@ -29,7 +29,7 @@ public class CompressedBigDecimalMinSqlAggregatorTest extends CompressedBigDecim
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalMinSqlAggregator()), ImmutableSet.of());
+    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalMinSqlAggregator()), ImmutableSet.of(), createMacroTable());
   }
 
   @Override

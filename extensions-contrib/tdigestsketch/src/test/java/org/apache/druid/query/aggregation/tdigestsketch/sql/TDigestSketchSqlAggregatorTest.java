@@ -64,9 +64,10 @@ import java.util.List;
 
 public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
+  private final DruidOperatorTable operatorTable = new DruidOperatorTable(
       ImmutableSet.of(new TDigestSketchQuantileSqlAggregator(), new TDigestGenerateSketchSqlAggregator()),
-      ImmutableSet.of()
+      ImmutableSet.of(),
+      createMacroTable()
   );
 
   @Override
@@ -119,7 +120,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return OPERATOR_TABLE;
+    return operatorTable;
   }
 
   @Test
