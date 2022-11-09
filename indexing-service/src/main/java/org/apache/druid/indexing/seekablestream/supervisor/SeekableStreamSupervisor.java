@@ -3891,6 +3891,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     partitionIds.addAll(partitionIdsForTests);
   }
 
+  @VisibleForTesting
   public Map<String, Task> createActiveTaskMap(List<Task> tasks)
   {
     Map<String, Task> taskMap = new HashMap<>();

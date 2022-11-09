@@ -2782,7 +2782,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 new KafkaDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, -100L, 2, 200L))
                 )
-            ).times(4);
+            ).times(3);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.
@@ -3828,6 +3828,27 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null
     );
 
+    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 0L, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    // Expect metadata call only for tasks that are not active
+    EasyMock.expect(taskStorage.getTask("id0")).andReturn(Optional.of(completedTaskFromStorage));
+
     KafkaIndexTask taskFromStorage = createKafkaIndexTask(
         "id1",
         0,
@@ -3900,15 +3921,17 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    List<Task> tasks = ImmutableList.of(
+    List<Task> activeTasks = ImmutableList.of(
         taskFromStorage,
         taskFromStorageMismatchedDataSchema,
         taskFromStorageMismatchedTuningConfig,
         taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    final Map<String, Task> taskMap = supervisor.createActiveTaskMap(tasks);
+    final Map<String, Task> taskMap = supervisor.createActiveTaskMap(activeTasks);
 
     replayAll();
+
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
 
     Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
