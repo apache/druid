@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -160,14 +161,25 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      aggregatorFactory = new HllSketchBuildAggregatorFactory(
-          aggregatorName,
-          dimensionSpec.getDimension(),
-          logK,
-          tgtHllType,
-          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-          ROUND
-      );
+      if (HllSketchModule.TYPE_NAME.equals(inputType.getComplexTypeName())) {
+        aggregatorFactory = new HllSketchMergeAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      } else {
+        aggregatorFactory = new HllSketchBuildAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getDimension(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      }
     }
 
     return toAggregation(
