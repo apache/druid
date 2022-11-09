@@ -114,6 +114,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -14359,8 +14360,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " EVAL('to_json_string(dim1)', dim1)"
         + " from druid.foo",
         expectedException -> {
-          expectedException.expect(RuntimeException.class);
-          expectedException.expectMessage("'EVAL' is not allowed, query context 'sqlAllowEval' must be set to true");
+          expectedException.expect(UnsupportedSQLQueryException.class);
+          expectedException.expectMessage("Query not supported. Possible error: EVAL function is not enabled, the query context parameter 'sqlAllowEval' must be set to true.");
         }
     );
   }
@@ -14368,14 +14369,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEvalWrongInputs()
   {
-    cannotVectorize();
     testQueryThrows(
         "SELECT"
         + " EVAL('concat(dim1, ''hello'', dim2)', dim1)"
         + " from druid.foo",
         exception -> {
           exception.expect(SqlPlanningException.class);
-          exception.expectMessage("EVAL must be supplied with all required inputs as arguments, missing [dim2]");
+          exception.expectMessage("EVAL function must be supplied with all required inputs as arguments, missing [dim2]");
+        }
+    );
+  }
+
+  @Test
+  public void testEvalExprInput()
+  {
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, NVL(dim2, 'foo'))"
+        + " from druid.foo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("EVAL function must be supplied with all required inputs as arguments, missing [dim2]");
         }
     );
   }

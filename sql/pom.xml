@@ -170,6 +170,10 @@
       <artifactId>avatica-metrics</artifactId>
     </dependency>
     <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
       <version>${checkerframework.version}</version>
@@ -185,7 +189,6 @@
       <artifactId>slf4j-api</artifactId>
       <scope>provided</scope>
     </dependency>
-
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>

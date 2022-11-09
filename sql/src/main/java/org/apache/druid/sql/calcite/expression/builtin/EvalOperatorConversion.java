@@ -70,13 +70,13 @@ public class EvalOperatorConversion implements SqlOperatorConversion
                 ExpressionType.fromColumnType(Calcites.getColumnTypeForRelDataType(opBinding.getOperandType(i)))
             );
           } else {
-            throw new IAE("EVAL arguments must be identifiers, no expressions or literals allowed");
+            throw new IAE("EVAL function arguments must be identifiers, no expressions or literals allowed");
           }
         }
         Expr expr = Parser.parse(expression, macroTable);
         for (String inputBinding : expr.analyzeInputs().getRequiredBindings()) {
           if (!typeMap.containsKey(inputBinding)) {
-            throw new IAE("EVAL must be supplied with all required inputs as arguments, missing [%s]", inputBinding);
+            throw new IAE("EVAL function must be supplied with all required inputs as arguments, missing [%s]", inputBinding);
           }
         }
         final ExpressionType expressionType = expr.getOutputType(InputBindings.inspectorFromTypeMap(typeMap));
@@ -113,7 +113,7 @@ public class EvalOperatorConversion implements SqlOperatorConversion
   {
     if (!QueryContexts.parseBoolean(plannerContext.queryContextMap(), QueryContexts.CTX_SQL_ALLOW_EVAL, false)) {
       throw new UnsupportedSQLQueryException(
-          "'EVAL' is not enabled, the query context parameter '%s' must be set to true.",
+          "EVAL function is not enabled, the query context parameter '%s' must be set to true.",
           QueryContexts.CTX_SQL_ALLOW_EVAL
       );
     }
@@ -134,7 +134,4 @@ public class EvalOperatorConversion implements SqlOperatorConversion
         }
     );
   }
-
-  // todo: this should 100% live somewhere else, maybe Calcites? Very similar to some other code in other places, e.g. RowSignatures
-
 }
