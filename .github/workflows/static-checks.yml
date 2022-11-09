@@ -197,7 +197,7 @@ jobs:
           MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 ||
           ./.github/scripts/display_dependency_analysis_error_message.sh
 
-  intellij inspections:
+  intellij_inspections:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
