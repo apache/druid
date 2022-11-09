@@ -507,7 +507,7 @@ Example `indexSpec` snippet with front coding enabled:
   }
 ```
 
-> In most cases the default stringDictionaryEncoding setting `{"type":"utf8"}` is suitable. Enable front coding in a test system and fully test your use case before you change the default in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
+> Front coding is new to Druid 25.0 so the current recommendation is to enable it in a staging environment and fully testing your use case before using in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.
