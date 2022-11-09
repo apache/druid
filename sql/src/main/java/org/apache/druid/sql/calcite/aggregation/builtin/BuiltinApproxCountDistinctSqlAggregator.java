@@ -121,7 +121,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      if (HyperUniquesAggregatorFactory.TYPE.equals(inputType)) {
+      if (inputType.is(ValueType.COMPLEX)) {
         aggregatorFactory = new HyperUniquesAggregatorFactory(
             aggregatorName,
             dimensionSpec.getOutputName(),
