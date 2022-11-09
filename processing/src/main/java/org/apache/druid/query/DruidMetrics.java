@@ -48,7 +48,7 @@ public class DruidMetrics
   public static final String DUTY = "duty";
   public static final String DUTY_GROUP = "dutyGroup";
 
-  public static final String TASK_ACTION_TYPE = "taskActionType";
+  public static final String STREAM = "stream";
 
   public static final String PARTITION = "partition";
 

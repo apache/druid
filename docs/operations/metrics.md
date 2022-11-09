@@ -183,10 +183,10 @@ These metrics apply to the [Kafka indexing service](../development/extensions-co
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
-|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
-|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
-|`ingest/kafka/partitionLag`|Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, partition.|Greater than 0, should not be a very high number |
+|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/partitionLag`|Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. Minimum emission period for this metric is a minute.|dataSource, stream, partition.|Greater than 0, should not be a very high number |
 
 ### Ingestion metrics for Kinesis
 
@@ -194,10 +194,10 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
-|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
-|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
-|`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, partition.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis. Minimum emission period for this metric is a minute.|dataSource, stream, partition.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
 ### Other ingestion metrics
 
@@ -236,8 +236,8 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |------|-----------|------------------------------------------------------------|------------|
 |`task/run/time`|Milliseconds taken to run a task.| dataSource, taskId, taskType, taskStatus.                  |Varies.|
 |`task/pending/time`|Milliseconds taken for a task to wait for running.| dataSource, taskId, taskType.                              |Varies.|
-|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| dataSource, taskId, taskType, taskActionType               |< 1000 (subsecond)|
-|`task/action/run/time`|Milliseconds taken to execute a task action.| dataSource, taskId, taskType, taskActionType               |Varies from subsecond to a few seconds, based on action type.|
+|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| dataSource, taskId, taskType                               |< 1000 (subsecond)|
+|`task/action/run/time`|Milliseconds taken to execute a task action.| dataSource, taskId, taskType                               |Varies from subsecond to a few seconds, based on action type.|
 |`segment/added/bytes`|Size in bytes of new segments created.| dataSource, taskId, taskType, interval.                    |Varies.|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| dataSource, taskId, taskType, interval.                    |Varies.|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| dataSource, taskId, taskType, interval.                    |Varies.|
