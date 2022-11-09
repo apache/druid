@@ -67,12 +67,6 @@ import java.util.List;
 
 public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private final DruidOperatorTable operatorTable = new DruidOperatorTable(
-      ImmutableSet.of(new QuantileSqlAggregator()),
-      ImmutableSet.of(),
-      createMacroTable()
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -126,7 +120,11 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return operatorTable;
+    return new DruidOperatorTable(
+        ImmutableSet.of(new QuantileSqlAggregator()),
+        ImmutableSet.of(),
+        createMacroTable()
+    );
   }
 
   @Test

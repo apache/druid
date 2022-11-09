@@ -68,12 +68,6 @@ import java.util.List;
 
 public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private final DruidOperatorTable operatorTable = new DruidOperatorTable(
-      ImmutableSet.of(new QuantileSqlAggregator(), new FixedBucketsHistogramQuantileSqlAggregator()),
-      ImmutableSet.of(),
-      createMacroTable()
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -127,7 +121,11 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return operatorTable;
+    return new DruidOperatorTable(
+        ImmutableSet.of(new QuantileSqlAggregator(), new FixedBucketsHistogramQuantileSqlAggregator()),
+        ImmutableSet.of(),
+        createMacroTable()
+    );
   }
 
 

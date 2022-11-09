@@ -29,7 +29,9 @@ public class CompressedBigDecimalMaxSqlAggregatorTest extends CompressedBigDecim
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalMaxSqlAggregator()), ImmutableSet.of(), createMacroTable());
+    return new DruidOperatorTable(
+        ImmutableSet.of(new CompressedBigDecimalMaxSqlAggregator()), ImmutableSet.of(), createMacroTable()
+    );
   }
 
   @Override

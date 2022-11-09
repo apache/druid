@@ -70,19 +70,6 @@ import java.util.List;
 
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private final DruidOperatorTable operatorTable = new DruidOperatorTable(
-      ImmutableSet.of(
-          new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
-          new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
-          new BaseVarianceSqlAggregator.VarianceSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevPopSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevSqlAggregator()
-      ),
-      ImmutableSet.of(),
-      createMacroTable()
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -136,7 +123,18 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return operatorTable;
+    return new DruidOperatorTable(
+        ImmutableSet.of(
+            new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
+            new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
+            new BaseVarianceSqlAggregator.VarianceSqlAggregator(),
+            new BaseVarianceSqlAggregator.StdDevPopSqlAggregator(),
+            new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
+            new BaseVarianceSqlAggregator.StdDevSqlAggregator()
+        ),
+        ImmutableSet.of(),
+        createMacroTable()
+    );
   }
 
   public void addToHolder(VarianceAggregatorCollector holder, Object raw)
