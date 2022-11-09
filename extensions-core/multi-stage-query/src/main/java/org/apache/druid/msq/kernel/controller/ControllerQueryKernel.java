@@ -602,7 +602,7 @@ public class ControllerQueryKernel
 
     final String errorCode;
     if (msqFault instanceof WorkerFailedFault) {
-      errorCode = MSQFaultUtils.getErrorCodeFromMessage((msqFault.getErrorMessage()));
+      errorCode = MSQFaultUtils.getErrorCodeFromMessage((((WorkerFailedFault) msqFault).getErrorMsg()));
     } else {
       errorCode = msqFault.getErrorCode();
     }

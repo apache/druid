@@ -195,7 +195,7 @@ public class MSQInsertTest extends MSQTestBase
   public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnable()
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .putAll(MSQ_CONTEXT_WITHOUT_DURABLE_STORAGE)
                                               .put("groupByEnableMultiValueUnnesting", false)
                                               .build();
 

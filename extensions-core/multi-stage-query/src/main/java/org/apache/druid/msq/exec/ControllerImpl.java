@@ -1024,10 +1024,25 @@ public class ControllerImpl implements Controller
     return retVal;
   }
 
-  private void contactWorkersForStage(final TaskContactFn contactFn, final IntSet workers)
+  /**
+   * A blocking function used to contact multiple workers. Checks if all the workers are running before contacting them.
+   *
+   * @param queryKernel
+   * @param contactFn
+   * @param workers         set of workers to contact
+   * @param succescCallBack on successfull api call, custom callback
+   * @param retryOnFailure  if set to true, adds this worker to retry queue. If false, cancel all the futures and propergate the exception to the caller.
+   */
+  private void contactWorkersForStage(
+      final ControllerQueryKernel queryKernel,
+      final TaskContactFn<Void> contactFn,
+      final IntSet workers,
+      final OnSuccess succescCallBack,
+      final boolean retryOnFailure
+  )
   {
     final List<String> taskIds = getTaskIds();
-    final List<ListenableFuture<Void>> taskFutures = new ArrayList<>(workers.size());
+    final List<ListenableFuture<Boolean>> taskFutures = new ArrayList<>(workers.size());
 
     try {
       workerTaskLauncher.waitUntilWorkersReady(workers);
@@ -1036,12 +1051,49 @@ public class ControllerImpl implements Controller
       throw new RuntimeException(e);
     }
 
+    Set<Pair<Integer, String>> failedCalls = ConcurrentHashMap.newKeySet();
+
     for (int workerNumber : workers) {
       final String taskId = taskIds.get(workerNumber);
-      taskFutures.add(contactFn.contactTask(netClient, taskId, workerNumber));
+      SettableFuture<Boolean> settableFuture = SettableFuture.create();
+      ListenableFuture<Void> apiFuture = contactFn.contactTask(netClient, taskId, workerNumber);
+      Futures.addCallback(apiFuture, new FutureCallback<Void>()
+      {
+        @Override
+        public void onSuccess(@Nullable Void result)
+        {
+          succescCallBack.onSuccess(taskId, workerNumber);
+          settableFuture.set(true);
+        }
+
+        @Override
+        public void onFailure(Throwable t)
+        {
+          if (retryOnFailure) {
+            log.info(
+                t,
+                "Detected failure while contacting task[%s]. Iniitiating relaunch of worker[%d] if applicable",
+                taskId,
+                workerNumber
+            );
+            failedCalls.add(new Pair<>(workerNumber, taskId));
+            settableFuture.set(false);
+          } else {
+            settableFuture.setException(t);
+          }
+        }
+      });
+
+      taskFutures.add(settableFuture);
     }
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(taskFutures, true), true);
+
+    if (retryOnFailure) {
+      for (Pair<Integer, String> workerIdTask : failedCalls) {
+        addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
+      }
+    }
   }
 
 
@@ -1062,42 +1114,15 @@ public class ControllerImpl implements Controller
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
     final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
 
-    Set<Pair<Integer, String>> workOrdersNotSent = ConcurrentHashMap.newKeySet();
-
+    queryKernel.startStage(stageId);
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) -> {
-          queryKernel.workOrdersSentForWorker(stageId, workerNumber);
-          SettableFuture<Boolean> settableFuture = SettableFuture.create();
-          ListenableFuture<Void> future = netClient.postWorkOrder(taskId, workOrders.get(workerNumber));
-          Futures.addCallback(future, new FutureCallback<Void>()
-          {
-            @Override
-            public void onSuccess(@Nullable Void result)
-            {
-              settableFuture.set(true);
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              if (isDurableStorageEnabled) {
-                settableFuture.setException(new MSQException(t, new WorkerRpcFailedFault(taskId)));
-              } else {
-                workOrdersNotSent.add(new Pair<>(workerNumber, taskId));
-                settableFuture.set(false);
-              }
-            }
-          });
-
-          return settableFuture;
-        },
-        workOrders.keySet()
+        queryKernel,
+        (netClient, taskId, workerNumber) -> (
+            netClient.postWorkOrder(taskId, workOrders.get(workerNumber))), workOrders.keySet(),
+        (taskId, workerNumber) -> queryKernel.workOrdersSentForWorker(stageId, workerNumber),
+        isDurableStorageEnabled
     );
 
-
-    for (Pair<Integer, String> workerIdTask : workOrdersNotSent) {
-      addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
-    }
   }
 
   private void postResultPartitionBoundariesForStage(
@@ -1110,44 +1135,18 @@ public class ControllerImpl implements Controller
   {
     final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
 
-    Set<Pair<Integer, String>> partitionBoundariesNotSent = ConcurrentHashMap.newKeySet();
     contactWorkersForStage(
-        (netClient, taskId, workerNumber) -> {
-          queryKernel.partitionBoundariesSentForWorker(stageId, workerNumber);
-          SettableFuture<Boolean> settableFuture = SettableFuture.create();
-          ListenableFuture<Void> future = netClient.postResultPartitionBoundaries(
-              taskId,
-              new StageId(queryDef.getQueryId(), stageNumber),
-              resultPartitionBoundaries
-          );
-          Futures.addCallback(future, new FutureCallback<Void>()
-          {
-            @Override
-            public void onSuccess(@Nullable Void result)
-            {
-              settableFuture.set(true);
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              if (isDurableStorageEnabled) {
-                settableFuture.setException(new MSQException(t, new WorkerRpcFailedFault(taskId)));
-              } else {
-                partitionBoundariesNotSent.add(new Pair<>(workerNumber, taskId));
-                settableFuture.set(false);
-              }
-
-            }
-          });
-          return settableFuture;
-        },
-        workers
+        queryKernel,
+        (netClient, taskId, workerNumber) -> netClient.postResultPartitionBoundaries(
+            taskId,
+            stageId,
+            resultPartitionBoundaries
+        ),
+        workers,
+        (taskId, workerNumber) -> queryKernel.partitionBoundariesSentForWorker(stageId, workerNumber),
+        isDurableStorageEnabled
     );
 
-    for (Pair<Integer, String> workerIdTask : partitionBoundariesNotSent) {
-      addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
-    }
   }
 
   /**
@@ -2114,63 +2113,30 @@ public class ControllerImpl implements Controller
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
 
-
-        Set<Pair<Integer, String>> workOrdersNotSent = ConcurrentHashMap.newKeySet();
         contactWorkersForStage(
-            (netClient, taskId, workerNumber) -> {
-              SettableFuture<Boolean> settableFuture = SettableFuture.create();
+            queryKernel,
+            (netClient, taskId, workerNumber) -> netClient.postWorkOrder(
+                taskId,
+                stageWorkOrders.getValue().get(workerNumber)
+            ),
+            new IntArraySet(stageWorkOrders.getValue().keySet()),
+            (taskId, workerNumber) -> {
               queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), workerNumber);
-              ListenableFuture<Void> future = netClient.postWorkOrder(
-                  taskId,
-                  stageWorkOrders.getValue().get(workerNumber)
-              );
-              Futures.addCallback(future, new FutureCallback<Void>()
-              {
-                @Override
-                public void onSuccess(@Nullable Void result)
-                {
-                  settableFuture.set(true);
+              workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
+                if (workOrderSet == null || workOrderSet.size() == 0 || !workOrderSet.remove(stageWorkOrders.getValue()
+                                                                                                            .get(
+                                                                                                                workerNumber))) {
+                  throw new ISE("Worker[%d] orders not found", workerNumber);
                 }
-
-                @Override
-                public void onFailure(Throwable t)
-                {
-                  // durable storage flag will always be set if code reaches here. Skipping the check.
-                  workOrdersNotSent.add(new Pair<>(workerNumber, taskId));
-                  settableFuture.set(false);
+                if (workOrderSet.size() == 0) {
+                  return null;
                 }
+                return workOrderSet;
               });
-
-              return settableFuture;
             },
-            new IntArraySet(stageWorkOrders.getValue().keySet())
+            isDurableStorageEnabled
+
         );
-
-
-//        for (int worker : workOrdersSent) {
-//          queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), worker);
-//        }
-
-
-        // remove worker orders from retryQueue
-        for (Integer workerNumber : workersNeedToBeFullyStarted) {
-          workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
-            if (workOrderSet == null || workOrderSet.size() == 0 || !workOrderSet.remove(stageWorkOrders.getValue()
-                                                                                                        .get(
-                                                                                                            workerNumber))) {
-              throw new ISE("Worker[%d] orders not found", workerNumber);
-            }
-            if (workOrderSet.size() == 0) {
-              return null;
-            }
-            return workOrderSet;
-          });
-        }
-
-        for (Pair<Integer, String> workerIdTask : workOrdersNotSent) {
-          addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
-        }
-
       }
     }
 
@@ -2226,7 +2192,6 @@ public class ControllerImpl implements Controller
       );
 
       for (final StageId stageId : newStageIds) {
-        queryKernel.startStage(stageId);
 
         // Allocate segments, if this is the final stage of an ingestion.
         if (MSQControllerTask.isIngestion(task.getQuerySpec())
@@ -2381,8 +2346,11 @@ public class ControllerImpl implements Controller
       for (final StageId stageId : queryKernel.getEffectivelyFinishedStageIds()) {
         log.info("Query [%s] issuing cleanup order for stage %d.", queryDef.getQueryId(), stageId.getStageNumber());
         contactWorkersForStage(
+            queryKernel,
             (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
-            queryKernel.getWorkerInputsForStage(stageId).workers()
+            queryKernel.getWorkerInputsForStage(stageId).workers(),
+            (ignore1, ignore2) -> {},
+            false
         );
         queryKernel.finishStage(stageId, true);
       }
@@ -2411,8 +2379,17 @@ public class ControllerImpl implements Controller
   /**
    * Interface used by {@link #contactWorkersForStage}.
    */
-  private interface TaskContactFn<T>
+  private interface TaskContactFn<Void>
   {
-    ListenableFuture<T> contactTask(WorkerClient client, String taskId, int workerNumber);
+    ListenableFuture<Void> contactTask(WorkerClient client, String taskId, int workerNumber);
   }
+
+
+  private interface OnSuccess
+  {
+    void onSuccess(String taskId, int workerNumber);
+
+  }
+
+
 }

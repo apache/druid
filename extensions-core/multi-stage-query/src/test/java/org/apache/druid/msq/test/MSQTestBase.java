@@ -219,6 +219,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                    .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
                                    .build();
 
+  public static final Map<String, Object> MSQ_CONTEXT_WITHOUT_DURABLE_STORAGE =
+      ImmutableMap.<String, Object>builder()
+                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
+                  .put(QueryContexts.FINALIZE_KEY, true)
+                  .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, false)
+                  .build();
+
+
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;

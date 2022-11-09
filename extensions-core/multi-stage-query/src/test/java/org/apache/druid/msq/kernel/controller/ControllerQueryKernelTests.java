@@ -268,7 +268,7 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
 
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
-
+    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 0);
     controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
