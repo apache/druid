@@ -121,7 +121,7 @@ To use the console data loader:
 
    ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) to ingest into Druid. The sample data contains three nested columns, so you need to create JSON-type dimensions for them. 
+7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
 
     Click **Add dimension** and enter the following information. You can only add one dimension at a time.
     - Name: `event`, Type: `json`
@@ -275,7 +275,7 @@ You can also use the Druid API to submit a supervisor spec:
 
 After Druid sends data to the Kafka stream, it is immediately available for querying. Click **Query** in the Druid console to run SQL queries against the datasource.
 
-Since this tutorial ingests a small dataset, you can run the query `SELECT * FROM "kttm-kafka"` to return all of the data in the dataset you created with the [console data loader](#load-data-with-the-console-data-loader).
+Since this tutorial ingests a small dataset, you can run the query `SELECT * FROM "kttm-kafka"` to return all of the data in the dataset you created.
 
 ![Query view](../assets/tutorial-kafka-data-loader-12.png "Query view")
 
