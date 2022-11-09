@@ -3921,13 +3921,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    List<Task> activeTasks = ImmutableList.of(
-        taskFromStorage,
-        taskFromStorageMismatchedDataSchema,
-        taskFromStorageMismatchedTuningConfig,
-        taskFromStorageMismatchedPartitionsWithTaskGroup
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    final Map<String, Task> taskMap = supervisor.createActiveTaskMap(activeTasks);
 
     replayAll();
 

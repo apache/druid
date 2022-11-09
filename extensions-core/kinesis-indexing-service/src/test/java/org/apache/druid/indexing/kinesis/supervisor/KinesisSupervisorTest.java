@@ -4039,13 +4039,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         dataSchema
     );
 
-    List<Task> tasks = ImmutableList.of(
-        taskFromStorage,
-        taskFromStorageMismatchedDataSchema,
-        taskFromStorageMismatchedTuningConfig,
-        taskFromStorageMismatchedPartitionsWithTaskGroup
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
     );
-    Map<String, Task> taskMap = supervisor.createActiveTaskMap(tasks);
 
     replayAll();
 

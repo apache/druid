@@ -1725,12 +1725,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     int taskCount = 0;
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
-    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    final Map<String, Task> activeTaskMap = createActiveTaskMap(tasks);
 
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
-    for (Task task : tasks) {
+    final Map<String, Task> activeTaskMap = getActiveTaskMap();
+
+    for (Task task : activeTaskMap.values()) {
       if (!doesTaskTypeMatchSupervisor(task)) {
         continue;
       }
@@ -3255,8 +3255,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
-    Map<String, Task> activeTaskMap = createActiveTaskMap(tasks);
+    Map<String, Task> activeTaskMap = getActiveTaskMap();
 
     List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = activelyReadingTaskGroups.entrySet().iterator();
@@ -3891,14 +3890,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     partitionIds.addAll(partitionIdsForTests);
   }
 
-  @VisibleForTesting
-  public Map<String, Task> createActiveTaskMap(List<Task> tasks)
+  /**
+   * Get all active tasks from metadata storage
+   * @return map from taskId to Task
+   */
+  private Map<String, Task> getActiveTaskMap()
   {
-    Map<String, Task> taskMap = new HashMap<>();
+    ImmutableMap.Builder activeTaskMap = ImmutableMap.builder();
+    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
     for (Task task : tasks) {
-      taskMap.put(task.getId(), task);
+      activeTaskMap.put(task.getId(), task);
     }
-    return taskMap;
+    return activeTaskMap.build();
   }
 
 
