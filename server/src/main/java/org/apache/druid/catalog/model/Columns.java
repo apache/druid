@@ -40,8 +40,10 @@ public class Columns
   public static final String DOUBLE = "DOUBLE";
   public static final String TIMESTAMP = "TIMESTAMP";
 
-  public static final Set<String> NUMERIC_TYPES = ImmutableSet.of(BIGINT, FLOAT, DOUBLE);
-  public static final Set<String> SCALAR_TYPES = ImmutableSet.of(VARCHAR, BIGINT, FLOAT, DOUBLE);
+  public static final Set<String> NUMERIC_TYPES =
+      ImmutableSet.of(BIGINT, FLOAT, DOUBLE);
+  public static final Set<String> SCALAR_TYPES =
+      ImmutableSet.of(TIMESTAMP, VARCHAR, BIGINT, FLOAT, DOUBLE);
 
   public static final Map<String, ColumnType> SQL_TO_DRUID_TYPES =
       new ImmutableMap.Builder<String, ColumnType>()
