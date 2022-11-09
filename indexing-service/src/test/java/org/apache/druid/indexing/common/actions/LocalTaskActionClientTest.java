@@ -19,26 +19,21 @@
 
 package org.apache.druid.indexing.common.actions;
 
-import org.apache.druid.indexing.overlord.ForkingTaskRunner;
-import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import java.util.Collections;
 
-public class TaskActionToolboxTest
+public class LocalTaskActionClientTest
 {
+  private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
   @Test
-  public void testMakeCodeCoverageHappy()
+  public void testGetActionType()
   {
-    TaskActionToolbox toolbox = new TaskActionToolbox(null, null, null, null, null, null);
-    assertFalse(toolbox.getTaskRunner().isPresent());
-    ForkingTaskRunnerFactory factory = mock(ForkingTaskRunnerFactory.class);
-    when(factory.get()).thenReturn(mock(ForkingTaskRunner.class));
-    toolbox.setTaskRunnerFactory(factory);
-    assertTrue(toolbox.getTaskRunner().isPresent());
+    final TaskAction<?> action = SegmentTransactionalInsertAction.appendAction(Collections.emptySet(), null, null);
+    Assert.assertEquals("segmentTransactionalInsert", LocalTaskActionClient.getActionType(objectMapper, action));
   }
 }
