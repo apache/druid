@@ -70,7 +70,7 @@ In this section, you download sample data to the tutorial's directory and send t
 
    ```bash
    curl -O https://druid.apache.org/docs/latest/assets/files/kttm-nested-data.json.gz
-   gunzip kttm-nested-data.json.gz
+   tar -xzf kttm-nested-data.json.gz
    ```
 
 2. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic. Replace `{PATH_TO_DRUID}` with the path to your Druid root directory:
