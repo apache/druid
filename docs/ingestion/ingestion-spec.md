@@ -477,34 +477,22 @@ The `indexSpec` object can include the following properties:
 |-----|-----------|-------|
 |bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`. For type `roaring`, the boolean property `compressRunOnSerialization` (defaults to true) controls whether or not run-length encoding will be used when it is determined to be more space-efficient.|`{"type": "roaring"}`|
 |dimensionCompression|Compression format for dimension columns. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
-|stringDictionaryEncoding|Encoding format for string typed column value dictionaries.|`{"type":"utf8"}`|
+|stringDictionaryEncoding|Encoding format for STRING-typed column value dictionaries. The default setting `utf8` suits most use cases.<br>Example to enable front coding: `{"type":"frontCoded", "bucketSize": 4}`<br>`bucketSize` is the number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128. Defaults to 4.<br>See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
 |metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
-
-#### String dictionary encoding
+##### Front coding
 
 By default, Druid stores values in STRING-typed columns as uncompressed UTF-8 encoded bytes.
 
-|Field|Description|Default|
-|-----|-----------|-------|
-|type|Must be `"utf8"`.|N/A|
-
-##### Front coding
-
 Starting in version 25.0, Druid can store STRING columns using an incremental encoding strategy called front coding. This allows Druid to create smaller UTF-8 encoded segments with very little performance cost.
 
-If you enable front coding, Druid divides the column values into buckets, storing the first value in each bucket as it is. Druid stores the remaining values using a number representing a prefix length and the remaining suffix bytes. 
+If you enable front coding, Druid divides the column values into buckets, storing the first value in each bucket as it is. Druid stores subsequent values in the bucket using a number representing the length of the prefix and the remainder of the value. This technique prevents Druid from storing duplicated prefixes.
 
-This technique prevents the prefix portion of the values in each bucket from being duplicated.
+If you set `bucketSize` to a larger number than the default, larger buckets allow columns with a high degree of overlap to produce smaller segments. This change causes a slight cost to read and search performance which scales with bucket size. 
 
-> Segments created with front encoding enabled are not compatible with Druid versions older than 25.0.
-
-|Field|Description|Default|
-|-----|-----------|-------|
-|type|Must be `"frontCoded"`. |N/A|
-|bucketSize|The number of values to place in a bucket to perform delta encoding. Must be a power of 2, maximum is 128. Larger buckets allow columns with a high degree of overlap to produce smaller segments at a slight cost to read and search performance which scales with bucket size.|4|
+> In most cases the default stringDictionaryEncoding setting `{"type":"utf8"}` is suitable. Enable front coding in a test system and fully test your use case before you change the default in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.
