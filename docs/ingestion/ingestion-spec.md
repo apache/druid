@@ -490,7 +490,22 @@ Starting in version 25.0, Druid can store STRING columns using an incremental en
 
 If you enable front coding, Druid divides the column values into buckets, storing the first value in each bucket as it is. Druid stores subsequent values in the bucket using a number representing the length of the prefix and the remainder of the value. This technique prevents Druid from storing duplicated prefixes.
 
-If you set `bucketSize` to a larger number than the default, larger buckets allow columns with a high degree of overlap to produce smaller segments. This change causes a slight cost to read and search performance which scales with bucket size. 
+If you set `bucketSize` to a larger number than the default, larger buckets allow columns with a high degree of overlap to produce smaller segments. This change causes a slight cost to read and search performance which scales with bucket size.
+
+Example `indexSpec` snippet with front coding enabled:
+
+```plaintext
+"indexSpec": {
+    "bitmap": { "type": "roaring" },
+    "dimensionCompression": "lz4",
+    "metricCompression": "lz4",
+    "jsonCompression": "lz4",
+    "longEncoding": "auto",
+    "stringDictionaryEncoding": {
+      "type": "utf8"
+    }
+  }
+```
 
 > In most cases the default stringDictionaryEncoding setting `{"type":"utf8"}` is suitable. Enable front coding in a test system and fully test your use case before you change the default in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
 
