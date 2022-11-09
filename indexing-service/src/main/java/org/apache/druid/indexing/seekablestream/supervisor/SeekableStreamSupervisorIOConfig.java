@@ -76,7 +76,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       this.taskCount = autoScalerConfig.getTaskCountMin();
     } else {
-      this.taskCount = taskCount != null ? taskCount : 1;
+      this.taskCount = taskCount;
     }
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");

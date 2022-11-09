@@ -1030,7 +1030,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       try {
         recordSupplier = setupRecordSupplier();
-
+        if (this.ioConfig.getTaskCount() == null) {
+          this.ioConfig.setTaskCount(this.getPartitionCount());
+        }
         exec.submit(
             () -> {
               try {
