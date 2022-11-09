@@ -195,6 +195,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                                    .build();
 
+  public static final Map<String, Object> QUERY_CONTEXT_ALLOW_EVAL =
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.CTX_SQL_ALLOW_EVAL, true)
+                                   .build();
+
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,

@@ -14304,6 +14304,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + " EVAL('concat(dim1, ''hello'', dim2)', dim1, dim2),"
         + " EVAL('to_json_string(dim1)', dim1)"
         + " from druid.foo",
+        QUERY_CONTEXT_ALLOW_EVAL,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -14345,6 +14346,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{10.0, "defhelloabc", "\"def\""},
             new Object[]{12.0, null, "\"abc\""}
         )
+    );
+  }
+
+  @Test
+  public void testEvalNotEnabled()
+  {
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('m1 + m2', m1, m2),"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, dim2),"
+        + " EVAL('to_json_string(dim1)', dim1)"
+        + " from druid.foo",
+        expectedException -> {
+          expectedException.expect(RuntimeException.class);
+          expectedException.expectMessage("'EVAL' is not allowed, query context 'sqlAllowEval' must be set to true");
+        }
+    );
+  }
+
+  @Test
+  public void testEvalWrongInputs()
+  {
+    cannotVectorize();
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1)"
+        + " from druid.foo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("EVAL must be supplied with all required inputs as arguments, missing [dim2]");
+        }
     );
   }
 }

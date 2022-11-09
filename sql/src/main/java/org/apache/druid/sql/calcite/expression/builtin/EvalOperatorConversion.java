@@ -36,12 +36,14 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -72,6 +74,11 @@ public class EvalOperatorConversion implements SqlOperatorConversion
           }
         }
         Expr expr = Parser.parse(expression, macroTable);
+        for (String inputBinding : expr.analyzeInputs().getRequiredBindings()) {
+          if (!typeMap.containsKey(inputBinding)) {
+            throw new IAE("EVAL must be supplied with all required inputs as arguments, missing [%s]", inputBinding);
+          }
+        }
         final ExpressionType expressionType = expr.getOutputType(InputBindings.inspectorFromTypeMap(typeMap));
         if (expressionType != null) {
           return Calcites.getRelDataTypeForColumnType(
@@ -104,6 +111,12 @@ public class EvalOperatorConversion implements SqlOperatorConversion
       RexNode rexNode
   )
   {
+    if (!QueryContexts.parseBoolean(plannerContext.queryContextMap(), QueryContexts.CTX_SQL_ALLOW_EVAL, false)) {
+      throw new UnsupportedSQLQueryException(
+          "'EVAL' is not enabled, the query context parameter '%s' must be set to true.",
+          QueryContexts.CTX_SQL_ALLOW_EVAL
+      );
+    }
     return OperatorConversions.convertCall(
         plannerContext,
         rowSignature,
