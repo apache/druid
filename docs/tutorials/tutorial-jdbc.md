@@ -87,7 +87,7 @@ public class JdbcListColumns {
 
 ## Query data
 
-Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan:
+Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets two query context parameters, `sqlTimeZone` and `useCache`. Optionally, you can also parameterize queries by using [Dynamic parameters](../querying/sql-jdbc.md#dynamic-parameters).
 
 ```java
 import java.sql.*;
@@ -105,6 +105,8 @@ public class JdbcCountryAndTime {
         // Set any connection context parameters you need here
         // Or leave empty for default behavior.
         Properties connectionProperties = new Properties();
+        connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+        connectionProperties.setProperty("useCache", "false");
 
         try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
             try (
