@@ -136,7 +136,7 @@ To use the console data loader:
 
     ![Data loader partition](../assets/tutorial-kafka-data-loader-06.png "Data loader partition")
 
-9.  Select `day` as the **Segment granularity**. Since this is a small dataset, you don't need to make any further adjustments. Click **Next: Tune** to finetune how Druid ingests data.
+9.  Select `day` as the **Segment granularity**. Since this is a small dataset, you don't need to make any further adjustments. Click **Next: Tune** to fine tune how Druid ingests data.
    
     ![Data loader tune](../assets/tutorial-kafka-data-loader-07.png "Data loader tune")
 
