@@ -87,7 +87,7 @@ public class JdbcListColumns {
 
 ## Query data
 
-Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets two query context parameters, `sqlTimeZone` and `useCache`. Optionally, you can also parameterize queries by using [Dynamic parameters](../querying/sql-jdbc.md#dynamic-parameters).
+Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets two [query context parameters](../querying/sql-query-context.md), `sqlTimeZone` and `useCache`. In addition, you can also parameterize queries by using [dynamic parameters](../querying/sql-jdbc.md#dynamic-parameters).
 
 ```java
 import java.sql.*;
