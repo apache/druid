@@ -105,7 +105,7 @@ In the example below, the LDAP user is `internal@example.com`.
    - `userAttribute`: The user search attribute.
    - `internal@example.com` is the LDAP user you created in step 1. In the example it serves as both the internal client user and the initial admin user.
 
-   > In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - internal@example.com. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
+   > In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - `internal@example.com`. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
 
 4. Save your group mapping to a JSON file. An example file `groupmap.json` looks like this:
    
@@ -295,11 +295,11 @@ The following are some ideas to help you troubleshoot issues with LDAP and LDAPS
 
 ### Check the coordinator logs
 
-If your LDAP connection isn't working, check the coordinator logs. See [Logging](./configuration/logging.md) for details.
+If your LDAP connection isn't working, check the coordinator logs. See [Logging](../configuration/logging.md) for details.
 
 ### Check the Druid escalator configuration
 
-If the coordinator is working but the rest of the cluster isn't, check the escalator configuration. See the [Configuration reference](./configurations/index.md) for details. You can also check other service logs to see why the services are unable to fetch authorization details from the coordinator.
+If the coordinator is working but the rest of the cluster isn't, check the escalator configuration. See the [Configuration reference](../configurations/index.md) for details. You can also check other service logs to see why the services are unable to fetch authorization details from the coordinator.
 
 ### Check your LDAP server response time
 
