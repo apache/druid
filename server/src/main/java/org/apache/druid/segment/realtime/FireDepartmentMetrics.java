@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.realtime;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -145,6 +147,12 @@ public class FireDepartmentMetrics
   public void markProcessingDone()
   {
     this.processingDone.set(true);
+  }
+
+  @VisibleForTesting
+  public boolean isProcessingDone()
+  {
+    return processingDone.get();
   }
 
   public long processed()
