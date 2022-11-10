@@ -38,10 +38,10 @@ Make sure you meet the following requirements before starting the tutorial:
 
 - The example `wikipedia` datasource from the quickstart is loaded on your Druid instance. If you have a different datasource loaded, you can still try this tutorial. You'll have to update the table name and column names to match your datasource.
 
-Keep the following in mind when trying these  the Java examples:
+Keep the following in mind when trying these the Java examples:
 - The `url` variable includes the following:
   - `jdbc:avatica:remote:url=` prepended to the hostname and port
-  - the hostname and port. In the case of the quickstart deployment, `http:localhost:8888`.
+  - the hostname and port. In the case of the quickstart deployment, `http://localhost:8888`.
   - the SQL endpoint in Druid for the Avatica driver, `/druid/v2/sql/avatica/`
   - For more information about the connection options, see [Client Reference](https://calcite.apache.org/avatica/docs/client_reference.html).
 - The `query` variable contains the SQL query you want to submit to Druid.
@@ -59,7 +59,6 @@ public class JdbcListColumns {
     public static void main(String args[]) throws SQLException
     {
         // Connect to /druid/v2/sql/avatica/ on your Broker.
-
         String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
 
         String query = "SELECT COLUMN_NAME,* FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'wikipedia' and TABLE_SCHEMA='druid'";
