@@ -61,7 +61,7 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertEquals("my-stream", config.getStream());
     Assert.assertEquals(KinesisRegion.US_EAST_1.getEndpoint(), config.getEndpoint());
     Assert.assertEquals(1, (int) config.getReplicas());
-    Assert.assertEquals(1, (int) config.getTaskCount());
+    Assert.assertNull(null,  config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
