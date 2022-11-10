@@ -28,6 +28,8 @@ public class FireDepartmentMetrics
 {
   private static final long DEFAULT_SEGMENT_HANDOFF_TIME = -1L;
 
+  private static final long DEFAULT_MESSAGE_GAP = -1L;
+
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
@@ -257,7 +259,11 @@ public class FireDepartmentMetrics
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
     long maxTimestamp = retVal.messageMaxTimestamp.get();
-    retVal.messageGap.set(!processingDone.get() && (maxTimestamp > 0) ? System.currentTimeMillis() - maxTimestamp : 0L);
+    if (processingDone.get()) {
+      retVal.messageGap.set(DEFAULT_MESSAGE_GAP);
+    } else {
+      retVal.messageGap.set(maxTimestamp > 0 ? System.currentTimeMillis() - maxTimestamp : 0L);
+    }
 
     reset();
 

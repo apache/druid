@@ -61,8 +61,8 @@ public class FireDepartmentMetricsTest
     metrics.snapshot();
     metrics.markProcessingDone();
     FireDepartmentMetrics snapshot = metrics.snapshot();
-    // Message gap must be 0 after processing is done
-    Assert.assertEquals(0, snapshot.messageGap());
+    // Message gap must be invalid after processing is done
+    Assert.assertTrue(0 > snapshot.messageGap());
     // value must be invalid
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
