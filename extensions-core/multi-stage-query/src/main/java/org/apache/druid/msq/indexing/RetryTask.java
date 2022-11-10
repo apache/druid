@@ -23,6 +23,11 @@ import org.apache.druid.msq.indexing.error.MSQFault;
 
 public interface RetryTask
 {
-
-  void shouldRetry(MSQWorkerTask workerTask, MSQFault msqFault);
+  /**
+   * Retry task when {@link MSQFault} is encountered.
+   *
+   * @param workerTask
+   * @param msqFault
+   */
+  void retry(MSQWorkerTask workerTask, MSQFault msqFault);
 }

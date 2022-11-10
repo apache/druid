@@ -473,7 +473,7 @@ public class MSQWorkerTaskLauncher
         removeWorkerFromFullyStartedWorkers(tracker);
         final String errorMessage = StringUtils.format("Task [%s] status missing", taskId);
         log.info(errorMessage + ". Trying to relaunch the worker");
-        retryTask.shouldRetry(
+        retryTask.retry(
             tracker.msqWorkerTask,
             UnknownFault.forMessage(errorMessage)
         );
@@ -484,7 +484,7 @@ public class MSQWorkerTaskLauncher
       } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
         log.info("Task[%s] failed because %s", taskId, tracker.status.getErrorMsg());
-        retryTask.shouldRetry(tracker.msqWorkerTask, new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
+        retryTask.retry(tracker.msqWorkerTask, new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
         tracker.retry();
       }
     }

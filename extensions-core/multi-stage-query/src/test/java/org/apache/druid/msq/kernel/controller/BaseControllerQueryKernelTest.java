@@ -26,17 +26,19 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 
+import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -115,6 +117,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           break;
 
         case READING_INPUT:
+          controllerQueryKernel.createWorkOrders(stageId.getStageNumber(), null);
           controllerQueryKernel.startStage(stageId);
           for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
             controllerQueryKernel.workOrdersSentForWorker(stageId, i);
@@ -125,13 +128,22 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           setupStage(stageNumber, ControllerStagePhase.READING_INPUT, true);
 
           if (queryDefinition.getStageDefinition(stageNumber).mustGatherResultKeyStatistics()) {
+
+            final ClusterByStatisticsCollector keyStatsCollector = getMockCollector(
+                stageNumber);
+
             for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
               controllerQueryKernel.addResultKeyStatisticsForStageAndWorker(
                   stageId,
                   i,
-                  ClusterByStatisticsSnapshot.empty()
+                  keyStatsCollector.snapshot()
               );
             }
+
+            for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
+              controllerQueryKernel.partitionBoundariesSentForWorker(stageId, i);
+            }
+
           } else {
             throw new IAE("Stage %d doesn't gather key result statistics", stageNumber);
           }
@@ -167,6 +179,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       }
       return this;
     }
+
 
     public ControllerQueryKernelTester init()
     {
@@ -228,7 +241,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public void startStage(int stageNumber)
     {
       Preconditions.checkArgument(initialized);
+      controllerQueryKernel.createWorkOrders(stageNumber, null);
       controllerQueryKernel.startStage(new StageId(queryDefinition.getQueryId(), stageNumber));
+
     }
 
     public void startWorkOrder(int stageNumber)
@@ -257,16 +272,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       Preconditions.checkArgument(initialized);
 
       // Simulate 1000 keys being encountered in the data, so the kernel can generate some partitions.
-      final ClusterByStatisticsCollector keyStatsCollector =
-          queryDefinition.getStageDefinition(stageNumber).createResultKeyStatisticsCollector(10_000_000);
-      for (int i = 0; i < 1000; i++) {
-        final RowKey key = KeyTestUtils.createKey(
-            MockQueryDefinitionBuilder.STAGE_SIGNATURE,
-            String.valueOf(i)
-        );
-
-        keyStatsCollector.add(key, 1);
-      }
+      final ClusterByStatisticsCollector keyStatsCollector = getMockCollector(stageNumber);
 
       controllerQueryKernel.addResultKeyStatisticsForStageAndWorker(
           new StageId(queryDefinition.getQueryId(), stageNumber),
@@ -302,16 +308,17 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       if (controllerStageTracker.getPhase() != expectedControllerStagePhase) {
         throw new ISE(
             StringUtils.format(
-                "Stage kernel for stage number %d is in %s phase which is different from the expected phase",
+                "Stage kernel for stage number %d is in %s phase which is different from the expected phase %s",
                 stageNumber,
-                controllerStageTracker.getPhase()
+                controllerStageTracker.getPhase(),
+                expectedControllerStagePhase
             )
         );
       }
     }
 
     /**
-     * Checks if the state of the BaseControllerQueryKernel is initialized properly. Currently this is just stubbed to
+     * Checks if the state of the BaseControllerQueryKernel is initialized properly. Currently, this is just stubbed to
      * return true irrespective of the actual state
      */
     private boolean isValidInitState()
@@ -339,5 +346,27 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
       controllerQueryKernel.partitionBoundariesSentForWorker(stageId, worker);
     }
+
+    public List<WorkOrder> getRetriableWorkOrdersAndChangeState(int workeNumber, MSQFault msqFault)
+    {
+      return controllerQueryKernel.getRetriableWorkOrdersAndChangeState(workeNumber, msqFault);
+    }
+
+    @Nonnull
+    private ClusterByStatisticsCollector getMockCollector(int stageNumber)
+    {
+      final ClusterByStatisticsCollector keyStatsCollector =
+          queryDefinition.getStageDefinition(stageNumber).createResultKeyStatisticsCollector(10_000_000);
+      for (int i = 0; i < 1000; i++) {
+        final RowKey key = KeyTestUtils.createKey(
+            MockQueryDefinitionBuilder.STAGE_SIGNATURE,
+            String.valueOf(i)
+        );
+        keyStatsCollector.add(key, 1);
+      }
+      return keyStatsCollector;
+    }
   }
+
+
 }

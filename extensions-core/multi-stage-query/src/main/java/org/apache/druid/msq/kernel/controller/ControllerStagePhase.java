@@ -39,15 +39,6 @@ public enum ControllerStagePhase
     }
   },
 
-
-  RETRYING {
-    @Override
-    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
-    {
-      return priorPhase == READING_INPUT || priorPhase == POST_READING || priorPhase == RETRYING;
-    }
-  },
-
   // Reading and mapping inputs (using "stateless" operators like filters, transforms which operate on individual records).
   READING_INPUT {
     @Override
@@ -64,7 +55,7 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == RETRYING || priorPhase == READING_INPUT;
+      return priorPhase == READING_INPUT;
     }
   },
 
@@ -93,6 +84,15 @@ public enum ControllerStagePhase
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
       return true;
+    }
+  },
+
+  // Stage currently under retry. Prior phases stages did not publish its final results yet.
+  RETRYING {
+    @Override
+    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
+    {
+      return priorPhase == READING_INPUT || priorPhase == POST_READING || priorPhase == RETRYING;
     }
   };
 

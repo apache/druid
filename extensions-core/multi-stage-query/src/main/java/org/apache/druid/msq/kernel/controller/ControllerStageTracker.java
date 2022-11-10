@@ -30,6 +30,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -57,11 +58,15 @@ import java.util.stream.IntStream;
  */
 class ControllerStageTracker
 {
+  private static final Logger log = new Logger(ControllerStageTracker.class);
   private final StageDefinition stageDef;
+
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
   private final Int2ObjectMap<WorkerStagePhase> workerStagePhases = new Int2ObjectOpenHashMap<>();
+
+  private final IntSet resultstatisticsRecieved = new IntAVLTreeSet();
 
 
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
@@ -341,15 +346,14 @@ class ControllerStageTracker
     try {
       if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.canTransitionFrom(currentPhase)) {
         workerStagePhases.put(workerNumber, WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
-        resultKeyStatisticsCollector.addAll(snapshot);
+
+        // if stats already recieved for worker, donot update the sketch.
+        if (resultstatisticsRecieved.add(workerNumber)) {
+          resultKeyStatisticsCollector.addAll(snapshot);
+        }
 
         if (allPartitionStatisticsPresent()) {
           generateResultPartitionsAndBoundaries();
-
-//                    for (int worker : workerStagePhases.keySet()) {
-//            workerStagePhases.compute(worker, (wk, state) -> WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT);
-//          }
-
           // Phase can become FAILED after generateResultPartitionsAndBoundaries, if there were too many partitions.
           if (phase != ControllerStagePhase.FAILED) {
             transitionTo(ControllerStagePhase.POST_READING);
@@ -415,7 +419,11 @@ class ControllerStageTracker
       throw new ISE(
           "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
           workerNumber,
-          (stageDef.getStageNumber()), WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT, currentPhase
+          (stageDef.getStageNumber()),
+          stageDef.mustGatherResultKeyStatistics()
+          ? WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT
+          : WorkerStagePhase.READING_INPUT,
+          currentPhase
 
       );
     }
@@ -464,7 +472,8 @@ class ControllerStageTracker
   private void generateResultPartitionsAndBoundaries()
   {
     if (resultPartitions != null) {
-      throw new ISE("Result partitions have already been generated");
+      log.debug("Partition boundaries already generated for stage %d", stageDef.getStageNumber());
+      return;
     }
 
     final int stageNumber = stageDef.getStageNumber();
@@ -513,7 +522,9 @@ class ControllerStageTracker
   {
     return workerStagePhases.values()
                             .stream()
-                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES))
+                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
+                                                  || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
+                                                  || stagePhase.equals(WorkerStagePhase.RESULTS_READY))
                             .count()
            == workerCount;
   }
@@ -523,7 +534,10 @@ class ControllerStageTracker
     return workerStagePhases.values()
                             .stream()
                             .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
-                                                  || stagePhase.equals(WorkerStagePhase.READING_INPUT))
+                                                  || stagePhase.equals(WorkerStagePhase.READING_INPUT)
+                                                  || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
+                                                  || stagePhase.equals(WorkerStagePhase.RESULTS_READY)
+                            )
                             .count()
            == workerCount;
   }

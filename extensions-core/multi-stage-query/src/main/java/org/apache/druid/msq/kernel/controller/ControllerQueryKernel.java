@@ -246,7 +246,7 @@ public class ControllerQueryKernel
       @Nullable final Int2ObjectMap<Object> extraInfos
   )
   {
-    final Int2ObjectMap<WorkOrder> retVal = new Int2ObjectAVLTreeMap<>();
+    final Int2ObjectMap<WorkOrder> workerToWorkOrder = new Int2ObjectAVLTreeMap<>();
     final ControllerStageTracker stageKernel = getStageKernelOrThrow(getStageId(stageNumber));
 
     final WorkerInputs workerInputs = stageKernel.getWorkerInputs();
@@ -266,10 +266,10 @@ public class ControllerQueryKernel
       );
 
       QueryValidator.validateWorkOrder(workOrder);
-      retVal.put(workerNumber, workOrder);
+      workerToWorkOrder.put(workerNumber, workOrder);
     }
-    stageWorkOrders.put(new StageId(queryDef.getQueryId(), stageNumber), retVal);
-    return retVal;
+    stageWorkOrders.put(new StageId(queryDef.getQueryId(), stageNumber), workerToWorkOrder);
+    return workerToWorkOrder;
   }
 
   private void createNewKernels(
@@ -387,13 +387,16 @@ public class ControllerQueryKernel
 
   /**
    * Checks if the stage can be started, delegates call to {@link ControllerStageTracker#start()} for internal phase
-   * transition and registers the transition in this queryKernel
+   * transition and registers the transition in this queryKernel. Work orders need to created via {@link ControllerQueryKernel#createWorkOrders(int, Int2ObjectMap)} before calling this method.
    */
   public void startStage(final StageId stageId)
   {
     final ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
     if (stageKernel.getPhase() != ControllerStagePhase.NEW) {
       throw new ISE("Cannot start the stage: [%s]", stageId);
+    }
+    if (stageWorkOrders.get(stageId) == null) {
+      throw new ISE("Work orders not present for stage %s", stageId);
     }
     stageKernel.start();
     transitionStageKernel(stageId, ControllerStagePhase.READING_INPUT);
@@ -597,7 +600,7 @@ public class ControllerQueryKernel
     return retVal;
   }
 
-  public List<WorkOrder> getRetriableWorkOrders(int workerNumber, MSQFault msqFault)
+  public List<WorkOrder> getRetriableWorkOrdersAndChangeState(int workerNumber, MSQFault msqFault)
   {
 
     final String errorCode;
@@ -608,14 +611,14 @@ public class ControllerQueryKernel
     }
 
     if (retriableErrorCodes.contains(errorCode)) {
-      return getRetriableWorkOrders(workerNumber);
+      return getRetriableWorkOrdersAndChangeState(workerNumber);
 
     } else {
       throw new MSQException(msqFault);
     }
   }
 
-  private List<WorkOrder> getRetriableWorkOrders(int worker)
+  private List<WorkOrder> getRetriableWorkOrdersAndChangeState(int worker)
   {
     List<StageId> trackedSet = new ArrayList<>(getActiveStages());
     // no need to retry effectively finished stages

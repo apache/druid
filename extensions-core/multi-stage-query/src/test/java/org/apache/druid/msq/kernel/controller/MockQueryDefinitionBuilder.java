@@ -135,7 +135,9 @@ public class MockQueryDefinitionBuilder
                      .map(StageInputSpec::new).collect(Collectors.toList());
 
     if (inputSpecs.isEmpty()) {
-      inputSpecs.add(new ControllerTestInputSpec());
+      for (int i = 0; i < maxWorkers; i++) {
+        inputSpecs.add(new ControllerTestInputSpec());
+      }
     }
 
     queryDefinitionBuilder.add(
