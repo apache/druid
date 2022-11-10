@@ -25,18 +25,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.segment.IndexSpec;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -73,7 +72,8 @@ public class MultiStageQueryContext
    * CLUSTERED BY clause) but it can be overridden.
    */
   public static final String CTX_SORT_ORDER = "segmentSortOrder";
-  private static final String DEFAULT_SORT_ORDER = null;
+
+  public static final String CTX_INDEX_SPEC = "indexSpec";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -143,41 +143,23 @@ public class MultiStageQueryContext
     );
   }
 
-  @Nullable
-  public static Object getValueFromPropertyMap(
-      Map<String, Object> propertyMap,
-      String key,
-      @Nullable List<String> aliases,
-      @Nullable Object defaultValue
-  )
+  public static List<String> getSortOrder(final QueryContext queryContext)
   {
-    if (propertyMap.get(key) != null) {
-      return propertyMap.get(key);
-    }
-
-    if (aliases != null) {
-      for (String legacyKey : aliases) {
-        if (propertyMap.get(legacyKey) != null) {
-          return propertyMap.get(legacyKey);
-        }
-      }
-    }
-
-    return defaultValue;
+    return MultiStageQueryContext.decodeSortOrder(queryContext.getString(CTX_SORT_ORDER));
   }
 
-  public static String getSortOrder(final QueryContext queryContext)
+  @Nullable
+  public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
-    return queryContext.getString(
-        CTX_SORT_ORDER,
-        DEFAULT_SORT_ORDER
-    );
+    return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
   }
 
   /**
    * Decodes {@link #CTX_SORT_ORDER} from either a JSON or CSV string.
    */
-  public static List<String> decodeSortOrder(@Nullable final String sortOrderString)
+  @Nullable
+  @VisibleForTesting
+  static List<String> decodeSortOrder(@Nullable final String sortOrderString)
   {
     if (sortOrderString == null) {
       return Collections.emptyList();
@@ -188,7 +170,7 @@ public class MultiStageQueryContext
         return new ObjectMapper().readValue(sortOrderString, new TypeReference<List<String>>() {});
       }
       catch (JsonProcessingException e) {
-        throw new IAE("Invalid JSON provided for [%s]", CTX_SORT_ORDER);
+        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
       }
     } else {
       final RFC4180Parser csvParser = new RFC4180ParserBuilder().withSeparator(',').build();
@@ -200,8 +182,29 @@ public class MultiStageQueryContext
                      .collect(Collectors.toList());
       }
       catch (IOException e) {
-        throw new IAE("Invalid CSV provided for [%s]", CTX_SORT_ORDER);
+        throw QueryContexts.badValueException(CTX_SORT_ORDER, "CSV or JSON array", sortOrderString);
       }
+    }
+  }
+
+  /**
+   * Decodes {@link #CTX_INDEX_SPEC} from either a JSON-encoded string, or POJOs.
+   */
+  @Nullable
+  @VisibleForTesting
+  static IndexSpec decodeIndexSpec(@Nullable final Object indexSpecObject, final ObjectMapper objectMapper)
+  {
+    try {
+      if (indexSpecObject == null) {
+        return null;
+      } else if (indexSpecObject instanceof String) {
+        return objectMapper.readValue((String) indexSpecObject, IndexSpec.class);
+      } else {
+        return objectMapper.convertValue(indexSpecObject, IndexSpec.class);
+      }
+    }
+    catch (Exception e) {
+      throw QueryContexts.badValueException(CTX_INDEX_SPEC, "an indexSpec", indexSpecObject);
     }
   }
 }

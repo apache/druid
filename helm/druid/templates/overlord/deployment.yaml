@@ -52,6 +52,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [ "overlord" ]
           env:
+          - name: POD_NAME
+            valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+          - name: POD_NAMESPACE
+            valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
           {{- range $key, $val := .Values.overlord.config }}
           - name: {{ $key }}
             value: {{ $val | quote }}

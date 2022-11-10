@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlLiteral } from 'druid-query-toolkit';
+import { L } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
@@ -44,7 +44,7 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
     processQuery: async (datasourceId: string) => {
       return await queryDruidSql<ColumnMetadata>({
         query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${SqlLiteral.create(datasourceId)}`,
+          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${L(datasourceId)}`,
       });
     },
   });

@@ -76,6 +76,11 @@ import java.util.Iterator;
  * Header file name is identified as: StringUtils.format("%s_header", columnName)
  * value files are identified as: StringUtils.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
+ *
+ * The version {@link EncodedStringDictionaryWriter#VERSION} is reserved and must never be specified as the
+ * {@link GenericIndexed} version byte, else it will interfere with string column deserialization.
+ *
+ * @see GenericIndexedWriter
  */
 public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 {
@@ -374,6 +379,12 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   }
 
   @Override
+  public boolean isSorted()
+  {
+    return allowReverseLookup;
+  }
+
+  @Override
   public Iterator<T> iterator()
   {
     return IndexedIterable.create(this).iterator();
@@ -458,7 +469,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   /**
    * Single-threaded view.
    */
-  abstract class BufferIndexed implements Indexed<T>
+  public abstract class BufferIndexed implements Indexed<T>
   {
     int lastReadSize;
 
@@ -560,6 +571,12 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
       }
 
       return -(minIndex + 1);
+    }
+
+    @Override
+    public boolean isSorted()
+    {
+      return allowReverseLookup;
     }
 
     @Override

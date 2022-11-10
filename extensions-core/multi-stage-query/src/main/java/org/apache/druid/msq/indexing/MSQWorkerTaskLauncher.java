@@ -346,6 +346,19 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
+   * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
+   * not yet fully started as left and right respectively.
+   */
+  public WorkerCount getWorkerTaskCount()
+  {
+    synchronized (taskIds) {
+      int runningTasks = fullyStartedTasks.size();
+      int pendingTasks = desiredTaskCount - runningTasks;
+      return new WorkerCount(runningTasks, pendingTasks);
+    }
+  }
+
+  /**
    * Used by the main loop to update {@link #taskTrackers} and {@link #fullyStartedTasks}.
    */
   private void updateTaskTrackersAndTaskIds()

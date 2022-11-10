@@ -52,10 +52,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, round);
+    super(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
   @Override
@@ -64,16 +65,19 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
     if (other.getName().equals(this.getName()) && other instanceof HllSketchMergeAggregatorFactory) {
       HllSketchMergeAggregatorFactory castedOther = (HllSketchMergeAggregatorFactory) other;
 
-      return new HllSketchMergeAggregatorFactory(
-          getName(),
-          getName(),
-          Math.max(getLgK(), castedOther.getLgK()),
-          getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
-          isRound() || castedOther.isRound()
-      );
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      if (castedOther.isShouldFinalize() == isShouldFinalize()) {
+        return new HllSketchMergeAggregatorFactory(
+            getName(),
+            getName(),
+            Math.max(getLgK(), castedOther.getLgK()),
+            getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
+            isShouldFinalize(),
+            isRound() || castedOther.isRound()
+        );
+      }
     }
+
+    throw new AggregatorFactoryNotMergeableException(this, other);
   }
 
   @Override
@@ -134,7 +138,14 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new HllSketchMergeAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
+    return new HllSketchMergeAggregatorFactory(
+        newName,
+        getFieldName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
 }

@@ -24,8 +24,10 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,13 +37,15 @@ import java.util.Set;
  */
 public abstract class MonitorScheduler
 {
+  private static final Logger log = new Logger(MonitorScheduler.class);
+
   private final MonitorSchedulerConfig config;
   private final ServiceEmitter emitter;
   private final Set<Monitor> monitors;
   private final Object lock = new Object();
 
   private volatile boolean started = false;
-  
+
   MonitorScheduler(
       MonitorSchedulerConfig config,
       ServiceEmitter emitter,
@@ -86,6 +90,13 @@ public abstract class MonitorScheduler
   {
     synchronized (lock) {
       monitors.remove(monitor);
+      // Stop the monitor only after emitting the last round of metrics
+      try {
+        monitor.monitor(emitter);
+      }
+      catch (Throwable t) {
+        log.warn(t, "Monitor could not emit finally before being removed from scheduler");
+      }
       monitor.stop();
     }
   }
@@ -110,8 +121,9 @@ public abstract class MonitorScheduler
       }
 
       started = false;
-      for (Monitor monitor : monitors) {
-        monitor.stop();
+      List<Monitor> monitorsCopy = new ArrayList<>(monitors);
+      for (Monitor monitor : monitorsCopy) {
+        removeMonitor(monitor);
       }
     }
   }

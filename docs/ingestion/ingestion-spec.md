@@ -469,16 +469,43 @@ is:
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#tuningconfig), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
-#### `indexSpec`
+### `indexSpec`
 
 The `indexSpec` object can include the following properties:
 
 |Field|Description|Default|
 |-----|-----------|-------|
 |bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`. For type `roaring`, the boolean property `compressRunOnSerialization` (defaults to true) controls whether or not run-length encoding will be used when it is determined to be more space-efficient.|`{"type": "roaring"}`|
-|dimensionCompression|Compression format for dimension columns. Options are `lz4`, `lzf`, or `uncompressed`.|`lz4`|
-|metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
+|dimensionCompression|Compression format for dimension columns. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+|stringDictionaryEncoding|Encoding format for string typed column value dictionaries.|`{"type":"utf8"}`|
+|metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
+|jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+
+
+#### String Dictionary Encoding
+
+##### UTF8
+By default, `STRING` typed column store the values as uncompressed UTF8 encoded bytes.
+
+|Field|Description|Default|
+|-----|-----------|-------|
+|type|Must be `"utf8"` .|n/a|
+
+##### Front Coding
+`STRING` columns can be stored using an incremental encoding strategy called front coding.
+In the Druid implementation of front coding, the column values are first divided into buckets,
+and the first value in each bucket is stored as is. The remaining values in the bucket are stored
+using a number representing a prefix length and the remaining suffix bytes.
+This technique allows the prefix portion of the values in each bucket from being duplicated.
+The values are still UTF-8 encoded, but front coding can often result in much smaller segments at very little
+performance cost. Segments created with this encoding are not compatible with Druid versions older than 25.0.0.
+
+|Field|Description|Default|
+|-----|-----------|-------|
+|type|Must be `"frontCoded"` .|n/a|
+|bucketSize|The number of values to place in a bucket to perform delta encoding, must be a power of 2, maximum is 128. Larger buckets allow columns with a high degree of overlap to produce smaller segments at a slight cost to read and search performance which scales with bucket size.|4|
+
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.

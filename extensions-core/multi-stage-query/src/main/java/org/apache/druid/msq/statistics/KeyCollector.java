@@ -57,7 +57,7 @@ public interface KeyCollector<CollectorType extends KeyCollector<CollectorType>>
    * Returns an estimate of the number of bytes currently retained by this collector. This may change over time as
    * more keys are added.
    */
-  double estimatedRetainedBytes();
+  long estimatedRetainedBytes();
 
   /**
    * Downsample this collector, dropping about half of the keys that are currently retained. Returns true if
