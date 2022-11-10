@@ -42,7 +42,7 @@ Keep the following in mind when trying these  the Java examples:
 - The `url` variable includes the following:
   - `jdbc:avatica:remote:url=` prepended to the hostname and port
   - the hostname and port. In the case of the quickstart deployment, `http:localhost:8888`.
-  - the SQL endpoint in Druied for the Avatica driver, `/druid/v2/sql/avatica/`
+  - the SQL endpoint in Druid for the Avatica driver, `/druid/v2/sql/avatica/`
   - For more information about the connection options, see [Client Reference](https://calcite.apache.org/avatica/docs/client_reference.html).
 - The `query` variable contains the SQL query you want to submit to Druid.
 
