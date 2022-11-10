@@ -32,11 +32,11 @@ Make sure you meet the following requirements before starting the tutorial:
 
 - A supported Java version, such as Java 8
 
-- [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). The jar can be added to your classpath directly or managed externally, such as through Maven and a `pom.xml` file.
+- [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). You can add the JAR  to your `CLASSPATH` directly or manage it externally, such as through Maven and a `pom.xml` file.
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](./index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned. 
 
-- The example `wikipedia` datasource from the quickstart is loaded on your Druid instance. If you have a different datasource loaded, you can still try this tutorial. You'll have to update the tablename and column names though.
+- The example `wikipedia` datasource from the quickstart is loaded on your Druid instance. If you have a different datasource loaded, you can still try this tutorial. You'll have to update the table name and column names to match your datasource.
 
 Keep the following in mind when trying these  the Java examples:
 - The `url` variable includes the following:
@@ -64,7 +64,7 @@ public class JdbcListColumns {
 
         String query = "SELECT COLUMN_NAME,* FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'wikipedia' and TABLE_SCHEMA='druid'";
         // Set any connection context parameters you need here
-// Or leave empty for default behavior.
+        // Or leave empty for default behavior.
         Properties connectionProperties = new Properties();
 
         try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
