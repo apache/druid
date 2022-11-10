@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class FireDepartmentMetrics
 {
-  private static final long DEFAULT_SEGMENT_HANDOFF_TIME = -1L;
+  private static final long NO_EMIT_SEGMENT_HANDOFF_TIME = -1L;
 
-  private static final long DEFAULT_MESSAGE_GAP = -1L;
+  private static final long NO_EMIT_MESSAGE_GAP = -1L;
 
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
@@ -50,7 +50,7 @@ public class FireDepartmentMetrics
   private final AtomicLong messageGap = new AtomicLong(0);
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
 
-  private final AtomicLong maxSegmentHandoffTime = new AtomicLong(DEFAULT_SEGMENT_HANDOFF_TIME);
+  private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
 
   public void incrementProcessed()
   {
@@ -258,12 +258,15 @@ public class FireDepartmentMetrics
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
     retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
-    long maxTimestamp = retVal.messageMaxTimestamp.get();
+
+    long messageGapSnapshot = 0;
+    final long maxTimestamp = retVal.messageMaxTimestamp.get();
     if (processingDone.get()) {
-      retVal.messageGap.set(DEFAULT_MESSAGE_GAP);
-    } else {
-      retVal.messageGap.set(maxTimestamp > 0 ? System.currentTimeMillis() - maxTimestamp : 0L);
+      messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
+    } else if (maxTimestamp > 0) {
+      messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
     }
+    retVal.messageGap.set(messageGapSnapshot);
 
     reset();
 
@@ -272,6 +275,6 @@ public class FireDepartmentMetrics
 
   private void reset()
   {
-    maxSegmentHandoffTime.set(DEFAULT_SEGMENT_HANDOFF_TIME);
+    maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
   }
 }
