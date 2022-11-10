@@ -22,6 +22,7 @@ package org.apache.druid.server.lookup.cache.polling;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import java.util.Collections;
 import java.util.List;
@@ -81,6 +82,19 @@ public class OnHeapPollingCache<K, V> implements PollingCache<K, V>
       return Collections.emptyList();
     }
     return listOfKeys;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public long estimateHeapFootprint()
+  {
+    for (final Map.Entry<K, V> entry : immutableMap.entrySet()) {
+      if (!(entry.getKey() instanceof String) || !(entry.getValue() instanceof String)) {
+        return 0;
+      }
+    }
+
+    return MapLookupExtractor.estimateHeapFootprint((Map<String, String>) immutableMap);
   }
 
   @Override

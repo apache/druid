@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import React from 'react';
 
 import { Execution, WorkbenchQuery } from '../../../druid-models';
@@ -47,7 +47,7 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
       ? stages.getTotalCounterForStage(lastStage, 'input0', 'rows') // Assume input0 since we know the segmentGenerator will only ever have one stage input
       : -1;
 
-  const table = SqlTableRef.create(datasource);
+  const table = T(datasource);
 
   const warnings = stages?.getWarningCount() || 0;
 

@@ -21,14 +21,15 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import {
+  C,
   Column,
+  F,
   QueryResult,
   SqlAlias,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
   SqlQuery,
-  SqlRef,
   SqlStar,
 } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
@@ -64,10 +65,6 @@ import { TimeFloorMenuItem } from '../time-floor-menu-item/time-floor-menu-item'
 import './result-table-pane.scss';
 
 const CAST_TARGETS: string[] = ['VARCHAR', 'BIGINT', 'DOUBLE'];
-
-function jsonValue(ex: SqlExpression, path: string): SqlExpression {
-  return SqlExpression.parse(`JSON_VALUE(${ex}, ${SqlLiteral.create(path)})`);
-}
 
 function getJsonPaths(jsons: Record<string, any>[]): string[] {
   return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
@@ -118,15 +115,15 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
     if (!parsedQuery || !parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) return false;
 
     return (
-      parsedQuery.getEffectiveWhereExpression().containsColumn(header) ||
-      parsedQuery.getEffectiveHavingExpression().containsColumn(header)
+      parsedQuery.getEffectiveWhereExpression().containsColumnName(header) ||
+      parsedQuery.getEffectiveHavingExpression().containsColumnName(header)
     );
   }
 
   function getHeaderMenu(column: Column, headerIndex: number) {
     const header = column.name;
     const type = column.sqlType || column.nativeType;
-    const ref = SqlRef.column(header);
+    const ref = C(header);
     const prettyRef = prettyPrintSql(ref);
 
     const menuItems: JSX.Element[] = [];
@@ -136,7 +133,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
 
       const orderByExpression = parsedQuery.isValidSelectIndex(headerIndex)
         ? SqlLiteral.index(headerIndex)
-        : SqlRef.column(header);
+        : ref;
       const descOrderBy = orderByExpression.toOrderByExpression('DESC');
       const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
       const orderBy = parsedQuery.getOrderByForSelectIndex(headerIndex);
@@ -254,7 +251,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       if (!selectExpression) return;
                       onQueryAction(q =>
                         q.addSelect(
-                          jsonValue(selectExpression.getUnderlyingExpression(), path).as(
+                          F('JSON_VALUE', selectExpression.getUnderlyingExpression(), path).as(
                             selectExpression.getOutputName() + path.replace(/^\$/, ''),
                           ),
                           { insertIndex: headerIndex + 1 },
@@ -271,7 +268,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
 
       if (parsedQuery.isRealOutputColumnAtSelectIndex(headerIndex)) {
         const whereExpression = parsedQuery.getWhereExpression();
-        if (whereExpression && whereExpression.containsColumn(header)) {
+        if (whereExpression && whereExpression.containsColumnName(header)) {
           menuItems.push(
             <MenuItem
               key="remove_where"
@@ -287,7 +284,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         }
 
         const havingExpression = parsedQuery.getHavingExpression();
-        if (havingExpression && havingExpression.containsColumn(header)) {
+        if (havingExpression && havingExpression.containsColumnName(header)) {
           menuItems.push(
             <MenuItem
               key="remove_having"
@@ -386,31 +383,19 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       <MenuItem
                         text="Convert to SUM(...)"
                         onClick={() => {
-                          convertToAggregate(
-                            SqlFunction.simple('SUM', [underlyingSelectExpression]).as(
-                              `sum_${header}`,
-                            ),
-                          );
+                          convertToAggregate(F.sum(underlyingSelectExpression).as(`sum_${header}`));
                         }}
                       />
                       <MenuItem
                         text="Convert to MIN(...)"
                         onClick={() => {
-                          convertToAggregate(
-                            SqlFunction.simple('MIN', [underlyingSelectExpression]).as(
-                              `min_${header}`,
-                            ),
-                          );
+                          convertToAggregate(F.min(underlyingSelectExpression).as(`min_${header}`));
                         }}
                       />
                       <MenuItem
                         text="Convert to MAX(...)"
                         onClick={() => {
-                          convertToAggregate(
-                            SqlFunction.simple('MAX', [underlyingSelectExpression]).as(
-                              `max_${header}`,
-                            ),
-                          );
+                          convertToAggregate(F.max(underlyingSelectExpression).as(`max_${header}`));
                         }}
                       />
                     </>
@@ -419,9 +404,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     text="Convert to COUNT(DISTINCT ...)"
                     onClick={() => {
                       convertToAggregate(
-                        SqlFunction.decorated('COUNT', 'DISTINCT', [underlyingSelectExpression]).as(
-                          `unique_${header}`,
-                        ),
+                        F.countDistinct(underlyingSelectExpression).as(`unique_${header}`),
                       );
                     }}
                   />
@@ -429,9 +412,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     text="Convert to APPROX_COUNT_DISTINCT_DS_HLL(...)"
                     onClick={() => {
                       convertToAggregate(
-                        SqlFunction.simple('APPROX_COUNT_DISTINCT_DS_HLL', [
-                          underlyingSelectExpression,
-                        ]).as(`unique_${header}`),
+                        F('APPROX_COUNT_DISTINCT_DS_HLL', underlyingSelectExpression).as(
+                          `unique_${header}`,
+                        ),
                       );
                     }}
                   />
@@ -439,9 +422,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     text="Convert to APPROX_COUNT_DISTINCT_DS_THETA(...)"
                     onClick={() => {
                       convertToAggregate(
-                        SqlFunction.simple('APPROX_COUNT_DISTINCT_DS_THETA', [
-                          underlyingSelectExpression,
-                        ]).as(`unique_${header}`),
+                        F('APPROX_COUNT_DISTINCT_DS_THETA', underlyingSelectExpression).as(
+                          `unique_${header}`,
+                        ),
                       );
                     }}
                   />
@@ -496,7 +479,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       );
 
       if (!runeMode) {
-        const orderByExpression = SqlRef.column(header);
+        const orderByExpression = ref;
         const descOrderBy = orderByExpression.toOrderByExpression('DESC');
         const ascOrderBy = orderByExpression.toOrderByExpression('ASC');
         const descOrderByPretty = prettyPrintSql(descOrderBy);

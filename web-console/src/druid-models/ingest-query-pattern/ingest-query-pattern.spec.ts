@@ -24,7 +24,7 @@ describe('ingest-query-pattern', () => {
   it('works', () => {
     const query = SqlQuery.parse(sane`
       INSERT INTO "kttm-2019"
-      WITH ext AS (SELECT *
+      WITH "ext" AS (SELECT *
       FROM TABLE(
         EXTERN(
           '{"type":"http","uris":["https://example.com/data.json.gz"]}',
@@ -38,7 +38,7 @@ describe('ingest-query-pattern', () => {
         agent_type,
         browser,
         browser_version
-      FROM ext
+      FROM "ext"
       PARTITIONED BY HOUR
       CLUSTERED BY 4
     `);

@@ -221,7 +221,8 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/sink/count`|Number of sinks not handoffed.|dataSource, taskId, taskType.|1~3|
 |`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. |dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
 |`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator|dataSource.|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
-|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource, noticeType.| < 1s. |
+|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource| < 1s. |
+|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
 
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
@@ -275,8 +276,9 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |------|-----------|----------|------------|
 |`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier.|Varies.|
 |`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
-|`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
-|`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
+|`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|tier.|Varies.|
+|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|tier.|Varies.|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|tier.|Varies.|
 |`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|tier.|Varies.|
 |`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|tier.|Varies.|
 |`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|tier.|Varies.|
@@ -287,7 +289,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overshadowed segments.| |Varies.|
+|`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|

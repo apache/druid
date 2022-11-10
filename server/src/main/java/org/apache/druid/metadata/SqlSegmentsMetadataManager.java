@@ -49,6 +49,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
@@ -669,8 +670,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
-    final VersionedIntervalTimeline<String, DataSegment> timeline =
-        VersionedIntervalTimeline.forSegments(Collections.emptyList());
+    final SegmentTimeline timeline =
+        SegmentTimeline.forSegments(Collections.emptyIterator());
 
     connector.inReadOnlyTransaction(
         (handle, status) -> {
@@ -704,15 +705,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private int markNonOvershadowedSegmentsAsUsed(
       List<DataSegment> unusedSegments,
-      VersionedIntervalTimeline<String, DataSegment> timeline
+      SegmentTimeline timeline
   )
   {
     List<SegmentId> segmentIdsToMarkAsUsed = new ArrayList<>();
     for (DataSegment segment : unusedSegments) {
-      if (timeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment)) {
-        continue;
+      if (!timeline.isOvershadowed(segment)) {
+        segmentIdsToMarkAsUsed.add(segment.getId());
       }
-      segmentIdsToMarkAsUsed.add(segment.getId());
     }
 
     return markSegmentsAsUsed(segmentIdsToMarkAsUsed);
@@ -723,7 +723,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       throws UnknownSegmentIdsException
   {
     try {
-      Pair<List<DataSegment>, VersionedIntervalTimeline<String, DataSegment>> unusedSegmentsAndTimeline = connector
+      Pair<List<DataSegment>, SegmentTimeline> unusedSegmentsAndTimeline = connector
           .inReadOnlyTransaction(
               (handle, status) -> {
                 List<DataSegment> unusedSegments = retrieveUnusedSegments(dataSource, segmentIds, handle);
@@ -732,7 +732,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 );
                 try (CloseableIterator<DataSegment> usedSegmentsOverlappingUnusedSegmentsIntervals =
                          retrieveUsedSegmentsOverlappingIntervals(dataSource, unusedSegmentsIntervals, handle)) {
-                  VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+                  SegmentTimeline timeline = SegmentTimeline.forSegments(
                       Iterators.concat(usedSegmentsOverlappingUnusedSegmentsIntervals, unusedSegments.iterator())
                   );
                   return new Pair<>(unusedSegments, timeline);
@@ -741,7 +741,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           );
 
       List<DataSegment> unusedSegments = unusedSegmentsAndTimeline.lhs;
-      VersionedIntervalTimeline<String, DataSegment> timeline = unusedSegmentsAndTimeline.rhs;
+      SegmentTimeline timeline = unusedSegmentsAndTimeline.rhs;
       return markNonOvershadowedSegmentsAsUsed(unusedSegments, timeline);
     }
     catch (Exception e) {
@@ -912,12 +912,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Set<SegmentId> getOvershadowedSegments()
-  {
-    return getSnapshotOfDataSourcesWithAllUsedSegments().getOvershadowedSegments();
-  }
-
-  @Override
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     useLatestIfWithinDelayOrPerformNewDatabasePoll();
@@ -945,16 +939,18 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
-                                                                                                    Interval interval,
-                                                                                                    boolean requiresLatest)
+  public Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+      String datasource,
+      Interval interval,
+      boolean requiresLatest
+  )
   {
     if (requiresLatest) {
       forceOrWaitOngoingDatabasePoll();
     } else {
       useLatestIfWithinDelayOrPerformNewDatabasePoll();
     }
-    VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
+    SegmentTimeline usedSegmentsTimeline
         = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
     return Optional.fromNullable(usedSegmentsTimeline)
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));

@@ -67,8 +67,11 @@ export const ParserMessage = React.memo(function ParserMessage(props: ParserMess
     <FormGroup>
       <Callout>
         <p>
-          Druid requires flat data (non-nested, non-hierarchical). Each row should represent a
-          discrete event.
+          You can{' '}
+          <ExternalLink href={`${getLink('DOCS')}/querying/nested-columns.html`}>
+            directly ingest nested data
+          </ExternalLink>{' '}
+          into COMPLEX&lt;json&gt; columns.
         </p>
         {canFlatten && (
           <p>
@@ -76,11 +79,9 @@ export const ParserMessage = React.memo(function ParserMessage(props: ParserMess
             <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
               flatten
             </ExternalLink>{' '}
-            it here. If the provided flattening capabilities are not sufficient, please pre-process
-            your data before ingesting it into Druid.
+            it here.
           </p>
         )}
-        <p>Ensure that your data appears correctly in a row/column orientation.</p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
       </Callout>
     </FormGroup>
