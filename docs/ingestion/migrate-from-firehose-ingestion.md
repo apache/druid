@@ -23,7 +23,7 @@ sidebar_label: "Migrate from firehose"
   ~ under the License.
   -->
 
-Apache deprecated support for Druid firehoses in version 0.17. Support for firehose ingestion was removed in LTS version 0.24.
+Apache deprecated support for Druid firehoses in version 0.17. Support for firehose ingestion was removed in version 24.0.
 
 If you're using a firehose for batch ingestion, we strongly recommend that you follow the instructions on this page to transition to using native batch ingestion input sources as soon as possible. 
 
@@ -31,7 +31,7 @@ Firehose ingestion doesn't work with newer Druid versions, so you must be using 
 
 ## Migrate from firehose ingestion to an input source
 
-To migrate from firehose ingestion, you can use the Druid console to update your ingestion spec, or you can update it manally.
+To migrate from firehose ingestion, you can use the Druid console to update your ingestion spec, or you can update it manually.
 
 ### Use the Druid console
 
