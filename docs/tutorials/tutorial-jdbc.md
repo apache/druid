@@ -113,7 +113,7 @@ public class JdbcCountryAndTime {
                     final ResultSet rs = statement.executeQuery(query)
             ) {
                 while (rs.next()) {
-                    String timeStamp = rs.getString("__time");
+                    Timestamp timeStamp = rs.getTimestamp("__time");
                     String comment = rs.getString("comment");
                     System.out.println(timeStamp);
                     System.out.println(comment);
