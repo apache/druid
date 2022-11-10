@@ -124,6 +124,7 @@ JDK
 JDK7
 JDK8
 JKS
+jks
 JMX
 JRE
 JS
@@ -142,6 +143,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+LDAPS
 LRU
 LZ4
 LZO
@@ -197,6 +199,7 @@ SYSTEM_TABLE
 TCP
 TGT
 TLS
+tls
 TopN
 TopNs
 UI
