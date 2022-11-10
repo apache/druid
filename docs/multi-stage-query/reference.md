@@ -204,6 +204,21 @@ The following table lists the context parameters for the MSQ task engine:
 | rowsPerSegment | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | indexSpec | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
 
+## Durable Storage
+This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
+
+To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
+cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
+the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output 
+for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well. 
+Following table lists the properties that can be set to control the behavior of the durable storage of the cluster.
+
+|Parameter          |Default                                 | Description          |
+|-------------------|----------------------------------------|----------------------|
+|`druid.msq.intermediate.storage.enable` | true | Whether to enable durable storage for the cluster |
+|`druid.msq.intermediate.storage.cleaner.enabled`| false | Whether durable storage cleaner should be enabled for the cluster. This should be set on the overlord|
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs. This should be set on the overlord |
+
 ## Limits
 
 Knowing the limits for the MSQ task engine can help you troubleshoot any [errors](#error-codes) that you encounter. Many of the errors occur as a result of reaching a limit.

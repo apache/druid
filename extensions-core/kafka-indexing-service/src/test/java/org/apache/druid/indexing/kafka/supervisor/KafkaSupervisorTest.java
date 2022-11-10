@@ -2833,7 +2833,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 new KafkaDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, -100L, 2, 200L))
                 )
-            ).times(4);
+            ).times(3);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.
@@ -3879,6 +3879,27 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null
     );
 
+    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 0L, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    // Expect metadata call only for tasks that are not active
+    EasyMock.expect(taskStorage.getTask("id0")).andReturn(Optional.of(completedTaskFromStorage));
+
     KafkaIndexTask taskFromStorage = createKafkaIndexTask(
         "id1",
         0,
@@ -3951,25 +3972,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    EasyMock.expect(taskStorage.getTask("id1"))
-            .andReturn(Optional.of(taskFromStorage))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id2"))
-            .andReturn(Optional.of(taskFromStorageMismatchedDataSchema))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id3"))
-            .andReturn(Optional.of(taskFromStorageMismatchedTuningConfig))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id4"))
-            .andReturn(Optional.of(taskFromStorageMismatchedPartitionsWithTaskGroup))
-            .once();
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
+    );
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4"));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
+
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
     verifyAll();
   }
 
@@ -4795,7 +4812,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public boolean isTaskCurrent(int taskGroupId, String taskId)
+    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
     {
       return isTaskCurrentReturn;
     }
