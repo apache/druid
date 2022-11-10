@@ -33,18 +33,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '8'
           cache: 'maven'
-
-      - name: maven install
-        run: |
+      - run: |
           echo 'Running Maven install...' &&
           MAVEN_OPTS='-Xmx3000m' \
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
@@ -54,8 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -68,8 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -82,8 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -96,8 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -110,8 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -124,8 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -138,8 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -159,8 +148,7 @@ jobs:
   script_checks:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         # who watches the watchers?
       - run: ./check_test_suite_test.py
 
@@ -168,8 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -184,8 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
@@ -199,8 +185,7 @@ jobs:
   openjdk11_strict_compilation:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: setup java 11
         uses: actions/setup-java@v3
         with:
