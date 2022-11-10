@@ -53,9 +53,10 @@
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
 
-  "ingest/kafka/lag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "ingest/kafka/maxLag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "ingest/kafka/avgLag" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kafka/avgLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kafka/partitionLag" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
 
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },

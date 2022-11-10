@@ -28,6 +28,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -76,7 +77,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == 0, "only V0 exists, encountered " + version);
-    final int bucketSize = orderedBuffer.get();
+    final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
     final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
     // size of offsets + values
@@ -146,6 +147,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     if (hasNull && index == 0) {
       return null;
     }
+    Indexed.checkIndex(index, adjustedNumValues);
 
     // due to vbyte encoding, the null value is not actually stored in the bucket (no negative values), so we adjust
     // the index
@@ -266,6 +268,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   @Override
   public Iterator<ByteBuffer> iterator()
   {
+    if (hasNull && adjustedNumValues == 1) {
+      return Collections.<ByteBuffer>singletonList(null).iterator();
+    }
     ByteBuffer copy = buffer.asReadOnlyBuffer().order(buffer.order());
     copy.position(bucketsPosition);
     final ByteBuffer[] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);

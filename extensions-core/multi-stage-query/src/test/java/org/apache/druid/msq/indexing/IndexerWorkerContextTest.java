@@ -35,7 +35,6 @@ import java.util.Collections;
 
 public class IndexerWorkerContextTest
 {
-
   private IndexerWorkerContext indexerWorkerContext = null;
 
   @Before

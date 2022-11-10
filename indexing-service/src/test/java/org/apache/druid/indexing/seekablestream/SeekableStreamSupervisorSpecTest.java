@@ -973,7 +973,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     };
 
     Assert.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
-    Assert.assertEquals(600000L, spec.getIoConfig().getIdleConfig().getInactiveAfterMillis());
   }
 
   private static DataSchema getDataSchema()

@@ -2113,6 +2113,57 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testSupervisorIsIdleIfStreamInactiveWhenSuspended() throws Exception
+  {
+    Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "false",
+                                                 "idleConfig.inactiveAfterMillis", "200");
+    supervisorConfig = OBJECT_MAPPER.convertValue(config, SupervisorStateManagerConfig.class);
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, null)
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasksAndFewPendingTasks() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -2782,7 +2833,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 new KafkaDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, -100L, 2, 200L))
                 )
-            ).times(4);
+            ).times(3);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.
@@ -3828,6 +3879,27 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null
     );
 
+    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 0L, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    // Expect metadata call only for tasks that are not active
+    EasyMock.expect(taskStorage.getTask("id0")).andReturn(Optional.of(completedTaskFromStorage));
+
     KafkaIndexTask taskFromStorage = createKafkaIndexTask(
         "id1",
         0,
@@ -3900,25 +3972,21 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    EasyMock.expect(taskStorage.getTask("id1"))
-            .andReturn(Optional.of(taskFromStorage))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id2"))
-            .andReturn(Optional.of(taskFromStorageMismatchedDataSchema))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id3"))
-            .andReturn(Optional.of(taskFromStorageMismatchedTuningConfig))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id4"))
-            .andReturn(Optional.of(taskFromStorageMismatchedPartitionsWithTaskGroup))
-            .once();
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
+    );
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4"));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
+
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
     verifyAll();
   }
 
@@ -4053,6 +4121,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+
+    Thread.sleep(1000);
 
     Assert.assertEquals(failsToResumePausedTask.getId(), shutdownTaskId.getValue());
 
@@ -4312,7 +4382,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            new SupervisorStateManagerConfig()
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
@@ -4742,7 +4812,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public boolean isTaskCurrent(int taskGroupId, String taskId)
+    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
     {
       return isTaskCurrentReturn;
     }

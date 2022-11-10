@@ -204,6 +204,21 @@ The following table lists the context parameters for the MSQ task engine:
 | rowsPerSegment | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | indexSpec | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
 
+## Durable Storage
+This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
+
+To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
+cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
+the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output 
+for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well. 
+Following table lists the properties that can be set to control the behavior of the durable storage of the cluster.
+
+|Parameter          |Default                                 | Description          |
+|-------------------|----------------------------------------|----------------------|
+|`druid.msq.intermediate.storage.enable` | true | Whether to enable durable storage for the cluster |
+|`druid.msq.intermediate.storage.cleaner.enabled`| false | Whether durable storage cleaner should be enabled for the cluster. This should be set on the overlord|
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs. This should be set on the overlord |
+
 ## Limits
 
 Knowing the limits for the MSQ task engine can help you troubleshoot any [errors](#error-codes) that you encounter. Many of the errors occur as a result of reaching a limit.
@@ -251,7 +266,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 |  TooManyColumns |  Exceeded the number of columns for a stage. See the [Limits](#limits) table for the specific limit.  | `maxColumns`: The limit on columns which was exceeded.  |
 |  TooManyWarnings |  Exceeded the allowed number of warnings of a particular type. | `rootErrorCode`: The error code corresponding to the exception that exceeded the required limit. <br /><br />`maxWarnings`: Maximum number of warnings that are allowed for the corresponding `rootErrorCode`.   |
 |  TooManyWorkers |  Exceeded the supported number of workers running simultaneously. See the [Limits](#limits) table for the specific limit.  | `workers`: The number of simultaneously running workers that exceeded a hard or soft limit. This may be larger than the number of workers in any one stage if multiple stages are running simultaneously. <br /><br />`maxWorkers`: The hard or soft limit on workers that was exceeded.  |
-|  NotEnoughMemory  |  Insufficient memory to launch a stage.  |  `serverMemory`: The amount of memory available to a single process.<br /><br />`serverWorkers`: The number of workers running in a single process.<br /><br />`serverThreads`: The number of threads in a single process.  |
+|  NotEnoughMemory  |  Insufficient memory to launch a stage.  |  `serverMemory`: The amount of memory available to a single process.<br /><br />`usableMemory`: The amount of server memory usable by query-related work. Excludes space taken by lookups plus an additional 25% overhead.<br /><br />`serverWorkers`: The number of workers running in a single process.<br /><br />`serverThreads`: The number of threads in a single process.  |
 |  WorkerFailed  |  A worker task failed unexpectedly.  |  `workerTaskId`: The ID of the worker task.  |
 |  WorkerRpcFailed  |  A remote procedure call to a worker task failed and could not recover.  |  `workerTaskId`: the id of the worker task  |
 |  UnknownError   |  All other errors.  |    |
