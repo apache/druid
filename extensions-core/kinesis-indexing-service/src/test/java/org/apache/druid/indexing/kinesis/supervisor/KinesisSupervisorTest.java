@@ -4039,25 +4039,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
         dataSchema
     );
 
-    EasyMock.expect(taskStorage.getTask("id1"))
-            .andReturn(Optional.of(taskFromStorage))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id2"))
-            .andReturn(Optional.of(taskFromStorageMismatchedDataSchema))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id3"))
-            .andReturn(Optional.of(taskFromStorageMismatchedTuningConfig))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id4"))
-            .andReturn(Optional.of(taskFromStorageMismatchedPartitionsWithTaskGroup))
-            .once();
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
+    );
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4"));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
     verifyAll();
   }
 
@@ -5571,7 +5565,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public boolean isTaskCurrent(int taskGroupId, String taskId)
+    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
     {
       return isTaskCurrentReturn;
     }

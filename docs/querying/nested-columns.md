@@ -217,6 +217,84 @@ FROM (
 PARTITIONED BY ALL
 ```
 
+## Streaming ingestion
+
+You can ingest nested data into Druid using the [streaming method](../ingestion/index.md#streaming)&mdash;for example, from a Kafka topic.
+
+When you [define your supervisor spec](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec), include a dimension with type `json` for each nested column. For example, the following supervisor spec from the [Kafka ingestion tutorial](../tutorials/tutorial-kafka.md) contains dimensions for the nested columns `event`, `agent`, and `geo_ip` in datasource `kttm-kafka`.
+
+```json
+{
+   "type": "kafka",
+   "spec": {
+      "ioConfig": {
+         "type": "kafka",
+         "consumerProperties": {
+           "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "kttm",
+      "inputFormat": {
+         "type": "json"
+      },
+      "useEarliestOffset": true
+   },
+   "tuningConfig": {
+     "type": "kafka"
+   },
+   "dataSchema": {
+      "dataSource": "kttm-kafka",
+      "timestampSpec": {
+         "column": "timestamp",
+         "format": "iso"
+      },
+      "dimensionsSpec": {
+         "dimensions": [
+            "session",
+             "number",
+             "client_ip",
+             "language",
+             "adblock_list",
+             "app_version",
+             "path",
+             "loaded_image",
+             "referrer",
+             "referrer_host",
+             "server_ip",
+             "screen",
+             "window",
+             {
+               "type": "long",
+               "name": "session_length"
+             },
+             "timezone",
+             "timezone_offset",
+             {
+               "type": "json",
+               "name": "event"
+             },
+             {
+               "type": "json",
+               "name": "agent"
+             },
+             {
+               "type": "json",
+               "name": "geo_ip"
+             }
+           ]
+         },
+      "granularitySpec": {
+         "queryGranularity": "none",
+         "rollup": false,
+         "segmentGranularity": "day"
+      }
+    }
+  }
+}
+```
+
+
+The [Kafka tutorial](../tutorials/tutorial-kafka.md) guides you through the steps to load sample nested data into a Kafka topic, then ingest the data into Druid.
+
 ### Transform data during SQL-based ingestion
 
 You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
