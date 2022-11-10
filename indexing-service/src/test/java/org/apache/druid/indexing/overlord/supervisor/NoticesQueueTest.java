@@ -20,8 +20,13 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.indexing.seekablestream.supervisor.NoticesQueue;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class NoticesQueueTest
 {
@@ -52,6 +57,25 @@ public class NoticesQueueTest
       Assert.assertEquals("bar", queue.poll(10));
       Assert.assertNull(queue.poll(10));
       Assert.assertEquals(0, queue.size());
+    }
+  }
+
+  @Test
+  public void testQueueConcurrent() throws InterruptedException, ExecutionException
+  {
+    final NoticesQueue<String> queue = new NoticesQueue<>();
+    final ExecutorService exec = Execs.singleThreaded(getClass().getSimpleName());
+
+    try {
+      final Future<String> item = exec.submit(() -> queue.poll(60_000));
+
+      // Imperfect test: ideally we "add" after "poll", but we can't tell if "poll" has started yet.
+      // Don't want to add a sleep, to avoid adding additional time to the test case, so we live with the imperfection.
+      queue.add("xyz");
+      Assert.assertEquals("xyz", item.get());
+    }
+    finally {
+      exec.shutdownNow();
     }
   }
 }

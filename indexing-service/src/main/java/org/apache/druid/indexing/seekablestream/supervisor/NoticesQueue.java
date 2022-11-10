@@ -21,11 +21,10 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.java.util.common.ISE;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Set;
+import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 
 /**
  * Queue that de-duplicates items on addition using {@link Object#equals}.
@@ -33,28 +32,25 @@ import java.util.Set;
 public class NoticesQueue<T>
 {
   @GuardedBy("this")
-  private final LinkedList<T> queue = new LinkedList<>();
+  private final LinkedHashSet<T> queue = new LinkedHashSet<>();
 
-  @GuardedBy("this")
-  private final Set<T> set = new HashSet<>();
-
+  /**
+   * Adds an item. Throws {@link NullPointerException} if the item is null.
+   */
   public void add(final T item)
   {
     Preconditions.checkNotNull(item, "item");
 
     synchronized (this) {
-      if (set.add(item)) {
-        final boolean ok = queue.offer(item);
-        this.notifyAll();
-
-        if (!ok) {
-          set.remove(item);
-          throw new ISE("Queue is full");
-        }
-      }
+      queue.add(item);
+      this.notifyAll();
     }
   }
 
+  /**
+   * Retrieves the head of the queue (eldest item). Returns null if the queue is empty and the timeout has elapsed.
+   */
+  @Nullable
   public T poll(final long timeoutMillis) throws InterruptedException
   {
     synchronized (this) {
@@ -66,13 +62,14 @@ public class NoticesQueue<T>
         waitMillis = timeoutAt - System.currentTimeMillis();
       }
 
-      final T item = queue.poll();
-
-      if (item != null) {
-        set.remove(item);
+      final Iterator<T> it = queue.iterator();
+      if (it.hasNext()) {
+        final T item = it.next();
+        it.remove();
+        return item;
+      } else {
+        return null;
       }
-
-      return item;
     }
   }
 
