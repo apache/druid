@@ -45,21 +45,11 @@ public class FireDepartmentMetricsTest
   @Test
   public void testSnapshotAfterProcessingOver()
   {
-    metrics.reportMessageMaxTimestamp(10);
+    metrics.reportMessageMaxTimestamp(System.currentTimeMillis() - 20L);
     metrics.reportMaxSegmentHandoffTime(7L);
-    metrics.markProcessingDone(30L);
     FireDepartmentMetrics snapshot = metrics.snapshot();
-    Assert.assertEquals(20, snapshot.messageGap());
+    Assert.assertTrue(snapshot.messageGap() >= 20L);
     Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
-  }
-
-  @Test
-  public void testSnapshotBeforeProcessingOver()
-  {
-    metrics.reportMessageMaxTimestamp(10);
-    long current = System.currentTimeMillis();
-    long messageGap = metrics.snapshot().messageGap();
-    Assert.assertTrue("Message gap: " + messageGap, messageGap >= (current - 10));
   }
 
   @Test
@@ -69,24 +59,11 @@ public class FireDepartmentMetricsTest
     metrics.reportMaxSegmentHandoffTime(7L);
     // Should reset to invalid value
     metrics.snapshot();
-    metrics.markProcessingDone(20);
+    metrics.markProcessingDone();
     FireDepartmentMetrics snapshot = metrics.snapshot();
-    Assert.assertEquals(10, snapshot.messageGap());
+    // Message gap must be invalid after processing is done
+    Assert.assertTrue(0 > snapshot.messageGap());
     // value must be invalid
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
-
-  @Test
-  public void testProcessingOverWithSystemTime()
-  {
-    metrics.reportMessageMaxTimestamp(10);
-    long current = System.currentTimeMillis();
-    metrics.markProcessingDone();
-    long completionTime = metrics.processingCompletionTime();
-    Assert.assertTrue(
-        "Completion time: " + completionTime,
-        completionTime >= current && completionTime < (current + 10_000)
-    );
-  }
-
 }
