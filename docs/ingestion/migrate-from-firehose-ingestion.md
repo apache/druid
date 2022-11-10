@@ -47,7 +47,7 @@ To update your ingestion spec manually, copy your existing spec into a new file.
 
 Edit the new file as follows:
 
-1. In the `ioConfig` component, replace the `firehose` definition with an `inputSource` definition for your chosen input source. See [Native batch input sources](./native-batch-input-sources.md) for details.
+1. In the `ioConfig` component, replace the `firehose` definition with an `inputSource` definition for your chosen input source. See [Native batch input sources](./native-batch-input-source.md) for details.
 2. Move the `timeStampSpec` definition from `parser.parseSpec` to the `dataSchema` component.
 3. Move the `dimensionsSpec` definition from `parser.parseSpec` to the `dataSchema` component.
 4. Move the `format` definition from `parser.parseSpec` to an `inputFormat` definition in `ioConfig`.
