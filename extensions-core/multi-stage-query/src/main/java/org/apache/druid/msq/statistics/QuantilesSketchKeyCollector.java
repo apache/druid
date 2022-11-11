@@ -161,7 +161,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
       if (isFinalPartition) {
         partitions.add(new ClusterByPartition(RowKey.wrap(quantiles[i]), null));
       } else {
-        final int cmp = comparator.compare(quantiles[i], quantiles[i+1]);
+        final int cmp = comparator.compare(quantiles[i], quantiles[i + 1]);
         if (cmp < 0) {
           // Skip partitions where start == end.
           // I don't think start can be greater than end, but if that happens, skip them too!

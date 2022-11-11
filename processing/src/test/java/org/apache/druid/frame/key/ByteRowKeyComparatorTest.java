@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class RowKeyComparatorTest extends InitializedNullHandlingTest
+public class ByteRowKeyComparatorTest extends InitializedNullHandlingTest
 {
   static final RowSignature SIGNATURE =
       RowSignature.builder()
@@ -71,7 +71,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingByteKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
   }
 
@@ -86,7 +86,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingByteKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
   }
 
@@ -101,7 +101,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingByteKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
   }
 
@@ -116,7 +116,7 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingByteKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
   }
 
@@ -131,29 +131,25 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         sortUsingObjectComparator(sortColumns, ALL_KEY_OBJECTS),
-        sortUsingKeyComparator(sortColumns, ALL_KEY_OBJECTS)
+        sortUsingByteKeyComparator(sortColumns, ALL_KEY_OBJECTS)
     );
   }
 
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(RowKeyComparator.class)
-                  .withNonnullFields("byteRowKeyComparatorDelegate")
+    EqualsVerifier.forClass(ByteRowKeyComparator.class)
                   .usingGetClass()
                   .verify();
   }
 
-  private List<RowKey> sortUsingKeyComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)
+  private List<RowKey> sortUsingByteKeyComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)
   {
-    final List<RowKey> sortedKeys = new ArrayList<>();
-
-    for (final Object[] objects : objectss) {
-      sortedKeys.add(KeyTestUtils.createKey(SIGNATURE, objects));
-    }
-
-    sortedKeys.sort(RowKeyComparator.create(sortColumns));
-    return sortedKeys;
+    return objectss.stream()
+                   .map(objects -> KeyTestUtils.createKey(SIGNATURE, objects).array())
+                   .sorted(ByteRowKeyComparator.create(sortColumns))
+                   .map(RowKey::wrap)
+                   .collect(Collectors.toList());
   }
 
   private List<RowKey> sortUsingObjectComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)

@@ -77,7 +77,7 @@ public class QuantilesSketchKeyCollectorFactory
   public QuantilesSketchKeyCollectorSnapshot toSnapshot(QuantilesSketchKeyCollector collector)
   {
     final String encodedSketch =
-        StringUtils.encodeBase64String(collector.getSketch().toByteArray(RowKeySerde.INSTANCE));
+        StringUtils.encodeBase64String(collector.getSketch().toByteArray(ByteRowKeySerde.INSTANCE));
     return new QuantilesSketchKeyCollectorSnapshot(encodedSketch, collector.getAverageKeyLength());
   }
 
@@ -87,15 +87,15 @@ public class QuantilesSketchKeyCollectorFactory
     final String encodedSketch = snapshot.getEncodedSketch();
     final byte[] bytes = StringUtils.decodeBase64String(encodedSketch);
     final ItemsSketch<byte[]> sketch =
-        ItemsSketch.getInstance(Memory.wrap(bytes), comparator, RowKeySerde.INSTANCE);
+        ItemsSketch.getInstance(Memory.wrap(bytes), comparator, ByteRowKeySerde.INSTANCE);
     return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 
-  private static class RowKeySerde extends ArrayOfItemsSerDe<byte[]>
+  private static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
   {
-    private static final RowKeySerde INSTANCE = new RowKeySerde();
+    private static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
 
-    private RowKeySerde()
+    private ByteRowKeySerde()
     {
     }
 
