@@ -87,7 +87,7 @@ public enum ControllerStagePhase
     }
   },
 
-  // Stage currently under retry. Prior phases stages did not publish its final results yet.
+  // Stage currently under retry. priorPhase did not publish its final results yet.
   RETRYING {
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)

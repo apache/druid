@@ -118,13 +118,19 @@ public class ControllerQueryKernel
   private final Set<StageId> effectivelyFinishedStages = new HashSet<>();
 
 
+  /**
+   * Store the work orders for the stage so that we can retrieve that in case of worker retry
+   */
   private final Map<StageId, Int2ObjectMap<WorkOrder>> stageWorkOrders;
 
+  /**
+   * {@link MSQFault#getErrorCode()} which are retried.
+   */
   private final Set<String> retriableErrorCodes = ImmutableSet.of(CanceledFault.CODE, UnknownFault.CODE,
                                                                   WorkerRpcFailedFault.CODE
   );
 
-  public ControllerQueryKernel(final QueryDefinition queryDef,final int partitionStatisticsMaxRetainedBytes)
+  public ControllerQueryKernel(final QueryDefinition queryDef, final int partitionStatisticsMaxRetainedBytes)
   {
     this.queryDef = queryDef;
     this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
@@ -345,20 +351,28 @@ public class ControllerQueryKernel
     return getStageKernelOrThrow(stageId).getResultPartitions();
   }
 
+  /**
+   * Delegates call to {@link ControllerStageTracker#getWorkersToSendParitionBoundaries()}
+   */
   public IntSet getWorkersToSendPartitionBoundaries(final StageId stageId)
   {
-    return getStageKernelOrThrow(stageId).getWorkersForPartitionBoundaries();
+    return getStageKernelOrThrow(stageId).getWorkersToSendParitionBoundaries();
   }
 
-
-  public void partitionBoundariesSentForWorker(final StageId stageId, int worker)
-  {
-    getStageKernelOrThrow(stageId).partitionBoundariesSentForWorker(worker);
-  }
-
+  /**
+   * Delegates call to {@link ControllerQueryKernel#workOrdersSentForWorker(StageId, int)}
+   */
   public void workOrdersSentForWorker(final StageId stageId, int worker)
   {
     getStageKernelOrThrow(stageId).workOrderSentForWorker(worker);
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#partitionBoundariesSentForWorker(int)} ()}
+   */
+  public void partitionBoundariesSentForWorker(final StageId stageId, int worker)
+  {
+    getStageKernelOrThrow(stageId).partitionBoundariesSentForWorker(worker);
   }
 
   /**
@@ -537,6 +551,7 @@ public class ControllerQueryKernel
       }
     }
 
+    // might need to change this
     if (ControllerStagePhase.isPostReadingPhase(newPhase)) {
       // Once the stage has consumed all the data/input from its dependent stages, we remove it from all the stages
       // whose input it was dependent on
@@ -600,7 +615,18 @@ public class ControllerQueryKernel
     return retVal;
   }
 
-  public List<WorkOrder> getRetriableWorkOrdersAndChangeState(int workerNumber, MSQFault msqFault)
+  /**
+   * Checks the {@link MSQFault#getErrorCode()} is eligible for retry.
+   * <br/>
+   * If yes, transitions the stage to{@link ControllerStagePhase#RETRYING} and returns all the {@link WorkOrder}
+   * <br/>
+   * else throw {@link MSQException}
+   *
+   * @param workerNumber
+   * @param msqFault
+   * @return List of {@link WorkOrder} that needs to be retried.
+   */
+  public List<WorkOrder> getWorkInCaseWorkerElgibileForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
 
     final String errorCode;
@@ -611,14 +637,24 @@ public class ControllerQueryKernel
     }
 
     if (retriableErrorCodes.contains(errorCode)) {
-      return getRetriableWorkOrdersAndChangeState(workerNumber);
+      return getWorkInCaseWorkerElgibileForRetryElseThrow(workerNumber);
 
     } else {
       throw new MSQException(msqFault);
     }
   }
 
-  private List<WorkOrder> getRetriableWorkOrdersAndChangeState(int worker)
+  /**
+   * Gets all the stages currently being tracked and filtres out all effectively finished stages.
+   * <br/>
+   * From the remaining stages, checks if (stage,worker) needs to be retried.
+   * <br/>
+   * If yes adds the workOrder for that stage to the return list and transitions the stage kernel to {@link ControllerStagePhase#RETRYING}
+   *
+   * @param worker
+   * @return List of {@link WorkOrder} that needs to be retried.
+   */
+  private List<WorkOrder> getWorkInCaseWorkerElgibileForRetryElseThrow(int worker)
   {
     List<StageId> trackedSet = new ArrayList<>(getActiveStages());
     // no need to retry effectively finished stages
@@ -626,8 +662,8 @@ public class ControllerQueryKernel
     trackedSet.removeAll(getEffictivelyFinishedStages);
 
     List<WorkOrder> workOrders = new ArrayList<>();
-    for (StageId stageId : trackedSet) {
 
+    for (StageId stageId : trackedSet) {
       ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
       if (ControllerStagePhase.RETRYING.canTransitionFrom(controllerStageTracker.getPhase())
           && controllerStageTracker.retryIfNeeded(worker)) {
@@ -635,7 +671,6 @@ public class ControllerQueryKernel
         // should be a no-op. Calling for code patterns.
         transitionStageKernel(stageId, ControllerStagePhase.RETRYING);
       }
-
     }
     return workOrders;
   }

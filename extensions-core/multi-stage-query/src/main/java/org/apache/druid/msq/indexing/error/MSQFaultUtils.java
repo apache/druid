@@ -24,6 +24,9 @@ public class MSQFaultUtils
 
   public static final String ERROR_CODE_DELIMITER = ": ";
 
+  /**
+   * Generate string message with error code delimited by {@link MSQFaultUtils#ERROR_CODE_DELIMITER}
+   */
   public static String generateMessageWithErrorCode(MSQFault msqFault)
   {
     final String message = msqFault.getErrorMessage();
@@ -35,6 +38,10 @@ public class MSQFaultUtils
     }
   }
 
+  /**
+   * Gets the error code from the message. If the messay is empty or null, {@link UnknownFault#CODE} is returned. This method
+   * does not gurantee that the error code we get out of the message is a valid error code.
+   */
   public static String getErrorCodeFromMessage(String message)
   {
     if (message == null || message.isEmpty()) {

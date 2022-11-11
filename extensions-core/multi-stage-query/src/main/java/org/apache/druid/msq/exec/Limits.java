@@ -65,7 +65,7 @@ public class Limits
   public static final int TOTAL_RETRY_LIMIT = 30;
 
   /**
-   * Maximum worker retries. Initial run is not a retry. The worker will be spawned 1 + retryNumber of times before erroring out;
+   * Maximum worker retries. Initial run is not a retry. The worker will be spawned 1 + retryNumber of times before erroring out.
    */
   public static int WORKER_RETRY_LIMIT = 2;
 }

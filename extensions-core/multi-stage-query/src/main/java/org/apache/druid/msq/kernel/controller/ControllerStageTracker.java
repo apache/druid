@@ -64,9 +64,11 @@ class ControllerStageTracker
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
-  private final Int2ObjectMap<WorkerStagePhase> workerStagePhases = new Int2ObjectOpenHashMap<>();
 
-  private final IntSet resultstatisticsRecieved = new IntAVLTreeSet();
+  // worker-> workerStagePhase
+  private final Int2ObjectMap<WorkerStagePhase> workerToPhase = new Int2ObjectOpenHashMap<>();
+
+  private final IntSet workersWithResultKeyStatistics = new IntAVLTreeSet();
 
 
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
@@ -109,9 +111,14 @@ class ControllerStageTracker
     }
   }
 
+  /**
+   * Initalized stage for each worker to {@link WorkerStagePhase#NEW}
+   *
+   * @param workerCount
+   */
   private void initializeWorkerState(int workerCount)
   {
-    IntStream.range(0, workerCount).forEach(wokerNumber -> workerStagePhases.put(wokerNumber, WorkerStagePhase.NEW));
+    IntStream.range(0, workerCount).forEach(wokerNumber -> workerToPhase.put(wokerNumber, WorkerStagePhase.NEW));
   }
 
   /**
@@ -182,24 +189,35 @@ class ControllerStageTracker
   }
 
 
-  IntSet getWorkersForPartitionBoundaries()
+  /**
+   * Get workers which need to be sent partition boundaries
+   *
+   * @return
+   */
+  IntSet getWorkersToSendParitionBoundaries()
   {
     if (!getStageDefinition().doesShuffle()) {
       throw new ISE("Result partition information is not relevant to this stage because it does not shuffle");
     }
     IntAVLTreeSet workers = new IntAVLTreeSet();
-    for (Integer worker : workerStagePhases.keySet()) {
-      if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(workerStagePhases.get(worker))) {
+    for (Integer worker : workerToPhase.keySet()) {
+      if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(workerToPhase.get(worker))) {
         workers.add(worker);
       }
     }
     return workers;
   }
 
+  /**
+   * Indicates that the work order for worker has been sent. Transistions the state to {@link WorkerStagePhase#READING_INPUT}
+   * if no more work orders need to be sent.
+   *
+   * @param worker
+   */
   void workOrderSentForWorker(int worker)
   {
 
-    workerStagePhases.compute(worker, (wk, state) -> {
+    workerToPhase.compute(worker, (wk, state) -> {
       if (state == null) {
         throw new ISE("Worker[%d] not found for stage[%s]", wk, stageDef.getStageNumber());
       }
@@ -214,19 +232,23 @@ class ControllerStageTracker
       return WorkerStagePhase.READING_INPUT;
     });
     if (phase != ControllerStagePhase.READING_INPUT) {
-      if (allWorkOrderSent()) {
-        // if all the work orders are sent, change state to reading input from retrying
+      if (workOrdersNeedToBeSent()) {
+        // if no more work orders need to be sent, change state to reading input from retrying.
         transitionTo(ControllerStagePhase.READING_INPUT);
       }
     }
 
   }
 
-
+  /**
+   * Indicates that the partition boundaries for worker has been sent.
+   *
+   * @param worker
+   */
   void partitionBoundariesSentForWorker(int worker)
   {
 
-    workerStagePhases.compute(worker, (wk, state) -> {
+    workerToPhase.compute(worker, (wk, state) -> {
       if (state == null) {
         throw new ISE("Worker[%d] not found for stage[%s]", wk, stageDef.getStageNumber());
       }
@@ -337,7 +359,7 @@ class ControllerStageTracker
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
 
-    WorkerStagePhase currentPhase = workerStagePhases.get(workerNumber);
+    WorkerStagePhase currentPhase = workerToPhase.get(workerNumber);
 
     if (currentPhase == null) {
       throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
@@ -345,10 +367,10 @@ class ControllerStageTracker
 
     try {
       if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.canTransitionFrom(currentPhase)) {
-        workerStagePhases.put(workerNumber, WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
+        workerToPhase.put(workerNumber, WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
 
         // if stats already recieved for worker, donot update the sketch.
-        if (resultstatisticsRecieved.add(workerNumber)) {
+        if (workersWithResultKeyStatistics.add(workerNumber)) {
           resultKeyStatisticsCollector.addAll(snapshot);
         }
 
@@ -394,7 +416,7 @@ class ControllerStageTracker
       throw new NullPointerException("resultObject must not be null");
     }
 
-    WorkerStagePhase currentPhase = workerStagePhases.get(workerNumber);
+    WorkerStagePhase currentPhase = workerToPhase.get(workerNumber);
     if (currentPhase == null) {
       throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
     }
@@ -407,7 +429,7 @@ class ControllerStageTracker
 
 
     if (WorkerStagePhase.RESULTS_READY.canTransitionFrom(currentPhase)) {
-      workerStagePhases.put(workerNumber, WorkerStagePhase.RESULTS_READY);
+      workerToPhase.put(workerNumber, WorkerStagePhase.RESULTS_READY);
       if (this.resultObject == null) {
         this.resultObject = resultObject;
       } else {
@@ -437,10 +459,10 @@ class ControllerStageTracker
 
   private boolean allResultsPresent()
   {
-    return workerStagePhases.values()
-                            .stream()
-                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.RESULTS_READY))
-                            .count() == workerCount;
+    return workerToPhase.values()
+                        .stream()
+                        .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.RESULTS_READY))
+                        .count() == workerCount;
   }
 
   /**
@@ -518,27 +540,33 @@ class ControllerStageTracker
     }
   }
 
+  /**
+   * True if all partitions stats are present, else false.
+   */
   private boolean allPartitionStatisticsPresent()
   {
-    return workerStagePhases.values()
-                            .stream()
-                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
-                                                  || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
-                                                  || stagePhase.equals(WorkerStagePhase.RESULTS_READY))
-                            .count()
+    return workerToPhase.values()
+                        .stream()
+                        .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
+                                              || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
+                                              || stagePhase.equals(WorkerStagePhase.RESULTS_READY))
+                        .count()
            == workerCount;
   }
 
-  private boolean allWorkOrderSent()
+  /**
+   * True if work orders needs to be sent else false.
+   */
+  private boolean workOrdersNeedToBeSent()
   {
-    return workerStagePhases.values()
-                            .stream()
-                            .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
-                                                  || stagePhase.equals(WorkerStagePhase.READING_INPUT)
-                                                  || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
-                                                  || stagePhase.equals(WorkerStagePhase.RESULTS_READY)
-                            )
-                            .count()
+    return workerToPhase.values()
+                        .stream()
+                        .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
+                                              || stagePhase.equals(WorkerStagePhase.READING_INPUT)
+                                              || stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT)
+                                              || stagePhase.equals(WorkerStagePhase.RESULTS_READY)
+                        )
+                        .count()
            == workerCount;
   }
 
@@ -567,6 +595,11 @@ class ControllerStageTracker
     }
   }
 
+  /**
+   * Retry true if the worker needs to be retried based on state else returns false.
+   *
+   * @param workerNumber
+   */
   public boolean retryIfNeeded(int workerNumber)
   {
     if (phase.equals(ControllerStagePhase.FINISHED) || phase.equals(ControllerStagePhase.RESULTS_READY)) {
@@ -578,20 +611,20 @@ class ControllerStageTracker
       return false;
     }
 
-    if (workerStagePhases.get(workerNumber).equals(WorkerStagePhase.RESULTS_READY)
-        || workerStagePhases.get(workerNumber).equals(WorkerStagePhase.FINISHED)) {
+    if (workerToPhase.get(workerNumber).equals(WorkerStagePhase.RESULTS_READY)
+        || workerToPhase.get(workerNumber).equals(WorkerStagePhase.FINISHED)) {
       // do nothing
       return false;
     }
-    workerStagePhases.put(workerNumber, WorkerStagePhase.NEW);
+    workerToPhase.put(workerNumber, WorkerStagePhase.NEW);
     transitionTo(ControllerStagePhase.RETRYING);
     return true;
   }
 
 
-  public boolean isTrackingWorker(int workerNumber)
+  private boolean isTrackingWorker(int workerNumber)
   {
-    return workerStagePhases.get(workerNumber) != null;
+    return workerToPhase.get(workerNumber) != null;
   }
 
 }

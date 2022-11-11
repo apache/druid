@@ -349,7 +349,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 
     public List<WorkOrder> getRetriableWorkOrdersAndChangeState(int workeNumber, MSQFault msqFault)
     {
-      return controllerQueryKernel.getRetriableWorkOrdersAndChangeState(workeNumber, msqFault);
+      return controllerQueryKernel.getWorkInCaseWorkerElgibileForRetryElseThrow(workeNumber, msqFault);
     }
 
     @Nonnull
