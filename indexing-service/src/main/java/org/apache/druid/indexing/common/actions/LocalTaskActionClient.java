@@ -19,12 +19,17 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+
+import javax.annotation.Nullable;
+import java.util.Map;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
@@ -58,7 +63,7 @@ public class LocalTaskActionClient implements TaskActionClient
       try {
         final long auditLogStartTime = System.currentTimeMillis();
         storage.addAuditLog(task, taskAction);
-        emitTimerMetric("task/action/log/time", System.currentTimeMillis() - auditLogStartTime);
+        emitTimerMetric("task/action/log/time", taskAction, System.currentTimeMillis() - auditLogStartTime);
       }
       catch (Exception e) {
         final String actionClass = taskAction.getClass().getName();
@@ -72,14 +77,35 @@ public class LocalTaskActionClient implements TaskActionClient
 
     final long performStartTime = System.currentTimeMillis();
     final RetType result = taskAction.perform(task, toolbox);
-    emitTimerMetric("task/action/run/time", System.currentTimeMillis() - performStartTime);
+    emitTimerMetric("task/action/run/time", taskAction, System.currentTimeMillis() - performStartTime);
     return result;
   }
 
-  private void emitTimerMetric(final String metric, final long time)
+  private void emitTimerMetric(final String metric, final TaskAction<?> action, final long time)
   {
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    final String actionType = getActionType(toolbox.getJsonMapper(), action);
+    if (actionType != null) {
+      metricBuilder.setDimension("taskActionType", actionType);
+    }
     toolbox.getEmitter().emit(metricBuilder.build(metric, Math.max(0, time)));
+  }
+
+  @Nullable
+  static String getActionType(final ObjectMapper jsonMapper, final TaskAction<?> action)
+  {
+    try {
+      final Map<String, Object> m = jsonMapper.convertValue(action, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+      final Object typeObject = m.get(TaskAction.TYPE_FIELD);
+      if (typeObject instanceof String) {
+        return (String) typeObject;
+      } else {
+        return null;
+      }
+    }
+    catch (Exception e) {
+      return null;
+    }
   }
 }

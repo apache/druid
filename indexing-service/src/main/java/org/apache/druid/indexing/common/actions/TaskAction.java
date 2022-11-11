@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = TaskAction.TYPE_FIELD)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = TimeChunkLockAcquireAction.class),
     @JsonSubTypes.Type(name = "lockTryAcquire", value = TimeChunkLockTryAcquireAction.class),
@@ -50,8 +50,12 @@ import org.apache.druid.indexing.common.task.Task;
 })
 public interface TaskAction<RetType>
 {
+  String TYPE_FIELD = "type";
+
   TypeReference<RetType> getReturnTypeReference(); // T_T
+
   RetType perform(Task task, TaskActionToolbox toolbox);
+
   boolean isAudited();
 
   @Override

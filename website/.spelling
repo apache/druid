@@ -1631,6 +1631,7 @@ poolName
 remoteAddress
 segmentAvailabilityConfirmed
 serviceName
+taskActionType
 taskIngestionMode
 taskStatus
 taskType
