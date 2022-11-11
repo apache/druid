@@ -100,9 +100,9 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    * @param finalize   whether these are the final offsets for a task (true) or an incremental checkpoint (false)
    */
   ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id,
-      final Map<PartitionIdType, SequenceOffsetType> endOffsets,
-      final boolean finalize
+      String id,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets,
+      boolean finalize
   );
 
   /**

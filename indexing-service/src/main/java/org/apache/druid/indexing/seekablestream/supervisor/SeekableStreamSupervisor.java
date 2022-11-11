@@ -1974,17 +1974,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     return Futures.transform(
         taskClient.getStatusAsync(taskId),
-        (AsyncFunction<SeekableStreamIndexTaskRunner.Status, Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>>)
-            status -> {
-              if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
-                return FutureUtils.transform(
-                    taskClient.getEndOffsetsAsync(taskId),
-                    endOffsets -> Pair.of(status, endOffsets)
-                );
-              } else {
-                return Futures.immediateFuture(Pair.of(status, null));
-              }
+        new AsyncFunction<SeekableStreamIndexTaskRunner.Status, Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>>()
+        {
+          @Override
+          public ListenableFuture<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>> apply(
+              SeekableStreamIndexTaskRunner.Status status
+          )
+          {
+            if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
+              return FutureUtils.transform(
+                  taskClient.getEndOffsetsAsync(taskId),
+                  endOffsets -> Pair.of(status, endOffsets)
+              );
+            } else {
+              return Futures.immediateFuture(Pair.of(status, null));
             }
+          }
+        }
     );
   }
 
