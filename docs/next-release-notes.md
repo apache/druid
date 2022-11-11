@@ -6,7 +6,6 @@ Updated the Apache Kafka core dependency to version 3.3.1.
 
 https://github.com/apache/druid/pull/13176
 
-
 ## Query engine
 
 ### BIG_SUM SQL function
@@ -15,7 +14,7 @@ Added SQL function `BIG_SUM` that uses the [Compressed Big Decimal](https://gith
 
 https://github.com/apache/druid/pull/13102
 
-### Add Compressed Big Decimal min and max functions
+### Added Compressed Big Decimal min and max functions
 
 Added min and max functions for Compressed Big Decimal and exposed these functions via SQL: BIG_MIN and BIG_MAX.
 
@@ -39,16 +38,46 @@ For disallowed MSQ warnings of certain types, the warning is now surfaced as the
 
 https://github.com/apache/druid/pull/13198
 
+### Added support for indexSpec
+
+The MSQ task engine now supports the `indexSpec` context parameter.
+
+https://github.com/apache/druid/pull/13275
+
+### Added task start status to the worker report
+
+Added `pendingTasks` and `runningTasks` fields to the worker report for the MSQ task engine.
+
+https://github.com/apache/druid/pull/13263
+
+### Improved handling of secrets
+
+When MSQ submits tasks containing SQL with sensitive keys, the keys can get logged in the file.
+Druid now masks the sensitive keys in the log files using regular expressions.
+
+https://github.com/apache/druid/pull/13231
+
+### Use worker number to communicate between tasks
+
+Changed the way WorkerClient communicates between the worker tasks, to abstract away the complexity of resolving the `workerNumber` to the `taskId` from the callers.
+Once the WorkerClient writes it's outputs to the durable storage, it adds a file with `__success` in the `workerNumber` output directory for that stage and with its `taskId`. This allows you to determine the worker, which has successfully written its outputs to the durable storage, and differentiate from the partial outputs by orphan or failed worker tasks.
+
+https://github.com/apache/druid/pull/13062
 
 ## Querying
 
 ### Improvements to querying user experience
 
-Exposed HTTP response headers for SQL queries.
+This release includes several improvements for querying:
 
-https://github.com/apache/druid/pull/13052
+* Exposed HTTP response headers for SQL queries (https://github.com/apache/druid/pull/13052)
+* Added the `shouldFinalize` feature for HLL and quantiles sketches. Druid will no longer finalize aggregators when:
+    - aggregators appear in the outer level of a query
+    - aggregators are used as input to an expression or finalizing-field-access post-aggregator
 
-### Enable async reads for JDBC
+    To provide backwards compatibility, we added a `sqlFinalizeOuterSketches` query context parameter that restores the old behavior (https://github.com/apache/druid/pull/13247)
+
+### Enabled async reads for JDBC
 
 Prevented JDBC timeouts on long queries by returning empty batches when a batch fetch takes too long. Uses an async model to run the result fetch concurrently with JDBC requests.
 
@@ -60,21 +89,19 @@ To accommodate large value sets arising from large in-filters or from joins push
 
 https://github.com/apache/druid/pull/13133
 
-### Add new configuration keys to query context security model
+### Added new configuration keys to query context security model
 
 Added the following configuration keys that refine the query context security model controlled by `druid.auth.authorizeQueryContextParams`:
 * `druid.auth.unsecuredContextKeys`: The set of query context keys that do not require a security check.
 * `druid.auth.securedContextKeys`: The set of query context keys that do require a security check.
 
-
 ## Nested columns
 
-### Refactor a data source before unnest 
+### Refactored a data source before unnest 
 
 When data requires "flattening" during processing, the operator now takes in an array and then flattens the array into N (N=number of elements in the array) rows where each row has one of the values from the array.
 
 https://github.com/apache/druid/pull/13085
-
 
 ## Ingestion
 
@@ -93,7 +120,7 @@ Allowed Kafka Consumer's custom deserializer to be configured after its instanti
 
 https://github.com/apache/druid/pull/13097
 
-### Fix Overlord leader election
+### Fixed Overlord leader election
 
 Fixed a problem where Overlord leader election failed due to lock reacquisition issues. Druid now fails these tasks and clears all locks so that the Overlord leader election isn't blocked.
 
@@ -111,6 +138,29 @@ Added Idle feature to `SeekableStreamSupervisor` for inactive stream.
 
 https://github.com/apache/druid/pull/13144
 
+### Sampling from stream input now respects the configured timeout
+
+Fixed a problem where sampling from a stream input, such as Kafka or Kinesis, failed to respect the configured timeout when the stream had no records available. You can now set the maximum amount of time in which the entry iterator will return results.
+
+https://github.com/apache/druid/pull/13296
+
+### Streaming tasks resume on Overlord switch
+
+Fixed a problem where streaming ingestion tasks continued to run until their duration elapsed after the Overlord leader had issued a pause to the tasks. Now, when the Overlord switch occurs right after it has issued a pause to the task, the task remains in a paused state even after the Overlord re-election.
+
+https://github.com/apache/druid/pull/13223
+
+### Fixed Parquet list conversion
+
+Fixes an issue with Parquet list conversion, where lists of complex objects could unexpectedly be wrapped in an extra object, appearing as `[{"element":<actual_list_element>},{"element":<another_one>}...]` instead of the direct list. This changes the behavior of the parquet reader for lists of structured objects to be consistent with other parquet logical list conversions. The data is now fetched directly, more closely matching its expected structure.
+
+https://github.com/apache/druid/pull/13294
+
+### Introduced a tree type to flattenSpec
+
+Introduced a `tree` type to `flattenSpec`. In the event that a simple hierarchical lookup is required, the `tree` type allows for faster JSON parsing than `jq` and `path` parsing types.
+
+https://github.com/apache/druid/pull/12177
 
 ## Operations
 
@@ -151,7 +201,7 @@ Improved `NestedDataColumnSerializer` to no longer explicitly write null values 
 
 https://github.com/apache/druid/pull/13101
 
-### Provide service specific log4j overrides in containerized deployments
+### Provided service specific log4j overrides in containerized deployments
 
 Provided an option to override log4j configs setup at the service level directories so that it works with Druid-operator based deployments.
 
@@ -175,15 +225,15 @@ Fixed issues with delayed supervisor termination during certain transient states
 
 https://github.com/apache/druid/pull/13072
 
-### Fixed problem when running Druid with JDK11+
+### Fixed a problem when running Druid with JDK11+
 
 Export `com.sun.management.internal` when running Druid under JRE11 and JRE17.
 
 https://github.com/apache/druid/pull/13068
 
-### Enable cleaner JSON for various input sources and formats
+### Enabled cleaner JSON for various input sources and formats
 
-Added JsonInclude to various properties, to avoid population of default values in serialized JSON.
+Added `JsonInclude` to various properties, to avoid population of default values in serialized JSON.
 
 https://github.com/apache/druid/pull/13064
 
@@ -193,24 +243,29 @@ Improved global-cached-lookups metric reporting.
 
 https://github.com/apache/druid/pull/13219
 
-### Fix a bug in HttpPostEmitter
+### Fixed a bug in HttpPostEmitter
 
 Fixed a bug in HttpPostEmitter where the emitting thread was prematurely stopped while there was data to be flushed.
 
 https://github.com/apache/druid/pull/13237
 
-### Improve direct memory check on startup
+### Improved direct memory check on startup
 
 Improved direct memory check on startup by providing better support for Java 9+ in `RuntimeInfo`, and clearer log messages where validation fails.
 
 https://github.com/apache/druid/pull/13207
 
-### Add a new way of storing STRING type columns
+### Added a new way of storing STRING type columns
 
 Added support for 'front coded' string dictionaries for smaller string columns.
 
 https://github.com/apache/druid/pull/12277
 
+### Improved the run time of the MarkAsUnusedOvershadowedSegments duty
+
+Improved the run time of the MarkAsUnusedOvershadowedSegments duty by iterating over all overshadowed segments and marking segments as unused in batches.
+
+https://github.com/apache/druid/pull/13287
 
 ## Extensions
 
@@ -226,10 +281,23 @@ Removed unnecessary generic type from CompressedBigDecimal, added support for nu
 
 https://github.com/apache/druid/pull/13048
 
+### Support for running tasks as Kubernetes jobs
+
+Added an extension that allows Druid to use Kubernetes for launching and managing tasks, eliminating the need for MiddleManagers.
+To use this extension, [include](../extensions.md#loading-extensions) `druid-kubernetes-overlord-extensions` in the extensions load list for your Overlord process.
+
+https://github.com/apache/druid/pull/13156
+
+### Support for Kubernetes discovery
+
+Added `POD_NAME` and `POD_NAMESPACE` env variables to all Kubernetes Deployments and StatefulSets.
+Helm deployment is now compatible with `druid-kubernetes-extension`.
+
+https://github.com/apache/druid/pull/13262
 
 ## Web console
 
-### Old query view is no longer available
+### Removed the old query view
 
 The old query view is removed. Use the new query view with tabs.
 For more information, see [Web console](https://druid.apache.org/docs/latest/operations/web-console.html#query).
@@ -244,11 +312,11 @@ https://github.com/apache/druid/pull/13169
 
 ### Ability to add issue comments
 
-You can now add an issue comment in SQL, for example `--:ISSUE: this is an issue` that is rendered in red and prevents the SQL from running.  The comments are used by the spec-to-SQL converter to indicate that something could not be converted.
+You can now add an issue comment in SQL, for example `--:ISSUE: this is an issue` that is rendered in red and prevents the SQL from running. The comments are used by the spec-to-SQL converter to indicate that something could not be converted.
 
 https://github.com/apache/druid/pull/13136
 
-### Support Kafka lookups
+### Support for Kafka lookups
 
 Added support for Kafka-based lookups rendering and input in the web console.
 
@@ -259,3 +327,15 @@ https://github.com/apache/druid/pull/13098
 Added better detection for arrays containing objects.
 
 https://github.com/apache/druid/pull/13077
+
+### Updated Druid Query Toolkit version
+
+[Druid Query Toolkit](https://www.npmjs.com/package/druid-query-toolkit) version 0.16.1 adds quotes to references in auto generated queries by default.
+
+https://github.com/apache/druid/pull/13243
+
+### Query task status information
+
+The web console now exposes a textual indication about running and pending tasks when a query is stuck due to lack of task slots.
+
+https://github.com/apache/druid/pull/13291
