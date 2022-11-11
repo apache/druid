@@ -176,7 +176,7 @@ public class MSQControllerTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     final ServiceClientFactory clientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
@@ -202,6 +202,12 @@ public class MSQControllerTask extends AbstractTask
       // This is to make sure we don't leak connections.
       remoteFetchExecutorService.shutdownNow();
     }
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
   }
 
   private static String getDataSourceForTaskMetadata(final MSQSpec querySpec)

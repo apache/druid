@@ -40,6 +40,11 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
 
   private static final SqlAggFunction FUNCTION_INSTANCE = new HllSketchApproxCountDistinctSqlAggFunction();
 
+  public HllSketchApproxCountDistinctSqlAggregator()
+  {
+    super(true);
+  }
+
   @Override
   public SqlAggFunction calciteFunction()
   {

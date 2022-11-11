@@ -97,11 +97,6 @@ public interface SegmentsMetadataManager
   Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments();
 
   /**
-   * Returns a set of overshadowed segment ids.
-   */
-  Set<SegmentId> getOvershadowedSegments();
-
-  /**
    * Returns a snapshot of DruidDataSources and overshadowed segments
    */
   DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments();

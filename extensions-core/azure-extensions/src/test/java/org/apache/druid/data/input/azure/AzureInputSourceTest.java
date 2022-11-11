@@ -22,7 +22,6 @@ package org.apache.druid.data.input.azure;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -42,6 +41,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -178,17 +180,19 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getPrefixesSplitStream_withFilter_successfullyCreatesCloudLocation_returnsExpectedLocations()
+  public void test_getPrefixesSplitStream_withObjectGlob_successfullyCreatesCloudLocation_returnsExpectedLocations()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
-    String filter = "*.csv";
+    String objectGlob = "**.csv";
+
+    PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + objectGlob);
 
     expectedCloudBlobsIterator = Iterators.filter(
         expectedCloudBlobsIterator,
-        object -> FilenameUtils.wildcardMatch(object.getName(), filter)
+        object -> m.matches(Paths.get(object.getName()))
     );
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
@@ -211,7 +215,7 @@ public class AzureInputSourceTest extends EasyMockSupport
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
-        filter
+        objectGlob
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> cloudObjectStream = azureInputSource.getPrefixesSplitStream(
@@ -265,7 +269,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     String actualToString = azureInputSource.toString();
-    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], filter=null}", actualToString);
+    Assert.assertEquals("AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}", actualToString);
   }
 
   @Test
@@ -279,7 +283,7 @@ public class AzureInputSourceTest extends EasyMockSupport
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("azureCloudBlobToLocationConverter")
                   .withNonnullFields("inputDataConfig")
-                  .withNonnullFields("filter")
+                  .withNonnullFields("objectGlob")
                   .withNonnullFields("scheme")
                   .verify();
   }

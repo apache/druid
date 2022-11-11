@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.local;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -33,6 +35,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class LocalFileStorageConnectorTest
@@ -107,6 +112,43 @@ public class LocalFileStorageConnectorTest
     expectedException.expect(IAE.class);
     StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
     storageConnectorProvider.get();
+  }
+
+  @Test
+  public void listFilesTest() throws Exception
+  {
+    String topLevelDir = "top" + UUID.randomUUID();
+    String uuid_base = topLevelDir + "/" + UUID.randomUUID();
+    String uuid1 = uuid_base + "/" + UUID.randomUUID();
+    String uuid2 = uuid_base + "/" + UUID.randomUUID();
+
+    createAndPopulateFile(uuid1);
+    createAndPopulateFile(uuid2);
+
+    List<String> topLevelDirContents = storageConnector.listDir(topLevelDir);
+    List<String> expectedTopLevelDirContents = ImmutableList.of(new File(uuid_base).getName());
+    Assert.assertEquals(expectedTopLevelDirContents, topLevelDirContents);
+
+    // Converted to a set since the output of the listDir can be shuffled
+    Set<String> nextLevelDirContents = new HashSet<>(storageConnector.listDir(uuid_base));
+    Set<String> expectedNextLevelDirContents = ImmutableSet.of(new File(uuid1).getName(), new File(uuid2).getName());
+    Assert.assertEquals(expectedNextLevelDirContents, nextLevelDirContents);
+
+    // Check if listDir throws if an unknown path is passed as an argument
+    Assert.assertThrows(
+        IAE.class,
+        () -> {
+          storageConnector.listDir("unknown_top_path");
+        }
+    );
+
+    // Check if listDir throws if a file path is passed as an argument
+    Assert.assertThrows(
+        IAE.class,
+        () -> {
+          storageConnector.listDir(uuid1);
+        }
+    );
   }
 
   private void checkContents(String uuid) throws IOException

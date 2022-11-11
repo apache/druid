@@ -1565,7 +1565,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -1573,7 +1574,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        OBJECT_MAPPER
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1657,7 +1659,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 

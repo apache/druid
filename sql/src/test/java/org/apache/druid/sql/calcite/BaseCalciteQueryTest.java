@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
@@ -59,6 +60,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -70,6 +72,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
@@ -84,14 +87,22 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
+import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -121,7 +132,8 @@ import java.util.stream.Collectors;
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
-public class BaseCalciteQueryTest extends CalciteTestBase implements QueryComponentSupplier
+public class BaseCalciteQueryTest extends CalciteTestBase
+    implements QueryComponentSupplier, PlannerComponentSupplier
 {
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
@@ -261,6 +273,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
   public QueryLogHook queryLogHook;
 
   public QueryComponentSupplier baseComponentSupplier;
+  public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
 
   public BaseCalciteQueryTest()
   {
@@ -420,7 +433,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
         condition,
         joinType,
         filter,
-        CalciteTests.createExprMacroTable()
+        CalciteTests.createExprMacroTable(),
+        CalciteTests.createJoinableFactoryWrapper()
     );
   }
 
@@ -512,16 +526,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory
   ) throws IOException
   {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate);
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory);
   }
 
   @Override
   public SqlEngine createEngine(
-      QueryLifecycleFactory qlf,
-      ObjectMapper queryJsonMapper
+      final QueryLifecycleFactory qlf,
+      final ObjectMapper queryJsonMapper
   )
   {
     if (engine0 == null) {
@@ -529,6 +544,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     } else {
       return engine0;
     }
+  }
+
+  @Override
+  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
+  {
+    return baseComponentSupplier.createCongolmerate(builder, closer);
   }
 
   @Override
@@ -559,6 +580,42 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
   public Iterable<? extends Module> getJacksonModules()
   {
     return baseComponentSupplier.getJacksonModules();
+  }
+
+  @Override
+  public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+  {
+    return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
+  }
+
+  @Override
+  public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
+  {
+    return basePlannerComponentSupplier.extensionCalciteRules();
+  }
+
+  @Override
+  public ViewManager createViewManager()
+  {
+    return basePlannerComponentSupplier.createViewManager();
+  }
+
+  @Override
+  public void populateViews(ViewManager viewManager, PlannerFactory plannerFactory)
+  {
+    basePlannerComponentSupplier.populateViews(viewManager, plannerFactory);
+  }
+
+  @Override
+  public DruidSchemaManager createSchemaManager()
+  {
+    return basePlannerComponentSupplier.createSchemaManager();
+  }
+
+  @Override
+  public void finalizePlanner(PlannerFixture plannerFixture)
+  {
+    basePlannerComponentSupplier.finalizePlanner(plannerFixture);
   }
 
   @Override
@@ -838,9 +895,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
     }
 
     @Override
-    public SqlStatementFactory statementFactory(PlannerConfig plannerConfig, AuthConfig authConfig)
+    public PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
     {
-      return getSqlStatementFactory(plannerConfig, authConfig);
+      return queryFramework.plannerFixture(BaseCalciteQueryTest.this, plannerConfig, authConfig);
     }
 
     @Override
@@ -962,7 +1019,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase implements QueryCompon
       AuthConfig authConfig
   )
   {
-    return queryFramework().statementFactory(plannerConfig, authConfig);
+    return queryFramework().plannerFixture(this, plannerConfig, authConfig).statementFactory();
   }
 
   protected void cannotVectorize()

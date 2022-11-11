@@ -1230,7 +1230,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     );
 
     SamplerResponse response = inputSourceSampler.sample(
-        new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true),
+        new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true, 3000),
         createInputFormat(),
         dataSchema,
         new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/, null, null)
