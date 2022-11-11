@@ -331,14 +331,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           current = Iterables.getOnlyElement(current.getChildren());
         }
 
-        assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
         current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
         }
-
-        assert current instanceof QueryDataSource;
 
         if (toolChest.canPerformSubquery(((QueryDataSource) current).getQuery())) {
           return current;
@@ -572,7 +569,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final RowSignature signature = toolChest.resultArraySignature(query);
 
-    final List<Object[]> resultList = new ArrayList<>();
+    final ArrayList<Object[]> resultList = new ArrayList<>();
 
     toolChest.resultsAsArrays(query, results).accumulate(
         resultList,

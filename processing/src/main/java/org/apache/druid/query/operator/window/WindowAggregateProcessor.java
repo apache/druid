@@ -1,5 +1,7 @@
 package org.apache.druid.query.operator.window;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.DefaultOnHeapAggregatable;
@@ -13,7 +15,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WindowAggregateProcessor
+public class WindowAggregateProcessor implements Processor
 {
   @Nullable
   private static <T> List<T> emptyToNull(List<T> list) {
@@ -27,14 +29,28 @@ public class WindowAggregateProcessor
   private final List<AggregatorFactory> aggregations;
   private final List<AggregatorFactory> cumulativeAggregations;
 
+  @JsonCreator
   public WindowAggregateProcessor(
-      List<AggregatorFactory> aggregations,
-      List<AggregatorFactory> cumulativeAggregations
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregations,
+      @JsonProperty("cumulativeAggregations") List<AggregatorFactory> cumulativeAggregations
   ) {
     this.aggregations = emptyToNull(aggregations);
     this.cumulativeAggregations = emptyToNull(cumulativeAggregations);
   }
 
+  @JsonProperty("aggregations")
+  public List<AggregatorFactory> getAggregations()
+  {
+    return aggregations;
+  }
+
+  @JsonProperty("cumulativeAggregations")
+  public List<AggregatorFactory> getCumulativeAggregations()
+  {
+    return cumulativeAggregations;
+  }
+
+  @Override
   public RowsAndColumns process(RowsAndColumns inputPartition) {
     AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(inputPartition);
 

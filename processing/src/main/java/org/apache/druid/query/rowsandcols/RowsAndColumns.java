@@ -1,7 +1,7 @@
 package org.apache.druid.query.rowsandcols;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.frame.AppendableMapOfColumns;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -9,18 +9,15 @@ import javax.annotation.Nullable;
 public interface RowsAndColumns
 {
   @Nonnull
-  static AppendableRowsAndColumns expectAppendable(RowsAndColumns inputPartition)
+  static AppendableRowsAndColumns expectAppendable(RowsAndColumns input)
   {
-    if (inputPartition instanceof AppendableRowsAndColumns) {
-      return (AppendableRowsAndColumns) inputPartition;
+    if (input instanceof AppendableRowsAndColumns) {
+      return (AppendableRowsAndColumns) input;
     }
 
-    AppendableRowsAndColumns retVal = inputPartition.as(AppendableRowsAndColumns.class);
+    AppendableRowsAndColumns retVal = input.as(AppendableRowsAndColumns.class);
     if (retVal == null) {
-      throw new ISE(
-          "Unable to force appendability, RowsAndColumns class[%s] cannot append.",
-          inputPartition.getClass()
-      );
+      retVal = new AppendableMapOfColumns(input);
     }
     return retVal;
   }
