@@ -35,7 +35,7 @@ public class NoticesQueueTest
   {
     final NoticesQueue<String> queue = new NoticesQueue<>();
 
-    for (int i = 0 ; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
       Assert.assertEquals(0, queue.size());
       queue.add("xyz");
       Assert.assertEquals(1, queue.size());
