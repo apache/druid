@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,10 +49,36 @@ public final class JacksonUtils
   /**
    * Silences Jackson's {@link IOException}.
    */
-  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueClass)
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueType)
   {
     try {
-      return mapper.readValue(bytes, valueClass);
+      return mapper.readValue(bytes, valueType);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, JavaType valueType)
+  {
+    try {
+      return mapper.readValue(bytes, valueType);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, TypeReference<T> valueType)
+  {
+    try {
+      return mapper.readValue(bytes, valueType);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

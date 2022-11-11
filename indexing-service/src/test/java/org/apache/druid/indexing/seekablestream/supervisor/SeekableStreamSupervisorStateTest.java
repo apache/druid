@@ -152,11 +152,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
 
     EasyMock.expect(taskClientFactory.build(
-        EasyMock.anyObject(),
         EasyMock.anyString(),
-        EasyMock.anyInt(),
         EasyMock.anyObject(),
-        EasyMock.anyLong()
+        EasyMock.anyInt(),
+        EasyMock.anyObject()
     )).andReturn(
         indexTaskClient).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
@@ -1091,6 +1090,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public Integer getWorkerThreads()
       {
         return 1;
+      }
+
+      @Override
+      public boolean getChatAsync()
+      {
+        return false;
       }
 
       @Override
