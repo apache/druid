@@ -2,7 +2,6 @@ package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.segment.column.ColumnType;
 
-import javax.annotation.Nullable;
 import java.util.Comparator;
 
 public class ObjectArrayColumn implements Column
@@ -26,8 +25,19 @@ public class ObjectArrayColumn implements Column
   @Override
   public ColumnAccessor toAccessor()
   {
-    return new ColumnAccessor()
-    {
+    return new ObjectColumnAccessorBase(){
+      @Override
+      protected Object getVal(int cell)
+      {
+        return objects[cell];
+      }
+
+      @Override
+      protected Comparator<Object> getComparator()
+      {
+        return comparator;
+      }
+
       @Override
       public ColumnType getType()
       {
@@ -39,89 +49,6 @@ public class ObjectArrayColumn implements Column
       {
         return objects.length;
       }
-
-      @Override
-      public boolean isNull(int cell)
-      {
-        return objects[cell] == null;
-      }
-
-      @Nullable
-      @Override
-      public Object getObject(int cell)
-      {
-        return objects[cell];
-      }
-
-      @Override
-      public double getDouble(int cell)
-      {
-        if (objects[cell] instanceof Number) {
-          return ((Number) objects[cell]).doubleValue();
-        } else if (objects[cell] instanceof String) {
-          try {
-            return Double.parseDouble((String) objects[cell]);
-          } catch (NumberFormatException e) {
-            return 0d;
-          }
-        } else {
-          return 0d;
-        }
-      }
-
-      @Override
-      public float getFloat(int cell)
-      {
-        if (objects[cell] instanceof Number) {
-          return ((Number) objects[cell]).floatValue();
-        } else if (objects[cell] instanceof String) {
-          try {
-            return Float.parseFloat((String) objects[cell]);
-          } catch (NumberFormatException e) {
-            return 0f;
-          }
-        } else {
-          return 0f;
-        }
-      }
-
-      @Override
-      public long getLong(int cell)
-      {
-        if (objects[cell] instanceof Number) {
-          return ((Number) objects[cell]).longValue();
-        } else if (objects[cell] instanceof String) {
-          try {
-            return Long.parseLong((String) objects[cell]);
-          } catch (NumberFormatException e) {
-            return 0L;
-          }
-        } else {
-          return 0L;
-        }
-      }
-
-      @Override
-      public int getInt(int cell)
-      {
-        if (objects[cell] instanceof Number) {
-          return ((Number) objects[cell]).intValue();
-        } else if (objects[cell] instanceof String) {
-          try {
-            return Integer.parseInt((String) objects[cell]);
-          } catch (NumberFormatException e) {
-            return 0;
-          }
-        } else {
-          return 0;
-        }
-      }
-
-      @Override
-      public int compareCells(int lhsCell, int rhsCell)
-      {
-        return comparator.compare(objects[lhsCell], objects[rhsCell]);
-      }
     };
   }
 
@@ -130,4 +57,5 @@ public class ObjectArrayColumn implements Column
   {
     return null;
   }
+
 }

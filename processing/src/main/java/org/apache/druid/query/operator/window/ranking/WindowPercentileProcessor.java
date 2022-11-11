@@ -1,5 +1,7 @@
 package org.apache.druid.query.operator.window.ranking;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
@@ -13,15 +15,28 @@ public class WindowPercentileProcessor implements Processor
   private final int numBuckets;
   private final String outputColumn;
 
+  @JsonCreator
   public WindowPercentileProcessor(
-      String outputColumn,
-      int numBuckets
+      @JsonProperty("outputColumn") String outputColumn,
+      @JsonProperty("numBuckets") int numBuckets
   )
   {
     Preconditions.checkArgument(numBuckets > 0, "numBuckets[%s] must be greater than zero", numBuckets);
 
     this.outputColumn = outputColumn;
     this.numBuckets = numBuckets;
+  }
+
+  @JsonProperty("numBuckets")
+  public int getNumBuckets()
+  {
+    return numBuckets;
+  }
+
+  @JsonProperty("outputColumn")
+  public String getOutputColumn()
+  {
+    return outputColumn;
   }
 
   @Override

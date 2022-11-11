@@ -1,5 +1,6 @@
 package org.apache.druid.query.operator.window.value;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
@@ -19,6 +20,18 @@ public abstract class WindowValueProcessorBase implements Processor
   ) {
     this.inputColumn = inputColumn;
     this.outputColumn = outputColumn;
+  }
+
+  @JsonProperty("inputColumn")
+  public String getInputColumn()
+  {
+    return inputColumn;
+  }
+
+  @JsonProperty("outputColumn")
+  public String getOutputColumn()
+  {
+    return outputColumn;
   }
 
   /**

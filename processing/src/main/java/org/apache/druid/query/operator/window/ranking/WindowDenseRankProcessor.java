@@ -1,8 +1,12 @@
 package org.apache.druid.query.operator.window.ranking;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -11,9 +15,10 @@ import java.util.List;
  */
 public class WindowDenseRankProcessor extends WindowRankingProcessorBase
 {
+  @JsonCreator
   public WindowDenseRankProcessor(
-      List<String> groupingCols,
-      String outputColumn
+      @JsonProperty("group") List<String> groupingCols,
+      @JsonProperty("outputColumn") String outputColumn
   ) {
     super(groupingCols, outputColumn);
   }
@@ -22,13 +27,10 @@ public class WindowDenseRankProcessor extends WindowRankingProcessorBase
   public RowsAndColumns process(RowsAndColumns incomingPartition)
   {
     return processInternal(incomingPartition, groupings -> {
-      final int[] ranks = new int[groupings.length];
-      ranks[0] = 1;
-      for (int i = 1; i < groupings.length; ++i) {
-        ranks[i] = ranks[i - 1];
-        if (groupings[i - 1] != groupings[i]) {
-          ++ranks[i];
-        }
+      final int[] ranks = new int[incomingPartition.numRows()];
+      for (int i = 0; i < groupings.size(); ++i) {
+        StartAndEnd startAndEnd = groupings.get(i);
+        Arrays.fill(ranks, startAndEnd.getStart(), startAndEnd.getEnd(), i + 1);
       }
 
       return new IntArrayColumn(ranks);

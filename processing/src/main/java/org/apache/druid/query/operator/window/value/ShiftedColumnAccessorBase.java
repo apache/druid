@@ -106,5 +106,5 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
 
   protected abstract int getActualCell(int cell);
 
-  protected abstract boolean outsideBounds(int actualLhsCell);
+  protected abstract boolean outsideBounds(int cell);
 }

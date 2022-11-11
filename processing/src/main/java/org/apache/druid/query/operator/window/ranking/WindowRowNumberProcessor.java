@@ -1,5 +1,7 @@
 package org.apache.druid.query.operator.window.ranking;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -11,10 +13,17 @@ public class WindowRowNumberProcessor implements Processor
 {
   private final String outputColumn;
 
+  @JsonCreator
   public WindowRowNumberProcessor(
-      String outputColumn
+      @JsonProperty("outputColumn") String outputColumn
   ) {
     this.outputColumn = outputColumn;
+  }
+
+  @JsonProperty("outputColumn")
+  public String getOutputColumn()
+  {
+    return outputColumn;
   }
 
   @Override
