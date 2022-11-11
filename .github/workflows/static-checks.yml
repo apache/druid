@@ -15,6 +15,10 @@
 
 name: Static Checks CI
 on:
+  push:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
   pull_request:
     branches:
       - master
