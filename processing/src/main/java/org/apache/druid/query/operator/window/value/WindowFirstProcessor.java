@@ -1,14 +1,17 @@
 package org.apache.druid.query.operator.window.value;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 
 public class WindowFirstProcessor extends WindowValueProcessorBase
 {
+  @JsonCreator
   public WindowFirstProcessor(
-      String inputColumn,
-      String outputColumn
+      @JsonProperty("inputColumn") String inputColumn,
+      @JsonProperty("outputColumn") String outputColumn
   ) {
     super(inputColumn, outputColumn);
   }

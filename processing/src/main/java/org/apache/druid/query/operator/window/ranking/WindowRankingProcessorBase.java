@@ -1,12 +1,15 @@
 package org.apache.druid.query.operator.window.ranking;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.DefaultGroupPartitioner;
-import org.apache.druid.query.rowsandcols.GroupPartitioner;
+import org.apache.druid.query.rowsandcols.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.SortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.Column;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -27,15 +30,30 @@ public abstract class WindowRankingProcessorBase implements Processor
     this.outputColumn = outputColumn;
   }
 
-  public RowsAndColumns processInternal(RowsAndColumns incomingPartition, Function<int[], Column> fn)
+  @JsonProperty("group")
+  public List<String> getGroupingCols()
+  {
+    return groupingCols;
+  }
+
+  @JsonProperty("outputColumn")
+  public String getOutputColumn()
+  {
+    return outputColumn;
+  }
+
+  public RowsAndColumns processInternal(
+      RowsAndColumns incomingPartition,
+      Function<ArrayList<StartAndEnd>, Column> fn
+  )
   {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(incomingPartition);
 
-    GroupPartitioner groupPartitioner = incomingPartition.as(GroupPartitioner.class);
+    SortedGroupPartitioner groupPartitioner = incomingPartition.as(SortedGroupPartitioner.class);
     if (groupPartitioner == null) {
-      groupPartitioner = new DefaultGroupPartitioner(incomingPartition);
+      groupPartitioner = new DefaultSortedGroupPartitioner(incomingPartition);
     }
 
-    return retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeGroupings(groupingCols)));
+    return retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeBoundaries(groupingCols)));
   }
 }

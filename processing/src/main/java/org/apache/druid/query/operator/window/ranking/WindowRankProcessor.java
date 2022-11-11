@@ -1,9 +1,13 @@
 package org.apache.druid.query.operator.window.ranking;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -14,40 +18,45 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
 {
   private final boolean asPercent;
 
+  @JsonCreator
   public WindowRankProcessor(
-      List<String> groupingCols,
-      String outputColumn,
-      boolean asPercent
+      @JsonProperty("group") List<String> groupingCols,
+      @JsonProperty("outputColumn") String outputColumn,
+      @JsonProperty("asPercent") boolean asPercent
   ) {
     super(groupingCols, outputColumn);
     this.asPercent = asPercent;
   }
 
+  @JsonProperty("asPercent")
+  public boolean isAsPercent()
+  {
+    return asPercent;
+  }
+
   @Override
   public RowsAndColumns process(RowsAndColumns incomingPartition)
   {
-    return processInternal(incomingPartition, groupings -> {
-      final int[] ranks = new int[groupings.length];
-      ranks[0] = 1;
-      for (int i = 1; i < groupings.length; ++i) {
-        if (groupings[i - 1] == groupings[i]) {
-          ranks[i] = ranks[i - 1];
-        } else {
-          // ranks are 1-indexed
-          ranks[i] = i + 1;
-        }
-      }
+    if (asPercent) {
+      return processInternal(incomingPartition, groupings -> {
+        final double[] percentages = new double[incomingPartition.numRows()];
+        final double denominator = percentages.length - 1;
 
-      if (asPercent) {
-        final double[] percentages = new double[ranks.length];
-        final double denominator = ranks.length - 1;
-
-        for (int i = 0; i < ranks.length; i++) {
-          percentages[i] = (ranks[i] - 1) / denominator;
+        for (final StartAndEnd startAndEnd : groupings) {
+          Arrays.fill(percentages, startAndEnd.getStart(), startAndEnd.getEnd(), startAndEnd.getStart() / denominator);
         }
 
         return new DoubleArrayColumn(percentages);
+      });
+    }
+
+    return processInternal(incomingPartition, groupings -> {
+      final int[] ranks = new int[incomingPartition.numRows()];
+
+      for (final StartAndEnd startAndEnd : groupings) {
+        Arrays.fill(ranks, startAndEnd.getStart(), startAndEnd.getEnd(), startAndEnd.getStart() + 1);
       }
+
       return new IntArrayColumn(ranks);
     });
   }

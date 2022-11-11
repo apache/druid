@@ -1,5 +1,7 @@
 package org.apache.druid.query.operator.window.value;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 
@@ -7,10 +9,11 @@ public class WindowLeadProcessor extends WindowValueProcessorBase
 {
   private final int leadRows;
 
+  @JsonCreator
   public WindowLeadProcessor(
-      String inputColumn,
-      String outputColumn,
-      int leadRows
+      @JsonProperty("inputColumn") String inputColumn,
+      @JsonProperty("outputColumn") String outputColumn,
+      @JsonProperty("lead") int leadRows
   ) {
     super(inputColumn, outputColumn);
     this.leadRows = leadRows;
