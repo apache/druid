@@ -211,6 +211,22 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
+  public void test_stopAsync_noPublish_ioException()
+  {
+    serviceClient.expect(
+        new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
+        new IOException()
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> client.stopAsync(TASK_ID, false).get()
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+  }
+
+  @Test
   public void test_resumeAsync_ok() throws Exception
   {
     serviceClient.expect(
@@ -328,7 +344,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
-  public void test_pauseAsync_immediate() throws Exception
+  public void test_pauseAsync_immediateOk() throws Exception
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
@@ -340,6 +356,30 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     );
 
     Assert.assertEquals(offsets, client.pauseAsync(TASK_ID).get());
+  }
+
+  @Test
+  public void test_pauseAsync_immediateBadStatus() throws Exception
+  {
+    final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
+
+    serviceClient.expect(
+        new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
+        HttpResponseStatus.CONTINUE,
+        Collections.emptyMap(),
+        jsonMapper.writeValueAsBytes(offsets)
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> client.pauseAsync(TASK_ID).get()
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(
+        e.getCause().getMessage(),
+        CoreMatchers.startsWith("Pause request for task [the-task] failed with response [100 Continue]")
+    );
   }
 
   @Test
@@ -471,6 +511,19 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
+  public void test_getMovingAveragesAsync_empty() throws Exception
+  {
+    serviceClient.expect(
+        new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        ByteArrays.EMPTY_ARRAY
+    );
+
+    Assert.assertNull(client.getMovingAveragesAsync(TASK_ID).get());
+  }
+
+  @Test
   public void test_getParseErrorsAsync() throws Exception
   {
     final List<ParseExceptionReport> retVal = ImmutableList.of(
@@ -485,6 +538,19 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     );
 
     Assert.assertEquals(retVal, client.getParseErrorsAsync(TASK_ID).get());
+  }
+
+  @Test
+  public void test_getParseErrorsAsync_empty() throws Exception
+  {
+    serviceClient.expect(
+        new RequestBuilder(HttpMethod.GET, "/unparseableEvents").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        ByteArrays.EMPTY_ARRAY
+    );
+
+    Assert.assertNull(client.getParseErrorsAsync(TASK_ID).get());
   }
 
   private class TestSeekableStreamIndexTaskClientAsyncImpl extends SeekableStreamIndexTaskClientAsyncImpl<Integer, Long>

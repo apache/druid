@@ -105,13 +105,7 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
     log.debug("Resume task[%s]", id);
 
     try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.POST,
-          "resume",
-          null,
-          true
-      );
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
       return isSuccess(response);
     }
     catch (NoTaskLocationException | IOException e) {
@@ -207,13 +201,7 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
     log.debug("GetStartTime task[%s]", id);
 
     try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.GET,
-          "time/start",
-          null,
-          true
-      );
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
       return response.getContent() == null || response.getContent().isEmpty()
              ? null
              : deserialize(response.getContent(), DateTime.class);
@@ -309,13 +297,7 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
   {
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
     try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.GET,
-          "checkpoints",
-          null,
-          retry
-      );
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
       return deserializeNestedValueMap(
           response.getContent(),
           TreeMap.class,
@@ -347,13 +329,7 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
     log.debug("GetEndOffsets task[%s]", id);
 
     try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.GET,
-          "offsets/end",
-          null,
-          true
-      );
+      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
       return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {

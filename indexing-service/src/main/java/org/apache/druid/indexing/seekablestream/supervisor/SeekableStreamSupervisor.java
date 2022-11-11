@@ -3051,25 +3051,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             for (int i = 0; i < input.size(); i++) {
               final String taskId = pauseTaskIds.get(i);
 
-              if (input.get(i).isValue()) {
-                final Map<PartitionIdType, SequenceOffsetType> result = input.get(i).valueOrThrow();
+              if (input.get(i).isError()) {
+                // Get the exception
+                final Throwable pauseException = input.get(i).error();
+                stateManager.recordThrowableEvent(pauseException);
 
-                if (result == null || result.isEmpty()) {
-                  killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
-                  taskGroup.tasks.remove(taskId);
-                } else { // otherwise build a map of the highest sequences seen
-                  for (Entry<PartitionIdType, SequenceOffsetType> sequence : result.entrySet()) {
-                    if (!endOffsets.containsKey(sequence.getKey())
-                        || makeSequenceNumber(endOffsets.get(sequence.getKey())).compareTo(
-                        makeSequenceNumber(sequence.getValue())) < 0) {
-                      endOffsets.put(sequence.getKey(), sequence.getValue());
-                    }
+                killTask(
+                    taskId,
+                    "An exception occurred while waiting for task [%s] to pause: [%s]",
+                    taskId,
+                    pauseException
+                );
+                taskGroup.tasks.remove(taskId);
+
+              } else if (input.get(i).valueOrThrow() == null || input.get(i).valueOrThrow().isEmpty()) {
+                killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
+                taskGroup.tasks.remove(taskId);
+              } else { // otherwise build a map of the highest sequences seen
+                for (Entry<PartitionIdType, SequenceOffsetType> sequence : input.get(i).valueOrThrow().entrySet()) {
+                  if (!endOffsets.containsKey(sequence.getKey())
+                      || makeSequenceNumber(endOffsets.get(sequence.getKey())).compareTo(
+                      makeSequenceNumber(sequence.getValue())) < 0) {
+                    endOffsets.put(sequence.getKey(), sequence.getValue());
                   }
                 }
-              } else {
-                final Throwable e = new RuntimeException(input.get(i).error());
-                killTask(taskId, "An exception occurred while waiting for task [%s] to pause: [%s]", taskId, e);
-                taskGroup.tasks.remove(taskId);
               }
             }
 
