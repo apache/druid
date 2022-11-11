@@ -67,6 +67,7 @@ const allColumns: string[] = [
   'Current size',
   'Max size',
   'Usage',
+  'Start Time',
   'Detail',
   ACTION_COLUMN_LABEL,
 ];
@@ -74,7 +75,17 @@ const allColumns: string[] = [
 const tableColumns: Record<CapabilitiesMode, string[]> = {
   'full': allColumns,
   'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
+  'no-proxy': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start Time',
+  ],
 };
 
 function formatQueues(
@@ -127,6 +138,7 @@ interface ServiceQueryResultRow {
   readonly max_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
+  readonly start_time: string;
 }
 
 interface LoadQueueStatus {
@@ -180,7 +192,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
-  "is_leader"
+  "is_leader",
+  "start_time"
 FROM sys.servers
 ORDER BY
   (
@@ -211,6 +224,7 @@ ORDER BY
         curr_size: s.currSize,
         max_size: s.maxSize,
         tls_port: -1,
+        start_time: s.start_time,
       };
     });
   }
@@ -509,6 +523,14 @@ ORDER BY
                   return '';
               }
             },
+          },
+          {
+            Header: 'Start Time',
+            show: visibleColumns.shown('Start Time'),
+            accessor: 'start_time',
+            width: 200,
+            Cell: this.renderFilterableCell('start_time'),
+            Aggregated: () => '',
           },
           {
             Header: 'Detail',

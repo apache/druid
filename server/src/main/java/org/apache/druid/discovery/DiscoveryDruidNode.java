@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import org.apache.druid.jackson.StringObjectPairList;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.joda.time.DateTime;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,7 @@ public class DiscoveryDruidNode
 
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
+  private final DateTime startTime;
 
   /**
    * Map of service name -> DruidServices.
@@ -65,12 +68,23 @@ public class DiscoveryDruidNode
       Map<String, DruidService> services
   )
   {
+    this(druidNode, nodeRole, services, DateTimes.nowUtc());
+  }
+
+  public DiscoveryDruidNode(
+      DruidNode druidNode,
+      NodeRole nodeRole,
+      Map<String, DruidService> services,
+      DateTime startTime
+  )
+  {
     this.druidNode = druidNode;
     this.nodeRole = nodeRole;
 
     if (services != null && !services.isEmpty()) {
       this.services.putAll(services);
     }
+    this.startTime = startTime;
   }
 
   @JsonCreator
@@ -78,6 +92,7 @@ public class DiscoveryDruidNode
       @JsonProperty("druidNode") DruidNode druidNode,
       @JsonProperty("nodeType") NodeRole nodeRole,
       @JsonProperty("services") Map<String, StringObjectPairList> rawServices,
+      @JsonProperty("startTime") DateTime startTime,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -93,7 +108,7 @@ public class DiscoveryDruidNode
         }
       }
     }
-    return new DiscoveryDruidNode(druidNode, nodeRole, services);
+    return new DiscoveryDruidNode(druidNode, nodeRole, services, startTime);
   }
 
   /**
@@ -104,10 +119,10 @@ public class DiscoveryDruidNode
    * This is definitely a bug of DataNodeService, but, since renaming one of those duplicate keys will
    * break compatibility, DataNodeService still has the deprecated "type" property.
    * See the Javadoc of DataNodeService for more details.
-   *
+   * <p>
    * This function catches such duplicate keys and rewrites the deprecated "type" to "serverType",
    * so that we don't lose any properties.
-   *
+   * <p>
    * This method can be removed together when we entirely remove the deprecated "type" property from DataNodeService.
    */
   @Deprecated
@@ -164,6 +179,12 @@ public class DiscoveryDruidNode
     return druidNode;
   }
 
+  @JsonProperty
+  public DateTime getStartTime()
+  {
+    return startTime;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -191,7 +212,8 @@ public class DiscoveryDruidNode
     return "DiscoveryDruidNode{" +
            "druidNode=" + druidNode +
            ", nodeRole='" + nodeRole + '\'' +
-           ", services=" + services +
+           ", services=" + services + '\'' +
+           ", startTime=" + startTime +
            '}';
   }
 }

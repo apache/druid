@@ -58,6 +58,7 @@ exports[`ServicesView renders data 1`] = `
           "Current size",
           "Max size",
           "Usage",
+          "Start Time",
           "Detail",
           "Actions",
         ]
@@ -199,6 +200,14 @@ exports[`ServicesView renders data 1`] = `
         Object {
           "Aggregated": [Function],
           "Cell": [Function],
+          "Header": "Start Time",
+          "accessor": "start_time",
+          "show": true,
+          "width": 200,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
           "Header": "Detail",
           "accessor": [Function],
           "className": "padded",
@@ -223,6 +232,7 @@ exports[`ServicesView renders data 1`] = `
       Array [
         Array [
           Object {
+            "start_time": 0,
             "curr_size": 0,
             "host": "localhost",
             "is_leader": 0,
@@ -234,6 +244,7 @@ exports[`ServicesView renders data 1`] = `
             "tls_port": -1,
           },
           Object {
+            "start_time": 0,
             "curr_size": 179744287,
             "host": "localhost",
             "is_leader": 0,
