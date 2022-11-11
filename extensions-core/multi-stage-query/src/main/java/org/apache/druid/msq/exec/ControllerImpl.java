@@ -63,8 +63,9 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -1201,30 +1202,17 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(task.getDataSource(), interval));
         }
       } else {
-        try {
-          context.taskActionClient()
-                 .submit(SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments));
-        }
-        catch (Exception e) {
-          if (isTaskLockPreemptedException(e)) {
-            throw new MSQException(e, InsertLockPreemptedFault.instance());
-          } else {
-            throw e;
-          }
-        }
+        performSegmentPublish(
+            context.taskActionClient(),
+            SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments)
+        );
       }
     } else if (!segments.isEmpty()) {
       // Append mode.
-      try {
-        context.taskActionClient().submit(new SegmentInsertAction(segments));
-      }
-      catch (Exception e) {
-        if (isTaskLockPreemptedException(e)) {
-          throw new MSQException(e, InsertLockPreemptedFault.instance());
-        } else {
-          throw e;
-        }
-      }
+      performSegmentPublish(
+          context.taskActionClient(),
+          SegmentTransactionalInsertAction.appendAction(segments, null, null)
+      );
     }
   }
 
@@ -1975,6 +1963,32 @@ public class ControllerImpl implements Controller
   }
 
   /**
+   * Performs a particular {@link SegmentTransactionalInsertAction}, publishing segments.
+   *
+   * Throws {@link MSQException} with {@link InsertLockPreemptedFault} if the action fails due to lock preemption.
+   */
+  static void performSegmentPublish(
+      final TaskActionClient client,
+      final SegmentTransactionalInsertAction action
+  ) throws IOException
+  {
+    try {
+      final SegmentPublishResult result = client.submit(action);
+
+      if (!result.isSuccess()) {
+        throw new MSQException(InsertLockPreemptedFault.instance());
+      }
+    }
+    catch (Exception e) {
+      if (isTaskLockPreemptedException(e)) {
+        throw new MSQException(e, InsertLockPreemptedFault.instance());
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  /**
    * Method that determines whether an exception was raised due to the task lock for the controller task being
    * preempted. Uses string comparison, because the relevant Overlord APIs do not have a more reliable way of
    * discerning the cause of errors.
@@ -1985,6 +1999,9 @@ public class ControllerImpl implements Controller
   private static boolean isTaskLockPreemptedException(Exception e)
   {
     final String exceptionMsg = e.getMessage();
+    if (exceptionMsg == null) {
+      return false;
+    }
     final List<String> validExceptionExcerpts = ImmutableList.of(
         "are not covered by locks" /* From TaskLocks */,
         "is preempted and no longer valid" /* From SegmentAllocateAction */

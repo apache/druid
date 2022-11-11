@@ -32,6 +32,7 @@ import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.BasicSecuritySSLSocketFactory;
 import org.apache.druid.security.basic.authentication.LdapUserPrincipal;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
@@ -193,7 +194,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
       if (!validatePassword(this.ldapConfig, userDn, password)) {
         LOG.debug("Password incorrect for LDAP user %s", username);
-        throw new BasicSecurityAuthenticationException("User LDAP authentication failed.");
+        throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
       }
 
       byte[] salt = BasicAuthUtils.generateSalt();

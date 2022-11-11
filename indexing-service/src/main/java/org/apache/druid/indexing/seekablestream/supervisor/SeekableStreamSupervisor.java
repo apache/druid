@@ -86,6 +86,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -746,6 +747,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
+  private final IdleConfig idleConfig;
 
   public SeekableStreamSupervisor(
       final String supervisorId,
@@ -802,6 +804,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       chatThreads = (this.tuningConfig.getChatThreads() != null
               ? this.tuningConfig.getChatThreads()
               : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+    }
+
+    IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
+    if (specIdleConfig != null) {
+      if (specIdleConfig.getInactiveAfterMillis() != null) {
+        idleConfig = specIdleConfig;
+      } else {
+        idleConfig = new IdleConfig(
+            specIdleConfig.isEnabled(),
+            spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+        );
+      }
+    } else {
+      idleConfig = new IdleConfig(
+          spec.getSupervisorStateManagerConfig().isIdleConfigEnabled(),
+          spec.getSupervisorStateManagerConfig().getInactiveAfterMillis()
+      );
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
@@ -1725,11 +1744,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     int taskCount = 0;
     List<String> futureTaskIds = new ArrayList<>();
     List<ListenableFuture<Boolean>> futures = new ArrayList<>();
-    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
 
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
-    for (Task task : tasks) {
+    final Map<String, Task> activeTaskMap = getActiveTaskMap();
+
+    for (Task task : activeTaskMap.values()) {
       if (!doesTaskTypeMatchSupervisor(task)) {
         continue;
       }
@@ -1873,7 +1893,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                           // make sure the task's io and tuning configs match with the supervisor config
                           // if it is current then only create corresponding taskGroup if it does not exist
-                          if (!isTaskCurrent(taskGroupId, taskId)) {
+                          if (!isTaskCurrent(taskGroupId, taskId, activeTaskMap)) {
                             log.info(
                                 "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
@@ -2276,17 +2296,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  /**
+   * Determines whether a given task was created by the current version of the supervisor.
+   * Uses the Task object mapped to this taskId in the {@code activeTaskMap}.
+   * If not found in the map, fetch it from the metadata store.
+   * @param taskGroupId task group id
+   * @param taskId task id
+   * @param activeTaskMap Set of active tasks that were pre-fetched
+   * @return true if the task was created by the current supervisor
+   */
   @VisibleForTesting
-  public boolean isTaskCurrent(int taskGroupId, String taskId)
+  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap)
   {
-    Optional<Task> taskOptional = taskStorage.getTask(taskId);
-    if (!taskOptional.isPresent() || !doesTaskTypeMatchSupervisor(taskOptional.get())) {
+    final Task genericTask;
+
+    if (activeTaskMap != null && activeTaskMap.containsKey(taskId)) {
+      genericTask = activeTaskMap.get(taskId);
+    } else {
+      genericTask = taskStorage.getTask(taskId).orNull();
+    }
+
+    if (genericTask == null || !doesTaskTypeMatchSupervisor(genericTask)) {
       return false;
     }
 
     @SuppressWarnings("unchecked")
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
-        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) taskOptional.get();
+        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -3064,7 +3100,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               log.info(
-                  "Setting endOffsets for tasks in taskGroup [%d] to %s and resuming",
+                  "Setting endOffsets for tasks in taskGroup [%d] to %s",
                   taskGroup.groupId,
                   endOffsets
               );
@@ -3083,6 +3119,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       taskId
                   );
                   taskGroup.tasks.remove(taskId);
+                } else {
+                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 }
               }
             }
@@ -3234,6 +3272,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
+    Map<String, Task> activeTaskMap = getActiveTaskMap();
+
     List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = activelyReadingTaskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
@@ -3256,7 +3296,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         TaskData taskData = task.getValue();
 
         // stop and remove bad tasks from the task group
-        if (!isTaskCurrent(groupId, taskId)) {
+        if (!isTaskCurrent(groupId, taskId, activeTaskMap)) {
           log.info("Stopping task [%s] which does not match the expected sequence range and ingestion spec", taskId);
           futures.add(stopTask(taskId, false));
           iTasks.remove();
@@ -3290,8 +3330,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
   {
-    IdleConfig idleConfig = spec.getIoConfig().getIdleConfig();
-    if ((idleConfig == null || !idleConfig.isEnabled()) || spec.isSuspended()) {
+    if (!idleConfig.isEnabled() || spec.isSuspended()) {
       return;
     }
 
@@ -3488,6 +3527,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
+    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
       SequenceOffsetType sequence = partitionOffsets.get(partitionId);
 
@@ -3499,7 +3539,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partitionId);
+        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
+            partitionId,
+            metadataOffsets
+        );
 
         if (offsetFromStorage != null) {
           builder.put(partitionId, offsetFromStorage);
@@ -3514,9 +3557,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * doesn't find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the
    * {@link SeekableStreamSupervisorIOConfig#useEarliestSequenceNumber}.
    */
-  private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(PartitionIdType partition)
+  private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(
+      PartitionIdType partition,
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets
+  )
   {
-    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
     SequenceOffsetType sequence = metadataOffsets.get(partition);
     if (sequence != null) {
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
@@ -3862,6 +3907,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
+   * Get all active tasks from metadata storage
+   * @return map from taskId to Task
+   */
+  private Map<String, Task> getActiveTaskMap()
+  {
+    ImmutableMap.Builder activeTaskMap = ImmutableMap.builder();
+    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    for (Task task : tasks) {
+      activeTaskMap.put(task.getId(), task);
+    }
+    return activeTaskMap.build();
+  }
+
+
+  /**
    * creates a specific task IOConfig instance for Kafka/Kinesis
    *
    * @return specific instance of Kafka/Kinesis IOConfig
@@ -4073,9 +4133,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected void emitLag()
   {
-    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle())) {
-      // don't emit metrics if supervisor is suspended or not in a healthy running state
-      // (lag should still available in status report)
+    SupervisorStateManager.State basicState = stateManager.getSupervisorState().getBasicState();
+    boolean unhealthySupervisorOrTasks = SupervisorStateManager.BasicState.UNHEALTHY_TASKS.equals(basicState)
+                                         || SupervisorStateManager.BasicState.UNHEALTHY_SUPERVISOR.equals(basicState);
+
+    if (spec.isSuspended() || !(stateManager.isSteadyState() || stateManager.isIdle() || unhealthySupervisorOrTasks)) {
+      // Don't emit metrics if the supervisor is suspended. Also,
+      // to emit metrics, the state must be in {healthy steady state, idle or UNHEALTHY_TASKS or UNHEALTHY_SUPERVISOR}
+      // (lag should still be available in the status report)
       return;
     }
     try {
@@ -4093,19 +4158,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         LagStats lagStats = computeLags(partitionLags);
+        for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
+          emitter.emit(
+              ServiceMetricEvent.builder()
+                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                .setDimension(DruidMetrics.PARTITION, entry.getKey())
+                                .build(
+                                    StringUtils.format("ingest/%s/partitionLag%s", type, suffix),
+                                    entry.getValue()
+                                )
+          );
+        }
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/lag%s", type, suffix), lagStats.getTotalLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/maxLag%s", type, suffix), lagStats.getMaxLag())
         );
         emitter.emit(
             ServiceMetricEvent.builder()
-                              .setDimension("dataSource", dataSource)
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
                               .build(StringUtils.format("ingest/%s/avgLag%s", type, suffix), lagStats.getAvgLag())
         );
       };

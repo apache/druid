@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { QueryResult, QueryRunner, SqlTableRef } from 'druid-query-toolkit';
+import { QueryResult, QueryRunner, T } from 'druid-query-toolkit';
 import React from 'react';
 
 import { Loader, RecordTablePane } from '../../../components';
@@ -42,7 +42,7 @@ export const DatasourcePreviewPane = React.memo(function DatasourcePreviewPane(
       let result: QueryResult;
       try {
         result = await queryRunner.runQuery({
-          query: `SELECT * FROM ${SqlTableRef.create(datasource)}`,
+          query: `SELECT * FROM ${T(datasource)}`,
           extraQueryContext: { sqlOuterLimit: 100 },
           cancelToken,
         });

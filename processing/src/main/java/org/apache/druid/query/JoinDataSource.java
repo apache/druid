@@ -97,8 +97,6 @@ public class JoinDataSource implements DataSource
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
-
-
   private JoinDataSource(
       DataSource left,
       DataSource right,

@@ -77,7 +77,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == 0, "only V0 exists, encountered " + version);
-    final int bucketSize = orderedBuffer.get();
+    final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
     final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
     // size of offsets + values

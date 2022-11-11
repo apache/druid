@@ -326,6 +326,7 @@ public class KafkaSupervisorIOConfigTest
   {
     HashMap<String, Object> idleConfig = new HashMap<>();
     idleConfig.put("enabled", true);
+    idleConfig.put("inactiveAfterMillis", 600000L);
 
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("bootstrap.servers", "localhost:8082");
@@ -354,6 +355,6 @@ public class KafkaSupervisorIOConfigTest
 
     Assert.assertNotNull(kafkaSupervisorIOConfig1.getIdleConfig());
     Assert.assertTrue(kafkaSupervisorIOConfig1.getIdleConfig().isEnabled());
-    Assert.assertEquals(600000L, kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
+    Assert.assertEquals(Long.valueOf(600000), kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
   }
 }

@@ -129,6 +129,12 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
       return this;
     }
 
+    public Builder setMinHttpTimeoutMillis(int minHttpTimeoutMillis)
+    {
+      this.minHttpTimeoutMillis = minHttpTimeoutMillis;
+      return this;
+    }
+
     public HttpEmitterConfig build()
     {
       return new HttpEmitterConfig(this, recipientBaseUrl);
