@@ -1101,7 +1101,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    protected void checkConnection(String host, int port) throws IOException
+    protected void checkConnection(String host, int port)
     {
       // Do nothing.
     }

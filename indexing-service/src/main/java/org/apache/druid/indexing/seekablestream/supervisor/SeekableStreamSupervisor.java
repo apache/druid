@@ -1947,7 +1947,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
-      if (results.get(i).isError()) {
+      if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
         killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
         // "return false" above means that we want to stop the task.

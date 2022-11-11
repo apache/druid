@@ -368,10 +368,8 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
-  public void test_pauseAsync_oneIterationWithError() throws Exception
+  public void test_pauseAsync_oneIterationWithError()
   {
-    final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
-
     serviceClient.expect(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.ACCEPTED,
