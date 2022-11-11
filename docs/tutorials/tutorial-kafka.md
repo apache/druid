@@ -66,18 +66,25 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 In this section, you download sample data to the tutorial's directory and send the data to your Kafka topic.
 
-1. Run the following commands from your Druid root directory to download and extract the sample spec:
+1. In your Kafka root directory, create a directory for the sample data:
 
    ```bash
+   mkdir sample-data
+   ```
+
+2. Download the sample data to your new directory and extract it:
+
+   ```bash
+   cd sample-data
    curl -O https://druid.apache.org/docs/latest/assets/files/kttm-nested-data.json.tgz
    tar -xzf kttm-nested-data.json.tgz
    ```
 
-2. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic. Replace `{PATH_TO_DRUID}` with the path to your Druid root directory:
+3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
 
    ```bash
-   export KAFKA_OPTS="-Dfile.encoding=UTF-8" 
-   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < {PATH_TO_DRUID}/kttm-nested-data.json
+   export KAFKA_OPTS="-Dfile.encoding=UTF-8"
+   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < ./sample-data/kttm-nested-data.json
    ```
 
 ## Load data into Druid
@@ -253,9 +260,9 @@ To submit a supervisor spec using the Druid console:
 
 #### Use the API
 
-You can also use the Druid API to submit a supervisor spec:
+You can also use the Druid API to submit a supervisor spec.
 
-1. Run the following commands from your Druid root directory to download the sample spec:
+1. Run the following command to download the sample spec:
 
    ```bash
    curl -O https://druid.apache.org/docs/latest/assets/files/kttm-kafka-supervisor.json
