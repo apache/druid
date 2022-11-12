@@ -88,7 +88,9 @@ public class MockServiceClient implements ServiceClient
     for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
       response.headers().set(headerEntry.getKey(), headerEntry.getValue());
     }
-    response.setContent(ChannelBuffers.wrappedBuffer(content));
+    if (content != null) {
+      response.setContent(ChannelBuffers.wrappedBuffer(content));
+    }
     return expect(request, response);
   }
 

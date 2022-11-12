@@ -221,7 +221,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/time/start"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
-          if (r.getContent() == null || r.getContent().length == 0) {
+          if (isNullOrEmpty(r.getContent())) {
             return null;
           } else {
             return JacksonUtils.readValue(jsonMapper, r.getContent(), DateTime.class);
@@ -273,7 +273,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/rowStats"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
-          if (r.getContent() == null || r.getContent().length == 0) {
+          if (isNullOrEmpty(r.getContent())) {
             log.warn("Got empty response when calling getMovingAverages, id[%s]", id);
             return null;
           } else {
@@ -290,7 +290,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/unparseableEvents"))
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> {
-          if (r.getContent() == null || r.getContent().length == 0) {
+          if (isNullOrEmpty(r.getContent())) {
             log.warn("Got empty response when calling getParseErrors, id[%s]", id);
             return null;
           } else {
@@ -402,6 +402,11 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           }
         }
     );
+  }
+
+  private static boolean isNullOrEmpty(@Nullable final byte[] content)
+  {
+    return content == null || content.length == 0;
   }
 
   /**
@@ -595,7 +600,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     }
   }
 
-  private static class SeekableStreamTaskLocator implements ServiceLocator
+  static class SeekableStreamTaskLocator implements ServiceLocator
   {
     private static final String BASE_PATH = "/druid/worker/v1/chat";
 

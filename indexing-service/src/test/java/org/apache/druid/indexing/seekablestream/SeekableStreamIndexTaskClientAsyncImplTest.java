@@ -20,9 +20,12 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,6 +35,8 @@ import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceClosedException;
+import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceNotAvailableException;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.easymock.EasyMock;
@@ -67,26 +72,22 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
 
   private MockServiceClient serviceClient;
   private ServiceClientFactory serviceClientFactory;
-  private TaskInfoProvider taskInfoProvider;
   private SeekableStreamIndexTaskClient<Integer, Long> client;
 
   @Before
   public void setUp()
   {
     serviceClient = new MockServiceClient();
-    taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
     serviceClientFactory = (serviceName, serviceLocator, retryPolicy) -> {
       Assert.assertEquals(TASK_ID, serviceName);
       return serviceClient;
     };
     client = new TestSeekableStreamIndexTaskClientAsyncImpl();
-    EasyMock.replay(taskInfoProvider);
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(taskInfoProvider);
     serviceClient.verify();
   }
 
@@ -281,8 +282,6 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getStatusAsync() throws Exception
   {
-    final Map<Integer, Long> offsets = ImmutableMap.of(2, 3L);
-
     serviceClient.expect(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
@@ -524,6 +523,19 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
+  public void test_getMovingAveragesAsync_null() throws Exception
+  {
+    serviceClient.expect(
+        new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        null
+    );
+
+    Assert.assertNull(client.getMovingAveragesAsync(TASK_ID).get());
+  }
+
+  @Test
   public void test_getParseErrorsAsync() throws Exception
   {
     final List<ParseExceptionReport> retVal = ImmutableList.of(
@@ -553,11 +565,91 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     Assert.assertNull(client.getParseErrorsAsync(TASK_ID).get());
   }
 
+  @Test
+  public void test_serviceLocator_unknownTask() throws Exception
+  {
+    final TaskInfoProvider taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
+    EasyMock.expect(taskInfoProvider.getTaskStatus(TASK_ID))
+            .andReturn(Optional.absent());
+    EasyMock.replay(taskInfoProvider);
+
+    try (final SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator locator =
+             new SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator(taskInfoProvider, TASK_ID)) {
+      Assert.assertEquals(
+          ServiceLocations.closed(),
+          locator.locate().get()
+      );
+    }
+
+    EasyMock.verify(taskInfoProvider);
+  }
+
+  @Test
+  public void test_serviceLocator_unknownLocation() throws Exception
+  {
+    final TaskInfoProvider taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
+    EasyMock.expect(taskInfoProvider.getTaskStatus(TASK_ID))
+            .andReturn(Optional.of(TaskStatus.running(TASK_ID)));
+    EasyMock.expect(taskInfoProvider.getTaskLocation(TASK_ID))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.replay(taskInfoProvider);
+
+    try (final SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator locator =
+             new SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator(taskInfoProvider, TASK_ID)) {
+      Assert.assertEquals(
+          ServiceLocations.forLocations(Collections.emptySet()),
+          locator.locate().get()
+      );
+    }
+
+    EasyMock.verify(taskInfoProvider);
+  }
+
+  @Test
+  public void test_serviceLocator_found() throws Exception
+  {
+    final TaskInfoProvider taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
+    EasyMock.expect(taskInfoProvider.getTaskStatus(TASK_ID))
+            .andReturn(Optional.of(TaskStatus.running(TASK_ID)));
+    EasyMock.expect(taskInfoProvider.getTaskLocation(TASK_ID))
+            .andReturn(TaskLocation.create("foo", 80, -1));
+    EasyMock.replay(taskInfoProvider);
+
+    try (final SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator locator =
+             new SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator(taskInfoProvider, TASK_ID)) {
+      Assert.assertEquals(
+          ServiceLocations.forLocation(new ServiceLocation("foo", 80, -1, "/druid/worker/v1/chat/" + TASK_ID)),
+          locator.locate().get()
+      );
+    }
+
+    EasyMock.verify(taskInfoProvider);
+  }
+
+  @Test
+  public void test_serviceLocator_closed() throws Exception
+  {
+    final TaskInfoProvider taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
+    EasyMock.expect(taskInfoProvider.getTaskStatus(TASK_ID))
+            .andReturn(Optional.of(TaskStatus.success(TASK_ID)));
+    EasyMock.replay(taskInfoProvider);
+
+    try (final SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator locator =
+             new SeekableStreamIndexTaskClientAsyncImpl.SeekableStreamTaskLocator(taskInfoProvider, TASK_ID)) {
+      Assert.assertEquals(
+          ServiceLocations.closed(),
+          locator.locate().get()
+      );
+    }
+
+    EasyMock.verify(taskInfoProvider);
+  }
+
   private class TestSeekableStreamIndexTaskClientAsyncImpl extends SeekableStreamIndexTaskClientAsyncImpl<Integer, Long>
   {
     public TestSeekableStreamIndexTaskClientAsyncImpl()
     {
-      super(DATASOURCE, serviceClientFactory, taskInfoProvider, jsonMapper, httpTimeout, MAX_ATTEMPTS);
+      super(DATASOURCE, serviceClientFactory, null, jsonMapper, httpTimeout, MAX_ATTEMPTS);
     }
 
     @Override
