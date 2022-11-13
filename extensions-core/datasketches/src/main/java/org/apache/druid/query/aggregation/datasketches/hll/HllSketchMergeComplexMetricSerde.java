@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -28,6 +27,7 @@ import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -89,9 +89,9 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   static HllSketch deserializeSketch(final Object object)
   {
     if (object instanceof String) {
-      return HllSketch.wrap(Memory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
+      return HllSketch.wrap(SafeWritableMemory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
     } else if (object instanceof byte[]) {
-      return HllSketch.wrap(Memory.wrap((byte[]) object));
+      return HllSketch.wrap(SafeWritableMemory.wrap((byte[]) object));
     } else if (object instanceof HllSketch) {
       return (HllSketch) object;
     }

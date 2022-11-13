@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesAnotB;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesCombiner;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesIntersection;
@@ -30,6 +29,7 @@ import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -122,8 +122,7 @@ public class ArrayOfDoublesSketchOperations
 
   public static ArrayOfDoublesSketch deserializeFromByteArray(final byte[] data)
   {
-    final Memory mem = Memory.wrap(data);
-    return ArrayOfDoublesSketches.wrapSketch(mem);
+    return ArrayOfDoublesSketches.wrapSketch(SafeWritableMemory.wrap(data));
   }
 
 }

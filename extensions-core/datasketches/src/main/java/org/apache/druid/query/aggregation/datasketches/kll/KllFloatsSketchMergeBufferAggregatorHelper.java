@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.datasketches.kll;
 
 import org.apache.datasketches.kll.KllFloatsSketch;
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.MemoryRequestServer;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.ByteBuffer;
 
@@ -52,6 +52,6 @@ public class KllFloatsSketchMergeBufferAggregatorHelper extends KllSketchMergeBu
   KllFloatsSketch get(ByteBuffer buffer, int position)
   {
     final KllFloatsSketch union = getSketchAtPosition(buffer, position);
-    return KllFloatsSketch.wrap(Memory.wrap(union.toByteArray()));
+    return KllFloatsSketch.wrap(SafeWritableMemory.wrap(union.toByteArray()));
   }
 }

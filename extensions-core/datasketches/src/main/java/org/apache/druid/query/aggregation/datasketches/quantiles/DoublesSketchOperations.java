@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -53,7 +53,7 @@ public class DoublesSketchOperations
 
   public static DoublesSketch deserializeFromByteArray(final byte[] data)
   {
-    return DoublesSketch.wrap(Memory.wrap(data));
+    return DoublesSketch.wrap(SafeWritableMemory.wrap(data));
   }
 
 }

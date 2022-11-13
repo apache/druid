@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation.datasketches.kll;
 
 import org.apache.datasketches.kll.KllDoublesSketch;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -53,7 +53,7 @@ public class KllDoublesSketchOperations
 
   public static KllDoublesSketch deserializeFromByteArray(final byte[] data)
   {
-    return KllDoublesSketch.wrap(Memory.wrap(data));
+    return KllDoublesSketch.wrap(SafeWritableMemory.wrap(data));
   }
 
 }
