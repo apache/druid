@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.stage.StageInputSpec;
@@ -37,6 +38,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.Assert;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
@@ -47,6 +49,7 @@ import java.util.stream.IntStream;
 
 public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 {
+  public static final UnknownFault RETRIABLE_FAULT = UnknownFault.forMessage("");
 
   public ControllerQueryKernelTester testControllerQueryKernel(int numWorkers)
   {
@@ -267,29 +270,34 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       controllerQueryKernel.finishStage(new StageId(queryDefinition.getQueryId(), stageNumber), strict);
     }
 
-    public void addResultKeyStatisticsForStageAndWorker(int stageNumber, int workerNumber)
+
+    public void addResultKeyStatisticsForStageAndWorkers(int stageNumber, int... workers)
     {
       Preconditions.checkArgument(initialized);
 
-      // Simulate 1000 keys being encountered in the data, so the kernel can generate some partitions.
-      final ClusterByStatisticsCollector keyStatsCollector = getMockCollector(stageNumber);
+      for (int worker : workers) {
+        // Simulate 1000 keys being encountered in the data, so the kernel can generate some partitions.
+        final ClusterByStatisticsCollector keyStatsCollector = getMockCollector(stageNumber);
 
-      controllerQueryKernel.addResultKeyStatisticsForStageAndWorker(
-          new StageId(queryDefinition.getQueryId(), stageNumber),
-          workerNumber,
-          keyStatsCollector.snapshot()
-      );
+        controllerQueryKernel.addResultKeyStatisticsForStageAndWorker(
+            new StageId(queryDefinition.getQueryId(), stageNumber),
+            worker,
+            keyStatsCollector.snapshot()
+        );
+      }
     }
 
-    public void setResultsCompleteForStageAndWorker(int stageNumber, int workerNumber)
+    public void setResultsCompleteForStageAndWorkerAndWorkers(int stageNumber, int... workers)
     {
       Preconditions.checkArgument(initialized);
       final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
-      controllerQueryKernel.setResultsCompleteForStageAndWorker(
-          stageId,
-          workerNumber,
-          new Object()
-      );
+      for (int worker : workers) {
+        controllerQueryKernel.setResultsCompleteForStageAndWorker(
+            stageId,
+            worker,
+            new Object()
+        );
+      }
     }
 
     public void failStage(int stageNumber)
@@ -333,23 +341,44 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
                      .collect(Collectors.toSet());
     }
 
-    public void sendWorkOrdersForWorker(int stageNumber, int worker)
+    public void sendWorkOrdersForWorkers(int stageNumber, int... workers)
     {
       Preconditions.checkArgument(initialized);
       final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
-      controllerQueryKernel.workOrdersSentForWorker(stageId, worker);
+      for (int worker : workers) {
+        controllerQueryKernel.workOrdersSentForWorker(stageId, worker);
+      }
     }
 
-    public void sendPartitionBoundariesForStageAndWorker(int stageNumber, int worker)
+    public void sendPartitionBoundariesForStageAndWorkers(int stageNumber, int... workers)
     {
       Preconditions.checkArgument(initialized);
       final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
-      controllerQueryKernel.partitionBoundariesSentForWorker(stageId, worker);
+      for (int worker : workers) {
+        controllerQueryKernel.partitionBoundariesSentForWorker(stageId, worker);
+      }
     }
 
     public List<WorkOrder> getRetriableWorkOrdersAndChangeState(int workeNumber, MSQFault msqFault)
     {
       return controllerQueryKernel.getWorkInCaseWorkerElgibileForRetryElseThrow(workeNumber, msqFault);
+    }
+
+    public void failWorkerAndAssertWorkOrderes(int workeNumber, int retriedStage)
+    {
+      // fail one worker
+      List<WorkOrder> workOrderList = getRetriableWorkOrdersAndChangeState(
+          workeNumber,
+          RETRIABLE_FAULT
+      );
+
+      // does not enable the current stage to enable running from start
+      Assert.assertTrue(createAndGetNewStageNumbers().size() == 0);
+      // only work order of failed worker should be there
+      Assert.assertTrue(workOrderList.size() == 1);
+      Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);
+      Assert.assertTrue(workOrderList.get(0).getStageNumber() == retriedStage);
+
     }
 
     @Nonnull

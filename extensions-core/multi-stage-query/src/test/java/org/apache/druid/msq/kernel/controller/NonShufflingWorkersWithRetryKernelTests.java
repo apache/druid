@@ -19,23 +19,20 @@
 
 package org.apache.druid.msq.kernel.controller;
 
-import org.apache.druid.msq.indexing.error.UnknownFault;
-import org.apache.druid.msq.kernel.WorkOrder;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQueryKernelTest
 {
-  private static final UnknownFault RETRIABLE_FAULT = UnknownFault.forMessage("");
 
 
   @Test
-  public void workerFailedAfterInitialization()
+  public void testWorkerFailedAfterInitialization()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.init();
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
@@ -47,9 +44,9 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
   }
 
   @Test
-  public void workerFailedBeforeAnyWorkOrdersSent()
+  public void testWorkerFailedBeforeAnyWorkOrdersSent()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.init();
 
     controllerQueryKernelTester.createAndGetNewStageNumbers();
@@ -57,47 +54,47 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
     controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
 
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 1);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
 
   }
 
   @Test
-  public void workerFailedBeforeAllWorkOrdersSent()
+  public void testWorkerFailedBeforeAllWorkOrdersSent()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.init();
 
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
 
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 1);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
 
 
   @Test
-  public void workerFailedBeforeAnyResultsRecieved()
+  public void testWorkerFailedBeforeAnyResultsRecieved()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
     // workorders sent for both stage
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
@@ -106,27 +103,18 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     // fail one worker
-    List<WorkOrder> workOrderList = controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(
-        0,
-        RETRIABLE_FAULT
-    );
-
-    // does not enable the current stage to enable running from start
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
-    // only work order of failed worker should be there
-    Assert.assertTrue(workOrderList.size() == 1);
-    Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -135,46 +123,37 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
   }
 
   @Test
-  public void workerFailedBeforeAllResultsRecieved()
+  public void testWorkerFailedBeforeAllResultsRecieved()
   {
 
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
     // workorders sent for both stage
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     // fail one worker
-    List<WorkOrder> workOrderList = controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(
-        0,
-        RETRIABLE_FAULT
-    );
-
-    // does not enable the current stage to enable running from start
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
-    // only work order of failed worker should be there
-    Assert.assertTrue(workOrderList.size() == 1);
-    Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
-    controllerQueryKernelTester.sendWorkOrdersForWorker(0, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
 
   @Test
-  public void workerFailedBeforeFinished()
+  public void testWorkerFailedBeforeFinished()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.init();
 
@@ -186,9 +165,9 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
 
 
   @Test
-  public void workerFailedAfterFinished()
+  public void testWorkerFailedAfterFinished()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition();
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.FINISHED);
     controllerQueryKernelTester.init();
 
@@ -199,44 +178,157 @@ public class NonShufflingWorkersWithRetryKernelTests extends BaseControllerQuery
 
   }
 
-  @Nonnull
-  private ControllerQueryKernelTester getSimpleQueryDefinition()
+
+  @Test
+  public void testMultipleWorkersFailedAfterInitialization()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(2);
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+    controllerQueryKernelTester.init();
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+                      && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
+    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size() == 0);
+    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.NEW);
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+                      && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
+  }
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAnyWorkOrdersSent()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+  @Test
+  public void testMulttipleWorkerFailedBeforeAllWorkOrdersSent()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(2, RETRIABLE_FAULT);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAnyResultsRecieved()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+
+
+  }
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAllResultsRecieved()
+  {
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+    // workorders sent for all stages
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(2, 0);
+    // should be no op
+    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
+
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+  }
+
+
+  @Nonnull
+  private ControllerQueryKernelTester getSimpleQueryDefinition(int numWorkers)
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(numWorkers);
     // 0 -> 1
     controllerQueryKernelTester.queryDefinition(
         new MockQueryDefinitionBuilder(2)
             .addVertex(0, 1)
-            .defineStage(0, false, 2) // Ingestion only on one worker
-            .defineStage(1, false, 2)
+            .defineStage(0, false, numWorkers)
+            .defineStage(1, false, numWorkers)
             .getQueryDefinitionBuilder()
             .build()
     );
     return controllerQueryKernelTester;
   }
-
-
-  public void multipleWorkerFailedAfterInitialization()
-  {
-
-  }
-
-  public void multipleWorkerFailedBeforeAnyWorkOrdersSent() {}
-
-  public void multipleWorkerFailedAfterOneWorkOrdersSent() {}
-
-  public void multipleWorkerFailedBeforeAnyResultsStatsArrive() {}
-
-  public void multipleWorkerFailedBeforeAllResultsStatsArrive() {}
-
-  public void multipleWorkerFailedBeforeAnyPartitionBoundariesAreSent() {}
-
-
-  public void multipleWorkerFailedBeforeAllPartitionBoundariesAreSent() {}
-
-  public void multipleWorkerFailedBeforeAnyResultsRecieved() {}
-
-  public void multipleWorkerFailedBeforeAllResultsRecieved() {}
-
 
 }

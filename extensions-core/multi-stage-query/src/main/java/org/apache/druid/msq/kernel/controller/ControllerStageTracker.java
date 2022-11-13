@@ -421,14 +421,17 @@ class ControllerStageTracker
       throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
     }
 
-    // This is unidirectional flow of data. While this works in the current state of MSQ where partial fault tolerance
-    // is implemented and a query flows in one direction only, rolling back of workers' state and query kernel's
-    // phase should be allowed to fully support fault tolerance in cases such as:
-    //  1. Rolling back worker's state in case it fails (and then retries)
-    //  2. Rolling back query kernel's phase in case the results are lost (and needs workers to retry the computation)
-
-
     if (WorkerStagePhase.RESULTS_READY.canTransitionFrom(currentPhase)) {
+
+      if (stageDef.mustGatherResultKeyStatistics() && currentPhase == WorkerStagePhase.READING_INPUT) {
+        throw new ISE(
+            "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
+            workerNumber,
+            (stageDef.getStageNumber()),
+            WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT,
+            currentPhase
+        );
+      }
       workerToPhase.put(workerNumber, WorkerStagePhase.RESULTS_READY);
       if (this.resultObject == null) {
         this.resultObject = resultObject;
