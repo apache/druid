@@ -354,7 +354,6 @@ public class SafeWritableMemoryTest
   private WritableMemory getMemory(int capacity)
   {
     final ByteBuffer aBuffer = ByteBuffer.allocate(capacity).order(ByteOrder.LITTLE_ENDIAN);
-    SafeWritableMemory memory = new SafeWritableMemory(aBuffer);
-    return memory;
+    return SafeWritableMemory.wrap(aBuffer);
   }
 }

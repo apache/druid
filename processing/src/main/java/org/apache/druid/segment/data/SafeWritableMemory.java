@@ -86,7 +86,7 @@ public class SafeWritableMemory extends SafeWritableBase implements WritableMemo
   {
     final int offset = Ints.checkedCast(offsetBytes);
     for (int j = 0; j < lengthBooleans; j++) {
-      dstArray[dstOffsetBooleans + j] = buffer.get(offset + j) == 0 ? false : true;
+      dstArray[dstOffsetBooleans + j] = buffer.get(offset + j) != 0;
     }
   }
 

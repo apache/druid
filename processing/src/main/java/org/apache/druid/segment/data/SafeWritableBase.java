@@ -40,6 +40,8 @@ import java.nio.ByteOrder;
  * @see SafeWritableMemory
  * @see SafeWritableBuffer
  */
+
+@SuppressWarnings("unused")
 public abstract class SafeWritableBase implements BaseState
 {
   static final MemoryRequestServer SAFE_HEAP_REQUEST_SERVER = new HeapByteBufferMemoryRequestServer();
@@ -58,7 +60,7 @@ public abstract class SafeWritableBase implements BaseState
 
   public boolean getBoolean(long offsetBytes)
   {
-    return getByte(Ints.checkedCast(offsetBytes)) == 0 ? false : true;
+    return getByte(Ints.checkedCast(offsetBytes)) != 0;
   }
 
   public byte getByte(long offsetBytes)
@@ -259,11 +261,10 @@ public abstract class SafeWritableBase implements BaseState
     final String s1 = StringUtils.format("(..., %d, %d)", offsetBytes, lengthBytes);
     final long hcode = hashCode() & 0XFFFFFFFFL;
     final String call = ".toHexString" + s1 + ", hashCode: " + hcode;
-    final StringBuilder sb = new StringBuilder();
-    sb.append("### ").append(klass).append(" SUMMARY ###").append(UnsafeUtil.LS);
-    sb.append("Header Comment      : ").append(header).append(UnsafeUtil.LS);
-    sb.append("Call Parameters     : ").append(call);
-    return toHex(this, sb.toString(), offsetBytes, lengthBytes);
+    String sb = "### " + klass + " SUMMARY ###" + UnsafeUtil.LS
+                + "Header Comment      : " + header + UnsafeUtil.LS
+                + "Call Parameters     : " + call;
+    return toHex(this, sb, offsetBytes, lengthBytes);
   }
 
   /**
@@ -302,7 +303,7 @@ public abstract class SafeWritableBase implements BaseState
     sb.append("MemReq, hashCode    : ").append(memReqStr).append(lineSeparator);
     sb.append("Valid               : ").append(state.isValid()).append(lineSeparator);
     sb.append("Read Only           : ").append(state.isReadOnly()).append(lineSeparator);
-    sb.append("Type Byte Order     : ").append(state.getTypeByteOrder().toString()).append(lineSeparator);
+    sb.append("Type Byte Order     : ").append(state.getTypeByteOrder()).append(lineSeparator);
     sb.append("Native Byte Order   : ").append(ByteOrder.nativeOrder().toString()).append(lineSeparator);
     sb.append("JDK Runtime Version : ").append(UnsafeUtil.JDK).append(lineSeparator);
     //Data detail
