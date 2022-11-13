@@ -126,6 +126,14 @@ public class ClusterBy
   }
 
   /**
+   * Comparator that compares byte arrays of keys for this instance using the given signature directly.
+   */
+  public Comparator<byte[]> byteKeyComparator()
+  {
+    return ByteRowKeyComparator.create(columns);
+  }
+
+  /**
    * Comparator that compares bucket keys for this instance. Bucket keys are retrieved by calling
    * {@link RowKeyReader#trim(RowKey, int)} with {@link #getBucketByCount()}.
    */

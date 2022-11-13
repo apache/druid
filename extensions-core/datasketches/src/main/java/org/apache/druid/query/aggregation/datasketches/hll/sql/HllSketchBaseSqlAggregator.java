@@ -160,14 +160,25 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      aggregatorFactory = new HllSketchBuildAggregatorFactory(
-          aggregatorName,
-          dimensionSpec.getDimension(),
-          logK,
-          tgtHllType,
-          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
-          ROUND
-      );
+      if (inputType.is(ValueType.COMPLEX)) {
+        aggregatorFactory = new HllSketchMergeAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      } else {
+        aggregatorFactory = new HllSketchBuildAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getDimension(),
+            logK,
+            tgtHllType,
+            finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
+            ROUND
+        );
+      }
     }
 
     return toAggregation(
