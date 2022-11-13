@@ -304,7 +304,7 @@ public abstract class SafeWritableBase implements BaseState
     sb.append("Valid               : ").append(state.isValid()).append(lineSeparator);
     sb.append("Read Only           : ").append(state.isReadOnly()).append(lineSeparator);
     sb.append("Type Byte Order     : ").append(state.getTypeByteOrder()).append(lineSeparator);
-    sb.append("Native Byte Order   : ").append(ByteOrder.nativeOrder().toString()).append(lineSeparator);
+    sb.append("Native Byte Order   : ").append(ByteOrder.nativeOrder()).append(lineSeparator);
     sb.append("JDK Runtime Version : ").append(UnsafeUtil.JDK).append(lineSeparator);
     //Data detail
     sb.append("Data, littleEndian  :  0  1  2  3  4  5  6  7");
