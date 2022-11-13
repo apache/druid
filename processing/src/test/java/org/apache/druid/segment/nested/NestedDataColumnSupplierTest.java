@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -231,6 +232,11 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertNotNull(zIndexSupplier);
     StringValueSetIndex zValueIndex = zIndexSupplier.as(StringValueSetIndex.class);
     NullValueIndex zNulls = zIndexSupplier.as(NullValueIndex.class);
+
+    Assert.assertEquals(ImmutableList.of(xPath, yPath, zPath), column.getNestedFields());
+    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getColumnTypes(xPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getColumnTypes(yPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(zPath));
 
     for (int i = 0; i < data.size(); i++) {
       Map row = data.get(i);
