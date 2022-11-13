@@ -287,7 +287,9 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
-    this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context());
+    this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec()
+                                                                                      .getQuery()
+                                                                                      .context());
 
   }
 
@@ -583,6 +585,10 @@ public class ControllerImpl implements Controller
     return queryDef;
   }
 
+  /**
+   * Adds the workorders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
+   * are work orders which needs reprocessing.
+   */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
   {
     List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerElgibileForRetryElseThrow(worker, fault);
@@ -599,6 +605,11 @@ public class ControllerImpl implements Controller
           return workOrders;
         }
       });
+    } else {
+      log.info(
+          "Worker[%d] has no active workOrders that need relaunch therefore not relaunching",
+          worker
+      );
     }
   }
 
@@ -1031,14 +1042,14 @@ public class ControllerImpl implements Controller
    * @param queryKernel
    * @param contactFn
    * @param workers         set of workers to contact
-   * @param succescCallBack on successfull api call, custom callback
+   * @param successCallBack on successfull api call, custom callback
    * @param retryOnFailure  if set to true, adds this worker to retry queue. If false, cancel all the futures and propergate the exception to the caller.
    */
   private void contactWorkersForStage(
       final ControllerQueryKernel queryKernel,
-      final TaskContactFn<Void> contactFn,
+      final TaskContactFn contactFn,
       final IntSet workers,
-      final OnSuccess succescCallBack,
+      final TaskContactSuccesss successCallBack,
       final boolean retryOnFailure
   )
   {
@@ -1063,7 +1074,7 @@ public class ControllerImpl implements Controller
         @Override
         public void onSuccess(@Nullable Void result)
         {
-          succescCallBack.onSuccess(taskId, workerNumber);
+          successCallBack.onSuccess(taskId, workerNumber);
           settableFuture.set(true);
         }
 
@@ -1964,7 +1975,7 @@ public class ControllerImpl implements Controller
 
   /**
    * Performs a particular {@link SegmentTransactionalInsertAction}, publishing segments.
-   *
+   * <p>
    * Throws {@link MSQException} with {@link InsertLockPreemptedFault} if the action fails due to lock preemption.
    */
   static void performSegmentPublish(
@@ -2101,13 +2112,17 @@ public class ControllerImpl implements Controller
       return Pair.of(queryKernel, workerTaskLauncherFuture);
     }
 
+
     private void retryFailedTasks() throws InterruptedException
     {
+      // if no work orders to rety skip
       if (workOrdersToRetry.size() == 0) {
         return;
       }
       Set<Integer> workersNeedToBeFullyStarted = new HashSet<>();
 
+      // transform work orders from map<Worker,Set<WorkOrders> to Map<StageId,Map<Worker,WorkOrder>>
+      // since we would want workOrders of processed per stage
       Map<StageId, Map<Integer, WorkOrder>> stageWorkerOrders = new HashMap<>();
 
       for (Map.Entry<Integer, Set<WorkOrder>> workerStages : workOrdersToRetry.entrySet()) {
@@ -2126,6 +2141,7 @@ public class ControllerImpl implements Controller
         }
       }
 
+      // wait till the workers identified above are fully ready
       workerTaskLauncher.waitUntilWorkersReady(workersNeedToBeFullyStarted);
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
@@ -2139,6 +2155,8 @@ public class ControllerImpl implements Controller
             new IntArraySet(stageWorkOrders.getValue().keySet()),
             (taskId, workerNumber) -> {
               queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), workerNumber);
+
+              // remove sucessfully contacted workOrders from workOrdersToRetry
               workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
                 if (workOrderSet == null || workOrderSet.size() == 0 || !workOrderSet.remove(stageWorkOrders.getValue()
                                                                                                             .get(
@@ -2280,10 +2298,12 @@ public class ControllerImpl implements Controller
             && queryKernel.doesStageHaveResultPartitions(stageId)) {
           IntSet workersToSendPartitionBoundaries = queryKernel.getWorkersToSendPartitionBoundaries(stageId);
           if (workersToSendPartitionBoundaries.isEmpty()) {
+            log.debug("No workers for stage[%s] ready to recieve partition boundaries", stageId);
             return;
           }
+          final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
+
           if (log.isDebugEnabled()) {
-            final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
             log.debug(
                 "Query [%s] sending out partition boundaries for stage %d: %s for workers %s",
                 stageId.getQueryId(),
@@ -2306,7 +2326,7 @@ public class ControllerImpl implements Controller
               queryKernel,
               queryDef,
               stageId.getStageNumber(),
-              queryKernel.getResultPartitionBoundariesForStage(stageId),
+              partitions,
               workersToSendPartitionBoundaries
           );
         }
@@ -2396,17 +2416,17 @@ public class ControllerImpl implements Controller
   /**
    * Interface used by {@link #contactWorkersForStage}.
    */
-  private interface TaskContactFn<Void>
+  private interface TaskContactFn
   {
     ListenableFuture<Void> contactTask(WorkerClient client, String taskId, int workerNumber);
   }
 
-
-  private interface OnSuccess
+  /**
+   * Interface used when {@link TaskContactFn#contactTask(WorkerClient, String, int)} return future is successfull.
+   */
+  private interface TaskContactSuccesss
   {
     void onSuccess(String taskId, int workerNumber);
 
   }
-
-
 }

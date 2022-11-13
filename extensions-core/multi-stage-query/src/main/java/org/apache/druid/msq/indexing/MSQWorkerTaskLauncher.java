@@ -124,7 +124,7 @@ public class MSQWorkerTaskLauncher
   // retry worker set
   private final Set<Integer> retryWorkerSet = ConcurrentHashMap.newKeySet();
 
-  private final Map<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
 
   public MSQWorkerTaskLauncher(
@@ -528,8 +528,6 @@ public class MSQWorkerTaskLauncher
         }
 
         MSQWorkerTask toRetry = tracker.msqWorkerTask;
-
-
         MSQWorkerTask retryTask = toRetry.getRetryTask();
 
         // check retry limits
@@ -541,6 +539,7 @@ public class MSQWorkerTaskLauncher
         taskTrackers.put(retryTask.getId(), new TaskTracker(retryTask.getWorkerNumber(), retryTask));
         context.workerManager().run(retryTask.getId(), retryTask);
         taskHistory.add(retryTask.getId());
+
         synchronized (taskIds) {
           // replace taskId with the retry taskID for the same worker number
           taskIds.set(toRetry.getWorkerNumber(), retryTask.getId());

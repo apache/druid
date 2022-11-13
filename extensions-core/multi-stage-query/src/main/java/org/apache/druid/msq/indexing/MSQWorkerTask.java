@@ -96,6 +96,10 @@ public class MSQWorkerTask extends AbstractTask
     return retryCount;
   }
 
+  /**
+   * Creates a new retry {@link MSQWorkerTask} with the same context as the current task, but with the retry count
+   * incremented by 1
+   */
   public MSQWorkerTask getRetryTask()
   {
     return new MSQWorkerTask(controllerTaskId, getDataSource(), workerNumber, getContext(), retryCount + 1);

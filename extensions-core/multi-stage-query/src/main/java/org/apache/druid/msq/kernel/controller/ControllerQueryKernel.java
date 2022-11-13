@@ -645,7 +645,7 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Gets all the stages currently being tracked and filtres out all effectively finished stages.
+   * Gets all the stages currently being tracked and filters out all effectively finished stages.
    * <br/>
    * From the remaining stages, checks if (stage,worker) needs to be retried.
    * <br/>
