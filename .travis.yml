@@ -679,12 +679,17 @@ jobs:
       jdk: openjdk8
       services: *integration_test_services
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
-      # Uses the installation defined above. Then, builds the test tools and docker image,
-      # and runs one IT. If tests fail, echos log lines of any of
-      # the Druid services that did not exit normally.
       script: ./it.sh travis MultiStageQuery
 
-    # Disabling BatchIndex test as it is failing with due to timeout, fixing it will be taken in a separate PR.
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) catalog integration tests"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      script: ./it.sh travis Catalog
+
+   # Disabling BatchIndex test as it is failing with due to timeout, fixing it will be taken in a separate PR.
     #- <<: *integration_tests_ex
     #  name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
     #  env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
