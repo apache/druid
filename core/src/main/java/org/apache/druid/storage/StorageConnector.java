@@ -65,7 +65,7 @@ public interface StorageConnector
   boolean pathExists(String path) throws IOException;
 
   /**
-   * Reads the data present at the path the underlying storage system. Most implementations prepend the input path
+   * Reads the data present at the path in the underlying storage system. Most implementations prepend the input path
    * with a basePath.
    * The caller should take care of closing the stream when done or in case of error.
    *
@@ -74,6 +74,19 @@ public interface StorageConnector
    * @throws IOException if the path is not present or the unable to read the data present on the path.
    */
   InputStream read(String path) throws IOException;
+
+  /**
+   * Reads the data present for a given range at the path in the underlying storage system.
+   * Most implementations prepend the input path with a basePath.
+   * The caller should take care of closing the stream when done or in case of error. Further, the caller must ensure
+   * that the start offset and the size of the read are valid parameters for the given path for correct behavior.
+   * @param path The path to read data from
+   * @param from Start offset of the read in the path
+   * @param size Length of the read to be done
+   * @return InputStream starting from the given offset limited by the given size
+   * @throws IOException if the path is not present or the unable to read the data present on the path
+   */
+  InputStream readRange(String path, long from, long size) throws IOException;
 
   /**
    * Open an {@link OutputStream} for writing data to the path in the underlying storage system.

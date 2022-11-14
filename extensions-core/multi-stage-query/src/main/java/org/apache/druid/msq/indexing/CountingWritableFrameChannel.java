@@ -31,24 +31,21 @@ public class CountingWritableFrameChannel implements WritableFrameChannel
 {
   private final WritableFrameChannel baseChannel;
   private final ChannelCounters channelCounters;
-  private final int partitionNumber;
 
   public CountingWritableFrameChannel(
       final WritableFrameChannel baseChannel,
-      final ChannelCounters channelCounters,
-      final int partitionNumber
+      final ChannelCounters channelCounters
   )
   {
     this.baseChannel = baseChannel;
     this.channelCounters = channelCounters;
-    this.partitionNumber = partitionNumber;
   }
 
   @Override
   public void write(FrameWithPartition frame) throws IOException
   {
     baseChannel.write(frame);
-    channelCounters.addFrame(partitionNumber, frame.frame());
+    channelCounters.addFrame(frame.partition(), frame.frame());
   }
 
   @Override

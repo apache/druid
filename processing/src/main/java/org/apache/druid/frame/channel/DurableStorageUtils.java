@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.shuffle;
+package org.apache.druid.frame.channel;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -100,6 +100,22 @@ public class DurableStorageUtils
         "%s/part_%d",
         getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
         partitionNumber
+    );
+  }
+
+
+  public static String getOutputsFileNameForPath(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber,
+      final String taskId,
+      final String path
+  )
+  {
+    return StringUtils.format(
+        "%s/%s",
+        getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
+        path
     );
   }
 }

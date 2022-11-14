@@ -84,10 +84,8 @@ public class FrameFile implements Closeable
 
   private final File file;
   private final long fileLength;
-  private final Memory footerMemory; // Footer is everything from the final MARKER_NO_MORE_FRAMES to EOF.
+  private final FrameFileFooter frameFileFooter; // Footer is everything from the final MARKER_NO_MORE_FRAMES to EOF.
   private final int maxMmapSize;
-  private final int numFrames;
-  private final int numPartitions;
   private final ReferenceCountingCloseableObject<Closeable> referenceCounter;
   private final Closeable referenceReleaser;
 
@@ -116,21 +114,17 @@ public class FrameFile implements Closeable
   private FrameFile(
       final File file,
       final long fileLength,
-      final Memory footerMemory,
+      final FrameFileFooter frameFileFooter,
       @Nullable final Memory wholeFileMemory,
       final int maxMmapSize,
-      final int numFrames,
-      final int numPartitions,
       final ReferenceCountingCloseableObject<Closeable> referenceCounter,
       final Closeable referenceReleaser
   )
   {
     this.file = file;
     this.fileLength = fileLength;
-    this.footerMemory = footerMemory;
+    this.frameFileFooter = frameFileFooter;
     this.maxMmapSize = maxMmapSize;
-    this.numFrames = numFrames;
-    this.numPartitions = numPartitions;
     this.referenceCounter = referenceCounter;
     this.referenceReleaser = referenceReleaser;
 
@@ -198,11 +192,7 @@ public class FrameFile implements Closeable
       randomAccessFile.seek(fileLength - FrameFileWriter.TRAILER_LENGTH);
       randomAccessFile.readFully(buf, 0, FrameFileWriter.TRAILER_LENGTH);
 
-      final int numFrames = bufMemory.getInt(0);
-      final int numPartitions = bufMemory.getInt(Integer.BYTES);
       final int footerLength = bufMemory.getInt(Integer.BYTES * 2L);
-      final int expectedFooterChecksum = bufMemory.getInt(Integer.BYTES * 3L);
-
       if (footerLength < 0) {
         throw new ISE("Negative-size footer. Corrupt or truncated file?");
       } else if (footerLength > fileLength) {
@@ -234,23 +224,7 @@ public class FrameFile implements Closeable
         footerMemory = Memory.wrap(footerMapHandle.get(), ByteOrder.LITTLE_ENDIAN);
       }
 
-      // Verify footer begins with MARKER_NO_MORE_FRAMES.
-      if (footerMemory.getByte(0) != FrameFileWriter.MARKER_NO_MORE_FRAMES) {
-        throw new IOE("File [%s] end marker not in expected location", file);
-      }
-
-      // Verify footer checksum.
-      final int actualChecksum =
-          (int) footerMemory.xxHash64(0, footerMemory.getCapacity() - Integer.BYTES, FrameFileWriter.CHECKSUM_SEED);
-
-      if (expectedFooterChecksum != actualChecksum) {
-        throw new ISE("Expected footer checksum did not match actual checksum. Corrupt or truncated file?");
-      }
-
-      // Verify footer length.
-      if (footerLength != FrameFileWriter.footerLength(numFrames, numPartitions)) {
-        throw new ISE("Expected footer length did not match actual footer length. Corrupt or truncated file?");
-      }
+      final FrameFileFooter frameFileFooter = new FrameFileFooter(footerMemory, fileLength);
 
       // Set up closer, refcounter; return instance.
       final Closer fileCloser = Closer.create();
@@ -270,11 +244,9 @@ public class FrameFile implements Closeable
       return new FrameFile(
           file,
           fileLength,
-          footerMemory,
+          frameFileFooter,
           wholeFileMemory,
           maxMmapSize,
-          numFrames,
-          numPartitions,
           referenceCounter,
           referenceCounter
       );
@@ -295,7 +267,7 @@ public class FrameFile implements Closeable
    */
   public int numFrames()
   {
-    return numFrames;
+    return frameFileFooter.getNumFrames();
   }
 
   /**
@@ -303,7 +275,7 @@ public class FrameFile implements Closeable
    */
   public int numPartitions()
   {
-    return numPartitions;
+    return frameFileFooter.getNumPartitions();
   }
 
   /**
@@ -313,21 +285,7 @@ public class FrameFile implements Closeable
   public int getPartitionStartFrame(final int partition)
   {
     checkOpen();
-
-    if (partition < 0) {
-      throw new IAE("Partition [%,d] out of bounds", partition);
-    } else if (partition >= numPartitions) {
-      // Frame might not have every partition, if some are empty.
-      return numFrames;
-    } else {
-      final long partitionStartFrameLocation =
-          footerMemory.getCapacity()
-          - FrameFileWriter.TRAILER_LENGTH
-          - (long) numFrames * Long.BYTES
-          - (long) (numPartitions - partition) * Integer.BYTES;
-
-      return footerMemory.getInt(partitionStartFrameLocation);
-    }
+    return frameFileFooter.getPartitionStartFrame(partition);
   }
 
   /**
@@ -337,17 +295,17 @@ public class FrameFile implements Closeable
   {
     checkOpen();
 
-    if (frameNumber < 0 || frameNumber >= numFrames) {
+    if (frameNumber < 0 || frameNumber >= numFrames()) {
       throw new IAE("Frame [%,d] out of bounds", frameNumber);
     }
 
-    final long frameEnd = getFrameEndPosition(frameNumber);
+    final long frameEnd = frameFileFooter.getFrameEndPosition(frameNumber);
     final long frameStart;
 
     if (frameNumber == 0) {
       frameStart = FrameFileWriter.MAGIC.length + Byte.BYTES /* MARKER_FRAME */;
     } else {
-      frameStart = getFrameEndPosition(frameNumber - 1) + Byte.BYTES /* MARKER_FRAME */;
+      frameStart = frameFileFooter.getFrameEndPosition(frameNumber - 1) + Byte.BYTES /* MARKER_FRAME */;
     }
 
     if (buffer == null || frameStart < bufferOffset || frameEnd > bufferOffset + buffer.getCapacity()) {
@@ -377,11 +335,9 @@ public class FrameFile implements Closeable
     return new FrameFile(
         file,
         fileLength,
-        footerMemory,
+        frameFileFooter,
         bufferOffset == 0 && bufferCloser == null ? buffer : null, // If bufferCloser is null, buffer is shared
         maxMmapSize,
-        numFrames,
-        numPartitions,
         referenceCounter,
         releaser
     );
@@ -412,23 +368,6 @@ public class FrameFile implements Closeable
     if (referenceCounter.isClosed()) {
       throw new ISE("Frame file is closed");
     }
-  }
-
-  private long getFrameEndPosition(final int frameNumber)
-  {
-    assert frameNumber >= 0 && frameNumber < numFrames;
-
-    final long frameEndPointerPosition =
-        footerMemory.getCapacity() - FrameFileWriter.TRAILER_LENGTH - (long) (numFrames - frameNumber) * Long.BYTES;
-
-    final long frameEndPosition = footerMemory.getLong(frameEndPointerPosition);
-
-    // Bounds check: protect against possibly-corrupt data.
-    if (frameEndPosition < 0 || frameEndPosition > fileLength - footerMemory.getCapacity()) {
-      throw new ISE("Corrupt frame file: frame [%,d] location out of range", frameNumber);
-    }
-
-    return frameEndPosition;
   }
 
   /**

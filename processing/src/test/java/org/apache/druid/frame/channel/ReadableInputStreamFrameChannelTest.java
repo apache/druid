@@ -71,7 +71,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "readSimpleFrameFile",
-        executorService
+        executorService,
+        false
     );
 
     FrameTestUtil.assertRowsEqual(
@@ -94,7 +95,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "readEmptyFrameFile",
-        executorService
+        executorService,
+        false
     );
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
@@ -116,7 +118,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "testZeroBytesFrameFile",
-        executorService
+        executorService,
+        false
     );
 
     final IllegalStateException e = Assert.assertThrows(
@@ -161,7 +164,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         new ByteArrayInputStream(truncatedFile),
         "readTruncatedFrameFile",
-        executorService
+        executorService,
+        false
     );
 
     expectedException.expect(ISE.class);
@@ -186,7 +190,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "readIncorrectFrameFile",
-        executorService
+        executorService,
+        false
     );
 
     expectedException.expect(ISE.class);
@@ -209,7 +214,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "closeInputStreamWhileReading",
-        executorService
+        executorService,
+        false
     );
     inputStream.close();
 
@@ -233,7 +239,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         inputStream,
         "closeInputStreamWhileReadingCheckError",
-        executorService
+        executorService,
+        false
     );
 
     inputStream.close();

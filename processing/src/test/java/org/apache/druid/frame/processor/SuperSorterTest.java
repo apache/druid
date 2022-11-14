@@ -27,6 +27,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -54,6 +55,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -110,7 +112,18 @@ public class SuperSorterTest
     }
 
     @Test
-    public void testSingleEmptyInputChannel() throws Exception
+    public void testSingleEmptyInputChannel_fileStorage() throws Exception
+    {
+      testSingleEmptyInputChannel(false);
+    }
+
+    @Test
+    public void testSingleEmptyInputChannel_durableStorage() throws Exception
+    {
+      testSingleEmptyInputChannel(true);
+    }
+
+    private void testSingleEmptyInputChannel(boolean isDurableStorage) throws Exception
     {
       final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
       inputChannel.writable().close();
@@ -118,15 +131,23 @@ public class SuperSorterTest
       final SettableFuture<ClusterByPartitions> outputPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
+      final File tempFolder = temporaryFolder.newFolder();
       final SuperSorter superSorter = new SuperSorter(
           Collections.singletonList(inputChannel.readable()),
           FrameReader.create(RowSignature.empty()),
           ClusterBy.none(),
           outputPartitionsFuture,
           exec,
-          temporaryFolder.newFolder(),
-          new FileOutputChannelFactory(temporaryFolder.newFolder(), FRAME_SIZE),
-          () -> ArenaMemoryAllocator.createOnHeap(FRAME_SIZE),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE),
+          isDurableStorage ? new DurableStorageOutputChannelFactory(
+              "0",
+              0,
+              0,
+              "0",
+              FRAME_SIZE,
+              new LocalFileStorageConnector(tempFolder),
+              tempFolder
+          ) : new FileOutputChannelFactory(tempFolder, FRAME_SIZE),
           2,
           2,
           -1,
@@ -271,7 +292,8 @@ public class SuperSorterTest
 
     private OutputChannels verifySuperSorter(
         final ClusterBy clusterBy,
-        final ClusterByPartitions clusterByPartitions
+        final ClusterByPartitions clusterByPartitions,
+        boolean isDurableStorage
     ) throws Exception
     {
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
@@ -279,15 +301,23 @@ public class SuperSorterTest
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
+      File tempFolder = temporaryFolder.newFolder();
       final SuperSorter superSorter = new SuperSorter(
           inputChannels,
           frameReader,
           clusterBy,
           clusterByPartitionsFuture,
           exec,
-          temporaryFolder.newFolder(),
-          new FileOutputChannelFactory(temporaryFolder.newFolder(), maxBytesPerFrame),
-          () -> ArenaMemoryAllocator.createOnHeap(maxBytesPerFrame),
+          new FileOutputChannelFactory(tempFolder, maxBytesPerFrame),
+          isDurableStorage ? new DurableStorageOutputChannelFactory(
+              "0",
+              0,
+              0,
+              "0",
+              maxBytesPerFrame,
+              new LocalFileStorageConnector(tempFolder),
+              tempFolder
+          ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame),
           maxActiveProcessors,
           maxChannelsPerProcessor,
           -1,
@@ -387,7 +417,7 @@ public class SuperSorterTest
       );
 
       setUpInputChannels(clusterBy);
-      verifySuperSorter(clusterBy, ClusterByPartitions.oneUniversalPartition());
+      verifySuperSorter(clusterBy, ClusterByPartitions.oneUniversalPartition(), false);
     }
 
     @Test
@@ -411,7 +441,8 @@ public class SuperSorterTest
                   new ClusterByPartition(null, zeroZero), // empty partition
                   new ClusterByPartition(zeroZero, null) // all data goes in here
               )
-          )
+          ),
+          false
       );
 
       // Verify that one of the partitions is actually empty.
@@ -473,7 +504,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(clusterBy, partitions, false);
     }
 
     @Test
@@ -513,7 +544,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(clusterBy, partitions, false);
     }
 
     @Test
@@ -552,7 +583,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(clusterBy, partitions, false);
     }
 
     @Test
@@ -591,7 +622,46 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(clusterBy, partitions, false);
+    }
+
+    @Test
+    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions_durableStorage() throws Exception
+    {
+      final ClusterBy clusterBy = new ClusterBy(
+          ImmutableList.of(
+              new SortColumn("qualityLong", true),
+              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+          ),
+          0
+      );
+
+      setUpInputChannels(clusterBy);
+
+      final ClusterByPartitions partitions = new ClusterByPartitions(
+          ImmutableList.of(
+              new ClusterByPartition(
+                  createKey(clusterBy, 1800L, 8L),
+                  createKey(clusterBy, 1600L, 506L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1600L, 506L),
+                  createKey(clusterBy, 1400L, 204L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1400L, 204L),
+                  createKey(clusterBy, 1300L, 900L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1300L, 900L),
+                  null
+              )
+          )
+      );
+
+      Assert.assertEquals(4, partitions.size());
+
+      verifySuperSorter(clusterBy, partitions, true);
     }
 
     private RowKey createKey(final ClusterBy clusterBy, final Object... objects)

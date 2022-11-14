@@ -22,6 +22,7 @@ package org.apache.druid.msq.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
@@ -41,6 +42,7 @@ import java.util.Map;
 
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_DESTINATION;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
@@ -53,16 +55,45 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.DEFAULT_MAX_NUM_T
 public class MultiStageQueryContextTest
 {
   @Test
-  public void isDurableStorageEnabled_noParameterSetReturnsDefaultValue()
+  public void isDurableShuffleStorageEnabled_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertFalse(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.empty()));
+    Assert.assertFalse(MultiStageQueryContext.isDurableShuffleStorageEnabled(QueryContext.empty()));
   }
 
   @Test
-  public void isDurableStorageEnabled_parameterSetReturnsCorrectValue()
+  public void isDurableShuffleStorageEnabled_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, "true");
-    Assert.assertTrue(MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(propertyMap)));
+    Assert.assertTrue(MultiStageQueryContext.isDurableShuffleStorageEnabled(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void isDurableTaskIntermediateStorageEnabled_noParameterSetReturnsDefaultValue()
+  {
+    Assert.assertFalse(MultiStageQueryContext.isDurableTaskIntermediateStorageEnabled(QueryContext.empty()));
+  }
+
+  @Test
+  public void isDurableTaskIntermediateStorageEnabled_parameterSetReturnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(
+        CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, "true",
+        CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE, "true"
+    );
+    Assert.assertTrue(MultiStageQueryContext.isDurableTaskIntermediateStorageEnabled(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void isDurableIntermediateStorageEnabled_partialParameterSetThrows()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(
+        CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, "false",
+        CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE, "true"
+    );
+    Assert.assertThrows(
+        IAE.class,
+        () -> MultiStageQueryContext.isDurableTaskIntermediateStorageEnabled(QueryContext.of(propertyMap))
+    );
   }
 
   @Test

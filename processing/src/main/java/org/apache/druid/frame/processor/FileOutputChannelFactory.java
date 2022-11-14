@@ -22,6 +22,7 @@ package org.apache.druid.frame.processor;
 import com.google.common.base.Suppliers;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -89,6 +91,62 @@ public class FileOutputChannelFactory implements OutputChannelFactory
         ArenaMemoryAllocator.createOnHeap(frameSize),
         readableChannelSupplier,
         partitionNumber
+    );
+  }
+
+  @Override
+  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead) throws IOException
+  {
+    FileUtils.mkdirp(fileChannelsDirectory);
+    final File file = new File(fileChannelsDirectory, name);
+    WritableFrameFileChannel writableFrameFileChannel = new WritableFrameFileChannel(
+        FrameFileWriter.open(
+            Files.newByteChannel(
+                file.toPath(),
+                StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.WRITE
+            ),
+            ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+        )
+    );
+    Supplier<FrameFile> frameFileSupplier = Suppliers.memoize(
+        () -> {
+          try {
+            return deleteAfterRead ? FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE)
+                                   : FrameFile.open(file);
+          }
+          catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        }
+    )::get;
+    final Supplier<PartitionedReadableFrameChannel> partitionedReadableFrameChannelSupplier = Suppliers.memoize(
+        () -> new PartitionedReadableFrameChannel()
+        {
+          @Override
+          public ReadableFrameChannel openChannel(int partitionNumber)
+          {
+            FrameFile fileHandle = frameFileSupplier.get();
+            fileHandle = fileHandle.newReference();
+            return new ReadableFileFrameChannel(
+                fileHandle,
+                fileHandle.getPartitionStartFrame(partitionNumber),
+                fileHandle.getPartitionStartFrame(partitionNumber + 1)
+            );
+          }
+
+          @Override
+          public void close() throws IOException
+          {
+            frameFileSupplier.get().close();
+          }
+        }
+    )::get;
+
+    return PartitionedOutputChannel.pair(
+        writableFrameFileChannel,
+        ArenaMemoryAllocator.createOnHeap(frameSize),
+        partitionedReadableFrameChannelSupplier
     );
   }
 

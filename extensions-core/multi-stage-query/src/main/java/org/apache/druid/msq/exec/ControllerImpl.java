@@ -40,6 +40,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.DurableStorageUtils;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
@@ -147,7 +148,6 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -522,7 +522,7 @@ public class ControllerImpl implements Controller
     closer.register(netClient::close);
 
     final boolean isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context());
+        MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context());
 
     final QueryDefinition queryDef = makeQueryDefinition(
         id(),
@@ -1187,7 +1187,7 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
+      if (MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
             MSQTasks.makeStorageConnector(context.injector()),
@@ -1289,7 +1289,7 @@ public class ControllerImpl implements Controller
    */
   private void cleanUpDurableStorageIfNeeded()
   {
-    if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
+    if (MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context())) {
       final String controllerDirName = DurableStorageUtils.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe

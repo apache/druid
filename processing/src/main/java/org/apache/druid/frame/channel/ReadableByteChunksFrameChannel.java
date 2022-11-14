@@ -100,23 +100,27 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   private long nextCompressedFrameLength = UNKNOWN_LENGTH;
 
   @GuardedBy("lock")
-  private StreamPart streamPart = StreamPart.MAGIC;
+  private StreamPart streamPart;
 
-  private ReadableByteChunksFrameChannel(String id, long bytesLimit)
+  private final boolean framesOnly;
+
+  private ReadableByteChunksFrameChannel(String id, long bytesLimit, boolean framesOnly)
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.bytesLimit = bytesLimit;
+    this.streamPart = framesOnly ? StreamPart.FRAMES : StreamPart.MAGIC;
+    this.framesOnly = framesOnly;
   }
 
   /**
    * Create a channel that aims to limit its memory footprint to one frame. The channel exerts backpressure
    * from {@link #addChunk} immediately once a full frame has been buffered.
    */
-  public static ReadableByteChunksFrameChannel create(final String id)
+  public static ReadableByteChunksFrameChannel create(final String id, boolean framesOnly)
   {
     // Set byte limit to 1, so backpressure will be exerted as soon as we have a full frame buffered.
     // (The bytesLimit is soft: it will be exceeded if needed to store a complete frame.)
-    return new ReadableByteChunksFrameChannel(id, 1);
+    return new ReadableByteChunksFrameChannel(id, 1, framesOnly);
   }
 
   /**
@@ -214,6 +218,9 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   public boolean canRead()
   {
     synchronized (lock) {
+      if (framesOnly) {
+        return canReadError() || canReadFrame();
+      }
       // The noMoreWrites check is here so read() can throw an error if the last few chunks are an incomplete frame.
       return canReadError() || canReadFrame() || (streamPart != StreamPart.FOOTER && noMoreWrites);
     }

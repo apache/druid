@@ -52,7 +52,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
   {
     final String taskId = taskList.get().get(workerNumber);
     final ReadableByteChunksFrameChannel channel =
-        ReadableByteChunksFrameChannel.create(makeChannelId(taskId, stageId, partitionNumber));
+        ReadableByteChunksFrameChannel.create(makeChannelId(taskId, stageId, partitionNumber), false);
     fetch(taskId, stageId, partitionNumber, 0, channel);
     return channel;
   }
