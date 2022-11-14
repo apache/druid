@@ -22,17 +22,13 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
-import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
-import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
-import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.timeline.DataSegment;
 
