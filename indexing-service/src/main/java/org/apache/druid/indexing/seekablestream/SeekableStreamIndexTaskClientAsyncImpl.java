@@ -108,7 +108,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         StringUtils.format(
             "%s-%s-%%d",
             getClass().getSimpleName(),
-            dataSource
+            StringUtils.encodeForFormat(dataSource)
         )
     );
   }

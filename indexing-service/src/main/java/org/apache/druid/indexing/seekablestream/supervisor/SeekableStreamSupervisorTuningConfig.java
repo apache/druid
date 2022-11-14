@@ -26,7 +26,7 @@ import org.joda.time.Period;
 
 public interface SeekableStreamSupervisorTuningConfig
 {
-  boolean DEFAULT_ASYNC = true;
+  boolean DEFAULT_ASYNC = false;
   String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
   int DEFAULT_CHAT_RETRIES = 8;
   String DEFAULT_HTTP_TIMEOUT = "PT10S";
