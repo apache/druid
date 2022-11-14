@@ -15,6 +15,12 @@ public class ComposingProcessor implements Processor
     this.processors = processors;
   }
 
+  @JsonProperty("processors")
+  public Processor[] getProcessors()
+  {
+    return processors;
+  }
+
   @Override
   public RowsAndColumns process(RowsAndColumns incomingPartition)
   {
