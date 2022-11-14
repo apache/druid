@@ -187,9 +187,9 @@ Sample output:
 ```
 
 If `--nested-path` is specified, the output will instead contain the types of the nested field, the local value
-dictionary, including the globalId and value, the uncompressed bitmap index for each value (list of row numbers which contain the value),
-and a dump of the column itself, which contains the row number, raw JSON form of the nested column itself, the local 
-dictionary id of the field for that row, and the value for the field for the row.
+dictionary, including the 'global' dictionary id and value, the uncompressed bitmap index for each value (list of row
+numbers which contain the value), and a dump of the column itself, which contains the row number, raw JSON form of the
+nested column itself, the local dictionary id of the field for that row, and the value for the field for the row.
 
 Sample output:
 ```json
