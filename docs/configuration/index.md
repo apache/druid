@@ -490,7 +490,7 @@ To use switching as emitter set `druid.emitter=switching`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter.switching.emitters|Map of feed to list of emitter modules to load that will be used for each feed, e.g., {"metrics":["http"], "requestLog":["logging"]}|{}|
+|`druid.emitter.switching.emitters|Map of feed to list of emitter modules to load that will be used for each feed, e.g., {"metrics":["http"], "alerts":["logging"]}|{}|
 |`druid.emitter.switching.defaultEmitters`|List of emitter modules to load that will be used if there is no emitter specifically designated to the event feed, e.g., ["logging","http"].|[]|
 
 ### Metadata storage
