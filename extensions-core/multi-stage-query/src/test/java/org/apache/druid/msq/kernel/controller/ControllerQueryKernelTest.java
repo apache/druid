@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import java.util.Set;
 
-public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
+public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 {
 
   @Test

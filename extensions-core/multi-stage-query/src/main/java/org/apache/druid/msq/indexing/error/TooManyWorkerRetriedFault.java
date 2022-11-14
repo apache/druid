@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
-@JsonTypeName(TotalRetryLimitExceededFault.CODE)
-public class TooManyWorkerRetriesFault extends BaseMSQFault
+@JsonTypeName(TooManyWorkerRetriedFault.CODE)
+public class TooManyWorkerRetriedFault extends BaseMSQFault
 {
   static final String CODE = "TooManyWorkerRetries";
 
@@ -41,7 +41,7 @@ public class TooManyWorkerRetriesFault extends BaseMSQFault
   private final String rootErrorMessage;
 
   @JsonCreator
-  public TooManyWorkerRetriesFault(
+  public TooManyWorkerRetriedFault(
       @JsonProperty("maxRetryCount") int maxRetryCount,
       @JsonProperty("taskId") String taskId,
       @JsonProperty("workerNumber") int workerNumber,
@@ -98,7 +98,7 @@ public class TooManyWorkerRetriesFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    TooManyWorkerRetriesFault that = (TooManyWorkerRetriesFault) o;
+    TooManyWorkerRetriedFault that = (TooManyWorkerRetriedFault) o;
     return maxRetryCount == that.maxRetryCount && workerNumber == that.workerNumber && Objects.equals(
         taskId,
         that.taskId

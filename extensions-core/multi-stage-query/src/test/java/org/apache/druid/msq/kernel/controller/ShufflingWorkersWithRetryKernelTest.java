@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import javax.annotation.Nonnull;
 
-public class ShufflingWorkersWithRetryKernelTests extends BaseControllerQueryKernelTest
+public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKernelTest
 {
 
   @Test

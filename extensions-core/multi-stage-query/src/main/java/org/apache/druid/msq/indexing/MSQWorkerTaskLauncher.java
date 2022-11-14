@@ -40,7 +40,7 @@ import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
-import org.apache.druid.msq.indexing.error.TooManyWorkerRetriesFault;
+import org.apache.druid.msq.indexing.error.TooManyWorkerRetriedFault;
 import org.apache.druid.msq.indexing.error.TotalRetryLimitExceededFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
@@ -556,7 +556,7 @@ public class MSQWorkerTaskLauncher
   private void checkRetryLimits(TaskTracker tracker, MSQWorkerTask toRetry)
   {
     if (toRetry.getRetryCount() > Limits.WORKER_RETRY_LIMIT) {
-      throw new MSQException(new TooManyWorkerRetriesFault(
+      throw new MSQException(new TooManyWorkerRetriedFault(
           Limits.WORKER_RETRY_LIMIT,
           toRetry.getId(),
           toRetry.getWorkerNumber(),

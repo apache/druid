@@ -2056,11 +2056,6 @@ public class ControllerImpl implements Controller
     private final ControllerQueryKernel queryKernel;
 
     /**
-     * Set of stages that have got their partition boundaries sent out.
-     */
-    private final Set<StageId> stageResultPartitionBoundariesSent = new HashSet<>();
-
-    /**
      * Return value of {@link MSQWorkerTaskLauncher#start()}. Set by {@link #startTaskLauncher()}.
      */
     private ListenableFuture<?> workerTaskLauncherFuture;
