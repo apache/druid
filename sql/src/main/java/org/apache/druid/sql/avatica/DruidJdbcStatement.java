@@ -24,6 +24,9 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
+
+import java.util.Map;
 
 /**
  * Represents Druid's version of the JDBC {@code Statement} class:
@@ -36,22 +39,27 @@ import org.apache.druid.sql.SqlStatementFactory;
 public class DruidJdbcStatement extends AbstractDruidJdbcStatement
 {
   private final SqlStatementFactory lifecycleFactory;
+  protected final Map<String, Object> queryContext;
 
   public DruidJdbcStatement(
       final String connectionId,
       final int statementId,
-      final SqlStatementFactory lifecycleFactory
+      final Map<String, Object> queryContext,
+      final SqlStatementFactory lifecycleFactory,
+      final ResultFetcherFactory fetcherFactory
   )
   {
-    super(connectionId, statementId);
+    super(connectionId, statementId, fetcherFactory);
+    this.queryContext = queryContext;
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
 
   public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount)
   {
     closeResultSet();
+    queryPlus = queryPlus.withContext(queryContext);
     DirectStatement stmt = lifecycleFactory.directStatement(queryPlus);
-    resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE);
+    resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE, fetcherFactory);
     try {
       resultSet.execute();
     }

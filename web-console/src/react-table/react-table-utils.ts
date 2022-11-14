@@ -18,7 +18,7 @@
 
 import { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import { C, F, SqlExpression } from 'druid-query-toolkit';
 import { Filter } from 'react-table';
 
 import { addOrUpdate, caseInsensitiveContains } from '../utils';
@@ -142,24 +142,21 @@ export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undef
   const modeAndNeedle = parseFilterModeAndNeedle(filter);
   if (!modeAndNeedle) return;
   const { mode, needle } = modeAndNeedle;
-  const column = SqlRef.columnWithQuotes(filter.id);
-  const needleLiteral = SqlLiteral.create(needle);
+  const column = C(filter.id);
   switch (mode) {
     case '=':
-      return column.equal(needleLiteral);
+      return column.equal(needle);
 
     case '!=':
-      return column.unequal(needleLiteral);
+      return column.unequal(needle);
 
     case '<=':
-      return column.lessThanOrEqual(needleLiteral);
+      return column.lessThanOrEqual(needle);
 
     case '>=':
-      return column.greaterThanOrEqual(needleLiteral);
+      return column.greaterThanOrEqual(needle);
 
     default:
-      return SqlFunction.simple('LOWER', [column]).like(
-        SqlLiteral.create(`%${needle.toLowerCase()}%`),
-      );
+      return F('LOWER', column).like(`%${needle.toLowerCase()}%`);
   }
 }

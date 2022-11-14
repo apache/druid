@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.IndexedUtf8ValueSetIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -71,7 +72,7 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
   public static class BenchmarkState
   {
     @Nullable
-    private DictionaryEncodedStringIndexSupplier.GenericIndexedDictionaryEncodedStringValueSetIndex stringValueSetIndex;
+    private IndexedUtf8ValueSetIndex<?> stringValueSetIndex;
     private final TreeSet<ByteBuffer> values = new TreeSet<>();
     private static final int START_INT = 10_000_000;
 
@@ -114,11 +115,9 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
                          .iterator(),
           serdeFactory.getObjectStrategy()
       );
-      DictionaryEncodedStringIndexSupplier dictionaryEncodedStringIndexSupplier =
+      DictionaryEncodedStringIndexSupplier indexSupplier =
           new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null);
-      stringValueSetIndex =
-          (DictionaryEncodedStringIndexSupplier.GenericIndexedDictionaryEncodedStringValueSetIndex)
-              dictionaryEncodedStringIndexSupplier.as(StringValueSetIndex.class);
+      stringValueSetIndex = (IndexedUtf8ValueSetIndex<?>) indexSupplier.as(StringValueSetIndex.class);
       List<Integer> filterValues = new ArrayList<>();
       List<Integer> nonFilterValues = new ArrayList<>();
       for (int i = 0; i < dictionarySize; i++) {

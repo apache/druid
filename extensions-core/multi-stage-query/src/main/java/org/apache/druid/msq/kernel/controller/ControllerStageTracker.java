@@ -81,7 +81,8 @@ class ControllerStageTracker
 
   private ControllerStageTracker(
       final StageDefinition stageDef,
-      final WorkerInputs workerInputs
+      final WorkerInputs workerInputs,
+      final int partitionStatisticsMaxRetainedBytes
   )
   {
     this.stageDef = stageDef;
@@ -105,11 +106,12 @@ class ControllerStageTracker
       final StageDefinition stageDef,
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final int partitionStatisticsMaxRetainedBytes
   )
   {
     final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy);
-    return new ControllerStageTracker(stageDef, workerInputs);
+    return new ControllerStageTracker(stageDef, workerInputs, partitionStatisticsMaxRetainedBytes);
   }
 
   /**
@@ -242,16 +244,15 @@ class ControllerStageTracker
       final WorkerAggregatedKeyStatistics aggregatedKeyStatistics
   )
   {
+    if (phase != ControllerStagePhase.READING_INPUT) {
+      throw new ISE("Cannot add result key statistics from stage [%s]", phase);
+    }
     if (aggregatedKeyStatistics == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
     if (workerNumber < 0 || workerNumber >= workerCount) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
-    }
-
-    if (phase != ControllerStagePhase.READING_INPUT) {
-      throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
 
     try {

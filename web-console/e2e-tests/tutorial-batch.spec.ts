@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
@@ -167,7 +167,7 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
 
 async function validateQuery(page: playwright.Page, datasourceName: string) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = `SELECT * FROM ${SqlTableRef.create(datasourceName)} ORDER BY __time`;
+  const query = `SELECT * FROM ${T(datasourceName)} ORDER BY __time`;
   const results = await queryOverview.runQuery(query);
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);

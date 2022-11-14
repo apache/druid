@@ -521,4 +521,19 @@ export class Stages {
         (stage.duration / 1000),
     );
   }
+
+  getPotentiallyStuckStageIndex(): number {
+    const { stages } = this;
+    const potentiallyStuckIndex = stages.findIndex(stage => typeof stage.phase === 'undefined');
+
+    if (potentiallyStuckIndex > 0) {
+      const prevStage = stages[potentiallyStuckIndex - 1];
+      if (oneOf(prevStage.phase, 'NEW', 'READING_INPUT')) {
+        // Previous stage is still working so this stage is not stuck, it is just waiting
+        return -1;
+      }
+    }
+
+    return potentiallyStuckIndex;
+  }
 }

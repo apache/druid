@@ -138,7 +138,10 @@ public class RowKeyComparatorTest extends InitializedNullHandlingTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(RowKeyComparator.class).usingGetClass().verify();
+    EqualsVerifier.forClass(RowKeyComparator.class)
+                  .withNonnullFields("byteRowKeyComparatorDelegate")
+                  .usingGetClass()
+                  .verify();
   }
 
   private List<RowKey> sortUsingKeyComparator(final List<SortColumn> sortColumns, final List<Object[]> objectss)

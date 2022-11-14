@@ -26,6 +26,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -40,9 +41,11 @@ import org.apache.druid.server.coordinator.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -76,7 +79,7 @@ public class CoordinatorSimulationBuilder
           )
       );
 
-  private BalancerStrategyFactory balancerStrategyFactory;
+  private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig =
       CoordinatorDynamicConfig.builder()
                               .withUseBatchedSegmentSampler(true)
@@ -92,9 +95,9 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default: "cost" ({@link CostBalancerStrategyFactory})
    */
-  public CoordinatorSimulationBuilder withBalancer(BalancerStrategyFactory strategyFactory)
+  public CoordinatorSimulationBuilder withBalancer(String balancerStrategy)
   {
-    this.balancerStrategyFactory = strategyFactory;
+    this.balancerStrategy = balancerStrategy;
     return this;
   }
 
@@ -209,14 +212,33 @@ public class CoordinatorSimulationBuilder
         Collections.emptySet(),
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
-        balancerStrategyFactory != null ? balancerStrategyFactory
-                                        : new CostBalancerStrategyFactory(),
+        createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
         OBJECT_MAPPER
     );
 
     return new SimulationImpl(coordinator, env);
+  }
+
+  private BalancerStrategyFactory createBalancerStrategy(Environment env)
+  {
+    if (balancerStrategy == null) {
+      return new CostBalancerStrategyFactory();
+    }
+
+    switch (balancerStrategy) {
+      case "cost":
+        return new CostBalancerStrategyFactory();
+      case "cachingCost":
+        return buildCachingCostBalancerStrategy(env);
+      case "diskNormalized":
+        return new DiskNormalizedCostBalancerStrategyFactory();
+      case "random":
+        return new RandomBalancerStrategyFactory();
+      default:
+        throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
+    }
   }
 
   private BalancerStrategyFactory buildCachingCostBalancerStrategy(Environment env)
@@ -345,6 +367,12 @@ public class CoordinatorSimulationBuilder
     public void removeServer(DruidServer server)
     {
       env.inventory.removeServer(server);
+    }
+
+    @Override
+    public void addServer(DruidServer server)
+    {
+      env.inventory.addServer(server);
     }
 
     private void verifySimulationRunning()
