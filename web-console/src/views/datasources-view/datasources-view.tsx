@@ -19,7 +19,7 @@
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlQuery, SqlTableRef } from 'druid-query-toolkit';
+import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -830,8 +830,7 @@ ORDER BY 1`;
       goToActions.push({
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () =>
-          goToQuery({ queryString: SqlQuery.create(SqlTableRef.create(datasource)).toString() }),
+        onAction: () => goToQuery({ queryString: SqlQuery.create(T(datasource)).toString() }),
       });
     }
 

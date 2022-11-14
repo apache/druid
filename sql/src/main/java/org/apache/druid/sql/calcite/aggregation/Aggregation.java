@@ -84,7 +84,6 @@ public class Aggregation
     }
   }
 
-
   public static Aggregation create(final AggregatorFactory aggregatorFactory)
   {
     return new Aggregation(
@@ -145,7 +144,6 @@ public class Aggregation
     if (filter == null) {
       return this;
     }
-
 
     if (postAggregator != null) {
       // Verify that this Aggregation contains all input to its postAggregator.

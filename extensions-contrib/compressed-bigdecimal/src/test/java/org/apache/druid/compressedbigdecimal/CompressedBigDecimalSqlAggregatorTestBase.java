@@ -41,6 +41,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -81,7 +82,8 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory
   ) throws IOException
   {
     QueryableIndex index =

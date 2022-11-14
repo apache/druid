@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -76,8 +77,8 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       int bucketSize
   )
   {
-    if (Integer.bitCount(bucketSize) != 1) {
-      throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
+    if (Integer.bitCount(bucketSize) != 1 || bucketSize < 1 || bucketSize > 128) {
+      throw new IAE("bucketSize must be a power of two (from 1 up to 128) but was[%,d]", bucketSize);
     }
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.scratch = ByteBuffer.allocate(1 << logScratchSize).order(byteOrder);

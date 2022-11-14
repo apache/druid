@@ -17,16 +17,16 @@
  */
 
 import {
+  C,
+  F,
   SqlClusteredByClause,
   SqlExpression,
-  SqlFunction,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlPartitionedByClause,
   SqlQuery,
-  SqlRef,
-  SqlTableRef,
+  SqlTable,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
@@ -201,10 +201,7 @@ export class WorkbenchQuery {
     let partitionedByExpression = partitionedByClause.expression;
     if (partitionedByExpression) {
       if (partitionedByExpression instanceof SqlLiteral) {
-        partitionedByExpression = SqlFunction.floor(
-          SqlRef.column('__time'),
-          partitionedByExpression,
-        );
+        partitionedByExpression = F.floor(C('__time'), partitionedByExpression);
       }
       orderByExpressions.push(SqlOrderByExpression.create(partitionedByExpression));
     }
@@ -451,8 +448,8 @@ export class WorkbenchQuery {
     const parsedQuery = this.getParsedQuery();
     if (parsedQuery) {
       const fromExpression = parsedQuery.getFirstFromExpression();
-      if (fromExpression instanceof SqlTableRef) {
-        const firstTable = fromExpression.getTable();
+      if (fromExpression instanceof SqlTable) {
+        const firstTable = fromExpression.getName();
         ret = ret.changeQueryParts(
           this.queryParts.map(queryPart =>
             queryPart.queryName === firstTable ? queryPart.addPreviewLimit() : queryPart,

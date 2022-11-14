@@ -268,41 +268,42 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier|Varies|
-|`segment/moved/count`|Number of segments moved in the cluster.|tier|Varies|
-|`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier|Varies|
-|`segment/deleted/count`|Number of segments dropped due to rules.|tier|Varies|
-|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|tier|Varies|
-|`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|tier|Varies|
-|`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|tier|Varies|
-|`segment/cost/normalized`|Used in cost balancing. The normalized cost of hosting segments.|tier|Varies|
-|`segment/loadQueue/size`|Size in bytes of segments to load.|server|Varies|
-|`segment/loadQueue/failed`|Number of segments that failed to load.|server|0|
-|`segment/loadQueue/count`|Number of segments to load.|server|Varies|
-|`segment/dropQueue/count`|Number of segments to drop.|server|Varies|
-|`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource|Varies|
-|`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource|< max|
-|`segment/overShadowed/count`|Number of overshadowed segments.| |Varies|
-|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource|0|
-|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource|0|
-|`tier/historical/count`|Number of available historical nodes in each tier.|tier|Varies|
-|`tier/replication/factor`|Configured maximum replication factor in each tier.|tier.|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier.|tier|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier.|tier|Varies|
+|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`tier`|Varies|
+|`segment/moved/count`|Number of segments moved in the cluster.|`tier`|Varies|
+|`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|`tier`|Varies|
+|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`tier`|Varies|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|`tier`|Varies|
+|`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`tier`|Varies|
+|`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|`tier`|Varies|
+|`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|`tier`|Varies|
+|`segment/cost/normalized`|Used in cost balancing. The normalized cost of hosting segments.|`tier`|Varies|
+|`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
+|`segment/loadQueue/failed`|Number of segments that failed to load.|`server`|0|
+|`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
+|`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
+|`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
+|`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
+|`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
+|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|`dataSource`|0|
+|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|`tier`, `dataSource`|0|
+|`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
+|`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
+|`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
+|`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Max number of task slots that can be used for auto compaction tasks in the auto compaction run.| |Varies|
-|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is max slot minus any currently running compaction task.| |Varies|
-|`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource|Varies|
-|`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource|Varies|
-|`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|datasource|Varies|
-|`segment/compacted/bytes`|Total bytes of this datasource that are already compacted with the spec set in the auto compaction config.|datasource|Varies|
-|`segment/compacted/count`|Total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.|datasource|Varies|
-|`interval/compacted/count`|Total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.|datasource|Varies|
-|`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource|Varies.|
-|`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource|Varies|
-|`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|datasource|Varies|
-|`coordinator/time`|Approximate Coordinator duty runtime in milliseconds. The duty dimension is the string alias of the Duty that is being run.|duty|Varies|
-|`coordinator/global/time`|Approximate runtime of a full coordination cycle in milliseconds. The `dutyGroup` dimension indicates what type of coordination this run was, that is Historical Management vs Indexing.|`dutyGroup`|Varies|
+|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is the max number of task slots minus any currently running compaction tasks.| |Varies|
+|`segment/waitCompact/bytes`|Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
+|`segment/waitCompact/count`|Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
+|`interval/waitCompact/count`|Total number of intervals of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction).|`dataSource`|Varies|
+|`segment/compacted/bytes`|Total bytes of this datasource that are already compacted with the spec set in the auto compaction config.|`dataSource`|Varies|
+|`segment/compacted/count`|Total number of segments of this datasource that are already compacted with the spec set in the auto compaction config.|`dataSource`|Varies|
+|`interval/compacted/count`|Total number of intervals of this datasource that are already compacted with the spec set in the auto compaction config.|`dataSource`|Varies|
+|`segment/skipCompact/bytes`|Total bytes of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
+|`segment/skipCompact/count`|Total number of segments of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
+|`interval/skipCompact/count`|Total number of intervals of this datasource that are skipped (not eligible for auto compaction) by the auto compaction.|`dataSource`|Varies|
+|`coordinator/time`|Approximate Coordinator duty runtime in milliseconds. The duty dimension is the string alias of the Duty that is being run.|`duty`|Varies|
+|`coordinator/global/time`|Approximate runtime of a full coordination cycle in milliseconds. The `dutyGroup` dimension indicates what type of coordination this run was. i.e. Historical Management vs Indexing|`dutyGroup`|Varies|
 |`metadata/kill/supervisor/count`|Total number of terminated supervisors that were automatically deleted from metadata store per each Coordinator kill supervisor duty run. This metric can help adjust `druid.coordinator.kill.supervisor.durationToRetain` configuration based on whether more or less terminated supervisors need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.supervisor.on` is set to true.| |Varies|
 |`metadata/kill/audit/count`|Total number of audit logs that were automatically deleted from metadata store per each Coordinator kill audit duty run. This metric can help adjust `druid.coordinator.kill.audit.durationToRetain` configuration based on whether more or less audit logs need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.audit.on` is set to true.| |Varies|
 |`metadata/kill/compaction/count`|Total number of compaction configurations that were automatically deleted from metadata store per each Coordinator kill compaction configuration duty run. Note that this metric is only emitted when `druid.coordinator.kill.compaction.on` is set to true.| |Varies|
