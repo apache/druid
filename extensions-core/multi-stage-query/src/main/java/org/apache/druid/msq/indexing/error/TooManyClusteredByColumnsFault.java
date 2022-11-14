@@ -32,16 +32,19 @@ public class TooManyClusteredByColumnsFault extends BaseMSQFault
 
   private final int numColumns;
   private final int maxColumns;
+  private final int stage;
 
   @JsonCreator
   public TooManyClusteredByColumnsFault(
       @JsonProperty("numColumns") final int numColumns,
-      @JsonProperty("maxColumns") final int maxColumns
+      @JsonProperty("maxColumns") final int maxColumns,
+      @JsonProperty("stage") final int stage
   )
   {
-    super(CODE, "Too many clustered by columns (requested = %d, max = %d)", numColumns, maxColumns);
+    super(CODE, "Too many cluster by columns present in stage [%s] (requested = %d, max = %d)", stage, numColumns, maxColumns);
     this.numColumns = numColumns;
     this.maxColumns = maxColumns;
+    this.stage = stage;
   }
 
   @JsonProperty
@@ -54,6 +57,12 @@ public class TooManyClusteredByColumnsFault extends BaseMSQFault
   public int getMaxColumns()
   {
     return maxColumns;
+  }
+
+  @JsonProperty
+  public int getStage()
+  {
+    return stage;
   }
 
   @Override
@@ -69,12 +78,12 @@ public class TooManyClusteredByColumnsFault extends BaseMSQFault
       return false;
     }
     TooManyClusteredByColumnsFault that = (TooManyClusteredByColumnsFault) o;
-    return numColumns == that.numColumns && maxColumns == that.maxColumns;
+    return numColumns == that.numColumns && maxColumns == that.maxColumns && stage == that.stage;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), numColumns, maxColumns);
+    return Objects.hash(super.hashCode(), numColumns, maxColumns, stage);
   }
 }

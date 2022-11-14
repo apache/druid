@@ -232,6 +232,7 @@ The following table lists query limits:
 | Number of input files/segments per worker. | 10,000 | `TooManyInputFiles` |
 | Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | `TooManyPartitions` |
 | Number of output columns for any one stage. | 2,000 | `TooManyColumns` |
+| Number of cluster by columns that can appear in a stage | 1,500 | `TooManyClusteredByColumns` |
 | Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | `TooManyWorkers` |
 | Maximum memory occupied by broadcasted tables. | 30% of each [processor memory bundle](concepts.md#memory-usage). | `BroadcastTablesTooLarge` |
 
@@ -263,6 +264,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 |  TooManyBuckets  |  Exceeded the number of partition buckets for a stage. Partition buckets are only used for `segmentGranularity` during INSERT queries. The most common reason for this error is that your `segmentGranularity` is too narrow relative to the data. See the [Limits](#limits) table for the specific limit.  |  `maxBuckets`: The limit on buckets.  |
 | TooManyInputFiles | Exceeded the number of input files/segments per worker. See the [Limits](#limits) table for the specific limit. | `umInputFiles`: The total number of input files/segments for the stage.<br /><br />`maxInputFiles`: The maximum number of input files/segments per worker per stage.<br /><br />`minNumWorker`: The minimum number of workers required for a successful run. |
 |  TooManyPartitions   |  Exceeded the number of partitions for a stage. The most common reason for this is that the final stage of an INSERT or REPLACE query generated too many segments. See the [Limits](#limits) table for the specific limit.  | `maxPartitions`: The limit on partitions which was exceeded    |
+|  TooManyClusteredByColumns  | Exceeded the number of cluster by columns for a stage. See the [Limits](#limits) table for the specific limit. | `numColumns`: The number of columns requested.<br /><br />`maxColumns`: The limit on columns which was exceeded.`stage`: The stage number exceeding the limit<br /><br /> |
 |  TooManyColumns |  Exceeded the number of columns for a stage. See the [Limits](#limits) table for the specific limit.  | `maxColumns`: The limit on columns which was exceeded.  |
 |  TooManyWarnings |  Exceeded the allowed number of warnings of a particular type. | `rootErrorCode`: The error code corresponding to the exception that exceeded the required limit. <br /><br />`maxWarnings`: Maximum number of warnings that are allowed for the corresponding `rootErrorCode`.   |
 |  TooManyWorkers |  Exceeded the supported number of workers running simultaneously. See the [Limits](#limits) table for the specific limit.  | `workers`: The number of simultaneously running workers that exceeded a hard or soft limit. This may be larger than the number of workers in any one stage if multiple stages are running simultaneously. <br /><br />`maxWorkers`: The hard or soft limit on workers that was exceeded.  |

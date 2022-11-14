@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
@@ -50,21 +49,23 @@ public class QueryValidator
         throw new MSQException(new TooManyColumnsFault(numColumns, Limits.MAX_FRAME_COLUMNS));
       }
 
+      final int numClusteredByColumns = stageDef.getClusterBy().getColumns().size();
+      if (numClusteredByColumns > Limits.MAX_CLUSTERED_BY_COLUMNS) {
+        throw new MSQException(
+            new TooManyClusteredByColumnsFault(
+                numClusteredByColumns,
+                Limits.MAX_CLUSTERED_BY_COLUMNS,
+                stageDef.getStageNumber()
+            )
+        );
+      }
+
       final int numWorkers = stageDef.getMaxWorkerCount();
       if (numWorkers > Limits.MAX_WORKERS) {
         throw new MSQException(new TooManyWorkersFault(numWorkers, Limits.MAX_WORKERS));
       } else if (numWorkers <= 0) {
         throw new ISE("Number of workers must be greater than 0");
       }
-    }
-
-    // Check if the number of columns in the query's CLUSTERED BY clause donot exceed the limit
-    ClusterBy queryClusteredBy = queryDef.getFinalStageDefinition().getClusterBy();
-    int queryClusteredByColumnsSize = queryClusteredBy.getColumns().size();
-    if (queryClusteredByColumnsSize > Limits.MAX_CLUSTERED_BY_COLUMNS) {
-      throw new MSQException(
-          new TooManyClusteredByColumnsFault(queryClusteredByColumnsSize, Limits.MAX_CLUSTERED_BY_COLUMNS)
-      );
     }
   }
 
