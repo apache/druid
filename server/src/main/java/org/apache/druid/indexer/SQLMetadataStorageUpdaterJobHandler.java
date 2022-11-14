@@ -65,24 +65,22 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
                 )
             );
             for (final DataSegment segment : segments) {
-
+              String now = DateTimes.nowUtc().toString();
               batch.add(
                   new ImmutableMap.Builder<String, Object>()
                       .put("id", segment.getId().toString())
                       .put("dataSource", segment.getDataSource())
-                      .put("created_date", DateTimes.nowUtc().toString())
+                      .put("created_date", now)
                       .put("start", segment.getInterval().getStart().toString())
                       .put("end", segment.getInterval().getEnd().toString())
                       .put("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
                       .put("version", segment.getVersion())
                       .put("used", true)
                       .put("payload", mapper.writeValueAsBytes(segment))
-                      .put("used_flag_last_updated", DateTimes.nowUtc().toString())
+                      .put("used_flag_last_updated", now)
                       .build()
               );
-
               log.info("Published %s", segment.getId());
-
             }
             batch.execute();
 
