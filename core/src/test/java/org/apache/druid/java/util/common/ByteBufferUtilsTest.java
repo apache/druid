@@ -84,7 +84,7 @@ public class ByteBufferUtilsTest
   @SuppressWarnings("EqualsWithItself")
   public void testUnsignedComparator()
   {
-    final Comparator<ByteBuffer> comparator = ByteBufferUtils.unsignedComparator();
+    final Comparator<ByteBuffer> comparator = ByteBufferUtils.utf8Comparator();
 
     // Tests involving null
     MatcherAssert.assertThat(comparator.compare(null, null), Matchers.equalTo(0));

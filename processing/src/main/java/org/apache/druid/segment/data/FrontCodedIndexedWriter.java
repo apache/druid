@@ -325,6 +325,9 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     return buffer.position() - pos;
   }
 
+  /**
+   * Same as {@link StringUtils#compareUtf8(byte[], byte[])}, but accepts nulls. Nulls are sorted first.
+   */
   public static int unsignedCompare(
       @Nullable final byte[] b1,
       @Nullable final byte[] b2
@@ -337,15 +340,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     if (b2 == null) {
       return 1;
     }
-    final int commonLength = Math.min(b1.length, b2.length);
 
-    for (int i = 0; i < commonLength; i++) {
-      final int cmp = FrontCodedIndexed.unsignedByteCompare(b1[i], b2[i]);
-      if (cmp != 0) {
-        return cmp;
-      }
-    }
-
-    return Integer.compare(b1.length, b2.length);
+    return StringUtils.compareUtf8(b1, b2);
   }
 }

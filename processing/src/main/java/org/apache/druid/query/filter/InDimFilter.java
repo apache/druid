@@ -674,7 +674,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     public SortedSet<ByteBuffer> toUtf8()
     {
-      final TreeSet<ByteBuffer> valuesUtf8 = new TreeSet<>(ByteBufferUtils.unsignedComparator());
+      final TreeSet<ByteBuffer> valuesUtf8 = new TreeSet<>(ByteBufferUtils.utf8Comparator());
 
       for (final String value : values) {
         if (value == null) {
