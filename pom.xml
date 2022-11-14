@@ -185,6 +185,7 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
+        <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>

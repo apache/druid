@@ -112,13 +112,11 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -306,15 +304,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     String getType();
 
     void handle() throws ExecutionException, InterruptedException, TimeoutException;
-
-    /**
-     * Whether this notice can also handle the work of another notice. Used to coalesce notices and avoid
-     * redundant work.
-     */
-    default boolean canAlsoHandle(Notice otherNotice)
-    {
-      return false;
-    }
   }
 
   private static class StatsFromTaskResult
@@ -383,7 +372,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private class RunNotice implements Notice
+  private final class RunNotice implements Notice
   {
     private static final String TYPE = "run_notice";
 
@@ -406,9 +395,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     @Override
-    public boolean canAlsoHandle(Notice otherNotice)
+    public int hashCode()
     {
-      return otherNotice.getType().equals(TYPE);
+      return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      // All RunNotices are the same. They are de-duplicated on insertion into the NoticesQueue "notices".
+      return obj != null && obj.getClass().equals(RunNotice.class);
     }
   }
 
@@ -725,7 +721,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
-  private final BlockingDeque<Notice> notices = new LinkedBlockingDeque<>();
+  private final NoticesQueue<Notice> notices = new NoticesQueue<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
   private final ReentrantLock recordSupplierLock = new ReentrantLock();
@@ -1037,15 +1033,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               try {
                 long pollTimeout = Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS);
                 while (!Thread.currentThread().isInterrupted() && !stopped) {
-                  final Notice notice = notices.poll(pollTimeout, TimeUnit.MILLISECONDS);
+                  final Notice notice = notices.poll(pollTimeout);
                   if (notice == null) {
                     continue;
-                  }
-
-                  // Coalesce notices.
-                  Notice nextNotice;
-                  while ((nextNotice = notices.peek()) != null && notice.canAlsoHandle(nextNotice)) {
-                    notices.removeFirst();
                   }
 
                   try {
@@ -1104,7 +1094,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction)
   {
-    return () -> notices.add(new DynamicAllocationTasksNotice(scaleAction));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction));
   }
 
   private Runnable buildRunTask()

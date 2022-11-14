@@ -206,7 +206,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null
+        null,
+        objectMapper
     );
   }
 

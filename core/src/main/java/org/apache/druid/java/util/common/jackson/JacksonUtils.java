@@ -20,11 +20,13 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -44,6 +46,10 @@ public final class JacksonUtils
       new TypeReference<Map<String, Boolean>>()
       {
       };
+
+  private JacksonUtils()
+  {
+  }
 
   /**
    * Silences Jackson's {@link IOException}.
@@ -89,7 +95,17 @@ public final class JacksonUtils
     }
   }
 
-  private JacksonUtils()
+  /**
+   * Convert the given object to an array of bytes. Use when the object is
+   * known serializable so that the Jackson exception can be suppressed.
+   */
+  public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
   {
+    try {
+      return jsonMapper.writeValueAsBytes(obj);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
+    }
   }
 }
