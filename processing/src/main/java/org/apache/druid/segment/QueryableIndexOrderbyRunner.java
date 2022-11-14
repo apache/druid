@@ -47,7 +47,6 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.NumericColumn;
-
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
@@ -167,11 +166,9 @@ public class QueryableIndexOrderbyRunner
     }
 
     Granularity gran = Granularities.ALL;
-    final DateTime minTime;
-    final DateTime maxTime;
     final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
-    minTime = DateTimes.utc(timestamps.getLongSingleValueRow(0));
-    maxTime = DateTimes.utc(timestamps.getLongSingleValueRow(timestamps.length() - 1));
+    final DateTime minTime = DateTimes.utc(timestamps.getLongSingleValueRow(0));
+    final DateTime maxTime = DateTimes.utc(timestamps.getLongSingleValueRow(timestamps.length() - 1));
 
     final Interval dataInterval = new Interval(minTime, gran.bucketEnd(maxTime));
 
