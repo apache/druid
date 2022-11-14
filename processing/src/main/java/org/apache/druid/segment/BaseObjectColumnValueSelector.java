@@ -36,5 +36,10 @@ public interface BaseObjectColumnValueSelector<T>
   @Nullable
   T getObject();
 
+  default Object getObjectOrDictionaryId()
+  {
+    return getObject();
+  }
+
   Class<? extends T> classOfObject();
 }

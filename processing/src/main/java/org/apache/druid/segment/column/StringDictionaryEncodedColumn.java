@@ -238,6 +238,12 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         }
 
         @Override
+        public Object getObjectOrDictionaryId()
+        {
+          return getRow();
+        }
+
+        @Override
         public Class classOfObject()
         {
           return Object.class;
@@ -350,6 +356,12 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         public Object getObject()
         {
           return lookupName(getRowValue());
+        }
+
+        @Override
+        public Object getObjectOrDictionaryId()
+        {
+          return getRowValue();
         }
 
         @Override
