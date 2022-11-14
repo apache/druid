@@ -59,6 +59,7 @@ import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
+import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
@@ -118,6 +119,7 @@ public class MSQIndexingModule implements DruidModule
       RowTooLargeFault.class,
       TaskStartTimeoutFault.class,
       TooManyBucketsFault.class,
+      TooManyClusteredByColumnsFault.class,
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
