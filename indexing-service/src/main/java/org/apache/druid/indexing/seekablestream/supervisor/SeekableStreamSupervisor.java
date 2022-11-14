@@ -3064,7 +3064,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               log.info(
-                  "Setting endOffsets for tasks in taskGroup [%d] to %s and resuming",
+                  "Setting endOffsets for tasks in taskGroup [%d] to %s",
                   taskGroup.groupId,
                   endOffsets
               );
@@ -3083,6 +3083,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       taskId
                   );
                   taskGroup.tasks.remove(taskId);
+                } else {
+                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 }
               }
             }
