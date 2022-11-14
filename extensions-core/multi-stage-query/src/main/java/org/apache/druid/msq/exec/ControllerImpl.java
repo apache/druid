@@ -525,7 +525,9 @@ public class ControllerImpl implements Controller
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
     ClusterStatisticsMergeMode clusterStatisticsMergeMode =
         MultiStageQueryContext.getClusterStatisticsMergeMode(task.getQuerySpec().getQuery().context());
-    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode);
+    int statisticsMaxRetainedBytes = WorkerMemoryParameters.createProductionInstanceForController(context.injector())
+                                                                    .getPartitionStatisticsMaxRetainedBytes();
+    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode, statisticsMaxRetainedBytes);
 
     closer.register(netClient::close);
 
@@ -1996,11 +1998,7 @@ public class ControllerImpl implements Controller
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
       this.closer = closer;
-      this.queryKernel = new ControllerQueryKernel(
-          queryDef,
-          WorkerMemoryParameters.createProductionInstanceForController(context.injector())
-                                .getPartitionStatisticsMaxRetainedBytes()
-      );
+      this.queryKernel = new ControllerQueryKernel(queryDef);
     }
 
     /**

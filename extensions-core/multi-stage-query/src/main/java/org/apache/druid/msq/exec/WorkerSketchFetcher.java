@@ -48,14 +48,16 @@ public class WorkerSketchFetcher
   private static final long WORKER_THRESHOLD = 100;
 
   private final ClusterStatisticsMergeMode clusterStatisticsMergeMode;
+  private final int statisticsMaxRetainedBytes;
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode)
+  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode, int statisticsMaxRetainedBytes)
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
     this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
   }
 
   /**
@@ -101,7 +103,7 @@ public class WorkerSketchFetcher
   {
     CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
 
-    final ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
+    final ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
     final int workerCount = workerTaskIds.size();
     final Set<Integer> finishedWorkers = new HashSet<>();
 
@@ -186,7 +188,7 @@ public class WorkerSketchFetcher
         Map.Entry<Long, Set<Integer>> entry = timeSegmentVsWorkerIdIterator.next();
         Long timeChunk = entry.getKey();
         Set<Integer> workerIdsWithTimeChunk = entry.getValue();
-        ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector();
+        ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
         Set<Integer> finishedWorkers = new HashSet<>();
 
         for (int workerNo : workerIdsWithTimeChunk) {

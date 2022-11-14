@@ -81,8 +81,7 @@ class ControllerStageTracker
 
   private ControllerStageTracker(
       final StageDefinition stageDef,
-      final WorkerInputs workerInputs,
-      final int partitionStatisticsMaxRetainedBytes
+      final WorkerInputs workerInputs
   )
   {
     this.stageDef = stageDef;
@@ -106,12 +105,11 @@ class ControllerStageTracker
       final StageDefinition stageDef,
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy,
-      final int partitionStatisticsMaxRetainedBytes
+      final WorkerAssignmentStrategy assignmentStrategy
   )
   {
     final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy);
-    return new ControllerStageTracker(stageDef, workerInputs, partitionStatisticsMaxRetainedBytes);
+    return new ControllerStageTracker(stageDef, workerInputs);
   }
 
   /**

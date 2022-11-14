@@ -82,7 +82,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public ControllerQueryKernelTester queryDefinition(QueryDefinition queryDefinition)
     {
       this.queryDefinition = Preconditions.checkNotNull(queryDefinition);
-      this.controllerQueryKernel = new ControllerQueryKernel(queryDefinition, 10_000_000);
+      this.controllerQueryKernel = new ControllerQueryKernel(queryDefinition);
       return this;
     }
 
