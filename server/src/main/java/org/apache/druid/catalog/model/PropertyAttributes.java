@@ -47,14 +47,20 @@ public class PropertyAttributes
   public static final Map<String, Object> SQL_AND_TABLE_PARAM =
       ImmutableMap.of(IS_SQL_FN_PARAM_KEY, true, IS_PARAMETER, true);
 
+  private static boolean getBoolean(PropertyDefn<?> defn, String key)
+  {
+    Object value = defn.attributes().get(key);
+    return value != null && (Boolean) value;
+  }
+
   public static boolean isSqlFunctionParameter(PropertyDefn<?> defn)
   {
-    return defn.attributes().get(IS_SQL_FN_PARAM_KEY) == Boolean.TRUE;
+    return getBoolean(defn, IS_SQL_FN_PARAM_KEY);
   }
 
   public static boolean isOptional(PropertyDefn<?> defn)
   {
-    return defn.attributes().get(IS_SQL_FN_OPTIONAL) == Boolean.TRUE;
+    return getBoolean(defn, IS_SQL_FN_OPTIONAL);
   }
 
   public static String typeName(PropertyDefn<?> defn)
@@ -69,7 +75,7 @@ public class PropertyAttributes
 
   public static boolean isExternTableParameter(PropertyDefn<?> defn)
   {
-    return defn.attributes().get(IS_PARAMETER) == Boolean.TRUE;
+    return getBoolean(defn, IS_PARAMETER);
   }
 
   public static Map<String, Object> merge(Map<String, Object> attribs1, Map<String, Object> attribs2)

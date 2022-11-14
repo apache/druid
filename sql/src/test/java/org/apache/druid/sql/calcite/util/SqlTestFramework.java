@@ -37,6 +37,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
@@ -525,7 +526,6 @@ public class SqlTestFramework
         .addModule(new BasicTestModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        //.addModule(new LookupSerdeModule())
         .addModule(new TestSetupModule(builder));
     builder.componentSupplier.configureGuice(injectorBuilder);
     this.injector = injectorBuilder.build();

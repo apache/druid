@@ -46,7 +46,7 @@ import java.util.Set;
  */
 public interface ModelProperties
 {
-  public interface PropertyDefn<T>
+  interface PropertyDefn<T>
   {
     String name();
     Map<String, Object> attributes();

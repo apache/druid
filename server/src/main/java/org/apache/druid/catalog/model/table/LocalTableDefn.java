@@ -64,7 +64,7 @@ public class LocalTableDefn extends FormattedExternalTableDefn implements Parame
         Arrays.asList(
             new StringPropertyDefn(BASE_DIR_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
             new StringPropertyDefn(FILE_FILTER_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM),
-            new StringListPropertyDefn(FILES_PROPERTY, PropertyAttributes.OPTIONAL_SQL_FN_PARAM)
+            new StringListPropertyDefn(FILES_PROPERTY, PropertyAttributes.SQL_AND_TABLE_PARAM)
         ),
         Collections.singletonList(INPUT_COLUMN_DEFN),
         InputFormats.ALL_FORMATS

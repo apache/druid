@@ -96,7 +96,8 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
   {
     return null;
   }
-  public class CatalogExternalTableOperator extends UserDefinedTableMacroFunction implements AuthorizableOperator
+
+  public static class CatalogExternalTableOperator extends UserDefinedTableMacroFunction implements AuthorizableOperator
   {
     public CatalogExternalTableOperator(final CatalogTableMacro macro)
     {

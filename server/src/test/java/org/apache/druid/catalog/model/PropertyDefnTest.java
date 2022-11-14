@@ -39,6 +39,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -116,7 +117,7 @@ public class PropertyDefnTest
     StringListPropertyDefn prop = new StringListPropertyDefn("prop", null);
     assertEquals("prop", prop.name());
     assertEquals("string list", prop.typeName());
-    assertNull(PropertyAttributes.sqlParameterType(prop));
+    assertSame(String.class, PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     prop.validate(null, mapper);

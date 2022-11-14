@@ -83,7 +83,7 @@ import java.util.Set;
  * the original. So, we override those to keep our modified operator.</li>
  * <li>When asked to produce a table ({@code apply(.)}), we call a Druid-specific
  * version that passes along the schema saved previously.</li>
- * <li>The extended {@link DruidTableMacro} uses the schema to define the
+ * <li>The extended {@code DruidTableMacro} uses the schema to define the
  * input source.</li>
  * <li>Care is taken that the same {@code DruidTableMacro} can be used without
  * EXTEND. In this case, the schema will be empty and the input source must have

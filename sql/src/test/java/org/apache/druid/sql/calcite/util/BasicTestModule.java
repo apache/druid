@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
@@ -52,18 +54,11 @@ class BasicTestModule implements DruidModule
         );
 
     binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-    binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
 
     // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
     binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
     SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
-
-    // Add "EXTERN" table macro, for CalciteInsertDmlTest.
-    SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-
-    // For catalog and related
-    binder.bind(TableDefnRegistry.class).in(LazySingleton.class);
-    SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+    ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
   }
 
   @Override
