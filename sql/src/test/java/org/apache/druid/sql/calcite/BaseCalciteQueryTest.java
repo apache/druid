@@ -868,9 +868,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
         // Verify native queries before results. (Note: change from prior pattern
         // that reversed the steps.
-        if (builder.expectedQueries != null) {
-          verifySteps.add(new QueryTestRunner.VerifyNativeQueries(execStep));
-        }
+//        if (builder.expectedQueries != null) {
+//          verifySteps.add(new QueryTestRunner.VerifyNativeQueries(execStep));
+//        }
         if (builder.expectedResultsVerifier != null) {
           verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
         }

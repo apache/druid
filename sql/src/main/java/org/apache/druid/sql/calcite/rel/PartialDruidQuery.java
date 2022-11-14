@@ -409,7 +409,9 @@ public class PartialDruidQuery
   @SuppressWarnings("VariableNotUsedInsideIf")
   public Stage stage()
   {
-    if (sortProject != null) {
+    if (window != null) {
+      return Stage.WINDOW;
+    } else if (sortProject != null) {
       return Stage.SORT_PROJECT;
     } else if (sort != null) {
       return Stage.SORT;
@@ -438,6 +440,8 @@ public class PartialDruidQuery
     final Stage currentStage = stage();
 
     switch (currentStage) {
+      case WINDOW:
+        return window;
       case SORT_PROJECT:
         return sortProject;
       case SORT:
