@@ -63,7 +63,9 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
+import org.apache.druid.msq.indexing.error.TooManyWorkerRetriedFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
+import org.apache.druid.msq.indexing.error.TotalRetryLimitExceededFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -123,6 +125,8 @@ public class MSQIndexingModule implements DruidModule
       TooManyPartitionsFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
+      TooManyWorkerRetriedFault.class,
+      TotalRetryLimitExceededFault.class,
       UnknownFault.class,
       WorkerFailedFault.class,
       WorkerRpcFailedFault.class

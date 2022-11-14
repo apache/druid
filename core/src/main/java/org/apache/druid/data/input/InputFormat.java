@@ -41,15 +41,17 @@ import java.io.File;
  * See {@link NestedInputFormat} for nested input formats such as JSON.
  */
 @UnstableApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = InputFormat.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @Type(name = "csv", value = CsvInputFormat.class),
-    @Type(name = "json", value = JsonInputFormat.class),
-    @Type(name = "regex", value = RegexInputFormat.class),
-    @Type(name = "tsv", value = DelimitedInputFormat.class)
+    @Type(name = CsvInputFormat.TYPE_KEY, value = CsvInputFormat.class),
+    @Type(name = JsonInputFormat.TYPE_KEY, value = JsonInputFormat.class),
+    @Type(name = RegexInputFormat.TYPE_KEY, value = RegexInputFormat.class),
+    @Type(name = DelimitedInputFormat.TYPE_KEY, value = DelimitedInputFormat.class)
 })
 public interface InputFormat
 {
+  String TYPE_PROPERTY = "type";
+
   /**
    * Trait to indicate that a file can be split into multiple {@link InputSplit}s.
    * <p>

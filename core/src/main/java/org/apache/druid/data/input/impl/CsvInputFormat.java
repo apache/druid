@@ -37,6 +37,7 @@ import java.util.List;
 
 public class CsvInputFormat extends FlatTextInputFormat
 {
+  public static final String TYPE_KEY = "csv";
   private static final char SEPARATOR = ',';
 
   @JsonCreator
@@ -59,6 +60,7 @@ public class CsvInputFormat extends FlatTextInputFormat
   }
 
   @Override
+  @JsonIgnore
   public boolean isSplittable()
   {
     return true;

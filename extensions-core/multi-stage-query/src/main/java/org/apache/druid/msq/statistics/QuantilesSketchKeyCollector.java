@@ -44,13 +44,13 @@ import java.util.NoSuchElementException;
  */
 public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketchKeyCollector>
 {
-  private final Comparator<RowKey> comparator;
-  private ItemsSketch<RowKey> sketch;
+  private final Comparator<byte[]> comparator;
+  private ItemsSketch<byte[]> sketch;
   private double averageKeyLength;
 
   QuantilesSketchKeyCollector(
-      final Comparator<RowKey> comparator,
-      @Nullable final ItemsSketch<RowKey> sketch,
+      final Comparator<byte[]> comparator,
+      @Nullable final ItemsSketch<byte[]> sketch,
       double averageKeyLength
   )
   {
@@ -67,7 +67,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
     estimatedTotalSketchSizeInBytes += key.estimatedObjectSizeBytes() * weight;
     for (int i = 0; i < weight; i++) {
       // Add the same key multiple times to make it "heavier".
-      sketch.update(key);
+      sketch.update(key.array());
     }
     averageKeyLength = (estimatedTotalSketchSizeInBytes / sketch.getN());
   }
@@ -75,7 +75,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public void addAll(QuantilesSketchKeyCollector other)
   {
-    final ItemsUnion<RowKey> union = ItemsUnion.getInstance(
+    final ItemsUnion<byte[]> union = ItemsUnion.getInstance(
         Math.max(sketch.getK(), other.sketch.getK()),
         comparator
     );
@@ -129,10 +129,10 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public RowKey minKey()
   {
-    final RowKey minValue = sketch.getMinValue();
+    final byte[] minValue = sketch.getMinValue();
 
     if (minValue != null) {
-      return minValue;
+      return RowKey.wrap(minValue);
     } else {
       throw new NoSuchElementException();
     }
@@ -152,20 +152,20 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
     final int numPartitions = Ints.checkedCast(LongMath.divide(sketch.getN(), targetWeight, RoundingMode.CEILING));
 
     // numPartitions + 1, because the final quantile is the max, and we won't build a partition based on that.
-    final RowKey[] quantiles = sketch.getQuantiles(numPartitions + 1);
+    final byte[][] quantiles = sketch.getQuantiles(numPartitions + 1);
     final List<ClusterByPartition> partitions = new ArrayList<>();
 
     for (int i = 0; i < numPartitions; i++) {
       final boolean isFinalPartition = i == numPartitions - 1;
 
       if (isFinalPartition) {
-        partitions.add(new ClusterByPartition(quantiles[i], null));
+        partitions.add(new ClusterByPartition(RowKey.wrap(quantiles[i]), null));
       } else {
-        final ClusterByPartition partition = new ClusterByPartition(quantiles[i], quantiles[i + 1]);
-        final int cmp = comparator.compare(partition.getStart(), partition.getEnd());
+        final int cmp = comparator.compare(quantiles[i], quantiles[i + 1]);
         if (cmp < 0) {
           // Skip partitions where start == end.
           // I don't think start can be greater than end, but if that happens, skip them too!
+          final ClusterByPartition partition = new ClusterByPartition(RowKey.wrap(quantiles[i]), RowKey.wrap(quantiles[i + 1]));
           partitions.add(partition);
         }
       }
@@ -177,7 +177,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   /**
    * Retrieves the backing sketch. Exists for usage by {@link QuantilesSketchKeyCollectorFactory}.
    */
-  ItemsSketch<RowKey> getSketch()
+  ItemsSketch<byte[]> getSketch()
   {
     return sketch;
   }
