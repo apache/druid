@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -70,7 +71,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
         if (object == null) {
           return null;
         }
-        return deserializeSketch(object);
+        return deserializeSketchSafe(object);
       }
     };
   }
@@ -87,6 +88,18 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   }
 
   static HllSketch deserializeSketch(final Object object)
+  {
+    if (object instanceof String) {
+      return HllSketch.wrap(Memory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
+    } else if (object instanceof byte[]) {
+      return HllSketch.wrap(Memory.wrap((byte[]) object));
+    } else if (object instanceof HllSketch) {
+      return (HllSketch) object;
+    }
+    throw new IAE("Object is not of a type that can be deserialized to an HllSketch:" + object.getClass().getName());
+  }
+
+  static HllSketch deserializeSketchSafe(final Object object)
   {
     if (object instanceof String) {
       return HllSketch.wrap(SafeWritableMemory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
