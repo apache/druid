@@ -9,7 +9,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
@@ -19,39 +18,30 @@ import java.util.Map;
 
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
-  private final List<String> partitionDimensions;
-  private final Processor processor;
   private final RowSignature rowSignature;
+  private final List<OperatorFactory> operators;
 
   @JsonCreator
   public WindowOperatorQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("processor") Processor processor,
-      @JsonProperty("partitionColumns") List<String> partitionDimensions,
-      @JsonProperty("outputSignature") RowSignature rowSignature
+      @JsonProperty("outputSignature") RowSignature rowSignature,
+      @JsonProperty("operatorDefinition") List<OperatorFactory> operators
   )
   {
     super(dataSource, querySegmentSpec, false, context);
     this.rowSignature = rowSignature;
+    this.operators = operators;
     if (! (dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
-    this.partitionDimensions = partitionDimensions;
-    this.processor = processor;
   }
 
-  @JsonProperty("partitionColumns")
-  public List<String> getPartitionDimensions()
+  @JsonProperty("operatorDefinition")
+  public List<OperatorFactory> getOperators()
   {
-    return partitionDimensions;
-  }
-
-  @JsonProperty("processor")
-  public Processor getProcessor()
-  {
-    return processor;
+    return operators;
   }
 
   @JsonProperty("outputSignature")
@@ -85,9 +75,8 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         getDataSource(),
         getQuerySegmentSpec(),
         computeOverriddenContext(getContext(), contextOverride),
-        processor,
-        partitionDimensions,
-        rowSignature
+        rowSignature,
+        operators
     );
   }
 
@@ -98,9 +87,8 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         getDataSource(),
         spec,
         getContext(),
-        processor,
-        partitionDimensions,
-        rowSignature
+        rowSignature,
+        operators
     );
   }
 
@@ -111,9 +99,8 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         dataSource,
         getQuerySegmentSpec(),
         getContext(),
-        processor,
-        partitionDimensions,
-        rowSignature
+        rowSignature,
+        operators
     );
   }
 }

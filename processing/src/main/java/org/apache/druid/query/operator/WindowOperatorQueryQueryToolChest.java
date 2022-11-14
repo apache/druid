@@ -34,14 +34,15 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
     return new RowsAndColumnsUnravelingQueryRunner(
         (queryPlus, responseContext) -> {
           final WindowOperatorQuery query = (WindowOperatorQuery) queryPlus.getQuery();
+          final List<OperatorFactory> opFactories = query.getOperators();
 
-          Supplier<Operator> opSupplier = () -> new WindowProcessorOperator(
-              query.getProcessor(),
-              new NaivePartitioningOperator(
-                  query.getPartitionDimensions(),
-                  new SequenceOperator(runner.run(queryPlus, responseContext))
-              )
-          );
+          Supplier<Operator> opSupplier = () -> {
+            Operator retVal = new SequenceOperator(runner.run(queryPlus, responseContext));
+            for (OperatorFactory operatorFactory : opFactories) {
+              retVal = operatorFactory.wrap(retVal);
+            }
+            return retVal;
+          };
 
           return new OperatorSequence(opSupplier);
         }
