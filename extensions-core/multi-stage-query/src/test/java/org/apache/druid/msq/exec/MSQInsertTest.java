@@ -458,9 +458,9 @@ public class MSQInsertTest extends MSQTestBase
     String columnNames = IntStream.range(1, numColumns)
                                   .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
 
-    String groupByClause = IntStream.range(1, numColumns + 1)
-                                    .mapToObj(String::valueOf)
-                                    .collect(Collectors.joining(", "));
+    String clusteredByClause = IntStream.range(1, numColumns + 1)
+                                        .mapToObj(String::valueOf)
+                                        .collect(Collectors.joining(", "));
 
     String externSignature = IntStream.range(1, numColumns)
                                       .mapToObj(i -> StringUtils.format(
@@ -470,19 +470,24 @@ public class MSQInsertTest extends MSQTestBase
                                       .collect(Collectors.joining(", "));
 
     testIngestQuery()
-        .setSql(StringUtils.format(" insert into foo1 SELECT\n"
-                                   + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-                                   + " %s\n"
-                                   + "FROM TABLE(\n"
-                                   + "  EXTERN(\n"
-                                   + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
-                                   + "    '{\"type\": \"json\"}',\n"
-                                   + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, %s]'\n"
-                                   + "  )\n"
-                                   + ") GROUP BY %s PARTITIONED by day", columnNames, externSignature, groupByClause))
+        .setSql(StringUtils.format(
+            " insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + " %s\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, %s]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day CLUSTERED BY %s",
+            columnNames,
+            externSignature,
+            clusteredByClause
+        ))
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns, 1500, 0))
+        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
         .verifyResults();
   }
 
