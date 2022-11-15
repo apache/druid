@@ -9,7 +9,7 @@ import java.util.SortedMap;
  */
 public class CompleteKeyStatisticsInformation
 {
-  private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerIdMap;
+  private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap;
 
   private boolean hasMultipleValues;
 
@@ -21,25 +21,25 @@ public class CompleteKeyStatisticsInformation
       double bytesRetained
   )
   {
-    this.timeSegmentVsWorkerIdMap = timeChunks;
+    this.timeSegmentVsWorkerMap = timeChunks;
     this.hasMultipleValues = hasMultipleValues;
     this.bytesRetained = bytesRetained;
   }
 
-  public void mergePartialInformation(int workerId, PartialKeyStatisticsInformation partialKeyStatisticsInformation)
+  public void mergePartialInformation(int workerNumber, PartialKeyStatisticsInformation partialKeyStatisticsInformation)
   {
     for (Long timeSegment : partialKeyStatisticsInformation.getTimeSegments()) {
-      this.timeSegmentVsWorkerIdMap
+      this.timeSegmentVsWorkerMap
           .computeIfAbsent(timeSegment, key -> new HashSet<>())
-          .add(workerId);
+          .add(workerNumber);
     }
     this.hasMultipleValues = this.hasMultipleValues || partialKeyStatisticsInformation.isHasMultipleValues();
     this.bytesRetained += bytesRetained;
   }
 
-  public SortedMap<Long, Set<Integer>> getTimeSegmentVsWorkerIdMap()
+  public SortedMap<Long, Set<Integer>> getTimeSegmentVsWorkerMap()
   {
-    return timeSegmentVsWorkerIdMap;
+    return timeSegmentVsWorkerMap;
   }
 
   public boolean isHasMultipleValues()

@@ -22,7 +22,6 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
@@ -30,9 +29,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.TreeMap;
-
-public class ClusterByStatisticsWorkerReportSerdeTest
+public class PartialKeyStatisticsInformationSerdeTest
 {
   private ObjectMapper objectMapper;
 
@@ -47,19 +44,19 @@ public class ClusterByStatisticsWorkerReportSerdeTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    WorkerAggregatedKeyStatistics workerReport = new WorkerAggregatedKeyStatistics(
-        new TreeMap<>(ImmutableMap.of(2L, ImmutableSet.of(2, 3))),
+    PartialKeyStatisticsInformation partialInformation = new PartialKeyStatisticsInformation(
+        ImmutableSet.of(2L, 3L),
         false,
         0.0
     );
 
-    final String json = objectMapper.writeValueAsString(workerReport);
-    final WorkerAggregatedKeyStatistics deserializedKeyStatistics = objectMapper.readValue(
+    final String json = objectMapper.writeValueAsString(partialInformation);
+    final PartialKeyStatisticsInformation deserializedKeyStatistics = objectMapper.readValue(
         json,
-        WorkerAggregatedKeyStatistics.class
+        PartialKeyStatisticsInformation.class
     );
-    Assert.assertEquals(json, workerReport.getTimeSegmentVsWorkerIdMap(), deserializedKeyStatistics.getTimeSegmentVsWorkerIdMap());
-    Assert.assertEquals(json, workerReport.isHasMultipleValues(), deserializedKeyStatistics.isHasMultipleValues());
-    Assert.assertEquals(json, workerReport.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0);
+    Assert.assertEquals(json, partialInformation.getTimeSegments(), deserializedKeyStatistics.getTimeSegments());
+    Assert.assertEquals(json, partialInformation.isHasMultipleValues(), deserializedKeyStatistics.isHasMultipleValues());
+    Assert.assertEquals(json, partialInformation.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0);
   }
 }

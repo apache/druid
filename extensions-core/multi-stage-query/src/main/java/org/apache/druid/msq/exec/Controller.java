@@ -27,7 +27,7 @@ import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -81,11 +81,11 @@ public interface Controller
   // Worker-to-controller messages
 
   /**
-   * Accepts a {@link WorkerAggregatedKeyStatistics} and updates the controller aggregated key statistics. If all key
-   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate key statistics.
+   * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
+   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
    * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
-  void updateAggregatedKeyStatistics(int stageNumber, int workerNumber, Object aggregatedKeyStatisticsObject);
+  void updatePartialKeyStatistics(int stageNumber, int workerNumber, Object partialKeyStatisticsObject);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by

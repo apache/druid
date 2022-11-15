@@ -41,7 +41,8 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -332,11 +333,11 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#getAggregatedKeyStatistics()}
+   * Delegates call to {@link ControllerStageTracker#getCompleteKeyStatisticsInformation()}
    */
-  public WorkerAggregatedKeyStatistics getAggregatedKeyStatistics(final StageId stageId)
+  public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation(final StageId stageId)
   {
-    return getStageKernelOrThrow(stageId).getAggregatedKeyStatistics();
+    return getStageKernelOrThrow(stageId).getCompleteKeyStatisticsInformation();
   }
 
   /**
@@ -403,19 +404,19 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#addAggregatedStatisticsForWorker}.
+   * Delegates call to {@link ControllerStageTracker#addPartialKeyStatisticsForWorker(int, PartialKeyStatisticsInformation)}.
    * If calling this causes transition for the stage kernel, then this gets registered in this query kernel
    */
-  public void addResultStatisticsReportForStageAndWorker(
+  public void addPartialKeyStatisticsForStageAndWorker(
       final StageId stageId,
       final int workerNumber,
-      final WorkerAggregatedKeyStatistics aggregatedKeyStatistics
+      final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
     ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
-    ControllerStagePhase newPhase = stageKernel.addAggregatedStatisticsForWorker(
+    ControllerStagePhase newPhase = stageKernel.addPartialKeyStatisticsForWorker(
         workerNumber,
-        aggregatedKeyStatistics
+        partialKeyStatisticsInformation
     );
 
     // If the kernel phase has transitioned, we need to account for that.

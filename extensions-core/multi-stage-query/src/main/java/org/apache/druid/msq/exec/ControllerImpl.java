@@ -151,7 +151,8 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -575,12 +576,12 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Accepts a {@link WorkerAggregatedKeyStatistics} and updates the controller aggregated key statistics. If all key
-   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate key statistics.
-   * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
+   * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
+   * statistics information has been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate
+   * partiton boundaries. This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
   @Override
-  public void updateAggregatedKeyStatistics(int stageNumber, int workerNumber, Object aggregatedKeyStatisticsObject)
+  public void updatePartialKeyStatistics(int stageNumber, int workerNumber, Object partialKeyStatisticsObject)
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -594,9 +595,9 @@ public class ControllerImpl implements Controller
               stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
           );
 
-          final WorkerAggregatedKeyStatistics aggregatedKeyStatistics;
+          final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
           try {
-            aggregatedKeyStatistics = mapper.convertValue(aggregatedKeyStatisticsObject, WorkerAggregatedKeyStatistics.class);
+            partialKeyStatisticsInformation = mapper.convertValue(partialKeyStatisticsObject, PartialKeyStatisticsInformation.class);
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -607,16 +608,17 @@ public class ControllerImpl implements Controller
             );
           }
 
-          queryKernel.addResultStatisticsReportForStageAndWorker(stageId, workerNumber, aggregatedKeyStatistics);
+          queryKernel.addPartialKeyStatisticsForStageAndWorker(stageId, workerNumber, partialKeyStatisticsInformation);
 
           if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
             List<String> workerTaskIds = workerTaskLauncher.getTaskList();
-            WorkerAggregatedKeyStatistics mergedKeyStatistics = queryKernel.getAggregatedKeyStatistics(stageId);
+            CompleteKeyStatisticsInformation completeKeyStatisticsInformation =
+                queryKernel.getCompleteKeyStatisticsInformation(stageId);
 
             // Queue the sketch fetching task into the worker sketch fetcher.
             CompletableFuture<Either<Long, ClusterByPartitions>> clusterByPartitionsCompletableFuture =
                 workerSketchFetcher.submitFetcherTask(
-                    mergedKeyStatistics,
+                    completeKeyStatisticsInformation,
                     workerTaskIds,
                     stageDef
                 );

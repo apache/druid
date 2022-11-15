@@ -123,10 +123,10 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
 
           if (queryDefinition.getStageDefinition(stageNumber).mustGatherResultKeyStatistics()) {
             for (int i = 0; i < numWorkers; ++i) {
-              controllerQueryKernel.addResultStatisticsReportForStageAndWorker(
+              controllerQueryKernel.addPartialKeyStatisticsForStageAndWorker(
                   new StageId(queryDefinition.getQueryId(), stageNumber),
                   i,
-                  ClusterByStatisticsSnapshot.empty().aggregatedKeyStatistics(i)
+                  ClusterByStatisticsSnapshot.empty().partialKeyStatistics()
               );
             }
           } else {
@@ -256,10 +256,10 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
         keyStatsCollector.add(key, 1);
       }
 
-      controllerQueryKernel.addResultStatisticsReportForStageAndWorker(
+      controllerQueryKernel.addPartialKeyStatisticsForStageAndWorker(
           new StageId(queryDefinition.getQueryId(), stageNumber),
           workerNumber,
-          keyStatsCollector.snapshot().aggregatedKeyStatistics(workerNumber)
+          keyStatsCollector.snapshot().partialKeyStatistics()
       );
       return keyStatsCollector;
     }

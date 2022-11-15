@@ -29,7 +29,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -59,14 +59,14 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postAggregatedKeyStatistics(
+  public void postPartialKeyStatistics(
       StageId stageId,
       int workerNumber,
-      WorkerAggregatedKeyStatistics aggregatedKeyStatistics
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation
   ) throws IOException
   {
     final String path = StringUtils.format(
-        "/aggregatedKeyStatistics/%s/%d/%d",
+        "/partialKeyStatistics/%s/%d/%d",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         workerNumber
@@ -74,7 +74,7 @@ public class IndexerControllerClient implements ControllerClient
 
     doRequest(
         new RequestBuilder(HttpMethod.POST, path)
-            .jsonContent(jsonMapper, aggregatedKeyStatistics),
+            .jsonContent(jsonMapper, partialKeyStatisticsInformation),
         IgnoreHttpResponseHandler.INSTANCE
     );
   }

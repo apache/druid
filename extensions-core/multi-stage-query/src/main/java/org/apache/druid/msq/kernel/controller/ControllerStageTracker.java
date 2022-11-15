@@ -38,7 +38,8 @@ import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -57,13 +58,13 @@ class ControllerStageTracker
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
-  private final IntSet workersWithFinishedReport = new IntAVLTreeSet();
+  private final IntSet workersWithReportedKeyStatistics = new IntAVLTreeSet();
   private final IntSet workersWithResultsComplete = new IntAVLTreeSet();
 
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
 
   @Nullable
-  public final WorkerAggregatedKeyStatistics aggregatedKeyStatistics;
+  public final CompleteKeyStatisticsInformation completeKeyStatisticsInformation;
 
   // Result partitions and where they can be read from.
   @Nullable
@@ -89,9 +90,10 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.aggregatedKeyStatistics = new WorkerAggregatedKeyStatistics(new TreeMap<>(), false, 0);
+      this.completeKeyStatisticsInformation =
+          new CompleteKeyStatisticsInformation(new TreeMap<>(), false, 0);
     } else {
-      this.aggregatedKeyStatistics = null;
+      this.completeKeyStatisticsInformation = null;
       generateResultPartitionsAndBoundariesWithoutKeyStatistics();
     }
   }
@@ -172,12 +174,12 @@ class ControllerStageTracker
    */
   boolean collectorEncounteredAnyMultiValueField()
   {
-    if (aggregatedKeyStatistics == null) {
+    if (completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
-    } else if (workersWithFinishedReport.size() != workerCount) {
+    } else if (workersWithReportedKeyStatistics.size() != workerCount) {
       throw new ISE("Result key statistics are not ready");
     } else {
-      return aggregatedKeyStatistics.isHasMultipleValues();
+      return completeKeyStatisticsInformation.isHasMultipleValues();
     }
   }
 
@@ -225,9 +227,9 @@ class ControllerStageTracker
    * Returns the merged key statistics.
    */
   @Nullable
-  public WorkerAggregatedKeyStatistics getAggregatedKeyStatistics()
+  public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation()
   {
-    return aggregatedKeyStatistics;
+    return completeKeyStatisticsInformation;
   }
 
   /**
@@ -235,17 +237,17 @@ class ControllerStageTracker
    * then this call ignores the new ones and does nothing.
    *
    * @param workerNumber the worker
-   * @param aggregatedKeyStatistics aggregated key statistics
+   * @param partialKeyStatisticsInformation partial key statistics
    */
-  ControllerStagePhase addAggregatedStatisticsForWorker(
+  ControllerStagePhase addPartialKeyStatisticsForWorker(
       final int workerNumber,
-      final WorkerAggregatedKeyStatistics aggregatedKeyStatistics
+      final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
     if (phase != ControllerStagePhase.READING_INPUT) {
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
-    if (aggregatedKeyStatistics == null) {
+    if (completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
@@ -254,10 +256,10 @@ class ControllerStageTracker
     }
 
     try {
-      if (workersWithFinishedReport.add(workerNumber)) {
-        aggregatedKeyStatistics.addAll(aggregatedKeyStatistics);
+      if (workersWithReportedKeyStatistics.add(workerNumber)) {
+        completeKeyStatisticsInformation.mergePartialInformation(workerNumber, partialKeyStatisticsInformation);
 
-        if (workersWithFinishedReport.size() == workerCount) {
+        if (workersWithReportedKeyStatistics.size() == workerCount) {
           // All workers have sent the report.
           // Transition to MERGING_STATISTICS state to queue fetch clustering statistics from workers.
           transitionTo(ControllerStagePhase.MERGING_STATISTICS);

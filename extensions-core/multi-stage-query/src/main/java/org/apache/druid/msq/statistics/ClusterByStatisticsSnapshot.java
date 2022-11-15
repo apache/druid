@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.frame.key.RowKey;
 
 import javax.annotation.Nullable;
@@ -32,8 +31,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 public class ClusterByStatisticsSnapshot
 {
@@ -74,17 +71,13 @@ public class ClusterByStatisticsSnapshot
     return hasMultipleValues;
   }
 
-  public WorkerAggregatedKeyStatistics aggregatedKeyStatistics(int workerNumber)
+  public PartialKeyStatisticsInformation partialKeyStatistics()
   {
-    SortedMap<Long, Set<Integer>> rowKeyIntSetTreeSet = new TreeMap<>();
     double bytesRetained = 0;
-
     for (Long bucketKey : buckets.keySet()) {
-      rowKeyIntSetTreeSet.put(bucketKey, ImmutableSet.of(workerNumber));
       bytesRetained += buckets.get(bucketKey).bytesRetained;
     }
-
-    return new WorkerAggregatedKeyStatistics(rowKeyIntSetTreeSet, !getHasMultipleValues().isEmpty(), bytesRetained);
+    return new PartialKeyStatisticsInformation(buckets.keySet(), !getHasMultipleValues().isEmpty(), bytesRetained);
   }
 
   @Override

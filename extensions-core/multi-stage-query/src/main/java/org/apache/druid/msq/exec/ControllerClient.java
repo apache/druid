@@ -22,7 +22,7 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -34,13 +34,13 @@ import java.util.List;
 public interface ControllerClient extends AutoCloseable
 {
   /**
-   * Client side method to update the controller with aggregated key statistics for a particular stage and worker.
-   * Controller's implementation collates all the aggregations for a stage to fetch cluster by statistics from workers.
+   * Client side method to update the controller with partial key statistics information for a particular stage and worker.
+   * Controller's implementation collates all the information for a stage to fetch key statistics from workers.
    */
-  void postAggregatedKeyStatistics(
+  void postPartialKeyStatistics(
       StageId stageId,
       int workerNumber,
-      WorkerAggregatedKeyStatistics aggregatedKeyStatistics
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation
   ) throws IOException;
 
   /**

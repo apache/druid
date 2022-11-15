@@ -25,7 +25,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -40,17 +40,17 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postAggregatedKeyStatistics(
+  public void postPartialKeyStatistics(
       StageId stageId,
       int workerNumber,
-      WorkerAggregatedKeyStatistics aggregatedKeyStatistics
+      PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
     try {
-      controller.updateAggregatedKeyStatistics(stageId.getStageNumber(), workerNumber, aggregatedKeyStatistics);
+      controller.updatePartialKeyStatistics(stageId.getStageNumber(), workerNumber, partialKeyStatisticsInformation);
     }
     catch (Exception e) {
-      throw new ISE(e, "unable to post aggregated key statistics");
+      throw new ISE(e, "unable to post partial key statistics");
     }
   }
 

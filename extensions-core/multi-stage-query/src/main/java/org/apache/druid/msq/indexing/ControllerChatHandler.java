@@ -27,7 +27,7 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -59,17 +59,17 @@ public class ControllerChatHandler implements ChatHandler
   }
 
   /**
-   * Used by subtasks to post {@link WorkerAggregatedKeyStatistics} for shuffling stages.
+   * Used by subtasks to post {@link PartialKeyStatisticsInformation} for shuffling stages.
    *
-   * See {@link ControllerClient#postAggregatedKeyStatistics(StageId, int, WorkerAggregatedKeyStatistics)}
+   * See {@link ControllerClient#postPartialKeyStatistics(StageId, int, PartialKeyStatisticsInformation)}
    * for the client-side code that calls this API.
    */
   @POST
-  @Path("/aggregatedKeyStatistics/{queryId}/{stageNumber}/{workerNumber}")
+  @Path("/partialKeyStatistics/{queryId}/{stageNumber}/{workerNumber}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response httpPostAggregatedKeyStatistics(
-      final Object aggregatedKeyStatisticsObject,
+  public Response httpPostPartialKeyStatistics(
+      final Object partialKeyStatisticsObject,
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("workerNumber") final int workerNumber,
@@ -77,7 +77,7 @@ public class ControllerChatHandler implements ChatHandler
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updateAggregatedKeyStatistics(stageNumber, workerNumber, aggregatedKeyStatisticsObject);
+    controller.updatePartialKeyStatistics(stageNumber, workerNumber, partialKeyStatisticsObject);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 

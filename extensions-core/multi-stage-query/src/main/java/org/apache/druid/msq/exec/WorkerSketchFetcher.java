@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.msq.statistics.WorkerAggregatedKeyStatistics;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -65,7 +65,7 @@ public class WorkerSketchFetcher
    * decides based on the statistics if it should fetch sketches one by one or together.
    */
   public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
-      WorkerAggregatedKeyStatistics aggregatedKeyStatistics,
+      CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
       List<String> workerTaskIds,
       StageDefinition stageDefinition
   )
@@ -74,15 +74,15 @@ public class WorkerSketchFetcher
 
     switch (clusterStatisticsMergeMode) {
       case SEQUENTIAL:
-        return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
+        return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
       case PARALLEL:
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
           // If there is no time cluserting, there is no scope for sequential merge
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
-        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || aggregatedKeyStatistics.getBytesRetained() > BYTES_THRESHOLD) {
-          return sequentialTimeChunkMerging(aggregatedKeyStatistics, stageDefinition, workerTaskIds);
+        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
+          return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
         } else {
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
         }
@@ -145,7 +145,7 @@ public class WorkerSketchFetcher
    * downsampling on the controller.
    */
   private CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
-      WorkerAggregatedKeyStatistics aggregatedKeyStatistics,
+      CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
       StageDefinition stageDefinition,
       List<String> workerTaskIds
   )
@@ -153,7 +153,7 @@ public class WorkerSketchFetcher
     SequentialFetchStage sequentialFetchStage = new SequentialFetchStage(
         stageDefinition,
         workerTaskIds,
-        aggregatedKeyStatistics.getTimeSegmentVsWorkerIdMap().entrySet().iterator()
+        completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().entrySet().iterator()
     );
     sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
     return sequentialFetchStage.getPartitionFuture();
