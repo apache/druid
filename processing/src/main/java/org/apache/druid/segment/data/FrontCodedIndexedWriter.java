@@ -99,7 +99,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   @Override
   public void write(@Nullable byte[] value) throws IOException
   {
-    if (prevObject != null && unsignedCompare(prevObject, value) >= 0) {
+    if (prevObject != null && compareNullableUtf8UsingJavaStringOrdering(prevObject, value) >= 0) {
       throw new ISE(
           "Values must be sorted and unique. Element [%s] with value [%s] is before or equivalent to [%s]",
           numWritten,
@@ -283,7 +283,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
         // all other values must be partitioned into a prefix length and suffix bytes
         int prefixLength = 0;
         for (; prefixLength < first.length; prefixLength++) {
-          final int cmp = FrontCodedIndexed.unsignedByteCompare(first[prefixLength], next[prefixLength]);
+          final int cmp = StringUtils.compareUtf8UsingJavaStringOrdering(first[prefixLength], next[prefixLength]);
           if (cmp != 0) {
             break;
           }
@@ -326,9 +326,10 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   }
 
   /**
-   * Same as {@link StringUtils#compareUtf8(byte[], byte[])}, but accepts nulls. Nulls are sorted first.
+   * Same as {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}, but accepts nulls. Nulls are
+   * sorted first.
    */
-  public static int unsignedCompare(
+  private static int compareNullableUtf8UsingJavaStringOrdering(
       @Nullable final byte[] b1,
       @Nullable final byte[] b2
   )
@@ -341,6 +342,6 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       return 1;
     }
 
-    return StringUtils.compareUtf8(b1, b2);
+    return StringUtils.compareUtf8UsingJavaStringOrdering(b1, b2);
   }
 }

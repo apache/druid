@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
@@ -355,7 +356,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     int sharedPrefix;
     int comparison = 0;
     for (sharedPrefix = 0; sharedPrefix < commonLength; sharedPrefix++) {
-      comparison = unsignedByteCompare(bucketBuffer.get(), value.get(sharedPrefix));
+      comparison = StringUtils.compareUtf8UsingJavaStringOrdering(bucketBuffer.get(), value.get(sharedPrefix));
       if (comparison != 0) {
         bucketBuffer.position(startOffset + sharedPrefix);
         break;
@@ -403,7 +404,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
         final int common = Math.min(fragmentLength, value.remaining() - prefixLength);
         int fragmentComparison = 0;
         for (int i = 0; i < common; i++) {
-          fragmentComparison = unsignedByteCompare(buffer.get(buffer.position() + i), value.get(prefixLength + i));
+          fragmentComparison = StringUtils.compareUtf8UsingJavaStringOrdering(
+              buffer.get(buffer.position() + i),
+              value.get(prefixLength + i)
+          );
           if (fragmentComparison != 0) {
             break;
           }
@@ -501,10 +505,5 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       bucketBuffers[pos++] = value;
     }
     return bucketBuffers;
-  }
-
-  public static int unsignedByteCompare(byte b1, byte b2)
-  {
-    return (b1 & 0xFF) - (b2 & 0xFF);
   }
 }

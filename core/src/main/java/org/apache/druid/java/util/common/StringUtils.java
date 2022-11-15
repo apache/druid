@@ -152,7 +152,7 @@ public class StringUtils
     final int commonLength = Math.min(a.length, b.length);
 
     for (int i = 0; i < commonLength; i++) {
-      final int cmp = compareUtf8UsingJavaStringOrderingSingleByte(a[i], b[i]);
+      final int cmp = compareUtf8UsingJavaStringOrdering(a[i], b[i]);
       if (cmp != 0) {
         return cmp;
       }
@@ -179,13 +179,44 @@ public class StringUtils
     final int commonLength = Math.min(length1, length2);
 
     for (int i = 0; i < commonLength; i++) {
-      final int cmp = compareUtf8UsingJavaStringOrderingSingleByte(buf1.get(position1 + i), buf2.get(position2 + i));
+      final int cmp = compareUtf8UsingJavaStringOrdering(buf1.get(position1 + i), buf2.get(position2 + i));
       if (cmp != 0) {
         return cmp;
       }
     }
 
     return Integer.compare(length1, length2);
+  }
+
+  /**
+   * Compares two bytes from UTF-8 strings in such a way that the entire byte arrays are compared in UTF-16
+   * code-unit order.
+   *
+   * Compatible with {@link #compareUtf8UsingJavaStringOrdering(byte[], byte[])} and
+   * {@link #compareUtf8UsingJavaStringOrdering(ByteBuffer, int, int, ByteBuffer, int, int)}.
+   */
+  public static int compareUtf8UsingJavaStringOrdering(byte byte1, byte byte2)
+  {
+    // Treat as unsigned bytes.
+    int ubyte1 = byte1 & 0xFF;
+    int ubyte2 = byte2 & 0xFF;
+
+    if (ubyte1 != ubyte2 && ubyte1 >= 0xEE && ubyte2 >= 0xEE) {
+      // Fixup logic for lead bytes for U+E000 ... U+FFFF, based on logic described at
+      // https://www.icu-project.org/docs/papers/utf16_code_point_order.html.
+      //
+      // Move possible lead bytes for this range (0xEE and 0xEF) above all other bytes, so they compare later.
+
+      if (ubyte1 == 0xEE || ubyte1 == 0xEF) {
+        ubyte1 += 0xFF;
+      }
+
+      if (ubyte2 == 0xEE || ubyte2 == 0xEF) {
+        ubyte2 += 0xFF;
+      }
+    }
+
+    return ubyte1 - ubyte2;
   }
 
   public static String fromUtf8(final byte[] bytes)
@@ -765,33 +796,5 @@ public class StringUtils
     } else {
       return s.substring(0, maxBytes);
     }
-  }
-
-  /**
-   * Helper for {@link #compareUtf8UsingJavaStringOrdering(byte[], byte[])} and
-   * {@link #compareUtf8UsingJavaStringOrdering(ByteBuffer, int, int, ByteBuffer, int, int)}.
-   */
-  private static int compareUtf8UsingJavaStringOrderingSingleByte(byte byte1, byte byte2)
-  {
-    // Treat as unsigned bytes.
-    int ubyte1 = byte1 & 0xFF;
-    int ubyte2 = byte2 & 0xFF;
-
-    if (ubyte1 != ubyte2 && ubyte1 >= 0xEE && ubyte2 >= 0xEE) {
-      // Fixup logic for lead bytes for U+E000 ... U+FFFF, based on logic described at
-      // https://www.icu-project.org/docs/papers/utf16_code_point_order.html.
-      //
-      // Move possible lead bytes for this range (0xEE and 0xEF) above all other bytes, so they compare later.
-
-      if (ubyte1 == 0xEE || ubyte1 == 0xEF) {
-        ubyte1 += 0xFF;
-      }
-
-      if (ubyte2 == 0xEE || ubyte2 == 0xEF) {
-        ubyte2 += 0xFF;
-      }
-    }
-
-    return ubyte1 - ubyte2;
   }
 }
