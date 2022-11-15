@@ -10,6 +10,8 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ServerModule;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.server.emitter.SwitchingEmitterConfig;
 import org.apache.druid.server.emitter.SwitchingEmitterModule;
@@ -67,6 +69,7 @@ public class SwitchingEmitterModuleTest
     Injector injector = Guice.createInjector(
         new DruidGuiceExtensions(),
         new LifecycleModule(),
+        new JacksonModule(),
         new Module()
         {
           @Override
@@ -88,5 +91,6 @@ public class SwitchingEmitterModuleTest
     injector.getInstance(Key.get(Emitter.class, Names.named("switching"))).start();
     EasyMock.verify(defaultEmitter);
     EasyMock.verify(feed1Emitter);
+
   }
 }

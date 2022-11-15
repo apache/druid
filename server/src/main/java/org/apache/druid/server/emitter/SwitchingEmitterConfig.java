@@ -28,6 +28,8 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
+/**
+ */
 public class SwitchingEmitterConfig
 {
 
@@ -36,6 +38,7 @@ public class SwitchingEmitterConfig
   private Map<String, List<String>> emitters = ImmutableMap.of();
 
   @JsonProperty
+  @NotNull
   private List<String> defaultEmitters = ImmutableList.of();
 
   public Map<String, List<String>> getEmitters()
