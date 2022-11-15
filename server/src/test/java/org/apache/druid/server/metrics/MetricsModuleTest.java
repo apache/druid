@@ -37,6 +37,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -190,7 +191,8 @@ public class MetricsModuleTest
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
     final MetricsModule metricsModule = new MetricsModule();
-    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    injector.injectMembers(metricsModule);
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
@@ -204,11 +206,13 @@ public class MetricsModuleTest
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
     Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
-    final Injector injector = createInjector(new Properties());
+    Injector injector = createInjector(new Properties());
+    injector = injector.createChildInjector(ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of()));
     final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
     injector.injectMembers(dimensionIdHolder);
     final MetricsModule metricsModule = new MetricsModule();
-    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    injector.injectMembers(metricsModule);
+    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 

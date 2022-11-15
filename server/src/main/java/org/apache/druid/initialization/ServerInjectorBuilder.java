@@ -21,6 +21,7 @@ package org.apache.druid.initialization;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -45,7 +46,7 @@ import java.util.Set;
  */
 public class ServerInjectorBuilder
 {
-  private Injector baseInjector;
+  private final Injector baseInjector;
   private Set<NodeRole> nodeRoles;
   private Iterable<? extends Module> modules;
 
@@ -78,7 +79,7 @@ public class ServerInjectorBuilder
 
   public ServerInjectorBuilder nodeRoles(final Set<NodeRole> nodeRoles)
   {
-    this.nodeRoles = nodeRoles;
+    this.nodeRoles = nodeRoles == null ? ImmutableSet.of() : nodeRoles;
     return this;
   }
 
@@ -90,6 +91,9 @@ public class ServerInjectorBuilder
 
   public Injector build()
   {
+    assert baseInjector != null;
+    assert nodeRoles != null;
+
     Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
 
     // Child injector, with the registered node roles
@@ -115,9 +119,6 @@ public class ServerInjectorBuilder
 
   public static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
   {
-    if (nodeRoles.isEmpty()) {
-      return binder -> {};
-    }
     return binder -> {
       Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
       nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
