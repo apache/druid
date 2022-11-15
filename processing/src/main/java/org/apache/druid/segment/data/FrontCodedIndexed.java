@@ -341,10 +341,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
 
   /**
-   * Performs an unsigned byte comparison of the first value in a bucket with the specified value. Note that this method
+   * Performs byte-by-byte comparison of the first value in a bucket with the specified value. Note that this method
    * MUST be prepared before calling, as it expects the length of the first value to have already been read externally,
    * and the buffer position to be at the start of the first bucket value. The final buffer position will be the
-   * 'shared prefix length' of the first value in the bucket and the value to compare
+   * 'shared prefix length' of the first value in the bucket and the value to compare.
+   *
+   * Bytes are compared using {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte, byte)}. Therefore, when the
+   * values are UTF-8 encoded strings, the ordering is compatible with {@link String#compareTo(String)}.
    */
   private static int compareBucketFirstValue(ByteBuffer bucketBuffer, int length, ByteBuffer value)
   {

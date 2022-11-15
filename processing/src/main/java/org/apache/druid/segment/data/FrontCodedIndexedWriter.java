@@ -44,8 +44,8 @@ import java.nio.channels.WritableByteChannel;
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
  * of the first byte array of the bucket to use as a prefix, followed by the remaining value bytes after the prefix.
  *
- * This is valid to use for any values which can be compared byte by byte with unsigned comparison. Otherwise, this
- * is not the collection for you.
+ * This writer is designed for use with UTF-8 encoded strings that are written in an order compatible with
+ * {@link String#compareTo(String)}.
  *
  * @see FrontCodedIndexed for additional details.
  */
