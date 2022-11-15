@@ -81,6 +81,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   private final TStringDictionary globalDictionary;
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
+
   private final FixedIndexed<Integer> dictionary;
   private final ImmutableBitmap nullBitmap;
 
@@ -161,6 +162,11 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   public int getCardinality()
   {
     return dictionary.size();
+  }
+
+  public FixedIndexed<Integer> getDictionary()
+  {
+    return dictionary;
   }
 
   private int getIdFromGlobalDictionary(@Nullable String val)

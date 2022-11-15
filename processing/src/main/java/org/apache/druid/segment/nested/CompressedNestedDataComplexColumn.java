@@ -68,7 +68,9 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -126,6 +128,16 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
     return fields;
   }
 
+  @Override
+  public List<List<NestedPathPart>> getNestedFields()
+  {
+    List<List<NestedPathPart>> fieldParts = new ArrayList<>(fields.size());
+    for (int i = 0; i < fields.size(); i++) {
+      fieldParts.add(NestedPathFinder.parseJqPath(fields.get(i)));
+    }
+    return fieldParts;
+  }
+
   public NestedLiteralTypeInfo getFieldInfo()
   {
     return fieldInfo;
@@ -144,6 +156,11 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
   public FixedIndexed<Double> getDoubleDictionary()
   {
     return doubleDictionarySupplier.get();
+  }
+
+  public ImmutableBitmap getNullValues()
+  {
+    return nullValues;
   }
 
   @Nullable
@@ -344,6 +361,27 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
     } else {
       return NilVectorSelector.create(readableOffset);
     }
+  }
+
+
+
+  @Nullable
+  @Override
+  public Set<ColumnType> getColumnTypes(List<NestedPathPart> path)
+  {
+    String field = getField(path);
+    int index = fields.indexOf(field);
+    if (index < 0) {
+      return null;
+    }
+    return NestedLiteralTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+  }
+
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(List<NestedPathPart> path)
+  {
+    return getColumnHolder(getField(path));
   }
 
   @Nullable
