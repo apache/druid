@@ -204,4 +204,9 @@ public class DruidInjectorBuilder
   {
     return Guice.createInjector(modules);
   }
+
+  public Injector baseInjector()
+  {
+    return baseInjector;
+  }
 }

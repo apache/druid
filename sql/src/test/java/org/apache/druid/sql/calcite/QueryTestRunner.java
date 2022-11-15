@@ -458,11 +458,11 @@ public class QueryTestRunner
       // Do-it-ourselves plan since the actual plan omits insert.
       String queryPlan = RelOptUtil.dumpPlan(
           "",
-          hook.relRoot.rel,
+          hook.relRoot().rel,
           SqlExplainFormat.TEXT,
           SqlExplainLevel.DIGEST_ATTRIBUTES);
       String plan;
-      SqlInsert insertNode = hook.insertNode;
+      SqlInsert insertNode = hook.insertNode();
       if (insertNode == null) {
         plan = queryPlan;
       } else {

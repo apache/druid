@@ -143,8 +143,8 @@ is unavailable. Instead, Columns are given using the `EXTEND` syntax described a
 
 #### Delimited Text Format
 
-Use the `tsv` format to read from an abitrary delimited (CSV-like) file such as tab-delimited,
-pipe-delimited, etc. This choice seelcts the Druid `DelimitedInputFormat` class.
+Use the `tsv` format to read from an arbitrary delimited (CSV-like) file such as tab-delimited,
+pipe-delimited, etc. This choice selects the Druid `DelimitedInputFormat` class.
 
 | Name | Description | JSON equivalent | Required |
 | ---- | ----------- | --------------- | -------- |
@@ -156,7 +156,7 @@ As noted above, MSQ cannot infer schema using headers. Use `EXTEND` instead.
 
 #### JSON Format
 
-Use the `json` format to read from a JSON input source. This choice seelcts the Druid `JsonInputFormat` class.
+Use the `json` format to read from a JSON input source. This choice selects the Druid `JsonInputFormat` class.
 
 | Name | Description | JSON equivalent | Required |
 | ---- | ----------- | --------------- | -------- |
