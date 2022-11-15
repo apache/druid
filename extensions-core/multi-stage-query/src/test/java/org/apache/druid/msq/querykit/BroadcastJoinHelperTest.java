@@ -189,6 +189,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
             "j.",
             JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
             JoinType.INNER,
+            null,
             null
         )
     );

@@ -151,6 +151,7 @@ public class MSQTasksTest
         "foo",
         controllerContext,
         false,
+        -1L,
         TimeUnit.SECONDS.toMillis(5)
     );
 

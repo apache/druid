@@ -25,6 +25,7 @@ import org.apache.druid.segment.ComparatorSortedDimensionDictionary;
 import org.apache.druid.segment.DimensionDictionary;
 import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 
@@ -44,7 +45,7 @@ public class GlobalDimensionDictionary
 
   public GlobalDimensionDictionary()
   {
-    this.stringDictionary = new ComparatorDimensionDictionary<String>(ColumnType.STRING.getNullableStrategy()) {
+    this.stringDictionary = new ComparatorDimensionDictionary<String>(GenericIndexed.STRING_STRATEGY) {
       @Override
       public long estimateSizeOfValue(String value)
       {

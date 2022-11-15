@@ -88,6 +88,7 @@ Metrics may have additional dimensions beyond those listed above.
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
+|`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
 |`query/count`|Number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|Number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|Number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -182,9 +183,10 @@ These metrics apply to the [Kafka indexing service](../development/extensions-co
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
-|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
-|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
+|`ingest/kafka/lag`|Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, should not be a very high number |
+|`ingest/kafka/partitionLag`|Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. Minimum emission period for this metric is a minute.|dataSource, stream, partition.|Greater than 0, should not be a very high number |
 
 ### Ingestion metrics for Kinesis
 
@@ -192,9 +194,10 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
-|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
-|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis across all shards. Minimum emission period for this metric is a minute.|dataSource, stream.|Greater than 0, up to max Kinesis retention period in milliseconds |
+|`ingest/kinesis/partitionLag/time`|Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis. Minimum emission period for this metric is a minute.|dataSource, stream, partition.|Greater than 0, up to max Kinesis retention period in milliseconds |
 
 ### Other ingestion metrics
 
@@ -220,7 +223,9 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/sink/count`|Number of sinks not handoffed.|dataSource, taskId, taskType.|1~3|
 |`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. |dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
 |`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator|dataSource.|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
-|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource, noticeType.| < 1s. |
+|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor|dataSource| < 1s. |
+|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
+|`ingest/handoff/time`|Total time taken for each set of segments handed off.|dataSource, taskId, taskType.|Depends on coordinator cycle time|
 
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0.
@@ -232,7 +237,7 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 |`task/run/time`|Milliseconds taken to run a task.| dataSource, taskId, taskType, taskStatus.                  |Varies.|
 |`task/pending/time`|Milliseconds taken for a task to wait for running.| dataSource, taskId, taskType.                              |Varies.|
 |`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| dataSource, taskId, taskType                               |< 1000 (subsecond)|
-|`task/action/run/time`|Milliseconds taken to execute a task action.| dataSource, taskId, taskType                               |Varies from subsecond to a few seconds, based on action type.|
+|`task/action/run/time`|Milliseconds taken to execute a task action.| dataSource, taskId, taskType, taskActionType                               |Varies from subsecond to a few seconds, based on action type.|
 |`segment/added/bytes`|Size in bytes of new segments created.| dataSource, taskId, taskType, interval.                    |Varies.|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| dataSource, taskId, taskType, interval.                    |Varies.|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| dataSource, taskId, taskType, interval.                    |Varies.|
@@ -274,8 +279,9 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |------|-----------|----------|------------|
 |`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier.|Varies.|
 |`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
-|`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
-|`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
+|`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|tier.|Varies.|
+|`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|tier.|Varies.|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|tier.|Varies.|
 |`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|tier.|Varies.|
 |`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|tier.|Varies.|
 |`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|tier.|Varies.|
@@ -286,7 +292,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropQueue/count`|Number of segments to drop.|server.|Varies.|
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|Varies.|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|dataSource.|< max|
-|`segment/overShadowed/count`|Number of overshadowed segments.| |Varies.|
+|`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies.|
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|dataSource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, dataSource.|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|tier.|Varies.|

@@ -251,6 +251,12 @@ public class TypeStrategies
     }
 
     @Override
+    public Long read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getLong(offset);
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
@@ -298,6 +304,12 @@ public class TypeStrategies
     }
 
     @Override
+    public Float read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getFloat(offset);
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
@@ -342,6 +354,12 @@ public class TypeStrategies
     public Double read(ByteBuffer buffer)
     {
       return buffer.getDouble();
+    }
+
+    @Override
+    public Double read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getDouble(offset);
     }
 
     @Override

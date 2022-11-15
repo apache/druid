@@ -21,11 +21,13 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -50,6 +52,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -68,20 +71,31 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
+import org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn;
+import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -92,6 +106,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -111,7 +126,8 @@ public class DumpSegment extends GuiceRunnable
   {
     ROWS,
     METADATA,
-    BITMAPS
+    BITMAPS,
+    NESTED
   }
 
   public DumpSegment()
@@ -143,6 +159,12 @@ public class DumpSegment extends GuiceRunnable
       title = "column",
       description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.")
   public List<String> columnNamesFromCli = new ArrayList<>();
+
+  @Option(
+      name = {"--nested-path"},
+      title = "nested path",
+      description = "JSONPath expression for nested column")
+  public String nestedPath;
 
   @Option(
       name = "--time-iso8601",
@@ -184,6 +206,18 @@ public class DumpSegment extends GuiceRunnable
           break;
         case BITMAPS:
           runBitmaps(injector, outputFileName, index, getColumnsToInclude(index), decompressBitmaps);
+          break;
+        case NESTED:
+          Preconditions.checkArgument(
+              columnNamesFromCli.size() == 1,
+              "Must be exactly 1 column specified"
+          );
+          final String nestedColumn = columnNamesFromCli.get(0);
+          if (nestedPath == null) {
+            runDumpNestedColumn(injector, outputFileName, index, nestedColumn);
+          } else {
+            runDumpNestedColumnPath(injector, outputFileName, index, nestedColumn, nestedPath);
+          }
           break;
         default:
           throw new ISE("dumpType[%s] has no handler", dumpType);
@@ -384,6 +418,261 @@ public class DumpSegment extends GuiceRunnable
                     }
                   }
                 }
+              }
+              jg.writeEndObject();
+            }
+            jg.writeEndObject();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+
+          return null;
+        },
+        outputFileName
+    );
+  }
+
+  @VisibleForTesting
+  public static void runDumpNestedColumn(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      String columnName
+  ) throws IOException
+  {
+    final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+
+    withOutputStream(
+        out -> {
+          try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+            jg.writeStartObject();
+            {
+              jg.writeFieldName(columnName);
+              jg.writeStartObject();
+              {
+                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumn baseColumn = columnHolder.getColumn();
+                Preconditions.checkArgument(baseColumn instanceof CompressedNestedDataComplexColumn);
+                final CompressedNestedDataComplexColumn<?> nestedDataColumn =
+                    (CompressedNestedDataComplexColumn<?>) baseColumn;
+
+                jg.writeFieldName("fields");
+                jg.writeStartArray();
+                List<List<NestedPathPart>> fields = nestedDataColumn.getNestedFields();
+                for (List<NestedPathPart> field : fields) {
+                  jg.writeStartObject();
+                  jg.writeFieldName("path");
+                  jg.writeString(NestedPathFinder.toNormalizedJsonPath(field));
+                  jg.writeFieldName("types");
+                  Set<ColumnType> types = nestedDataColumn.getColumnTypes(field);
+                  jg.writeStartArray();
+                  for (ColumnType type : types) {
+                    jg.writeString(type.asTypeString());
+                  }
+                  jg.writeEndArray();
+                  jg.writeEndObject();
+                }
+                jg.writeEndArray();
+
+                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getStringDictionary();
+                FixedIndexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
+                FixedIndexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                jg.writeFieldName("dictionaries");
+                jg.writeStartObject();
+                {
+                  int globalId = 0;
+                  jg.writeFieldName("strings");
+                  jg.writeStartArray();
+                  for (int i = 0; i < globalStringDictionary.size(); i++, globalId++) {
+                    jg.writeStartObject();
+                    jg.writeFieldName("globalId");
+                    jg.writeNumber(globalId);
+                    jg.writeFieldName("value");
+                    final ByteBuffer val = globalStringDictionary.get(i);
+                    if (val == null) {
+                      jg.writeNull();
+                    } else {
+                      jg.writeString(StringUtils.fromUtf8(val));
+                    }
+                    jg.writeEndObject();
+                  }
+                  jg.writeEndArray();
+
+                  jg.writeFieldName("longs");
+                  jg.writeStartArray();
+                  for (int i = 0; i < globalLongDictionary.size(); i++, globalId++) {
+                    jg.writeStartObject();
+                    jg.writeFieldName("globalId");
+                    jg.writeNumber(globalId);
+                    jg.writeFieldName("value");
+                    jg.writeNumber(globalLongDictionary.get(i));
+                    jg.writeEndObject();
+                  }
+                  jg.writeEndArray();
+
+                  jg.writeFieldName("doubles");
+                  jg.writeStartArray();
+                  for (int i = 0; i < globalDoubleDictionary.size(); i++, globalId++) {
+                    jg.writeStartObject();
+                    jg.writeFieldName("globalId");
+                    jg.writeNumber(globalId);
+                    jg.writeFieldName("value");
+                    jg.writeNumber(globalDoubleDictionary.get(i));
+                    jg.writeEndObject();
+                  }
+                  jg.writeEndArray();
+                }
+                jg.writeFieldName("nullRows");
+                ImmutableBitmap bitmap = nestedDataColumn.getNullValues();
+                jg.writeStartArray();
+                final IntIterator iterator = bitmap.iterator();
+                while (iterator.hasNext()) {
+                  final int rowNum = iterator.next();
+                  jg.writeNumber(rowNum);
+                }
+                jg.writeEndArray();
+                jg.writeEndObject();
+              }
+              jg.writeEndObject();
+            }
+            jg.writeEndObject();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+
+          return null;
+        },
+        outputFileName
+    );
+  }
+
+  @VisibleForTesting
+  public static void runDumpNestedColumnPath(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      String columnName,
+      String path
+  ) throws IOException
+  {
+    final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
+    final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+    final BitmapSerdeFactory bitmapSerdeFactory;
+
+    if (bitmapFactory instanceof ConciseBitmapFactory) {
+      bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
+    } else if (bitmapFactory instanceof RoaringBitmapFactory) {
+      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
+    } else {
+      throw new ISE(
+          "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",
+          bitmapFactory.getClass().getName()
+      );
+    }
+
+    withOutputStream(
+        out -> {
+          try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
+            jg.writeStartObject();
+            {
+              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+              jg.writeFieldName(columnName);
+              jg.writeStartObject();
+              {
+                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumn column = columnHolder.getColumn();
+                Preconditions.checkArgument(column instanceof CompressedNestedDataComplexColumn);
+                final CompressedNestedDataComplexColumn nestedDataColumn = (CompressedNestedDataComplexColumn) column;
+                final List<NestedPathPart> pathParts = NestedPathFinder.parseJsonPath(path);
+                final ColumnIndexSupplier indexSupplier = nestedDataColumn.getColumnIndexSupplier(pathParts);
+
+                final ColumnHolder nestedPathColumnHolder = nestedDataColumn.getColumnHolder(pathParts);
+                final NestedFieldLiteralDictionaryEncodedColumn<?> nestedPathColumn =
+                    (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedPathColumnHolder.getColumn();
+                final FixedIndexed<Integer> nestedPathDictionary = nestedPathColumn.getDictionary();
+
+                SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());
+                final ColumnValueSelector rawSelector = nestedDataColumn.makeColumnValueSelector(offset);
+                final DimensionSelector fieldSelector = nestedDataColumn.makeDimensionSelector(
+                    pathParts,
+                    offset,
+                    null
+                );
+                if (indexSupplier == null) {
+                  jg.writeNullField(path);
+                } else {
+                  DictionaryEncodedStringValueIndex valueIndex =
+                      indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+                  if (valueIndex == null) {
+                    jg.writeNullField(path);
+                  } else {
+                    jg.writeFieldName(path);
+                    jg.writeStartObject();
+                    jg.writeFieldName("types");
+                    Set<ColumnType> types = nestedDataColumn.getColumnTypes(pathParts);
+                    jg.writeStartArray();
+                    for (ColumnType type : types) {
+                      jg.writeString(type.asTypeString());
+                    }
+                    jg.writeEndArray();
+
+                    // write "dictionary":[{"localId":0, "value": "hello", "rows":[]}...]
+                    jg.writeFieldName("dictionary");
+                    jg.writeStartArray();
+                    for (int i = 0; i < valueIndex.getCardinality(); i++) {
+                      jg.writeStartObject();
+                      jg.writeFieldName("localId");
+                      jg.writeNumber(i);
+                      jg.writeFieldName("globalId");
+                      jg.writeNumber(nestedPathDictionary.get(i));
+                      jg.writeFieldName("value");
+                      String val = valueIndex.getValue(i);
+                      if (val == null) {
+                        jg.writeNull();
+                      } else {
+                        jg.writeString(val);
+                      }
+                      jg.writeFieldName("rows");
+                      final ImmutableBitmap bitmap = valueIndex.getBitmap(i);
+                      jg.writeStartArray();
+                      final IntIterator iterator = bitmap.iterator();
+                      while (iterator.hasNext()) {
+                        final int rowNum = iterator.next();
+                        jg.writeNumber(rowNum);
+                      }
+                      jg.writeEndArray();
+                      jg.writeEndObject();
+                    }
+                    jg.writeEndArray();
+                    jg.writeFieldName("column");
+                    jg.writeStartArray();
+                    for (int i = 0; i < index.getNumRows(); i++) {
+                      jg.writeStartObject();
+                      jg.writeFieldName("row");
+                      jg.writeNumber(i);
+                      jg.writeFieldName("raw");
+                      JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, rawSelector.getObject());
+                      jg.writeFieldName("fieldId");
+                      int id = fieldSelector.getRow().get(0);
+                      jg.writeNumber(id);
+                      jg.writeFieldName("fieldValue");
+                      String val = fieldSelector.lookupName(id);
+                      if (val == null) {
+                        jg.writeNull();
+                      } else {
+                        jg.writeString(val);
+                      }
+                      jg.writeEndObject();
+                      offset.increment();
+                    }
+                    jg.writeEndArray();
+                    jg.writeEndObject();
+                  }
+                }
+                column.close();
               }
               jg.writeEndObject();
             }

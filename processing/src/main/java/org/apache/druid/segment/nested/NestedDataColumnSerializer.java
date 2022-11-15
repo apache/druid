@@ -36,6 +36,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.Types;
@@ -43,6 +44,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
@@ -99,7 +101,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> fields;
   private GenericIndexedWriter<String> fieldsWriter;
   private NestedLiteralTypeInfo.Writer fieldsInfoWriter;
-  private GenericIndexedWriter<String> dictionaryWriter;
+  private DictionaryWriter<String> dictionaryWriter;
   private FixedIndexedWriter<Long> longDictionaryWriter;
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
   private CompressedVariableSizedBlobColumnSerializer rawWriter;
@@ -133,7 +135,11 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     fieldsInfoWriter = new NestedLiteralTypeInfo.Writer(segmentWriteOutMedium);
     fieldsInfoWriter.open();
 
-    dictionaryWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, name, GenericIndexed.STRING_STRATEGY);
+    dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
+        indexSpec.getStringDictionaryEncoding(),
+        segmentWriteOutMedium,
+        name
+    );
     dictionaryWriter.open();
 
     longDictionaryWriter = new FixedIndexedWriter<>(
@@ -310,7 +316,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
-
+    Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
     // version 3
     channel.write(ByteBuffer.wrap(new byte[]{0x03}));
     channel.write(ByteBuffer.wrap(metadataBytes));
@@ -373,6 +379,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     public Integer read(ByteBuffer buffer)
     {
       return buffer.getInt();
+    }
+
+    @Override
+    public Integer read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getInt(offset);
     }
 
     @Override

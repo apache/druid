@@ -63,6 +63,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -71,6 +72,7 @@ import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -79,6 +81,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -90,6 +93,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -117,6 +121,13 @@ public class DruidQuery
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
    */
   public static final String CTX_SCAN_SIGNATURE = "scanSignature";
+
+  /**
+   * Maximum number of time-granular buckets that we allow for non-Druid tables.
+   *
+   * Used by {@link #canUseQueryGranularity}.
+   */
+  private static final int MAX_TIME_GRAINS_NON_DRUID_TABLE = 100000;
 
   private final DataSource dataSource;
   private final PlannerContext plannerContext;
@@ -738,7 +749,8 @@ public class DruidQuery
   static Pair<DataSource, Filtration> getFiltration(
       DataSource dataSource,
       DimFilter filter,
-      VirtualColumnRegistry virtualColumnRegistry
+      VirtualColumnRegistry virtualColumnRegistry,
+      JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     if (!(dataSource instanceof JoinDataSource)) {
@@ -758,13 +770,16 @@ public class DruidQuery
     // Adds the intervals from the join left filter to query filtration
     Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
                                            .optimize(virtualColumnRegistry.getFullRowSignature());
+
+
     JoinDataSource newDataSource = JoinDataSource.create(
         joinDataSource.getLeft(),
         joinDataSource.getRight(),
         joinDataSource.getRightPrefix(),
         joinDataSource.getConditionAnalysis(),
         joinDataSource.getJoinType(),
-        leftFiltration.getDimFilter()
+        leftFiltration.getDimFilter(),
+        joinableFactoryWrapper
     );
     return Pair.of(newDataSource, queryFiltration);
   }
@@ -772,6 +787,53 @@ public class DruidQuery
   private static Filtration toFiltration(DimFilter filter, VirtualColumnRegistry virtualColumnRegistry)
   {
     return Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+  }
+
+  /**
+   * Whether the provided combination of dataSource, filtration, and queryGranularity is safe to use in queries.
+   *
+   * Necessary because some combinations are unsafe, mainly because they would lead to the creation of too many
+   * time-granular buckets during query processing.
+   */
+  private static boolean canUseQueryGranularity(
+      final DataSource dataSource,
+      final Filtration filtration,
+      final Granularity queryGranularity
+  )
+  {
+    if (Granularities.ALL.equals(queryGranularity)) {
+      // Always OK: no storage adapter has problem with ALL.
+      return true;
+    }
+
+    if (DataSourceAnalysis.forDataSource(dataSource).isConcreteTableBased()) {
+      // Always OK: queries on concrete tables (regular Druid datasources) use segment-based storage adapters
+      // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
+      // intervals safer. They do not have special checks for granularity and interval safety.
+      return true;
+    }
+
+    // Query is against something other than a regular Druid table. Apply additional checks, because we can't
+    // count on interval-clipping to save us.
+
+    for (final Interval filtrationInterval : filtration.getIntervals()) {
+      // Query may be using RowBasedStorageAdapter. We don't know for sure, so check
+      // RowBasedStorageAdapter#isQueryGranularityAllowed to be safe.
+      if (!RowBasedStorageAdapter.isQueryGranularityAllowed(filtrationInterval, queryGranularity)) {
+        return false;
+      }
+
+      // Validate the interval against MAX_TIME_GRAINS_NON_DRUID_TABLE.
+      // Estimate based on the size of the first bucket, to avoid computing them all. (That's what we're
+      // trying to avoid!)
+      final Interval firstBucket = queryGranularity.bucket(filtrationInterval.getStart());
+      final long estimatedNumBuckets = filtrationInterval.toDurationMillis() / firstBucket.toDurationMillis();
+      if (estimatedNumBuckets > MAX_TIME_GRAINS_NON_DRUID_TABLE) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   public DataSource getDataSource()
@@ -889,7 +951,8 @@ public class DruidQuery
       final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
           dataSource,
           filter,
-          virtualColumnRegistry
+          virtualColumnRegistry,
+          plannerContext.getJoinableFactoryWrapper()
       );
       final DataSource newDataSource = dataSourceFiltrationPair.lhs;
       final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -999,10 +1062,15 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
+
+    if (!canUseQueryGranularity(dataSource, filtration, queryGranularity)) {
+      return null;
+    }
 
     final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
     if (sorting != null && sorting.getProjection() != null) {
@@ -1093,7 +1161,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -1138,7 +1207,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
@@ -1208,7 +1278,8 @@ public class DruidQuery
             dimensionExpression.getDruidExpression(),
             plannerContext.getExprMacroTable()
         );
-        if (granularity == null) {
+        if (granularity == null || !canUseQueryGranularity(dataSource, filtration, granularity)) {
+          // Can't, or won't, convert this dimension to a query granularity.
           continue;
         }
         if (queryGranularity != null) {
@@ -1219,10 +1290,20 @@ public class DruidQuery
         }
         queryGranularity = granularity;
         int timestampDimensionIndexInDimensions = grouping.getDimensions().indexOf(dimensionExpression);
+
         // these settings will only affect the most inner query sent to the down streaming compute nodes
         theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, dimensionExpression.getOutputName());
         theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, timestampDimensionIndexInDimensions);
-        theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryGranularity);
+
+        try {
+          theContext.put(
+              GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+              plannerContext.getJsonMapper().writeValueAsString(queryGranularity)
+          );
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
       }
     }
     if (queryGranularity == null) {
@@ -1252,7 +1333,8 @@ public class DruidQuery
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        plannerContext.getJoinableFactoryWrapper()
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -26,7 +27,7 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
-
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -231,16 +232,18 @@ public class QueryContext
     return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
   }
 
-  public Granularity getGranularity(String key)
+  public Granularity getGranularity(String key, ObjectMapper jsonMapper)
   {
-    final Object value = get(key);
-    if (value == null) {
+    final String granularityString = getString(key);
+    if (granularityString == null) {
       return null;
     }
-    if (value instanceof Granularity) {
-      return (Granularity) value;
-    } else {
-      throw QueryContexts.badTypeException(key, "a Granularity", value);
+
+    try {
+      return jsonMapper.readValue(granularityString, Granularity.class);
+    }
+    catch (IOException e) {
+      throw QueryContexts.badTypeException(key, "a Granularity", granularityString);
     }
   }
 

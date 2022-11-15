@@ -89,7 +89,7 @@ public class DelegateOrMinKeyCollectorTest
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
     Assert.assertEquals(key, collector.minKey());
-    Assert.assertEquals(key.getNumberOfBytes(), collector.estimatedRetainedBytes(), 0);
+    Assert.assertEquals(key.estimatedObjectSizeBytes(), collector.estimatedRetainedBytes(), 0);
     Assert.assertEquals(1, collector.estimatedTotalWeight());
   }
 
@@ -110,7 +110,7 @@ public class DelegateOrMinKeyCollectorTest
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
     Assert.assertEquals(key, collector.minKey());
-    Assert.assertEquals(key.getNumberOfBytes(), collector.estimatedRetainedBytes(), 0);
+    Assert.assertEquals(key.estimatedObjectSizeBytes(), collector.estimatedRetainedBytes(), 0);
     Assert.assertEquals(1, collector.estimatedTotalWeight());
 
     // Should not have actually downsampled, because the quantiles-based collector does nothing when
@@ -133,7 +133,7 @@ public class DelegateOrMinKeyCollectorTest
     RowKey key = createKey(1L);
     collector.add(key, 1);
     collector.add(key, 1);
-    int expectedRetainedBytes = 2 * key.getNumberOfBytes();
+    int expectedRetainedBytes = 2 * key.estimatedObjectSizeBytes();
 
     Assert.assertTrue(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
@@ -144,7 +144,7 @@ public class DelegateOrMinKeyCollectorTest
     while (collector.getDelegate().isPresent()) {
       Assert.assertTrue(collector.downSample());
     }
-    expectedRetainedBytes = key.getNumberOfBytes();
+    expectedRetainedBytes = key.estimatedObjectSizeBytes();
 
     Assert.assertFalse(collector.getDelegate().isPresent());
     Assert.assertFalse(collector.isEmpty());
