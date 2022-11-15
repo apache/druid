@@ -57,14 +57,10 @@ public class SwitchingEmitterModule implements Module
   public Emitter makeEmitter(SwitchingEmitterConfig config, final Injector injector)
   {
     log.info(
-        "Crfeateing Switching emitter with %s, and default emitter %s",
+        "Createing Switching emitter with %s, and default emitter %s",
         config.getEmitters(),
         config.getDefaultEmitter()
     );
-    //validate that there are no nulls for feed.
-    for (String feed : config.getEmitters().keySet()) {
-      Preconditions.checkNotNull(feed);
-    }
     Map<String, List<Emitter>> switchingEmitters = config
         .getEmitters()
         .entrySet()
