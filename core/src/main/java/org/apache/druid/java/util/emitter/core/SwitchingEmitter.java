@@ -72,7 +72,7 @@ public class SwitchingEmitter implements Emitter
     // linear search is likely faster than hashed lookup
     // todo dont use a hashmap here. use something that will be more efficient for this kind of lookups
     for (Map.Entry<String, List<Emitter>> feedToEmitters : feedToEmitters.entrySet()) {
-      if (event.getFeed().equals(feedToEmitters.getKey())) {
+      if (feedToEmitters.getKey().equals(event.getFeed())) {
         for (Emitter emitter : feedToEmitters.getValue()) {
           emitter.emit(event);
         }

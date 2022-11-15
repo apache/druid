@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.emitter;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -60,6 +61,10 @@ public class SwitchingEmitterModule implements Module
         config.getEmitters(),
         config.getDefaultEmitter()
     );
+    //validate that there are no nulls for feed.
+    for (String feed : config.getEmitters().keySet()) {
+      Preconditions.checkNotNull(feed);
+    }
     Map<String, List<Emitter>> switchingEmitters = config
         .getEmitters()
         .entrySet()
