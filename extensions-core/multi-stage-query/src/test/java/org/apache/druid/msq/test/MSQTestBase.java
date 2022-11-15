@@ -78,7 +78,7 @@ import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
-import org.apache.druid.msq.indexing.error.TooManyWorkerRetriedFault;
+import org.apache.druid.msq.indexing.error.WorkerRelaunchedTooManyTimes;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -902,8 +902,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
-            String errorMessage = msqErrorReport.getFault() instanceof TooManyWorkerRetriedFault
-                                  ? ((TooManyWorkerRetriedFault) msqErrorReport.getFault()).getRootErrorMessage()
+            String errorMessage = msqErrorReport.getFault() instanceof WorkerRelaunchedTooManyTimes
+                                  ? ((WorkerRelaunchedTooManyTimes) msqErrorReport.getFault()).getRootErrorMessage()
                                   : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
                 MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
@@ -1073,8 +1073,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
-            String errorMessage = msqErrorReport.getFault() instanceof TooManyWorkerRetriedFault
-                                  ? ((TooManyWorkerRetriedFault) msqErrorReport.getFault()).getRootErrorMessage()
+            String errorMessage = msqErrorReport.getFault() instanceof WorkerRelaunchedTooManyTimes
+                                  ? ((WorkerRelaunchedTooManyTimes) msqErrorReport.getFault()).getRootErrorMessage()
                                   : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
                 MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),

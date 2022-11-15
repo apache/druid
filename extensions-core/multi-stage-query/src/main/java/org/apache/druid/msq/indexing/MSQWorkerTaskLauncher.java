@@ -40,10 +40,10 @@ import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
-import org.apache.druid.msq.indexing.error.TooManyWorkerRetriedFault;
-import org.apache.druid.msq.indexing.error.TotalRetryLimitExceededFault;
+import org.apache.druid.msq.indexing.error.TotalRelaunchLimitExceededFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
+import org.apache.druid.msq.indexing.error.WorkerRelaunchedTooManyTimes;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
@@ -73,7 +73,7 @@ public class MSQWorkerTaskLauncher
   private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
   private static final long SHUTDOWN_TIMEOUT_MS = Duration.ofMinutes(1).toMillis();
-  private int currentRetryCount = 0;
+  private int currentRelaunchCount = 0;
 
   // States for "state" variable.
   private enum State
@@ -121,8 +121,8 @@ public class MSQWorkerTaskLauncher
   // tasks to clean up due to retries
   private final Set<String> tasksToCleanup = ConcurrentHashMap.newKeySet();
 
-  // retry worker set
-  private final Set<Integer> retryWorkerSet = ConcurrentHashMap.newKeySet();
+  // workers to relaunch
+  private final Set<Integer> workersToRelaunch = ConcurrentHashMap.newKeySet();
 
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
@@ -247,7 +247,7 @@ public class MSQWorkerTaskLauncher
    */
   public void submitForRelaunch(int workerNumber)
   {
-    retryWorkerSet.add(workerNumber);
+    workersToRelaunch.add(workerNumber);
   }
 
   /**
@@ -507,7 +507,7 @@ public class MSQWorkerTaskLauncher
 
   private void relaunchTasks()
   {
-    Iterator<Integer> iterator = retryWorkerSet.iterator();
+    Iterator<Integer> iterator = workersToRelaunch.iterator();
 
     while (iterator.hasNext()) {
       int worker = iterator.next();
@@ -527,23 +527,23 @@ public class MSQWorkerTaskLauncher
           return taskHistory;
         }
 
-        MSQWorkerTask toRetry = tracker.msqWorkerTask;
-        MSQWorkerTask retryTask = toRetry.getRetryTask();
+        MSQWorkerTask toRelaunch = tracker.msqWorkerTask;
+        MSQWorkerTask relaunchedTask = toRelaunch.getRetryTask();
 
-        // check retry limits
-        checkRetryLimits(tracker, toRetry);
+        // check relaunch limits
+        checkRelaunchLimits(tracker, toRelaunch);
         // clean up trackers and tasks
         tasksToCleanup.add(latestTaskId);
         taskTrackers.remove(latestTaskId);
-        currentRetryCount += 1;
-        taskTrackers.put(retryTask.getId(), new TaskTracker(retryTask.getWorkerNumber(), retryTask));
-        context.workerManager().run(retryTask.getId(), retryTask);
-        taskHistory.add(retryTask.getId());
+        currentRelaunchCount += 1;
+        taskTrackers.put(relaunchedTask.getId(), new TaskTracker(relaunchedTask.getWorkerNumber(), relaunchedTask));
+        context.workerManager().run(relaunchedTask.getId(), relaunchedTask);
+        taskHistory.add(relaunchedTask.getId());
 
         synchronized (taskIds) {
           // replace taskId with the retry taskID for the same worker number
-          taskIds.set(toRetry.getWorkerNumber(), retryTask.getId());
-          fullyStartedTasks.remove(retryTask.getWorkerNumber());
+          taskIds.set(toRelaunch.getWorkerNumber(), relaunchedTask.getId());
+          fullyStartedTasks.remove(relaunchedTask.getWorkerNumber());
           taskIds.notifyAll();
         }
         return taskHistory;
@@ -553,21 +553,21 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  private void checkRetryLimits(TaskTracker tracker, MSQWorkerTask toRetry)
+  private void checkRelaunchLimits(TaskTracker tracker, MSQWorkerTask relaunchTask)
   {
-    if (toRetry.getRetryCount() > Limits.WORKER_RETRY_LIMIT) {
-      throw new MSQException(new TooManyWorkerRetriedFault(
-          Limits.WORKER_RETRY_LIMIT,
-          toRetry.getId(),
-          toRetry.getWorkerNumber(),
+    if (relaunchTask.getRetryCount() > Limits.PER_WORKER_RELAUNCH_LIMIT) {
+      throw new MSQException(new WorkerRelaunchedTooManyTimes(
+          Limits.PER_WORKER_RELAUNCH_LIMIT,
+          relaunchTask.getId(),
+          relaunchTask.getWorkerNumber(),
           tracker.status.getErrorMsg()
       ));
     }
-    if (currentRetryCount > Limits.TOTAL_RETRY_LIMIT) {
-      throw new MSQException(new TotalRetryLimitExceededFault(
-          Limits.TOTAL_RETRY_LIMIT,
-          currentRetryCount,
-          toRetry.getId(),
+    if (currentRelaunchCount > Limits.TOTAL_RELAUNCH_LIMIT) {
+      throw new MSQException(new TotalRelaunchLimitExceededFault(
+          Limits.TOTAL_RELAUNCH_LIMIT,
+          currentRelaunchCount,
+          relaunchTask.getId(),
           tracker.status.getErrorMsg()
       ));
     }
@@ -590,7 +590,7 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
-   * Cleans the task indentified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for realunch. Asks the overlord to cancel the task.
+   * Cleans the task indentified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
    */
   private void cleanFailedTasksWhichAreRelaunched()
   {

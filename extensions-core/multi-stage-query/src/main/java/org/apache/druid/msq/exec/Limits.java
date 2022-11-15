@@ -23,7 +23,7 @@ public class Limits
 {
   /**
    * Maximum number of columns that can appear in a frame signature.
-   *
+   * <p>
    * Somewhat less than {@link WorkerMemoryParameters#STANDARD_FRAME_SIZE} divided by typical minimum column size:
    * {@link org.apache.druid.frame.allocation.AppendableMemory#DEFAULT_INITIAL_ALLOCATION_SIZE}.
    */
@@ -60,12 +60,12 @@ public class Limits
   public static final int MAX_KERNEL_MANIPULATION_QUEUE_SIZE = 100_000;
 
   /**
-   * Maximum retries across all workers.
+   * Maximum relaunches across all workers.
    */
-  public static final int TOTAL_RETRY_LIMIT = 30;
+  public static final int TOTAL_RELAUNCH_LIMIT = 30;
 
   /**
-   * Maximum worker retries. Initial run is not a retry. The worker will be spawned 1 + retryNumber of times before erroring out.
+   * Maximum relaunches per worker. Initial run is not a relaunch. The worker will be spawned 1 + workerRelaunchLimit times before erroring out.
    */
-  public static final int WORKER_RETRY_LIMIT = 2;
+  public static final int PER_WORKER_RELAUNCH_LIMIT = 2;
 }

@@ -25,60 +25,59 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
-@JsonTypeName(TotalRetryLimitExceededFault.CODE)
-public class TotalRetryLimitExceededFault extends BaseMSQFault
+@JsonTypeName(WorkerRelaunchedTooManyTimes.CODE)
+public class WorkerRelaunchedTooManyTimes extends BaseMSQFault
 {
-  static final String CODE = "TotalRetryLimitExceededFault";
+  static final String CODE = "WorkerRelaunchedTooManyTimes";
 
 
-  private final int maxRetryCount;
+  private final int maxPerWorkerRelaunchCount;
 
   private final String taskId;
 
-  private final int retryCount;
+  private final int workerNumber;
 
 
   private final String rootErrorMessage;
 
   @JsonCreator
-  public TotalRetryLimitExceededFault(
-      @JsonProperty("maxRetryCount") int maxRetryCount,
-      @JsonProperty("retryCount") int retryCount,
+  public WorkerRelaunchedTooManyTimes(
+      @JsonProperty("maxPerWorkerRelaunchCount") int maxPerWorkerRelaunchCount,
       @JsonProperty("taskId") String taskId,
+      @JsonProperty("workerNumber") int workerNumber,
       @JsonProperty("rootErrorMessage") String rootErrorMessage
   )
   {
     super(
         CODE,
-        "Retry count %d exceeded total retry limit %d .Latest task[%s] failure reason: %s",
-        retryCount,
-        maxRetryCount,
+        "Worker[%d] exceeded max relaunch count of %d for task[%s]. Latest failure reason: %s.",
+        workerNumber,
+        maxPerWorkerRelaunchCount,
         taskId,
         rootErrorMessage
     );
-    this.maxRetryCount = maxRetryCount;
-    this.retryCount = retryCount;
+    this.maxPerWorkerRelaunchCount = maxPerWorkerRelaunchCount;
     this.taskId = taskId;
-
+    this.workerNumber = workerNumber;
     this.rootErrorMessage = rootErrorMessage;
   }
 
   @JsonProperty
-  public int getMaxRetryCount()
+  public int getMaxPerWorkerRelaunchCount()
   {
-    return maxRetryCount;
+    return maxPerWorkerRelaunchCount;
+  }
+
+  @JsonProperty
+  public int getWorkerNumber()
+  {
+    return workerNumber;
   }
 
   @JsonProperty
   public String getTaskId()
   {
     return taskId;
-  }
-
-  @JsonProperty
-  public int getRetryCount()
-  {
-    return retryCount;
   }
 
   @JsonProperty
@@ -99,16 +98,19 @@ public class TotalRetryLimitExceededFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    TotalRetryLimitExceededFault that = (TotalRetryLimitExceededFault) o;
-    return maxRetryCount == that.maxRetryCount && retryCount == that.retryCount && Objects.equals(
+    WorkerRelaunchedTooManyTimes that = (WorkerRelaunchedTooManyTimes) o;
+    return maxPerWorkerRelaunchCount == that.maxPerWorkerRelaunchCount
+           && workerNumber == that.workerNumber
+           && Objects.equals(
         taskId,
         that.taskId
-    ) && Objects.equals(rootErrorMessage, that.rootErrorMessage);
+    )
+           && Objects.equals(rootErrorMessage, that.rootErrorMessage);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), maxRetryCount, taskId, retryCount, rootErrorMessage);
+    return Objects.hash(super.hashCode(), maxPerWorkerRelaunchCount, taskId, workerNumber, rootErrorMessage);
   }
 }

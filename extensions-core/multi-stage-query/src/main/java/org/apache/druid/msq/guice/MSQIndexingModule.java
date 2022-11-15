@@ -63,11 +63,11 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
-import org.apache.druid.msq.indexing.error.TooManyWorkerRetriedFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
-import org.apache.druid.msq.indexing.error.TotalRetryLimitExceededFault;
+import org.apache.druid.msq.indexing.error.TotalRelaunchLimitExceededFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
+import org.apache.druid.msq.indexing.error.WorkerRelaunchedTooManyTimes;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.input.NilInputSlice;
@@ -88,7 +88,6 @@ import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.DruidProcessingConfig;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -125,10 +124,10 @@ public class MSQIndexingModule implements DruidModule
       TooManyPartitionsFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
-      TooManyWorkerRetriedFault.class,
-      TotalRetryLimitExceededFault.class,
+      TotalRelaunchLimitExceededFault.class,
       UnknownFault.class,
       WorkerFailedFault.class,
+      WorkerRelaunchedTooManyTimes.class,
       WorkerRpcFailedFault.class
   );
 
