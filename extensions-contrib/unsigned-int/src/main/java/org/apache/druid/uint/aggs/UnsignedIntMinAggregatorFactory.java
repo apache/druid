@@ -24,13 +24,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.uint.UnsignedIntComplexSerde;
 
 import javax.annotation.Nullable;
 
 public class UnsignedIntMinAggregatorFactory extends LongMinAggregatorFactory
 {
+
+  public static final ColumnType TYPE = ColumnType.ofComplex(UnsignedIntComplexSerde.TYPE);
 
   @JsonCreator
   public UnsignedIntMinAggregatorFactory(
@@ -43,20 +45,9 @@ public class UnsignedIntMinAggregatorFactory extends LongMinAggregatorFactory
     super(name, fieldName, expression, macroTable);
   }
 
-  public UnsignedIntMinAggregatorFactory(String name, String fieldName)
-  {
-    super(name, fieldName);
-  }
-
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
-  }
-
-  @Override
-  public String getComplexTypeName()
-  {
-    return UnsignedIntComplexSerde.TYPE;
+    return TYPE;
   }
 }

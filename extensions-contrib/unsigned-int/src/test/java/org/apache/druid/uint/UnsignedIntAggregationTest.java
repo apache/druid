@@ -45,7 +45,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     segmentDir.delete();
   }

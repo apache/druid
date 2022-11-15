@@ -17,32 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.uint.aggs;
+package org.apache.druid.uint;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.uint.UnsignedIntComplexSerde;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.segment.serde.ComplexMetricExtractor;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class UnsignedIntAnyAggregatorFactory extends LongAnyAggregatorFactory
+public class UnsignedIntComplexSerdeTest
 {
-
-  public static final ColumnType TYPE = ColumnType.ofComplex(UnsignedIntComplexSerde.TYPE);
-
-  @JsonCreator
-  public UnsignedIntAnyAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
-  )
+  @Test
+  public void testSerde()
   {
-    super(name, fieldName);
+    final UnsignedIntComplexSerde serde = new UnsignedIntComplexSerde();
+    final ComplexMetricExtractor extractor = serde.getExtractor();
+    final Long value = (Long) extractor.extractValue(
+        new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", 3L)),
+        "foo"
+    );
+    Assert.assertEquals(Long.valueOf(3), value);
   }
-
-  @Override
-  public ColumnType getIntermediateType()
-  {
-    return TYPE;
-  }
-
 }

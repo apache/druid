@@ -30,7 +30,7 @@ import org.apache.druid.uint.aggs.UnsignedIntMaxAggregatorFactory;
 import org.apache.druid.uint.aggs.UnsignedIntMinAggregatorFactory;
 import org.apache.druid.uint.aggs.UnsignedIntSumAggregatorFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class UnsignedIntDruidModule implements DruidModule
@@ -38,13 +38,26 @@ public class UnsignedIntDruidModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.asList(new SimpleModule("UnsignedIntDruidModule")
-                             .registerSubtypes(
-                                 new NamedType(UnsignedIntSumAggregatorFactory.class, UnsignedIntComplexSerde.TYPE),
-                                 new NamedType(UnsignedIntMaxAggregatorFactory.class, UnsignedIntComplexSerde.TYPE),
-                                 new NamedType(UnsignedIntMinAggregatorFactory.class, UnsignedIntComplexSerde.TYPE),
-                                 new NamedType(UnsignedIntAnyAggregatorFactory.class, UnsignedIntComplexSerde.TYPE)
-                             )
+    return Collections.singletonList(
+        new SimpleModule("UnsignedIntDruidModule")
+            .registerSubtypes(
+                new NamedType(
+                    UnsignedIntSumAggregatorFactory.class,
+                    UnsignedIntComplexSerde.TYPE
+                ),
+                new NamedType(
+                    UnsignedIntMaxAggregatorFactory.class,
+                    UnsignedIntComplexSerde.TYPE
+                ),
+                new NamedType(
+                    UnsignedIntMinAggregatorFactory.class,
+                    UnsignedIntComplexSerde.TYPE
+                ),
+                new NamedType(
+                    UnsignedIntAnyAggregatorFactory.class,
+                    UnsignedIntComplexSerde.TYPE
+                )
+            )
     );
   }
 
