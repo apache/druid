@@ -53,7 +53,6 @@ def get_argument_value(argument):
     return split_args[1]
 
 def parse_arguments():
-    num_args = len(sys.argv)
     service_list = []
     service_path_list = []
     base_config_path = ""
@@ -157,7 +156,7 @@ def distribute_memory_over_services(service_config, total_memory):
         direct_memory = allocated_memory - heap_memory
         service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
 
-    print(f'\nMemory distribution for services')
+    print(f'\nMemory distribution for services:')
     for key, value in service_memory_config.items():
         print(f'{key}, memory_config: {value}, instance_count: {service_instance_map[key]}')
     print('\n')
@@ -199,7 +198,6 @@ def print_service_config(service_config, base_config_path):
             print(f'{item[0]}, using default config from {os.getcwd()}/../{QUICKSTART_BASE_CONFIG_PATH}')
         else:
             print(f'{item[0]}, using config from {base_config_path}/{item[1]}')
-    print('\n')
 
 def display_help():
     text = """
@@ -270,14 +268,14 @@ def main():
             display_help()
             return
 
-    print("Druid auto tuning quickstart\n")
+    print("Druid automated quickstart\n")
 
     base_config_path, total_memory, service_config, run_zk, compute_only = parse_arguments()
 
     # change directory to bin
     os.chdir(os.path.dirname(sys.argv[0]))
 
-    print(f'Arguments passed, baseConfigPath: "{base_config_path}", totalMemory: "{total_memory}"\n')
+    print(f'Arguments passed: baseConfigPath: "{base_config_path}", totalMemory: "{total_memory}"\n')
     print_service_config(service_config, base_config_path)
 
     service_memory_config = {}
