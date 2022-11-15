@@ -70,6 +70,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
+  private final @Nullable RoundRobinServerSelector roundRobinServerSelector;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -80,6 +81,7 @@ public class DruidCoordinatorRuntimeParams
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
+      RoundRobinServerSelector roundRobinServerSelector,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -96,6 +98,7 @@ public class DruidCoordinatorRuntimeParams
     this.dataSourcesSnapshot = dataSourcesSnapshot;
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
+    this.roundRobinServerSelector = roundRobinServerSelector;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
@@ -148,6 +151,12 @@ public class DruidCoordinatorRuntimeParams
   public ReplicationThrottler getReplicationManager()
   {
     return replicationManager;
+  }
+
+  @Nullable
+  public RoundRobinServerSelector getRoundRobinServerSelector()
+  {
+    return roundRobinServerSelector;
   }
 
   public ServiceEmitter getEmitter()
@@ -250,6 +259,7 @@ public class DruidCoordinatorRuntimeParams
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
+    private @Nullable RoundRobinServerSelector roundRobinServerSelector;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
@@ -267,6 +277,7 @@ public class DruidCoordinatorRuntimeParams
       this.dataSourcesSnapshot = null;
       this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
+      this.roundRobinServerSelector = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
@@ -319,6 +330,7 @@ public class DruidCoordinatorRuntimeParams
           dataSourcesSnapshot,
           loadManagementPeons,
           replicationManager,
+          roundRobinServerSelector,
           emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
@@ -398,6 +410,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withReplicationManager(ReplicationThrottler replicationManager)
     {
       this.replicationManager = replicationManager;
+      return this;
+    }
+
+    public Builder withRoundRobinServerSelector(RoundRobinServerSelector roundRobinServerSelector)
+    {
+      this.roundRobinServerSelector = roundRobinServerSelector;
       return this;
     }
 
