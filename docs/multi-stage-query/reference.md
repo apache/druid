@@ -203,7 +203,8 @@ The following table lists the context parameters for the MSQ task engine:
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
-| clusterStatisticsMergeMode | Whether to parallel or sequential merging of worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. On `AUTO` tries to find the best approach based on number of workers and size of input rows. | `AUTO` |
+
+| `clusterStatisticsMergeMode` | Whether to parallel or sequential merging of worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. On `AUTO` tries to find the best approach based on number of workers and size of input rows. | `AUTO` |
 
 ## Durable Storage
 This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.

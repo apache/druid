@@ -247,7 +247,7 @@ class ControllerStageTracker
     if (phase != ControllerStagePhase.READING_INPUT) {
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
-    if (completeKeyStatisticsInformation == null) {
+    if (!stageDef.doesShuffle() || completeKeyStatisticsInformation == null ) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
@@ -264,11 +264,6 @@ class ControllerStageTracker
           // Transition to MERGING_STATISTICS state to queue fetch clustering statistics from workers.
           transitionTo(ControllerStagePhase.MERGING_STATISTICS);
 
-          if (!stageDef.doesShuffle()) {
-            // We don't need to wait for key statistics in this case. We can generate parititions and skip to the next phase.
-            generateResultPartitionsAndBoundariesWithoutKeyStatistics();
-            transitionTo(ControllerStagePhase.POST_READING);
-          }
         }
       }
     }
