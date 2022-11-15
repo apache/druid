@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
@@ -223,27 +224,32 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
-  private void populateFrameWriterAndFlushIfNeeded() throws IOException
+  private void populateFrameWriterAndFlushIfNeeded()
   {
     createFrameWriterIfNeeded();
 
-    while (!cursor.isDone()) {
-      if (!frameWriter.addSelection()) {
-        if (frameWriter.getNumRows() > 0) {
-          final long numRowsWritten = flushFrameWriter();
+    try {
+      while (!cursor.isDone()) {
+        if (!frameWriter.addSelection()) {
+          if (frameWriter.getNumRows() > 0) {
+            final long numRowsWritten = flushFrameWriter();
 
-          if (runningCountForLimit != null) {
-            runningCountForLimit.addAndGet(numRowsWritten);
+            if (runningCountForLimit != null) {
+              runningCountForLimit.addAndGet(numRowsWritten);
+            }
+
+            return;
+          } else {
+            throw new FrameRowTooLargeException(currentAllocatorCapacity);
           }
-
-          return;
-        } else {
-          throw new FrameRowTooLargeException(currentAllocatorCapacity);
         }
-      }
 
-      cursor.advance();
-      partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
+        cursor.advance();
+        partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
+      }
+    }
+    catch (Exception e) {
+      throw new ParseException("", e, "Unable to add the selection to the frame. Type conversion might be required.");
     }
   }
 
