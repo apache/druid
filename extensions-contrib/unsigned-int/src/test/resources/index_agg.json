@@ -1,0 +1,7 @@
+[
+  {
+    "name": "u_int",
+    "type": "unsigned_int",
+    "fieldName": "foo"
+  }
+]

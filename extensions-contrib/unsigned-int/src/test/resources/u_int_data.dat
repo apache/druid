@@ -1,0 +1,6 @@
+{"timestamp":  100, "dim": "a", "foo":  100}
+{"timestamp":  101, "dim": "a", "foo":  99}
+{"timestamp":  102, "dim": "b", "foo":  97}
+{"timestamp":  104, "dim": "b", "foo":  1}
+{"timestamp":  104, "dim": "c", "foo":  2147483647}
+{"timestamp":  105, "dim": "c", "foo":  2147483647}
