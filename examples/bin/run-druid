@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ "$#" -gt 2 ] || [ "$#" -eq 0 ]
+if [ "$#" -gt 4 ] || [ "$#" -eq 0 ]
 then
   >&2 echo "usage: $0 <service> [conf-dir]"
   exit 1
@@ -47,7 +47,30 @@ if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
 
 echo "Running [$1], logging to [$LOG_DIR/$1.log] if no changes made to log4j2.xml"
 
-cd "$WHEREAMI/.."
-exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-  -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
-  `cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+if [ "$WHATAMI" = 'coordinator-overlord' ]
+then
+    SERVER_NAME=coordinator
+else
+    SERVER_NAME="$WHATAMI"
+fi
+
+if [ "$#" -eq 3 ]
+then
+  cd "$WHEREAMI/.."
+  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$3"/jvm.config | xargs` \
+    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
+elif [ "$#" -eq 4 ]
+then
+  JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
+  JVMARGS+=' '
+  JVMARGS+=$4
+
+  cd "$WHEREAMI/.."
+  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
+    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
+else
+  cd "$WHEREAMI/.."
+  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
+    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
+    `cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+fi
