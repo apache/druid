@@ -26,29 +26,16 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
-import org.apache.druid.indexing.overlord.LockResult;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
+import java.util.concurrent.Future;
 
 /**
  * Allocates a pending segment for a given timestamp. The preferredSegmentGranularity is used if there are no prior
@@ -180,177 +167,25 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     };
   }
 
-  @Override
-  public SegmentIdWithShardSpec perform(
-      final Task task,
-      final TaskActionToolbox toolbox
-  )
+  public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
   {
-    int attempt = 0;
-    while (true) {
-      attempt++;
-
-      if (!task.getDataSource().equals(dataSource)) {
-        throw new IAE("Task dataSource must match action dataSource, [%s] != [%s].", task.getDataSource(), dataSource);
-      }
-
-      final IndexerMetadataStorageCoordinator msc = toolbox.getIndexerMetadataStorageCoordinator();
-
-      // 1) if something overlaps our timestamp, use that
-      // 2) otherwise try preferredSegmentGranularity & going progressively smaller
-
-      final Interval rowInterval = queryGranularity.bucket(timestamp).withChronology(ISOChronology.getInstanceUTC());
-
-      final Set<DataSegment> usedSegmentsForRow =
-          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
-
-      final SegmentIdWithShardSpec identifier;
-      if (usedSegmentsForRow.isEmpty()) {
-        identifier = tryAllocateFirstSegment(toolbox, task, rowInterval);
-      } else {
-        identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
-      }
-      if (identifier != null) {
-        return identifier;
-      }
-
-      // Could not allocate a pending segment. There's a chance that this is because someone else inserted a segment
-      // overlapping with this row between when we called "msc.retrieveUsedSegmentsForInterval" and now. Check it again,
-      // and if it's different, repeat.
-
-      Set<DataSegment> newUsedSegmentsForRow =
-          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
-      if (!newUsedSegmentsForRow.equals(usedSegmentsForRow)) {
-        if (attempt < MAX_ATTEMPTS) {
-          final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
-          log.debug(
-              "Used segment set changed for rowInterval[%s]. Retrying segment allocation in %,dms (attempt = %,d).",
-              rowInterval,
-              shortRandomSleep,
-              attempt
-          );
-          try {
-            Thread.sleep(shortRandomSleep);
-          }
-          catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-          }
-        } else {
-          log.error(
-              "Used segment set changed for rowInterval[%s]. Not trying again (attempt = %,d).",
-              rowInterval,
-              attempt
-          );
-          return null;
-        }
-      } else {
-        return null;
-      }
-    }
-  }
-
-  private SegmentIdWithShardSpec tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
-  {
-    // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
-    // segment granularity. Try that first, and then progressively smaller ones if it fails.
-    final List<Interval> tryIntervals = Granularity.granularitiesFinerThan(preferredSegmentGranularity)
-                                                   .stream()
-                                                   .map(granularity -> granularity.bucket(timestamp))
-                                                   .collect(Collectors.toList());
-    for (Interval tryInterval : tryIntervals) {
-      if (tryInterval.contains(rowInterval)) {
-        final SegmentIdWithShardSpec identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
-        if (identifier != null) {
-          return identifier;
-        }
-      }
-    }
-    return null;
-  }
-
-  private SegmentIdWithShardSpec tryAllocateSubsequentSegment(
-      TaskActionToolbox toolbox,
-      Task task,
-      Interval rowInterval,
-      DataSegment usedSegment
-  )
-  {
-    // Existing segment(s) exist for this row; use the interval of the first one.
-    if (!usedSegment.getInterval().contains(rowInterval)) {
-      log.error(
-          "The interval of existing segment[%s] doesn't contain rowInterval[%s]",
-          usedSegment.getId(),
-          rowInterval
-      );
-      return null;
-    } else {
-      // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
-      // debugging.
-      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true);
-    }
-  }
-
-  private SegmentIdWithShardSpec tryAllocate(
-      TaskActionToolbox toolbox,
-      Task task,
-      Interval tryInterval,
-      Interval rowInterval,
-      boolean logOnFail
-  )
-  {
-    // This action is always used by appending tasks, so if it is a time_chunk lock then we allow it to be
-    // shared with other appending tasks as well
-    final LockResult lockResult = toolbox.getTaskLockbox().tryLock(
-        task,
-        new LockRequestForNewSegment(
-            lockGranularity,
-            taskLockType,
-            task.getGroupId(),
-            dataSource,
-            tryInterval,
-            partialShardSpec,
-            task.getPriority(),
-            sequenceName,
-            previousSegmentId,
-            skipSegmentLineageCheck
-        )
+    return toolbox.getSegmentAllocationQueue().add(
+        new SegmentAllocateRequest(task, this, MAX_ATTEMPTS)
     );
+  }
 
-    if (lockResult.isRevoked()) {
-      // We had acquired a lock but it was preempted by other locks
-      throw new ISE("The lock for interval[%s] is preempted and no longer valid", tryInterval);
+  @Override
+  public SegmentIdWithShardSpec perform(Task task, TaskActionToolbox toolbox)
+  {
+    if (!task.getDataSource().equals(dataSource)) {
+      throw new IAE("Task dataSource must match action dataSource, [%s] != [%s].", task.getDataSource(), dataSource);
     }
 
-    if (lockResult.isOk()) {
-      final SegmentIdWithShardSpec identifier = lockResult.getNewSegmentId();
-      if (identifier != null) {
-        return identifier;
-      } else {
-        final String msg = StringUtils.format(
-            "Could not allocate pending segment for rowInterval[%s], segmentInterval[%s].",
-            rowInterval,
-            tryInterval
-        );
-        if (logOnFail) {
-          log.error(msg);
-        } else {
-          log.debug(msg);
-        }
-        return null;
-      }
-    } else {
-      final String msg = StringUtils.format(
-          "Could not acquire lock for rowInterval[%s], segmentInterval[%s].",
-          rowInterval,
-          tryInterval
-      );
-      if (logOnFail) {
-        log.error(msg);
-      } else {
-        log.debug(msg);
-      }
-      return null;
+    try {
+      return performAsync(task, toolbox).get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
