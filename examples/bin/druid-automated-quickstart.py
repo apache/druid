@@ -29,11 +29,16 @@ DEFAULT_SERVICES = [
 ]
 
 SERVICE_MEMORY_DISTRIBUTION_WEIGHT = {
-    MIDDLE_MANAGER_SERVICE_NAME: 0.25,
+    MIDDLE_MANAGER_SERVICE_NAME: 0.5,
     ROUTER_SERVICE_NAME: 1,
     COORDINATOR_SERVICE_NAME: 18,
     BROKER_SERVICE_NAME: 28,
-    HISTORICAL_SERVICE_NAME: 50
+    HISTORICAL_SERVICE_NAME: 45
+}
+
+SERVICE_MEMORY_LOWER_BOUND = {
+    MIDDLE_MANAGER_SERVICE_NAME: 64,
+    ROUTER_SERVICE_NAME: 128
 }
 
 SERVICE_MEMORY_HEAP_RATIO = {
@@ -150,8 +155,34 @@ def distribute_memory_over_services(service_config, total_memory):
 
     multiplier = total_memory / memory_weight_sum
 
+    lower_bound_memory_allocation = 0
+    allocated_services = set()
     for key, value in service_instance_map.items():
         allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * multiplier
+        if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
+            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
+            heap_memory = SERVICE_MEMORY_HEAP_RATIO.get(key) * allocated_memory
+            direct_memory = allocated_memory - heap_memory
+            service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
+            lower_bound_memory_allocation += allocated_memory
+            allocated_services.add(key)
+
+    if lower_bound_memory_allocation > 0:
+        # compute the multiplier again for remaing services
+        memory_weight_sum = 0
+        for key, value in service_instance_map.items():
+            if key in allocated_services:
+                continue
+            memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * value
+        multiplier = (total_memory - lower_bound_memory_allocation) / memory_weight_sum
+
+    for key, value in service_instance_map.items():
+        if key in allocated_services:
+            continue
+        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * multiplier
+        if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
+            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
+
         heap_memory = SERVICE_MEMORY_HEAP_RATIO.get(key) * allocated_memory
         direct_memory = allocated_memory - heap_memory
         service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
@@ -191,13 +222,15 @@ def create_supervise_config_file(service_config, service_memory_config, base_con
             else:
                 the_file.write(f'{prefix}{service} bin/run-druid {service} {base_config_path} {service_path} \'{jvm_args}\'\n')
 
-def print_service_config(service_config, base_config_path):
+def print_service_config(service_config, base_config_path, run_zk):
     print('Services to start:')
     for item in service_config:
         if item[1] == "":
             print(f'{item[0]}, using default config from {os.getcwd()}/../{QUICKSTART_BASE_CONFIG_PATH}')
         else:
             print(f'{item[0]}, using config from {base_config_path}/{item[1]}')
+    if run_zk:
+        print(f'zk, using default config from {os.getcwd()}/../conf/zk')
 
 def display_help():
     text = """
@@ -206,9 +239,12 @@ def display_help():
     where options include:
        totalMemory=<memory>
             memory for druid cluster, if totalMemory is not specified
-            80 percent of system memory is used. Note, if service
-            specific jvm config is present,
+            80 percent of system memory is used.
+            Note, if service specific jvm config is present,
             totalMemory shouldn't be specified
+            Integer value is supported with `m` or `g` suffix,
+            denoting memory in mb or gb
+            Memory should be greater than equals 2g
        baseConfigPath=<path>
             relative path to base directory containing common and service specific
             properties to be overridden, this directory must contain `_common`
@@ -276,7 +312,7 @@ def main():
     os.chdir(os.path.dirname(sys.argv[0]))
 
     print(f'Arguments passed: baseConfigPath: "{base_config_path}", totalMemory: "{total_memory}"\n')
-    print_service_config(service_config, base_config_path)
+    print_service_config(service_config, base_config_path, run_zk)
 
     service_memory_config = {}
     if (should_compute_memory(base_config_path, total_memory, service_config)):
