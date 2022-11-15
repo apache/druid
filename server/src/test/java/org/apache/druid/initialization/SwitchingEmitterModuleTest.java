@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -96,7 +95,7 @@ public class SwitchingEmitterModuleTest
           {
             Properties props = new Properties();
             String defaultEmittersValue = "[\"" + DEFAULT_EMITTER_TYPE + "\"]";
-            String emittersValue = "{\"" + FEED_1 + "\":[\""+ FEED_1_EMITTER_TYPE+"\"]}";
+            String emittersValue = "{\"" + FEED_1 + "\":[\"" + FEED_1_EMITTER_TYPE + "\"]}";
             props.put("druid.emitter.switching.defaultEmitters", defaultEmittersValue);
             props.put("druid.emitter.switching.emitters", emittersValue);
             binder.bind(Properties.class).toInstance(props);
