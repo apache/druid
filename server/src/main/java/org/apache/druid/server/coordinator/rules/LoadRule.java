@@ -290,9 +290,7 @@ public abstract class LoadRule implements Rule
 
     if (topCandidate != null) {
       // remove tier for primary replica
-      if (!useRoundRobinAssignment) {
-        strategyCache.remove(topCandidate.getServer().getTier());
-      }
+      strategyCache.remove(topCandidate.getServer().getTier());
       log.info(
           "Assigning 'primary' for segment [%s] to server [%s] in tier [%s]",
           segment.getId(),
