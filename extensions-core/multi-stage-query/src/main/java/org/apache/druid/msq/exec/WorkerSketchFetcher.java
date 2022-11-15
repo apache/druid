@@ -37,13 +37,14 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
  */
 public class WorkerSketchFetcher
 {
-  private static final int DEFAULT_THREAD_COUNT = 10;
+  private static final int DEFAULT_THREAD_COUNT = 4;
   private static final long BYTES_THRESHOLD = 1_000_000_000L;
   private static final long WORKER_THRESHOLD = 100;
 
@@ -107,8 +108,7 @@ public class WorkerSketchFetcher
     final int workerCount = workerTaskIds.size();
     final Set<Integer> finishedWorkers = new HashSet<>();
 
-    for (int i = 0; i < workerCount; i++) {
-      final int workerNo = i;
+    IntStream.range(0, workerCount).forEach(workerNo -> {
       executorService.submit(() -> {
         try {
           ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = workerClient.fetchClusterByStatisticsSnapshot(
@@ -135,7 +135,7 @@ public class WorkerSketchFetcher
           partitionFuture.completeExceptionally(e);
         }
       });
-    }
+    });
     return partitionFuture;
   }
 

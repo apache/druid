@@ -20,7 +20,7 @@
 package org.apache.druid.msq.exec;
 
 /**
- * Mode which dictates how {@link WorkerSketchFetcher} gets sketches from workers.
+ * Mode which dictates how {@link WorkerSketchFetcher} gets sketches for the partition boundaries from workers.
  */
 public enum ClusterStatisticsMergeMode
 {

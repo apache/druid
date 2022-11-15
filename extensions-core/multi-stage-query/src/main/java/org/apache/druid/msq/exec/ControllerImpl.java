@@ -526,6 +526,9 @@ public class ControllerImpl implements Controller
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
     ClusterStatisticsMergeMode clusterStatisticsMergeMode =
         MultiStageQueryContext.getClusterStatisticsMergeMode(task.getQuerySpec().getQuery().context());
+
+    log.debug("Query [%s] cluster statistics merge mode is set to %s.", id(), clusterStatisticsMergeMode);
+
     int statisticsMaxRetainedBytes = WorkerMemoryParameters.createProductionInstanceForController(context.injector())
                                                                     .getPartitionStatisticsMaxRetainedBytes();
     this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode, statisticsMaxRetainedBytes);
