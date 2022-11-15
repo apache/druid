@@ -51,7 +51,7 @@ public interface WorkerClient extends AutoCloseable
    * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
    * This is intended to be used by the {@link WorkerSketchFetcher}.
    */
-  ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+  ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,

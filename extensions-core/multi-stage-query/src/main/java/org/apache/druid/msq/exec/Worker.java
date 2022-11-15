@@ -77,7 +77,7 @@ public interface Worker
   /**
    * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk
    */
-  ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(StageId stageId, long timeChunk)
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
       throws ExecutionException, InterruptedException;
 
   /**

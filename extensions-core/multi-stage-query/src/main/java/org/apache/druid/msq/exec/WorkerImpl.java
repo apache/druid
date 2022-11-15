@@ -581,14 +581,14 @@ public class WorkerImpl implements Worker
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(StageId stageId, long timeChunk)
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
       throws ExecutionException, InterruptedException
   {
     CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
     kernelManipulationQueue.add(kernelHolder -> {
       ClusterByStatisticsSnapshot snapshot = kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
-      ClusterByStatisticsSnapshot singletonSnapshot = snapshot.getSingletonSnapshot(timeChunk);
-      future.complete(singletonSnapshot);
+      ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshot.getSnapshotForTimeChunk(timeChunk);
+      future.complete(snapshotForTimeChunk);
     });
     return future.get();
   }

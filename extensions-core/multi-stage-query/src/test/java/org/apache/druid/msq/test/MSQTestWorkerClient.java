@@ -61,7 +61,7 @@ public class MSQTestWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
@@ -69,7 +69,7 @@ public class MSQTestWorkerClient implements WorkerClient
   ) throws ExecutionException, InterruptedException
   {
     StageId stageId = new StageId(queryId, stageNumber);
-    return inMemoryWorkers.get(workerTaskId).fetchSingletonStatisticsSnapshot(stageId, timeChunk);
+    return inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
   }
 
   @Override

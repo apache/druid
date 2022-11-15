@@ -126,14 +126,14 @@ public class IndexerWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
   ) throws ExecutionException, InterruptedException
   {
-    String path = StringUtils.format("/singletonKeyStatistics/%s/%d/%d",
+    String path = StringUtils.format("/keyStatisticsForTimeChunk/%s/%d/%d",
                                      StringUtils.urlEncode(queryId),
                                      stageNumber,
                                      timeChunk);

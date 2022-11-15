@@ -58,7 +58,7 @@ public class ClusterByStatisticsSnapshot
     return buckets;
   }
 
-  public ClusterByStatisticsSnapshot getSingletonSnapshot(long timeChunk)
+  public ClusterByStatisticsSnapshot getSnapshotForTimeChunk(long timeChunk)
   {
     Bucket bucket = buckets.get(timeChunk);
     return new ClusterByStatisticsSnapshot(ImmutableMap.of(timeChunk, bucket), null);

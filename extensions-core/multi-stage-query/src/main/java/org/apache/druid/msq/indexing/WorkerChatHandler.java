@@ -209,7 +209,7 @@ public class WorkerChatHandler implements ChatHandler
   }
 
   @POST
-  @Path("/singletonKeyStatistics/{queryId}/{stageNumber}/{timeChunk}")
+  @Path("/keyStatisticsForTimeChunk/{queryId}/{stageNumber}/{timeChunk}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpSketch(
@@ -220,10 +220,10 @@ public class WorkerChatHandler implements ChatHandler
   )
   {
     ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
-    ClusterByStatisticsSnapshot singletonSnapshot;
+    ClusterByStatisticsSnapshot snapshotForTimeChunk;
     try {
       StageId stageId = new StageId(queryId, stageNumber);
-      singletonSnapshot = worker.fetchSingletonStatisticsSnapshot(stageId, timeChunk);
+      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
     }
     catch (ExecutionException | InterruptedException e) {
       return Response
@@ -231,7 +231,7 @@ public class WorkerChatHandler implements ChatHandler
           .build();
     }
     return Response.status(Response.Status.ACCEPTED)
-                   .entity(singletonSnapshot)
+                   .entity(snapshotForTimeChunk)
                    .build();
   }
 

@@ -194,8 +194,8 @@ public class WorkerSketchFetcher
         for (int workerNo : workerIdsWithTimeChunk) {
           executorService.submit(() -> {
             try {
-              ClusterByStatisticsSnapshot singletonStatisticsSnapshot =
-                  workerClient.fetchSingletonStatisticsSnapshot(
+              ClusterByStatisticsSnapshot snapshotForTimeChunk =
+                  workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
                       workerTaskIds.get(workerNo),
                       stageDefinition.getId().getQueryId(),
                       stageDefinition.getStageNumber(),
@@ -206,7 +206,7 @@ public class WorkerSketchFetcher
                 return;
               }
               synchronized (mergedStatisticsCollector) {
-                mergedStatisticsCollector.addAll(singletonStatisticsSnapshot);
+                mergedStatisticsCollector.addAll(snapshotForTimeChunk);
                 finishedWorkers.add(workerNo);
 
                 if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {

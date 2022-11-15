@@ -65,14 +65,14 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchSingletonStatisticsSnapshot(
+  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
   ) throws ExecutionException, InterruptedException
   {
-    return client.fetchSingletonStatisticsSnapshot(workerTaskId, queryId, stageNumber, timeChunk);
+    return client.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, queryId, stageNumber, timeChunk);
   }
 
   @Override
