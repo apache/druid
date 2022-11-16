@@ -84,6 +84,7 @@ public class DruidInjectorBuilder
     this.modulesConfig = from.modulesConfig;
     this.jsonMapper = from.jsonMapper;
     this.smileMapper = from.smileMapper;
+    this.ignoreLoadScopes = from.ignoreLoadScopes;
   }
 
   /**
