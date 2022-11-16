@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
@@ -95,8 +93,6 @@ public class MSQIndexingModule implements DruidModule
 {
   static final String BASE_MSQ_KEY = "druid.msq";
 
-  private Set<NodeRole> nodeRoles;
-
   public static final List<Class<? extends MSQFault>> FAULT_CLASSES = ImmutableList.of(
       BroadcastTablesTooLargeFault.class,
       CanceledFault.class,
@@ -126,12 +122,6 @@ public class MSQIndexingModule implements DruidModule
       WorkerFailedFault.class,
       WorkerRpcFailedFault.class
   );
-
-  @Inject
-  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
-  {
-    this.nodeRoles = nodeRoles;
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -198,7 +188,7 @@ public class MSQIndexingModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, Injector injector)
+  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
       // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected
