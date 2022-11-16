@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.actions;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -412,7 +411,6 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
      * It is to avoid races between a new request being added just when the batch
      * is being processed.
      */
-    @GuardedBy("this")
     private final Map<SegmentAllocateRequest, CompletableFuture<SegmentIdWithShardSpec>>
         requestToFuture = new HashMap<>();
 
