@@ -240,7 +240,8 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public Object getObjectOrDictionaryId()
         {
-          return getRow();
+          //For multi value dimensions, temporarily select the dictionary ID of the first index
+          return getRow().get(0);
         }
 
         @Override
