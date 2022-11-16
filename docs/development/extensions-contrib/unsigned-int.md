@@ -1,6 +1,6 @@
 ---
 id: unsigned-int
-title: "Un-signed Integer Column Type"
+title: "Unsigned Integer Column Type"
 ---
 
 <!--
@@ -22,13 +22,13 @@ title: "Un-signed Integer Column Type"
   ~ under the License.
   -->
 
-Apache Druid Extension to utilize an un-signed int column.  
+Apache Druid Extension to utilize an unsigned int column.  
 
 Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it has not been tested yet on a wide variety of long-running Druid clusters.
 
 ## How it works
 
-Only store a 4 byte un-signed integer instead of a long column when you need your columns don't require you to store a long.  Aggregations still happen as long values, only the data stored on disk is as an un-signed integer.
+Only store a 4 byte unsigned integer instead of a long column when you need your columns don't require you to store a long.  Aggregations still happen as long values, only the data stored on disk is as an unsigned integer.
 
 ## Configuration
 

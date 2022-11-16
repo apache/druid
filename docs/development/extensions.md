@@ -98,7 +98,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 |prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (https://prometheus.io/)|[link](./extensions-contrib/prometheus.md)|
 |kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-contrib/k8s-jobs.md)|
-|unsigned-int-extensions|Support for an un-signed integer column|[link](../development/extensions-contrib/unsigned-int.md)|
+|unsigned-int-extensions|Support for an unsigned integer column|[link](../development/extensions-contrib/unsigned-int.md)|
 
 ## Promoting community extensions to core extensions
 
