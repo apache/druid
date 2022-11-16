@@ -30,7 +30,6 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.ExecutionException;
 
 public interface Worker
 {
@@ -73,14 +72,13 @@ public interface Worker
    * Returns the statistics snapshot for the given stageId. This is called from {@link WorkerSketchFetcher} under
    * PARALLEL OR AUTO modes.
    */
-  ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId) throws ExecutionException, InterruptedException;
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId);
 
   /**
    * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk.
    * This is called from {@link WorkerSketchFetcher} under SEQUENTIAL OR AUTO modes.
    */
-  ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
-      throws ExecutionException, InterruptedException;
+  ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk);
 
   /**
    * Called when the worker chat handler recieves the result partition boundaries for a particular stageNumber

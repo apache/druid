@@ -48,7 +48,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.ExecutionException;
 
 public class WorkerChatHandler implements ChatHandler
 {
@@ -193,16 +192,8 @@ public class WorkerChatHandler implements ChatHandler
   {
     ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
     ClusterByStatisticsSnapshot clusterByStatisticsSnapshot;
-    try {
-      StageId stageId = new StageId(queryId, stageNumber);
-      clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
-    }
-    catch (ExecutionException | InterruptedException e) {
-      return Response
-          .status(Response.Status.INTERNAL_SERVER_ERROR)
-          .build();
-
-    }
+    StageId stageId = new StageId(queryId, stageNumber);
+    clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
     return Response.status(Response.Status.ACCEPTED)
                    .entity(clusterByStatisticsSnapshot)
                    .build();
@@ -221,15 +212,8 @@ public class WorkerChatHandler implements ChatHandler
   {
     ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
     ClusterByStatisticsSnapshot snapshotForTimeChunk;
-    try {
-      StageId stageId = new StageId(queryId, stageNumber);
-      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
-    }
-    catch (ExecutionException | InterruptedException e) {
-      return Response
-          .status(Response.Status.INTERNAL_SERVER_ERROR)
-          .build();
-    }
+    StageId stageId = new StageId(queryId, stageNumber);
+    snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
     return Response.status(Response.Status.ACCEPTED)
                    .entity(snapshotForTimeChunk)
                    .build();

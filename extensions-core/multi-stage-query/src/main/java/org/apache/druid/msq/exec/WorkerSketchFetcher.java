@@ -124,9 +124,9 @@ public class WorkerSketchFetcher
             );
         partitionFuture.whenComplete((result, exception) -> snapshotFuture.cancel(true));
 
-        synchronized (mergedStatisticsCollector) {
-          try {
-            ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
+        try {
+          ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
+          synchronized (mergedStatisticsCollector) {
             mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
             finishedWorkers.add(workerNo);
 
@@ -134,7 +134,9 @@ public class WorkerSketchFetcher
               partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
             }
           }
-          catch (Exception e) {
+        }
+        catch (Exception e) {
+          synchronized (mergedStatisticsCollector) {
             partitionFuture.completeExceptionally(e);
           }
         }
@@ -212,9 +214,9 @@ public class WorkerSketchFetcher
                 );
             partitionFuture.whenComplete((result, exception) -> snapshotFuture.cancel(true));
 
-            synchronized (mergedStatisticsCollector) {
-              try {
-                ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
+            try {
+              ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
+              synchronized (mergedStatisticsCollector) {
                 mergedStatisticsCollector.addAll(snapshotForTimeChunk);
                 finishedWorkers.add(workerNo);
 
@@ -240,7 +242,9 @@ public class WorkerSketchFetcher
                   }
                 }
               }
-              catch (Exception e) {
+            }
+            catch (Exception e) {
+              synchronized (mergedStatisticsCollector) {
                 partitionFuture.completeExceptionally(e);
               }
             }

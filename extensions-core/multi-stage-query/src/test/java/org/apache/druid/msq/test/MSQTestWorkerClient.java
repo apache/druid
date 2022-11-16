@@ -34,7 +34,6 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
@@ -60,16 +59,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     StageId stageId = new StageId(queryId, stageNumber);
-    try {
-      return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
-    }
-    catch (ExecutionException e) {
-      // TODO: fix
-      throw new RuntimeException(e);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
   }
 
   @Override
@@ -81,18 +71,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     StageId stageId = new StageId(queryId, stageNumber);
-    try {
-      return Futures.immediateFuture(
-          inMemoryWorkers.get(workerTaskId)
-                         .fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
-      );
-    }
-    catch (ExecutionException e) {
-      throw new RuntimeException(e);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk));
   }
 
   @Override

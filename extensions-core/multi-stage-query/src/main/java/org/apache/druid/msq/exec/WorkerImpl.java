@@ -136,10 +136,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -162,6 +160,7 @@ public class WorkerImpl implements Worker
   private final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue = new LinkedBlockingDeque<>();
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -571,26 +570,15 @@ public class WorkerImpl implements Worker
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
-      throws ExecutionException, InterruptedException
   {
-    CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
-    kernelManipulationQueue.add(kernelHolder -> {
-      future.complete(kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot());
-    });
-    return future.get();
+    return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
-      throws ExecutionException, InterruptedException
   {
-    CompletableFuture<ClusterByStatisticsSnapshot> future = new CompletableFuture<>();
-    kernelManipulationQueue.add(kernelHolder -> {
-      ClusterByStatisticsSnapshot snapshot = kernelHolder.stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
-      ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshot.getSnapshotForTimeChunk(timeChunk);
-      future.complete(snapshotForTimeChunk);
-    });
-    return future.get();
+    ClusterByStatisticsSnapshot snapshot = stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+    return snapshot.getSnapshotForTimeChunk(timeChunk);
   }
 
   @Override
@@ -1304,9 +1292,8 @@ public class WorkerImpl implements Worker
     }
   }
 
-  private static class KernelHolder
+  private class KernelHolder
   {
-    private final Map<StageId, WorkerStageKernel> stageKernelMap = new HashMap<>();
     private boolean done = false;
 
     public Map<StageId, WorkerStageKernel> getStageKernelMap()
