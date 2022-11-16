@@ -208,17 +208,17 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-      name: 'useRoundRobinSegmentAssignment',
-      type: 'boolean',
-      defaultValue: false,
-      info: (
-        <>
-          Boolean flag for whether segments should be assigned to historicals in a round-robin fashion.
-          If enabled, this can speed up initial segment loading leaving segment balancing to make
-          cost-based decisions and find the optimal location of a segment.
-        </>
-      ),
-    },
+    name: 'useRoundRobinSegmentAssignment',
+    type: 'boolean',
+    defaultValue: false,
+    info: (
+      <>
+        Boolean flag for whether segments should be assigned to historicals in a round-robin
+        fashion. If enabled, this can speed up initial segment loading leaving segment balancing to
+        make cost-based decisions and find the optimal location of a segment.
+      </>
+    ),
+  },
   {
     name: 'percentOfSegmentsToConsiderPerMove',
     type: 'number',
