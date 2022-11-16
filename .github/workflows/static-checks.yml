@@ -32,6 +32,7 @@ env:
   MVN: mvn -B
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
+  MAVEN_OPTS: -Xmx3000m
 
 jobs:
   build:
@@ -46,7 +47,6 @@ jobs:
           cache: 'maven'
       - run: |
           echo 'Running Maven install...' &&
-          MAVEN_OPTS='-Xmx3000m' \
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
@@ -174,7 +174,7 @@ jobs:
           java-version: '8'
           cache: 'maven'
       - run: |-
-          MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${{ matrix.HADOOP_PROFILE }} ||
+          ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${{ matrix.HADOOP_PROFILE }} ||
           ./.github/scripts/display_dependency_analysis_error_message.sh
 
   openjdk11_strict_compilation:
@@ -191,4 +191,4 @@ jobs:
         # errorprone requires JDK 11
         # Strict compilation requires more than 2 GB
       - run: |
-          MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+          ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
