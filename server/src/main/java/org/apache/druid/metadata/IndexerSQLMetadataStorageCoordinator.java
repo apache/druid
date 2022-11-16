@@ -836,7 +836,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     //    end are used to determine if the found segment is valid or not)
     // 2. IN filters on sequence_name and sequence_prev_id might perform worse than individual SELECTs?
     // 3. IN filter on sequence_name alone might be a feasible option worth evaluating
-    final String sql = String.format(
+    final String sql = StringUtils.format(
         "SELECT payload FROM %s WHERE "
         + "dataSource = :dataSource AND "
         + "sequence_name = :sequence_name AND "

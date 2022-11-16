@@ -312,6 +312,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
           requestKey.skipSegmentLineageCheck,
           requestKey.lockGranularity
       );
+      emitBatchMetric("task/action/batch/retries", 1L, requestKey);
 
       successCount += updateBatchWithResults(requestBatch, requests, results);
     }
@@ -379,6 +380,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, key.dataSource);
+    metricBuilder.setDimension(DruidMetrics.INTERVAL, key.rowInterval.toString());
     emitter.emit(metricBuilder.build(metric, value));
   }
 
@@ -448,7 +450,6 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     synchronized void handleResult(SegmentAllocateResult result, SegmentAllocateRequest request)
     {
       request.incrementAttempts();
-      emitTaskMetric("task/action/attempt/count", request.getAttempts(), request);
 
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
@@ -464,6 +465,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
             request.getAttempts()
         );
       } else {
+        emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
             "Removing allocation action [%s] from batch after [%d] failed attempts.",
             request.getAction(),
