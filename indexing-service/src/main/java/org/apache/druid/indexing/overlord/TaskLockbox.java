@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -1475,7 +1476,7 @@ public class TaskLockbox
     void markFailed(String msgFormat, Object... args)
     {
       list.markCompleted(this);
-      result = new SegmentAllocateResult(null, String.format(msgFormat, args));
+      result = new SegmentAllocateResult(null, StringUtils.format(msgFormat, args));
     }
 
     void markSucceeded()
