@@ -82,13 +82,12 @@ public class WorkerSketchFetcher
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
-          // If there is no time cluserting, there is no scope for sequential merge
+          // If there is no time clustering, there is no scope for sequential merge
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
         } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
           return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
-        } else {
-          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
         }
+        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       default:
         throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
     }
