@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -30,7 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class ColumnarValueUnnestCursor implements UnnestCursor
+public class ColumnarValueUnnestCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final ColumnSelectorFactory baseColumSelectorFactory;
@@ -45,13 +46,14 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
 
   public ColumnarValueUnnestCursor(
       Cursor cursor,
+      ColumnSelectorFactory baseColumSelectorFactory,
       String columnName,
       String outputColumnName,
       LinkedHashSet<String> allowSet
   )
   {
     this.baseCursor = cursor;
-    this.baseColumSelectorFactory = cursor.getColumnSelectorFactory();
+    this.baseColumSelectorFactory = baseColumSelectorFactory;
     this.columnValueSelector = this.baseColumSelectorFactory.makeColumnValueSelector(columnName);
     this.columnName = columnName;
     this.index = 0;
@@ -68,7 +70,10 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
-        return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
+        if (!outputName.equals(dimensionSpec.getDimension())) {
+          return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
+        }
+        return baseColumSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
       }
 
       @Override
@@ -112,7 +117,7 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            baseColumSelectorFactory.makeColumnValueSelector(columnName).inspectRuntimeShape(inspector);
+            columnValueSelector.inspectRuntimeShape(inspector);
           }
 
           @Override
@@ -179,7 +184,7 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
   @Override
   public boolean isDone()
   {
-    if (needInitialization && baseCursor.isDone() == false) {
+    if (needInitialization && !baseCursor.isDone()) {
       initialize();
     }
     return baseCursor.isDone();
@@ -188,7 +193,7 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
   @Override
   public boolean isDoneOrInterrupted()
   {
-    if (needInitialization && baseCursor.isDoneOrInterrupted() == false) {
+    if (needInitialization && !baseCursor.isDoneOrInterrupted()) {
       initialize();
     }
     return baseCursor.isDoneOrInterrupted();
@@ -202,61 +207,73 @@ public class ColumnarValueUnnestCursor implements UnnestCursor
     baseCursor.reset();
   }
 
-  @Override
+  private void getNextRow(boolean firstRun)
+  {
+    currentVal = this.columnValueSelector.getObject();
+    if (currentVal == null) {
+      if (!firstRun) {
+        unnestListForCurrentRow = new ArrayList<>();
+      }
+      unnestListForCurrentRow.add(null);
+    } else {
+      if (currentVal instanceof List) {
+        unnestListForCurrentRow = (List<Object>) currentVal;
+      } else if (currentVal.getClass().equals(String.class)) {
+        if (!firstRun) {
+          unnestListForCurrentRow = new ArrayList<>();
+        }
+        unnestListForCurrentRow.add(currentVal);
+      }
+    }
+  }
+
+  /**
+   * This initializes the unnest cursor and creates daa=ta structures
+   * to start iterating over the values to be unnested.
+   * This would also create a bitset for dictonary encoded columns to
+   * check for matching values specified in allowedList of UnnestDataSource.
+   */
   public void initialize()
   {
-    if (columnValueSelector != null) {
-      this.currentVal = this.columnValueSelector.getObject();
-      this.unnestListForCurrentRow = new ArrayList<>();
-      if (currentVal == null) {
-        unnestListForCurrentRow = new ArrayList<>();
-        unnestListForCurrentRow.add(null);
-      } else {
-        if (currentVal instanceof List) {
-          unnestListForCurrentRow = (List<Object>) currentVal;
-        } else if (currentVal.getClass().equals(String.class)) {
-          unnestListForCurrentRow.add(currentVal);
-        }
-      }
-      if (allowSet != null) {
-        if (!allowSet.isEmpty()) {
-          if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
-            advance();
-          }
+    this.unnestListForCurrentRow = new ArrayList<>();
+    getNextRow(needInitialization);
+    if (allowSet != null) {
+      if (!allowSet.isEmpty()) {
+        if (!allowSet.contains((String) unnestListForCurrentRow.get(index))) {
+          advance();
         }
       }
     }
     needInitialization = false;
   }
 
-  @Override
+  /**
+   * This advances the cursor to move to the next element to be unnested.
+   * When the last element in a row is unnested, it is also responsible
+   * to move the base cursor to the next row for unnesting and repopulates
+   * the data structures, created during initialize(), to point to the new row
+   */
+
   public void advanceAndUpdate()
   {
     if (unnestListForCurrentRow.isEmpty() || index >= unnestListForCurrentRow.size() - 1) {
       index = 0;
       baseCursor.advance();
-      // get the next row
       if (!baseCursor.isDone()) {
-        currentVal = columnValueSelector.getObject();
-        if (currentVal == null) {
-          unnestListForCurrentRow = new ArrayList<>();
-          unnestListForCurrentRow.add(null);
-        } else {
-          if (currentVal instanceof List) {
-            //convert array into array list
-            unnestListForCurrentRow = (List<Object>) currentVal;
-          } else if (currentVal instanceof String) {
-            unnestListForCurrentRow = new ArrayList<>();
-            unnestListForCurrentRow.add(currentVal);
-          }
-        }
+        getNextRow(needInitialization);
       }
     } else {
       index++;
     }
   }
 
-  @Override
+  /**
+   * This advances the unnest cursor in cases where an allowList is specified
+   * and the current value at the unnest cursor is not in the allowList.
+   * The cursor in such cases is moved till the next match is found.
+   *
+   * @return a boolean to indicate whether to stay or move cursor
+   */
   public boolean matchAndProceed()
   {
     boolean matchStatus;

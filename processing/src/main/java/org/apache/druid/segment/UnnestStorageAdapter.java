@@ -69,8 +69,8 @@ public class UnnestStorageAdapter implements StorageAdapter
   )
   {
     Filter updatedFilter;
-    final InDimFilter allowListFilters;
     if (allowSet != null && !allowSet.isEmpty()) {
+      final InDimFilter allowListFilters;
       allowListFilters = new InDimFilter(dimensionToUnnest, allowSet);
       if (filter != null) {
         updatedFilter = new AndFilter(Arrays.asList(filter, allowListFilters));
@@ -94,15 +94,14 @@ public class UnnestStorageAdapter implements StorageAdapter
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
-          UnnestCursor retUnnestCursor;
           ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
           if (capabilities.isDictionaryEncoded() == ColumnCapabilities.Capable.TRUE
               && capabilities.areDictionaryValuesUnique() == ColumnCapabilities.Capable.TRUE) {
-            retUnnestCursor = new DimensionUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
+            retVal = new DimensionUnnestCursor(retVal, retVal.getColumnSelectorFactory(), dimensionToUnnest, outputColumnName, allowSet);
           } else {
-            retUnnestCursor = new ColumnarValueUnnestCursor(retVal, dimensionToUnnest, outputColumnName, allowSet);
+            retVal = new ColumnarValueUnnestCursor(retVal, retVal.getColumnSelectorFactory(), dimensionToUnnest, outputColumnName, allowSet);
           }
-          return retUnnestCursor;
+          return retVal;
         }
     );
   }

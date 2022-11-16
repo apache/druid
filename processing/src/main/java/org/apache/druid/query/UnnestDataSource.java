@@ -130,7 +130,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
-    return base.isConcrete();
+    return false;
   }
 
   @Override
@@ -139,20 +139,27 @@ public class UnnestDataSource implements DataSource
       AtomicLong cpuTimeAccumulator
   )
   {
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
+        query,
+        cpuTimeAccumulator
+    );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> {
           if (column == null) {
-            return Function.identity();
+            return segmentMapFn;
           } else if (column.isEmpty()) {
-            return Function.identity();
+            return segmentMapFn;
           } else {
-            return baseSegment ->
-                new UnnestSegmentReference(
-                    baseSegment,
-                    column,
-                    outputName,
-                    allowList
+            return
+                segmentMapFn.andThen(
+                    baseSegment ->
+                        new UnnestSegmentReference(
+                            baseSegment,
+                            column,
+                            outputName,
+                            allowList
+                        )
                 );
           }
         }
@@ -163,7 +170,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return null;
+    return newSource;
   }
 
   @Override

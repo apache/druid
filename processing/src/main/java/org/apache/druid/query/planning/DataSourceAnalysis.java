@@ -113,22 +113,22 @@ public class DataSourceAnalysis
     Query<?> baseQuery = null;
     DataSource current = dataSource;
 
-    while (current instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) current).getQuery();
+    while (current instanceof QueryDataSource || current instanceof UnnestDataSource) {
+      if (current instanceof QueryDataSource) {
+        final Query<?> subQuery = ((QueryDataSource) current).getQuery();
 
-      if (!(subQuery instanceof BaseQuery)) {
-        // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
-        // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
-        throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+        if (!(subQuery instanceof BaseQuery)) {
+          // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
+          // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+          throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+        }
+
+        baseQuery = subQuery;
+        current = subQuery.getDataSource();
+      } else {
+        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+        current = unnestDataSource.getBase();
       }
-
-      baseQuery = subQuery;
-      current = subQuery.getDataSource();
-    }
-
-    while (current instanceof UnnestDataSource) {
-      final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-      current = unnestDataSource.getBase();
     }
 
     if (current instanceof JoinDataSource) {

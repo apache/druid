@@ -40,7 +40,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   public void test_list_unnest_cursors()
   {
     ListCursor listCursor = new ListCursor();
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int j = 0;
@@ -67,7 +73,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -95,7 +107,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -126,7 +144,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -154,7 +178,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -178,7 +208,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -206,7 +242,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -217,6 +259,47 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
       unnestCursor.advance();
     }
     Assert.assertEquals(k, 10);
+  }
+
+  @Test
+  public void test_list_unnestof_unnest_cursors_user_supplied_list_three_level_array()
+  {
+    List<Object> inputList = Arrays.asList(
+        Arrays.asList("a", "b", "c"),
+        Arrays.asList("e", "f", "g", "h", "i"),
+        Arrays.asList("j", Arrays.asList("a", "b"))
+    );
+
+    List<Object> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", "j", "a", "b");
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    ColumnarValueUnnestCursor childCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
+    ColumnarValueUnnestCursor parentCursor = new ColumnarValueUnnestCursor(
+        childCursor,
+        childCursor.getColumnSelectorFactory(),
+        OUTPUT_NAME,
+        "tmp-out",
+        IGNORE_SET
+    );
+    ColumnValueSelector unnestColumnValueSelector = parentCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector("tmp-out");
+    int k = 0;
+    while (!parentCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      Assert.assertEquals(valueSelectorVal.toString(), expectedResults.get(k).toString());
+      k++;
+      parentCursor.advance();
+    }
+    Assert.assertEquals(k, 11);
   }
 
   @Test
@@ -235,7 +318,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -267,7 +356,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -299,7 +394,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     DimensionSelector unnestDimSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(
         DefaultDimensionSpec.of("dummy"));
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
@@ -333,7 +434,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET1);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET1
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -365,7 +472,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -393,7 +506,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -421,7 +540,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
 
@@ -452,7 +577,13 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     ListCursor listCursor = new ListCursor(inputList);
 
     //Create unnest cursor
-    UnnestCursor unnestCursor = new ColumnarValueUnnestCursor(listCursor, "dummy", OUTPUT_NAME, IGNORE_SET);
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     DimensionSelector dimensionSelector = unnestCursor.getColumnSelectorFactory()

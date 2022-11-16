@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.LinkedHashSet;
 
-public class DimensionUnnestCursor implements UnnestCursor
+public class DimensionUnnestCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final DimensionSelector dimSelector;
@@ -45,23 +45,25 @@ public class DimensionUnnestCursor implements UnnestCursor
   private int index;
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
+  private SingleIndexInts indexIntsForRow;
 
   public DimensionUnnestCursor(
       Cursor cursor,
+      ColumnSelectorFactory baseColumnSelectorFactory,
       String columnName,
       String outputColumnName,
       LinkedHashSet<String> allowSet
   )
   {
     this.baseCursor = cursor;
-    this.baseColumnSelectorFactory = cursor.getColumnSelectorFactory();
+    this.baseColumnSelectorFactory = baseColumnSelectorFactory;
     this.dimSelector = this.baseColumnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
     this.columnName = columnName;
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
     this.allowSet = allowSet;
-    allowedBitSet = new BitSet();
+    this.allowedBitSet = new BitSet();
   }
 
   @Override
@@ -82,18 +84,36 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public IndexedInts getRow()
           {
-            return dimSelector.getRow();
+            return indexIntsForRow;
           }
 
           @Override
           public ValueMatcher makeValueMatcher(@Nullable String value)
           {
+            final int idForLookup = idLookup().lookupId(value);
+            if (idForLookup < 0) {
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches()
+                {
+                  return false;
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
+
+                }
+              };
+            }
+
             return new ValueMatcher()
             {
               @Override
               public boolean matches()
               {
-                return lookupName(indexedIntsForCurrentRow.get(index)).equals(value);
+                return idForLookup == indexedIntsForCurrentRow.get(index);
               }
 
               @Override
@@ -113,25 +133,19 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            baseCursor.getColumnSelectorFactory()
-                      .makeDimensionSelector(actualDimensionSpec)
-                      .inspectRuntimeShape(inspector);
+            dimSelector.inspectRuntimeShape(inspector);
           }
 
           @Nullable
           @Override
           public Object getObject()
           {
-            if (indexedIntsForCurrentRow != null) {
-              if (allowedBitSet.isEmpty()) {
-                if (allowSet == null || allowSet.isEmpty()) {
-                  return lookupName(indexedIntsForCurrentRow.get(index));
-                }
-              } else if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
+            if (allowedBitSet.isEmpty()) {
+              if (allowSet == null || allowSet.isEmpty()) {
                 return lookupName(indexedIntsForCurrentRow.get(index));
               }
-            } else {
-              return null;
+            } else if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
+              return lookupName(indexedIntsForCurrentRow.get(index));
             }
             return null;
           }
@@ -145,7 +159,10 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public int getValueCardinality()
           {
-            return 0;
+            if (!allowedBitSet.isEmpty()) {
+              return allowedBitSet.cardinality();
+            }
+            return dimSelector.getValueCardinality();
           }
 
           @Nullable
@@ -158,7 +175,7 @@ public class DimensionUnnestCursor implements UnnestCursor
           @Override
           public boolean nameLookupPossibleInAdvance()
           {
-            return false;
+            return dimSelector.nameLookupPossibleInAdvance();
           }
 
           @Nullable
@@ -176,74 +193,7 @@ public class DimensionUnnestCursor implements UnnestCursor
         if (!outputName.equals(columnName)) {
           return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
         }
-        return new ColumnValueSelector()
-        {
-          @Override
-          public double getDouble()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).doubleValue();
-          }
-
-          @Override
-          public float getFloat()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).floatValue();
-          }
-
-          @Override
-          public long getLong()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).longValue();
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            baseColumnSelectorFactory.makeColumnValueSelector(columnName).inspectRuntimeShape(inspector);
-          }
-
-          @Override
-          public boolean isNull()
-          {
-            return getObject() == null;
-          }
-
-          @Nullable
-          @Override
-          public Object getObject()
-          {
-            if (indexedIntsForCurrentRow != null) {
-              if (allowedBitSet.isEmpty()) {
-                if (allowSet == null || allowSet.isEmpty()) {
-                  return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
-                }
-              } else {
-                if (allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
-                  return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
-                }
-              }
-            }
-            return null;
-          }
-
-          @Override
-          public Class classOfObject()
-          {
-            return Object.class;
-          }
-        };
+        return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
       }
 
       @Nullable
@@ -282,7 +232,7 @@ public class DimensionUnnestCursor implements UnnestCursor
   @Override
   public boolean isDone()
   {
-    if (needInitialization && baseCursor.isDone() == false) {
+    if (needInitialization && !baseCursor.isDone()) {
       initialize();
     }
     return baseCursor.isDone();
@@ -291,7 +241,7 @@ public class DimensionUnnestCursor implements UnnestCursor
   @Override
   public boolean isDoneOrInterrupted()
   {
-    if (needInitialization && baseCursor.isDoneOrInterrupted() == false) {
+    if (needInitialization && !baseCursor.isDoneOrInterrupted()) {
       initialize();
     }
     return baseCursor.isDoneOrInterrupted();
@@ -305,55 +255,46 @@ public class DimensionUnnestCursor implements UnnestCursor
     baseCursor.reset();
   }
 
-  @Override
+
   public void initialize()
   {
-    if (dimSelector != null) {
-      IdLookup idLookup = dimSelector.idLookup();
-      if (allowSet != null && !allowSet.isEmpty() && idLookup != null) {
-        for (String s : allowSet) {
-          if (idLookup.lookupId(s) >= 0) {
-            allowedBitSet.set(idLookup.lookupId(s));
-          }
+    IdLookup idLookup = dimSelector.idLookup();
+    this.indexIntsForRow = new SingleIndexInts();
+    if (allowSet != null && !allowSet.isEmpty() && idLookup != null) {
+      for (String s : allowSet) {
+        if (idLookup.lookupId(s) >= 0) {
+          allowedBitSet.set(idLookup.lookupId(s));
         }
       }
-      if (dimSelector.getObject() != null) {
-        this.indexedIntsForCurrentRow = dimSelector.getRow();
-      }
-      if (!allowedBitSet.isEmpty()) {
-        if (!allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
-          advance();
-        }
+    }
+    if (dimSelector.getObject() != null) {
+      this.indexedIntsForCurrentRow = dimSelector.getRow();
+    }
+    if (!allowedBitSet.isEmpty()) {
+      if (!allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
+        advance();
       }
     }
     needInitialization = false;
   }
 
-  @Override
+
   public void advanceAndUpdate()
   {
-    if (indexedIntsForCurrentRow != null) {
-      if (this.dimSelector != null) {
-        if (index >= indexedIntsForCurrentRow.size() - 1) {
-          if (!baseCursor.isDone()) {
-            baseCursor.advanceUninterruptibly();
-          }
-          if (!baseCursor.isDone()) {
-            indexedIntsForCurrentRow = dimSelector.getRow();
-          }
-          index = 0;
-        } else {
-          ++index;
-        }
-      }
-    } else {
+    if (index >= indexedIntsForCurrentRow.size() - 1) {
       if (!baseCursor.isDone()) {
         baseCursor.advanceUninterruptibly();
       }
+      if (!baseCursor.isDone()) {
+        indexedIntsForCurrentRow = dimSelector.getRow();
+      }
+      index = 0;
+    } else {
+      ++index;
     }
   }
 
-  @Override
+
   public boolean matchAndProceed()
   {
     boolean matchStatus;
@@ -363,5 +304,27 @@ public class DimensionUnnestCursor implements UnnestCursor
       matchStatus = allowedBitSet.get(indexedIntsForCurrentRow.get(index));
     }
     return !baseCursor.isDone() && !matchStatus;
+  }
+
+  private class SingleIndexInts implements IndexedInts
+  {
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
+    }
+
+    @Override
+    public int size()
+    {
+      return 1;
+    }
+
+    @Override
+    public int get(int idx)
+    {
+      return indexedIntsForCurrentRow.get(index);
+    }
   }
 }
