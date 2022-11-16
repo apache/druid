@@ -45,11 +45,10 @@ import java.util.stream.IntStream;
 public class WorkerSketchFetcher
 {
   private static final int DEFAULT_THREAD_COUNT = 4;
-
   // If the combined size of worker sketches is more than this threshold, SEQUENTIAL merging mode is used.
-  public static final long BYTES_THRESHOLD = 1_000_000_000L;
+  private static final long BYTES_THRESHOLD = 1_000_000_000L;
   // If there are more workers than this threshold, SEQUENTIAL merging mode is used.
-  public static final long WORKER_THRESHOLD = 100;
+  private static final long WORKER_THRESHOLD = 100;
 
   private final ClusterStatisticsMergeMode clusterStatisticsMergeMode;
   private final int statisticsMaxRetainedBytes;
@@ -111,6 +110,7 @@ public class WorkerSketchFetcher
     final ClusterByStatisticsCollector mergedStatisticsCollector =
         stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
     final int workerCount = workerTaskIds.size();
+    // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
 
     // Submit a task for each worker to fetch statistics
@@ -199,6 +199,7 @@ public class WorkerSketchFetcher
         // Create a new key statistics collector to merge worker sketches into
         ClusterByStatisticsCollector mergedStatisticsCollector =
             stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
+        // Guarded by synchronized mergedStatisticsCollector
         Set<Integer> finishedWorkers = new HashSet<>();
 
         // Submits a task for every worker which has a certain time chunk

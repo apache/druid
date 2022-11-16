@@ -209,7 +209,7 @@ The following table lists the context parameters for the MSQ task engine:
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.
 
 If a query requires key statistics to generate partition boundaries, key statistics are gathered by the workers while
-reading rows from the datasource. These statistics must be transfered to the controller to be merged together.
+reading rows from the datasource. These statistics must be transferred to the controller to be merged together.
 `clusterStatisticsMergeMode` configures the way in which this happens.
 
 `PARALLEL` mode fetches the key statistics for all time chunks from all workers together and the controller then downsamples

@@ -628,14 +628,14 @@ public class ControllerImpl implements Controller
 
             // Add the listener to handle completion.
             clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
-              if (throwable != null) {
-                queryKernel.failStageForReason(stageId, UnknownFault.forException(throwable));
-              } else if (clusterByPartitionsEither.isError()) {
-                queryKernel.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
-              } else {
-                queryKernel.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
-              }
               kernelManipulationQueue.add(holder -> {
+                if (throwable != null) {
+                  queryKernel.failStageForReason(stageId, UnknownFault.forException(throwable));
+                } else if (clusterByPartitionsEither.isError()) {
+                  queryKernel.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+                } else {
+                  queryKernel.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
+                }
                 holder.transitionStageKernel(stageId, queryKernel.getStagePhase(stageId));
               });
             });
