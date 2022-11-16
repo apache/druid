@@ -247,7 +247,7 @@ class ControllerStageTracker
     if (phase != ControllerStagePhase.READING_INPUT) {
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
-    if (!stageDef.doesShuffle() || completeKeyStatisticsInformation == null ) {
+    if (!stageDef.doesShuffle() || completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 

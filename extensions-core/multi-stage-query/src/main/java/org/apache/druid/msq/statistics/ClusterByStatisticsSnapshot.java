@@ -74,8 +74,8 @@ public class ClusterByStatisticsSnapshot
   public PartialKeyStatisticsInformation partialKeyStatistics()
   {
     double bytesRetained = 0;
-    for (Long bucketKey : buckets.keySet()) {
-      bytesRetained += buckets.get(bucketKey).bytesRetained;
+    for (ClusterByStatisticsSnapshot.Bucket bucket : buckets.values()) {
+      bytesRetained += bucket.bytesRetained;
     }
     return new PartialKeyStatisticsInformation(buckets.keySet(), !getHasMultipleValues().isEmpty(), bytesRetained);
   }

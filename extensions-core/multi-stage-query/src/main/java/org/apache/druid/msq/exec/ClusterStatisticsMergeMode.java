@@ -36,6 +36,10 @@ public enum ClusterStatisticsMergeMode
 
   /**
    * Tries to decide between sequential and parallel modes based on the number of workers and size of the input
+   *
+   * If there are more than {@link WorkerSketchFetcher.WORKER_THRESHOLD} workers or if the combined sketch size
+   * among all workers is more than {@link WorkerSketchFetcher.BYTES_THRESHOLD}, `SEQUENTIAL` is chosen, otherwise,
+   * `PARALLEL` is chosen.
    */
   AUTO
 }

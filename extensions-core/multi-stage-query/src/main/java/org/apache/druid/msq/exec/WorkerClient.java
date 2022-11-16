@@ -42,14 +42,14 @@ public interface WorkerClient extends AutoCloseable
 
   /**
    * Fetches the {@link ClusterByStatisticsSnapshot} from a worker. This is intended to be used by the
-   * {@link WorkerSketchFetcher}.
+   * {@link WorkerSketchFetcher} under PARALLEL or AUTO modes.
    */
   ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
       throws ExecutionException, InterruptedException;
 
   /**
    * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
-   * This is intended to be used by the {@link WorkerSketchFetcher}.
+   * This is intended to be used by the {@link WorkerSketchFetcher} under SEQUENTIAL or AUTO modes.
    */
   ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,

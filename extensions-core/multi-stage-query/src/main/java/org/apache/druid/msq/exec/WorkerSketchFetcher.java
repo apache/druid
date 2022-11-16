@@ -45,8 +45,11 @@ import java.util.stream.IntStream;
 public class WorkerSketchFetcher
 {
   private static final int DEFAULT_THREAD_COUNT = 4;
-  private static final long BYTES_THRESHOLD = 1_000_000_000L;
-  private static final long WORKER_THRESHOLD = 100;
+
+  // If the combined size of worker sketches is more than this threshold, SEQUENTIAL merging mode is used.
+  public static final long BYTES_THRESHOLD = 1_000_000_000L;
+  // If there are more workers than this threshold, SEQUENTIAL merging mode is used.
+  public static final long WORKER_THRESHOLD = 100;
 
   private final ClusterStatisticsMergeMode clusterStatisticsMergeMode;
   private final int statisticsMaxRetainedBytes;
@@ -104,10 +107,13 @@ public class WorkerSketchFetcher
   {
     CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
 
-    final ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
+    // Create a new key statistics collector to merge worker sketches into
+    final ClusterByStatisticsCollector mergedStatisticsCollector =
+        stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
     final int workerCount = workerTaskIds.size();
     final Set<Integer> finishedWorkers = new HashSet<>();
 
+    // Submit a task for each worker to fetch statistics
     IntStream.range(0, workerCount).forEach(workerNo -> {
       executorService.submit(() -> {
         try {
@@ -165,6 +171,7 @@ public class WorkerSketchFetcher
     private final List<String> workerTaskIds;
     private final Iterator<Map.Entry<Long, Set<Integer>>> timeSegmentVsWorkerIdIterator;
     private final CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture;
+    // Final sorted list of partition boundaries. This is appended to after statistics for each time chunk are gathered.
     private final List<ClusterByPartition> finalPartitionBoundries;
 
     public SequentialFetchStage(
@@ -186,11 +193,15 @@ public class WorkerSketchFetcher
         partitionFuture.complete(Either.value(new ClusterByPartitions(finalPartitionBoundries)));
       } else {
         Map.Entry<Long, Set<Integer>> entry = timeSegmentVsWorkerIdIterator.next();
+        // Time chunk for which partition boundries are going to be generated for
         Long timeChunk = entry.getKey();
         Set<Integer> workerIdsWithTimeChunk = entry.getValue();
-        ClusterByStatisticsCollector mergedStatisticsCollector = stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
+        // Create a new key statistics collector to merge worker sketches into
+        ClusterByStatisticsCollector mergedStatisticsCollector =
+            stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
         Set<Integer> finishedWorkers = new HashSet<>();
 
+        // Submits a task for every worker which has a certain time chunk
         for (int workerNo : workerIdsWithTimeChunk) {
           executorService.submit(() -> {
             try {
@@ -235,12 +246,21 @@ public class WorkerSketchFetcher
       }
     }
 
+    /**
+     * Takes a list of sorted {@link ClusterByPartitions} {@param timeSketchPartitions} and adds it to a sorted list
+     * {@param finalPartitionBoundries}. If {@param finalPartitionBoundries} is not empty, the end time of the last
+     * partition of {@param finalPartitionBoundries} is changed to abut with the starting time of the first partition
+     * of {@param timeSketchPartitions}.
+     *
+     * This is used to make the partitions generated continuous.
+     */
     private void abutAndAppendPartitionBoundries(
         List<ClusterByPartition> finalPartitionBoundries,
         List<ClusterByPartition> timeSketchPartitions
     )
     {
       if (!finalPartitionBoundries.isEmpty()) {
+        // Stitch up the end time of the last partition with the start time of the first partition.
         ClusterByPartition clusterByPartition = finalPartitionBoundries.remove(finalPartitionBoundries.size() - 1);
         finalPartitionBoundries.add(new ClusterByPartition(clusterByPartition.getStart(), timeSketchPartitions.get(0).getStart()));
       }
