@@ -58,23 +58,32 @@ import { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 
-const allColumns: string[] = [
-  'Service',
-  'Type',
-  'Tier',
-  'Host',
-  'Port',
-  'Current size',
-  'Max size',
-  'Usage',
-  'Start time',
-  'Detail',
-  ACTION_COLUMN_LABEL,
-];
-
 const tableColumns: Record<CapabilitiesMode, string[]> = {
-  'full': allColumns,
-  'no-sql': allColumns,
+  'full': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Start time',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
+  'no-sql': [
+    'Service',
+    'Type',
+    'Tier',
+    'Host',
+    'Port',
+    'Current size',
+    'Max size',
+    'Usage',
+    'Detail',
+    ACTION_COLUMN_LABEL,
+  ],
   'no-proxy': [
     'Service',
     'Type',
