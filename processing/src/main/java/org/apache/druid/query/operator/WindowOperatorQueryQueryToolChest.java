@@ -78,11 +78,13 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   }
 
   @Override
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
       WindowOperatorQuery query, Sequence<RowsAndColumns> resultSequence
   )
   {
-    return super.resultsAsArrays(query, resultSequence);
+    // Dark magic; see RowsAndColumnsUnravelingQueryRunner.
+    return (Sequence) resultSequence;
   }
 
   /**

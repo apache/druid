@@ -43,19 +43,24 @@ import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.AggregateStarTableRule;
 import org.apache.calcite.rel.rules.AggregateValuesRule;
+import org.apache.calcite.rel.rules.CalcMergeRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
+import org.apache.calcite.rel.rules.FilterCalcMergeRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
+import org.apache.calcite.rel.rules.FilterToCalcRule;
 import org.apache.calcite.rel.rules.IntersectToDistinctRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
 import org.apache.calcite.rel.rules.MatchRule;
+import org.apache.calcite.rel.rules.ProjectCalcMergeRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
+import org.apache.calcite.rel.rules.ProjectToCalcRule;
 import org.apache.calcite.rel.rules.ProjectToWindowRule;
 import org.apache.calcite.rel.rules.ProjectWindowTransposeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
@@ -129,7 +134,13 @@ public class CalciteRulesManager
           SortRemoveConstantKeysRule.INSTANCE,
           SortUnionTransposeRule.INSTANCE,
           ExchangeRemoveConstantKeysRule.EXCHANGE_INSTANCE,
-          ExchangeRemoveConstantKeysRule.SORT_EXCHANGE_INSTANCE
+          ExchangeRemoveConstantKeysRule.SORT_EXCHANGE_INSTANCE,
+          CalcMergeRule.INSTANCE, // TODO: this will maybe make HAVING work
+          FilterCalcMergeRule.INSTANCE,
+          ProjectCalcMergeRule.INSTANCE,
+          FilterToCalcRule.INSTANCE,
+          ProjectToCalcRule.INSTANCE,
+          ProjectToWindowRule.INSTANCE
       );
 
   // Rules for scanning via Bindable, embedded directly in RelOptUtil's registerDefaultRules.

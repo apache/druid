@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.Window;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
@@ -86,10 +87,16 @@ public class DruidRules
             PartialDruidQuery.Stage.SORT_PROJECT,
             PartialDruidQuery::withSortProject
         ),
+        new DruidQueryRule<>(
+            Window.class,
+            PartialDruidQuery.Stage.WINDOW,
+            PartialDruidQuery::withWindow
+        ),
         DruidOuterQueryRule.AGGREGATE,
         DruidOuterQueryRule.WHERE_FILTER,
         DruidOuterQueryRule.SELECT_PROJECT,
         DruidOuterQueryRule.SORT,
+        DruidOuterQueryRule.WINDOW,
         new DruidUnionRule(plannerContext),
         new DruidUnionDataSourceRule(plannerContext),
         DruidSortUnionRule.instance(),
@@ -221,6 +228,28 @@ public class DruidRules
             druidRel,
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
                              .withSort(sort)
+        );
+        if (outerQueryRel.isValidDruidQuery()) {
+          call.transformTo(outerQueryRel);
+        }
+      }
+    };
+
+    public static final RelOptRule WINDOW = new DruidOuterQueryRule(
+        operand(Window.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
+        "WINDOW"
+    )
+    {
+      @Override
+      public void onMatch(final RelOptRuleCall call)
+      {
+        final Window window = call.rel(0);
+        final DruidRel druidRel = call.rel(1);
+
+        final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
+            druidRel,
+            PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
+                             .withWindow(window)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);

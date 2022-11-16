@@ -5,41 +5,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 
-public class WindowLagProcessor extends WindowValueProcessorBase
+public class WindowOffsetProcessor extends WindowValueProcessorBase
 {
-  private final int lagRows;
+  private final int offset;
 
   @JsonCreator
-  public WindowLagProcessor(
+  public WindowOffsetProcessor(
       @JsonProperty("inputColumn") String inputColumn,
       @JsonProperty("outputColumn") String outputColumn,
-      @JsonProperty("lag")int lagRows
+      @JsonProperty("offset") int offset
   ) {
     super(inputColumn, outputColumn);
-    this.lagRows = lagRows;
+    this.offset = offset;
   }
 
-  @JsonProperty("lag")
-  public int getLagRows()
+  @JsonProperty("offset")
+  public int getOffset()
   {
-    return lagRows;
+    return offset;
   }
 
   @Override
   public RowsAndColumns process(RowsAndColumns input) {
+    final int numRows = input.numRows();
+
     return processInternal(input, column -> new ColumnAccessorBasedColumn(
         new ShiftedColumnAccessorBase(column.toAccessor())
         {
           @Override
           protected int getActualCell(int cell)
           {
-            return cell - lagRows;
+            return cell + offset;
           }
 
           @Override
           protected boolean outsideBounds(int actualCell)
           {
-            return actualCell < 0;
+            return actualCell < 0 || actualCell >= numRows;
           }
         }));
   }

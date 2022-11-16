@@ -236,8 +236,6 @@ public class TypeStrategies
    */
   public static final class LongTypeStrategy implements TypeStrategy<Long>
   {
-    private static final Comparator<Long> COMPARATOR = Longs::compare;
-
     @Override
     public int estimateSizeBytes(Long value)
     {
@@ -276,9 +274,9 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(Long o1, Long o2)
+    public int compare(Object o1, Object o2)
     {
-      return COMPARATOR.compare(o1, o2);
+      return Longs.compare(((Number) o1).longValue(), ((Number) o2).longValue());
     }
   }
 
@@ -289,8 +287,6 @@ public class TypeStrategies
    */
   public static final class FloatTypeStrategy implements TypeStrategy<Float>
   {
-    private static final Comparator<Float> COMPARATOR = Floats::compare;
-
     @Override
     public int estimateSizeBytes(Float value)
     {
@@ -329,9 +325,9 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(Float o1, Float o2)
+    public int compare(Object o1, Object o2)
     {
-      return COMPARATOR.compare(o1, o2);
+      return Floats.compare(((Number) o1).floatValue(), ((Number) o2).floatValue());
     }
   }
 
@@ -342,7 +338,6 @@ public class TypeStrategies
    */
   public static final class DoubleTypeStrategy implements TypeStrategy<Double>
   {
-    private static final Comparator<Double> COMPARATOR = Double::compare;
 
     @Override
     public int estimateSizeBytes(Double value)
@@ -382,9 +377,9 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(Double o1, Double o2)
+    public int compare(Object o1, Object o2)
     {
-      return COMPARATOR.compare(o1, o2);
+      return Double.compare(((Number) o1).doubleValue(), ((Number) o2).doubleValue());
     }
   }
 
@@ -437,7 +432,7 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(String s, String s2)
+    public int compare(Object s, Object s2)
     {
       // copy of lexicographical string comparator in druid processing
       // Avoid comparisons for equal references
@@ -447,7 +442,7 @@ public class TypeStrategies
         return 0;
       }
 
-      return ORDERING.compare(s, s2);
+      return ORDERING.compare((String) s, (String) s2);
     }
   }
 
@@ -521,8 +516,11 @@ public class TypeStrategies
     }
 
     @Override
-    public int compare(@Nullable Object[] o1, @Nullable Object[] o2)
+    public int compare(@Nullable Object o1Obj, @Nullable Object o2Obj)
     {
+      Object[] o1 = (Object[]) o1Obj;
+      Object[] o2 = (Object[]) o2Obj;
+
       //noinspection ArrayEquality
       if (o1 == o2) {
         return 0;

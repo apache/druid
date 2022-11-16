@@ -103,7 +103,6 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         QueryStackTests.createClusterQuerySegmentWalker(
             timelines,
-            joinableFactoryWrapper,
             conglomerate,
             scheduler
         ),

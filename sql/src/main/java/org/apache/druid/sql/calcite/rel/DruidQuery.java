@@ -43,6 +43,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -61,10 +62,12 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
@@ -97,7 +100,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -144,6 +146,9 @@ public class DruidQuery
   @Nullable
   private final Sorting sorting;
 
+  @Nullable
+  private final Windowing windowing;
+
   private final Query<?> query;
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
@@ -157,6 +162,7 @@ public class DruidQuery
       @Nullable final Projection selectProjection,
       @Nullable final Grouping grouping,
       @Nullable final Sorting sorting,
+      @Nullable final Windowing windowing,
       final RowSignature sourceRowSignature,
       final RelDataType outputRowType,
       final VirtualColumnRegistry virtualColumnRegistry
@@ -168,9 +174,16 @@ public class DruidQuery
     this.selectProjection = selectProjection;
     this.grouping = grouping;
     this.sorting = sorting;
+    this.windowing = windowing;
     this.sourceRowSignature = sourceRowSignature;
 
-    this.outputRowSignature = computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting);
+    this.outputRowSignature = computeOutputRowSignature(
+        sourceRowSignature,
+        selectProjection,
+        grouping,
+        sorting,
+        windowing
+    );
     this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
     this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
     this.query = computeQuery();
@@ -200,6 +213,7 @@ public class DruidQuery
     final Projection selectProjection;
     final Grouping grouping;
     final Sorting sorting;
+    final Windowing windowing;
 
     if (partialQuery.getWhereFilter() != null) {
       filter = Preconditions.checkNotNull(
@@ -221,7 +235,7 @@ public class DruidQuery
           computeSelectProjection(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(sourceRowSignature, null, null, null),
+              computeOutputRowSignature(sourceRowSignature, null, null, null, null),
               virtualColumnRegistry
           )
       );
@@ -234,7 +248,7 @@ public class DruidQuery
           computeGrouping(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(sourceRowSignature, null, null, null),
+              computeOutputRowSignature(sourceRowSignature, null, null, null, null),
               virtualColumnRegistry,
               rexBuilder,
               finalizeAggregations
@@ -249,13 +263,26 @@ public class DruidQuery
           computeSorting(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, null),
+              computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, null, null),
               // When sorting follows grouping, virtual columns cannot be used
               partialQuery.getAggregate() != null ? null : virtualColumnRegistry
           )
       );
     } else {
       sorting = null;
+    }
+
+    if (partialQuery.getWindow() != null) {
+      windowing = Preconditions.checkNotNull(
+          Windowing.fromCalciteStuff(
+              partialQuery,
+              plannerContext,
+              sourceRowSignature, // TODO(gianm): window can only apply to the source data, because SCAN -> WINDOW
+              rexBuilder
+          )
+      );
+    } else {
+      windowing = null;
     }
 
     return new DruidQuery(
@@ -265,6 +292,7 @@ public class DruidQuery
         selectProjection,
         grouping,
         sorting,
+        windowing,
         sourceRowSignature,
         outputRowType,
         virtualColumnRegistry
@@ -438,7 +466,10 @@ public class DruidQuery
       final ColumnType outputType = Calcites.getColumnTypeForRelDataType(dataType);
       if (Types.isNullOr(outputType, ValueType.COMPLEX)) {
         // Can't group on unknown or COMPLEX types.
-        plannerContext.setPlanningError("SQL requires a group-by on a column of type %s that is unsupported.", outputType);
+        plannerContext.setPlanningError(
+            "SQL requires a group-by on a column of type %s that is unsupported.",
+            outputType
+        );
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
 
@@ -631,10 +662,13 @@ public class DruidQuery
       final RowSignature sourceRowSignature,
       @Nullable final Projection selectProjection,
       @Nullable final Grouping grouping,
-      @Nullable final Sorting sorting
+      @Nullable final Sorting sorting,
+      @Nullable final Windowing windowing
   )
   {
-    if (sorting != null && sorting.getProjection() != null) {
+    if (windowing != null) {
+      return windowing.getSignature();
+    } else if (sorting != null && sorting.getProjection() != null) {
       return sorting.getProjection().getOutputRowSignature();
     } else if (grouping != null) {
       // Sanity check: cannot have both "grouping" and "selectProjection".
@@ -870,6 +904,12 @@ public class DruidQuery
    */
   private Query<?> computeQuery()
   {
+    // TODO(gianm): structure
+    if (windowing != null) {
+      // Windowing can only be handled by window queries.
+      return toWindowQuery();
+    }
+
     if (dataSource instanceof QueryDataSource) {
       // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
       // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
@@ -1310,6 +1350,27 @@ public class DruidQuery
       return query;
     }
     return query.withOverriddenContext(theContext);
+  }
+
+  /**
+   * Return this query as a {@link WindowOperatorQuery}, or null if this query cannot be run that way.
+   *
+   * @return query or null
+   */
+  @Nullable
+  private WindowOperatorQuery toWindowQuery()
+  {
+    if (windowing == null) {
+      return null;
+    }
+
+    return new WindowOperatorQuery(
+        dataSource,
+        new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
+        plannerContext.queryContextMap(),
+        windowing.getSignature(),
+        windowing.getOperators()
+    );
   }
 
   /**

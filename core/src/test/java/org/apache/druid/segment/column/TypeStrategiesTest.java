@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -103,7 +104,7 @@ public class TypeStrategiesTest
       }
 
       @Override
-      public int compare(String o1, String o2)
+      public int compare(Object o1, Object o2)
       {
         return 0;
       }
@@ -639,10 +640,13 @@ public class TypeStrategiesTest
   
   public static class NullableLongPairTypeStrategy implements TypeStrategy<NullableLongPair>
   {
+
+    private Ordering<NullableLongPair> ordering = Comparators.naturalNullsFirst();
+
     @Override
-    public int compare(NullableLongPair o1, NullableLongPair o2)
+    public int compare(Object o1, Object o2)
     {
-      return Comparators.<NullableLongPair>naturalNullsFirst().compare(o1, o2);
+      return ordering.compare((NullableLongPair) o1, (NullableLongPair) o2);
     }
 
     @Override

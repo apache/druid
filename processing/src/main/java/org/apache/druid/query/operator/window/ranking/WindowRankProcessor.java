@@ -40,10 +40,17 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
     if (asPercent) {
       return processInternal(incomingPartition, groupings -> {
         final double[] percentages = new double[incomingPartition.numRows()];
-        final double denominator = percentages.length - 1;
+        if (percentages.length > 1) {
+          final double denominator = percentages.length - 1;
 
-        for (final StartAndEnd startAndEnd : groupings) {
-          Arrays.fill(percentages, startAndEnd.getStart(), startAndEnd.getEnd(), startAndEnd.getStart() / denominator);
+          for (final StartAndEnd startAndEnd : groupings) {
+            Arrays.fill(
+                percentages,
+                startAndEnd.getStart(),
+                startAndEnd.getEnd(),
+                startAndEnd.getStart() / denominator
+            );
+          }
         }
 
         return new DoubleArrayColumn(percentages);

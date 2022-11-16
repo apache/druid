@@ -41,4 +41,30 @@ public class WindowRankProcessorTest
           .setExpectation(new double[]{0.0, 1/9d, 1/9d, 3/9d, 4/9d, 5/9d, 6/9d, 6/9d, 8/9d, 8/9d})
           .validate();
   }
+
+  @Test
+  public void testRankSingle()
+  {
+    Map<String, Column> map = new LinkedHashMap<>();
+    map.put("vals", new IntArrayColumn(new int[]{7}));
+
+    MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
+
+    Processor processor = new ComposingProcessor(
+        new WindowRankProcessor(Collections.singletonList("vals"), "rank", false),
+        new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
+    );
+
+    final RowsAndColumns results = processor.process(rac);
+    RowsAndColumnsHelper.assertEquals(results, "vals", new int[]{7});
+
+    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
+    helper.forColumn("rank", ColumnType.LONG)
+          .setExpectation(new int[]{1})
+          .validate();
+
+    helper.forColumn("rankAsPercent", ColumnType.DOUBLE)
+          .setExpectation(new double[]{0.0})
+          .validate();
+  }
 }

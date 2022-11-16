@@ -31,9 +31,9 @@ public class WindowLeadProcessorTest
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
     ComposingProcessor processor = new ComposingProcessor(
-        new WindowLeadProcessor("intCol", "LeadingIntCol", 2),
-        new WindowLeadProcessor("doubleCol", "LeadingDoubleCol", 4),
-        new WindowLeadProcessor("objectCol", "LeadingObjectCol", 1)
+        new WindowOffsetProcessor("intCol", "LeadingIntCol", 2),
+        new WindowOffsetProcessor("doubleCol", "LeadingDoubleCol", 4),
+        new WindowOffsetProcessor("objectCol", "LeadingObjectCol", 1)
     );
 
     final RowsAndColumns results = processor.process(rac);

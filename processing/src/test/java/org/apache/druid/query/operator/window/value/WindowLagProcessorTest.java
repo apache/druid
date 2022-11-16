@@ -30,9 +30,9 @@ public class WindowLagProcessorTest
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
     ComposingProcessor processor = new ComposingProcessor(
-        new WindowLagProcessor("intCol", "laggardIntCol", 2),
-        new WindowLagProcessor("doubleCol", "laggardDoubleCol", 4),
-        new WindowLagProcessor("objectCol", "laggardObjectCol", 1)
+        new WindowOffsetProcessor("intCol", "laggardIntCol", -2),
+        new WindowOffsetProcessor("doubleCol", "laggardDoubleCol", -4),
+        new WindowOffsetProcessor("objectCol", "laggardObjectCol", -1)
     );
 
     final RowsAndColumns results = processor.process(rac);

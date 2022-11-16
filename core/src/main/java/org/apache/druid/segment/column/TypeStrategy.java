@@ -55,8 +55,15 @@ import java.util.Comparator;
  * Implementations of this interface should be thread safe, but may not use {@link ByteBuffer} in a thread safe manner,
  * potentially modifying positions and limits, either temporarily or permanently depending on which set of methods is
  * called.
+ *
+ * This interface extends {@code Comparator<Object>} instead of {@code Comparator<T>} because trying to specialize the
+ * type of the comparison method can run into issues for comparators of objects that can sometimes be of a different
+ * java class type.  For example, {@code Comparator<Long>} cannot accept Integer objects in its comparison method
+ * and there is no easy way for this interface definition to allow {@code TypeStrategy<Long>} to actually be a
+ * {@code Comparator<Number>}.  So, we fall back to effectively erasing the generic type and having them all be
+ * {@code Comparator<Object>}.
  */
-public interface TypeStrategy<T> extends Comparator<T>
+public interface TypeStrategy<T> extends Comparator<Object>
 {
   /**
    * Estimate the size in bytes that writing this value to memory would require. This method is not required to be

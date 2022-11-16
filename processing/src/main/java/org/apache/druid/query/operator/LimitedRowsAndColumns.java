@@ -53,7 +53,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
           {
             int retVal = start + cell;
             if (retVal >= end) {
-              throw new ISE("Index out of bounds[%d] > [%d], start[%s]", retVal, end, start);
+              throw new ISE("Index out of bounds[%d] >= [%d], start[%s]", retVal, end, start);
             }
             return retVal;
           }

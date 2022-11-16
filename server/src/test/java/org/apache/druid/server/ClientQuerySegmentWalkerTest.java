@@ -1391,7 +1391,6 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
-                joinableFactoryWrapper,
                 conglomerate,
                 schedulerForTest
             ),

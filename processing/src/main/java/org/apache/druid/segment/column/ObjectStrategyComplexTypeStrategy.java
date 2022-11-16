@@ -82,9 +82,9 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   }
 
   @Override
-  public int compare(T o1, T o2)
+  public int compare(Object o1, Object o2)
   {
-    return objectStrategy.compare(o1, o2);
+    return objectStrategy.compare((T) o1, (T) o2);
   }
 
   @Override
