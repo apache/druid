@@ -95,7 +95,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public SqlTaskStatus submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
   {
-    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of(), null));
+    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of("finalizeAggregations", false), null));
   }
 
   // Run the task, wait for it to complete, fetch the reports, verify the results,

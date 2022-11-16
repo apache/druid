@@ -346,7 +346,7 @@
                             </goals>
                             <configuration>
                                 <!-- our tests are very verbose, let's keep the volume down -->
-                                <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                <redirectTestOutputToFile>False</redirectTestOutputToFile>
                                 <!-- Can run only one test category per Maven run. -->
                                 <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
                              </configuration>
