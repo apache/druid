@@ -189,7 +189,7 @@ public class QueryTestRunner
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)
           .build();
-      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
+      final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
       final PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlQuery);
       stmt.prepare();
       resourceActions = stmt.allResources();
@@ -223,7 +223,7 @@ public class QueryTestRunner
 
       BaseCalciteQueryTest.log.info("SQL: %s", builder.sql);
 
-      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
+      final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)

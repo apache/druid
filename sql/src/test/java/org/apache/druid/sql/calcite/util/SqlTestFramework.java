@@ -522,6 +522,10 @@ public class SqlTestFramework
         .withProperties(properties)
         .build();
     DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+        // Ignore load scopes. This is a unit test, not a Druid node. If a
+        // test pulls in a module, then pull in that module, even though we are
+        // not the Druid node that the module to which the module is scoped.
+        .ignoreLoadScopes()
         .addModule(new BasicTestModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())

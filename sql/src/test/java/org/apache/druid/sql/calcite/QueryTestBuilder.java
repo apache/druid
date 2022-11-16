@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -228,17 +229,17 @@ public class QueryTestBuilder
   }
 
   /**
-   * Internal method to return the cached planner config, or create a new one
+   * Internal method to return the cached statement factory, or create a new one
    * based on the configs provided. Note: does not cache the newly created
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  protected PlannerFixture plannerFixture()
+  protected SqlStatementFactory statementFactory()
   {
     if (plannerFixture != null) {
-      return plannerFixture;
+      return plannerFixture.statementFactory();
     } else {
-      return config.plannerFixture(plannerConfig, authConfig);
+      return config.plannerFixture(plannerConfig, authConfig).statementFactory();
     }
   }
 

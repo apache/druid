@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -29,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
@@ -54,6 +56,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -65,6 +68,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -119,7 +123,6 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -130,11 +133,11 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
@@ -143,6 +146,7 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
+import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
@@ -225,13 +229,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
-//  private ObjectMapper objectMapper;
+  private ObjectMapper objectMapper;
   private MSQTestOverlordServiceClient indexingServiceClient;
-//  private SqlStatementFactory sqlStatementFactory;
-//  private IndexIO indexIO;
+  private SqlStatementFactory sqlStatementFactory;
+  private IndexIO indexIO;
 
-//  private MSQTestSegmentManager segmentManager;
-//  private SegmentCacheManager segmentCacheManager;
+  private MSQTestSegmentManager segmentManager;
+  private SegmentCacheManager segmentCacheManager;
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
@@ -249,13 +253,81 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
-    builder.addModule(new MSQSqlModule());
-    builder.addModule(binder -> {
-        binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-        binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+    super.configureGuice(builder);
+
+    builder.addModule(new DruidModule() {
+
+      // Small subset of MsqSqlModule
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
       }
+
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        return new InputSourceModule().getJacksonModules();
+      }
+    });
+  }
+
+  @After
+  public void tearDown2()
+  {
+    groupByBuffers.close();
+  }
+
+  // This test is a Frankenstein creation: it uses the injector set up by the
+  // SqlTestFramework to pull items from that are then used to create another
+  // injector that has the MSQ dependencies. This allows the test to create a
+  // "shadow" statement factory that is used for tests. It works... kinda.
+  //
+  // Better would be to sort through the Guice stuff and move it into the
+  // configureGuice() method above: use the SQL test framework injector so
+  // that everything is coordinated. Use the planner factory provided by that
+  // framework.
+  //
+  // Leaving well enough alone for now because any change should be done by
+  // someone familiar with the rather complex setup code below.
+  //
+  // One brute-force attempt ran afoul of circular dependencies: the SQL engine
+  // is created in the main injector, but it depends on the SegmentCacheManagerFactory
+  // which depends on the object mapper that the injector will provide, once it
+  // is built, but has not yet been build while we build the SQL engine.
+  @Before
+  public void setUp2()
+  {
+    groupByBuffers = TestGroupByBuffers.createDefault();
+
+    SqlTestFramework qf = queryFramework();
+    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> {
+              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+            }
+        )
     );
-    builder.addModules(
+
+    ObjectMapper secondMapper = setupObjectMapper(secondInjector);
+    indexIO = new IndexIO(secondMapper, () -> 0);
+
+    try {
+      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
+    }
+    catch (IOException exception) {
+      throw new ISE(exception, "Unable to create segmentCacheManager");
+    }
+
+    MSQSqlModule sqlModule = new MSQSqlModule();
+
+    segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
+
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
@@ -277,10 +349,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(DataSegmentProvider.class)
                 .toInstance((dataSegment, channelCounters) ->
                                 new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-          ObjectMapper secondMapper = builder.baseInjector().getInstance(ObjectMapper.class);
-          IndexIO indexIO = new IndexIO(secondMapper, () -> 0);
           binder.bind(IndexIO.class).toInstance(indexIO);
-//          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
+          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
           binder.bind(GroupByStrategySelector.class)
                 .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
@@ -324,7 +394,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
-      binder -> {
+        binder -> {
           // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
           final LookupReferencesManager lookupReferencesManager =
               EasyMock.createStrictMock(LookupReferencesManager.class);
@@ -333,7 +403,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
           binder.bind(AppenderatorsManager.class).toProvider(() -> null);
         },
-      binder -> {
+        binder -> {
           // Requirements of JoinableFactoryModule
           binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
@@ -355,157 +425,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
             }
         ),
         new MSQExternalDataSourceModule()
-    );
-  }
+    ));
 
-  @Override
-  public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper)
-  {
-    return new MSQTaskSqlEngine(
-        indexingServiceClient,
-        objectMapper
-    );
-  }
-
-  @After
-  public void tearDown2()
-  {
-    groupByBuffers.close();
-  }
-
-  @Before
-  public void setUp2()
-  {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-
-//    SqlTestFramework qf = queryFramework();
-//    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
-//        ImmutableList.of(
-//            binder -> {
-//              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-//              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-//            }
-//        )
-//    );
-
-    ObjectMapper secondMapper = queryFramework().queryJsonMapper();
-//    indexIO = new IndexIO(secondMapper, () -> 0);
-
-    try {
-      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
-    }
-    catch (IOException exception) {
-      throw new ISE(exception, "Unable to create segmentCacheManager");
-    }
-
-//    MSQSqlModule sqlModule = new MSQSqlModule();
-//
-//    segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
-//
-//    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(
-//        binder -> {
-//          DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-//          {
-//            @Override
-//            public String getFormatString()
-//            {
-//              return "test";
-//            }
-//          };
-//
-//          GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-//
-//          binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-//          binder.bind(new TypeLiteral<Set<NodeRole>>()
-//          {
-//          }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-//          binder.bind(QueryProcessingPool.class)
-//                .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
-//          binder.bind(DataSegmentProvider.class)
-//                .toInstance((dataSegment, channelCounters) ->
-//                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-//          binder.bind(IndexIO.class).toInstance(indexIO);
-//          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
-//
-//          binder.bind(GroupByStrategySelector.class)
-//                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-//                                                  .getStrategySelector());
-//
-//          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-//          try {
-//            config.storageDirectory = tmpFolder.newFolder("localsegments");
-//          }
-//          catch (IOException e) {
-//            throw new ISE(e, "Unable to create folder");
-//          }
-//          binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-//              new LocalDataSegmentPusher(config),
-//              segmentManager
-//          ));
-//          binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-//          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
-//          // Client is not used in tests
-//          binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
-//                .toProvider(Providers.of(null));
-//          // fault tolerance module
-//          try {
-//            JsonConfigProvider.bind(
-//                binder,
-//                MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
-//                StorageConnectorProvider.class,
-//                MultiStageQuery.class
-//            );
-//            localFileStorageDir = tmpFolder.newFolder("fault");
-//            localFileStorageConnector = Mockito.spy(
-//                new LocalFileStorageConnector(localFileStorageDir)
-//            );
-//            binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-//                  .toProvider(() -> localFileStorageConnector);
-//          }
-//          catch (IOException e) {
-//            throw new ISE(e, "Unable to create setup storage connector");
-//          }
-//
-//          binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-//          binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-//        },
-//        binder -> {
-//          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
-//          final LookupReferencesManager lookupReferencesManager =
-//              EasyMock.createStrictMock(LookupReferencesManager.class);
-//          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
-//          EasyMock.replay(lookupReferencesManager);
-//          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
-//          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
-//        },
-//        binder -> {
-//          // Requirements of JoinableFactoryModule
-//          binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-//          binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-//              LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap())
-//          );
-//        },
-//        new JoinableFactoryModule(),
-//        new IndexingServiceTuningConfigModule(),
-//        new MSQIndexingModule(),
-//        Modules.override(new MSQSqlModule()).with(
-//            binder -> {
-//              // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
-//              // following bindings are overriding other bindings that end up needing a lot more dependencies.
-//              // We replace the bindings with something that returns null to make things more brittle in case they
-//              // actually are used somewhere in the test.
-//              binder.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
-//              binder.bind(SqlToolbox.class).toProvider(Providers.of(null));
-//              binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
-//            }
-//        ),
-//        new MSQExternalDataSourceModule()
-//    ));
-
-    ObjectMapper objectMapper = queryFramework().queryJsonMapper();
-    Injector injector = queryFramework().injector();
-//    objectMapper = setupObjectMapper(injector);
-//    objectMapper.registerModules(sqlModule.getJacksonModules());
+    objectMapper = setupObjectMapper(injector);
+    objectMapper.registerModules(sqlModule.getJacksonModules());
 
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
@@ -513,35 +436,35 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new MSQTestTaskActionClient(objectMapper),
         workerMemoryParameters
     );
-//    final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
-//    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-//        CalciteTests.INJECTOR,
-//        qf.conglomerate(),
-//        qf.walker(),
-//        new PlannerConfig(),
-//        viewManager,
-//        new NoopDruidSchemaManager(),
-//        CalciteTests.TEST_AUTHORIZER_MAPPER
-//    );
+    final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
+    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+        CalciteTests.INJECTOR,
+        qf.conglomerate(),
+        qf.walker(),
+        new PlannerConfig(),
+        viewManager,
+        new NoopDruidSchemaManager(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
 
-//    final SqlEngine engine = new MSQTaskSqlEngine(
-//        indexingServiceClient,
-//        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
-//    );
+    final SqlEngine engine = new MSQTaskSqlEngine(
+        indexingServiceClient,
+        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
+    );
 
-//    PlannerFactory plannerFactory = new PlannerFactory(
-//        rootSchema,
-//        CalciteTests.createOperatorTable(),
-//        CalciteTests.createExprMacroTable(),
-//        PLANNER_CONFIG_DEFAULT,
-//        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-//        objectMapper,
-//        CalciteTests.DRUID_SCHEMA_NAME,
-//        new CalciteRulesManager(ImmutableSet.of()),
-//        CalciteTests.createJoinableFactoryWrapper()
-//    );
-//
-//    sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+    PlannerFactory plannerFactory = new PlannerFactory(
+        rootSchema,
+        qf.operatorTable(),
+        qf.macroTable(),
+        PLANNER_CONFIG_DEFAULT,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        objectMapper,
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper()
+    );
+
+    sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
   }
 
   /**
