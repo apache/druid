@@ -1017,7 +1017,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return Collections.emptyMap();
     }
 
-    // Shard spec of any of the requests (as they are all compatible) used to
+    // Shard spec of any of the requests (as they are all compatible) can be used to
     // identify existing shard specs that share partition space with the requested ones.
     final PartialShardSpec partialShardSpec = requests.get(0).getPartialShardSpec();
 
@@ -1060,8 +1060,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
     for (SegmentCreateRequest request : requests) {
-      // TODO: create new segment should maybe also take the segments created so far as argument
-      //  so that we assign the right partition id to all of them
       SegmentIdWithShardSpec createdSegment = createNewSegment(
           request,
           dataSource,
@@ -1073,6 +1071,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       if (createdSegment != null) {
         log.info("Created new segment [%s]", createdSegment);
         createdSegments.put(request, createdSegment);
+        pendingSegments.add(createdSegment);
       }
     }
     return createdSegments;
