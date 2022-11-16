@@ -210,26 +210,27 @@ public class QueryableIndexOrderbyRunnerTests extends NullHandlingTest
     List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
                                                                             .mergeRunners(
                                                                                 DirectQueryProcessingPool.INSTANCE,
-                                                                                ImmutableList.of(FACTORY.createRunner(
-                                                                                                     segment0),
-                                                                                                 FACTORY.createRunner(
-                                                                                                     segment1)
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
                                                                                 )
                                                                             )).run(QueryPlus.wrap(query)).toList();
 
 
     List<Map<String, Object>> expected = new ArrayList<>();
-    expected.add(ImmutableMap.of("market","spot","__time","1294797600000","quality","entertainment"));
-    expected.add(ImmutableMap.of("market","spot","__time","1294794000000","quality","business"));
-    expected.add(ImmutableMap.of("market","spot","__time","1294790400000","quality","automotive"));
-    expected.add(ImmutableMap.of("market","total_market","__time","1294912800000","quality","premium"));
-    expected.add(ImmutableMap.of("market","total_market","__time","1294909200000","quality","mezzanine"));
+    expected.add(ImmutableMap.of("market", "spot", "__time", "1294797600000", "quality", "entertainment"));
+    expected.add(ImmutableMap.of("market", "spot", "__time", "1294794000000", "quality", "business"));
+    expected.add(ImmutableMap.of("market", "spot", "__time", "1294790400000", "quality", "automotive"));
+    expected.add(ImmutableMap.of("market", "total_market", "__time", "1294912800000", "quality", "premium"));
+    expected.add(ImmutableMap.of("market", "total_market", "__time", "1294909200000", "quality", "mezzanine"));
     Assert.assertNotNull(results);
 
     for (ScanResultValue scanResultValue : results) {
-      List<Map<String,Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
       Assert.assertEquals(expected.size(), events.size());
-      for (int i=0; i<events.size(); i++) {
+      for (int i = 0; i < events.size(); i++) {
         Assert.assertEquals(expected.get(i).get("market"), events.get(i).get("market"));
         Assert.assertEquals(expected.get(i).get("__time").toString(), events.get(i).get("__time").toString());
         Assert.assertEquals(expected.get(i).get("quality"), events.get(i).get("quality"));
