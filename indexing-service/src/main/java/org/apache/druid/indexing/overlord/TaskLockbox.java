@@ -1349,6 +1349,7 @@ public class TaskLockbox
             } else {
               throw new ISE("Unknown request type[%s]", request);
             }
+            //noinspection SuspiciousIndentAfterControlStatement
           default:
             throw new ISE("Unknown lock type[%s]", taskLock.getType());
         }
