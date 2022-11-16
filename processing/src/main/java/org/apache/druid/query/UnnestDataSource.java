@@ -130,7 +130,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
-    return false;
+    return base.isConcrete();
   }
 
   @Override

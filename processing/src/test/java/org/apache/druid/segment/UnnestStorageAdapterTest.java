@@ -51,10 +51,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER1;
+  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER2;
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
-  private static LinkedHashSet<String> IGNORE_SET = new LinkedHashSet<>(Arrays.asList("1", "5", "100"));
+  private static String OUTPUT_COLUMN_NAME1 = "unnested-multi-string1-again";
+  private static LinkedHashSet<String> IGNORE_SET = new LinkedHashSet<>(Arrays.asList("1", "3", "5"));
 
   @BeforeClass
   public static void setup()
@@ -71,7 +73,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                .build();
     final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
 
-    final int numRows = 10_000;
+    final int numRows = 2;
     INCREMENTAL_INDEX = CLOSER.register(
         segmentGenerator.generateIncrementalIndex(dataSegment, schemaInfo, Granularities.HOUR, numRows)
     );
@@ -87,6 +89,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         COLUMNNAME,
         OUTPUT_COLUMN_NAME,
         IGNORE_SET
+    );
+    UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
+        UNNEST_STORAGE_ADAPTER,
+        COLUMNNAME,
+        OUTPUT_COLUMN_NAME1,
+        null
     );
     ADAPTERS = ImmutableList.of(UNNEST_STORAGE_ADAPTER);
   }
@@ -108,7 +116,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           adapter.getMaxTime()
       );
       Assert.assertEquals(
-          DateTimes.of("2000-01-01T00:00:00.000Z"),
+          DateTimes.of("2000-01-01T12:00:00.000Z"),
           adapter.getMinTime()
       );
       adapter.getColumnCapabilities(colName);
@@ -129,8 +137,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   @Test
   public void test_unnest_adapters_basic()
   {
-    final String columnName = "multi-string1";
-
     for (StorageAdapter adapter : ADAPTERS) {
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
           null,
@@ -141,27 +147,69 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           null
       );
 
-
       cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
         DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-        ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME);
-
-
+        int count = 0;
         while (!cursor.isDone()) {
           Object dimSelectorVal = dimSelector.getObject();
-          Object valueSelectorVal = valueSelector.getObject();
           if (dimSelectorVal == null) {
             Assert.assertNull(dimSelectorVal);
-          } else if (valueSelectorVal == null) {
-            Assert.assertNull(valueSelectorVal);
           }
           cursor.advance();
+          count++;
         }
+        /*
+      each row has 8 entries.
+      unnest 2 rows -> 16 rows after unnest
+       */
+        Assert.assertEquals(count, 16);
         return null;
       });
     }
+  }
+
+  @Test
+  public void test_unnest_adapters_unnest_again()
+  {
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER2.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER2.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME1));
+      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME1);
+
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        Object valueSelectorVal = valueSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        } else if (valueSelectorVal == null) {
+          Assert.assertNull(valueSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+      /*
+      each row has 8 entries.
+      unnest 2 rows -> 16 entries also the value cardinality
+      unnest of unnest -> 16*8 = 128 rows
+       */
+      Assert.assertEquals(count, 128);
+      Assert.assertEquals(dimSelector.getValueCardinality(), 16);
+      return null;
+    });
   }
 
   @Test
@@ -178,14 +226,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         null
     );
 
-
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
       ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME);
 
-
+      int count = 0;
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
         Object valueSelectorVal = valueSelector.getObject();
@@ -195,7 +242,15 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           Assert.assertNull(valueSelectorVal);
         }
         cursor.advance();
+        count++;
       }
+      /*
+      each row has 8 distinct entries.
+      allowlist has 3 entries also the value cardinality
+      unnest will have 3 distinct entries
+       */
+      Assert.assertEquals(count, 3);
+      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
       return null;
     });
   }
@@ -265,21 +320,21 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-
-
+      IdLookup idlookUp = dimSelector.idLookup();
+      int[] indices = new int[]{1, 3, 5};
+      int count = 0;
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
-        Assert.assertNotNull(dimSelector.getRow());
-        Assert.assertNotNull(dimSelector.getValueCardinality());
+        Assert.assertEquals(idlookUp.lookupId((String) dimSelectorVal), indices[count]);
+        Assert.assertEquals(dimSelector.getRow().get(0), indices[count]);
+        Assert.assertEquals(dimSelector.getValueCardinality(), 3);
         Assert.assertNotNull(dimSelector.makeValueMatcher(OUTPUT_COLUMN_NAME));
-        Assert.assertNotNull(dimSelector.idLookup());
-        Assert.assertNotNull(dimSelector.lookupName(0));
-        Assert.assertNotNull(dimSelector.defaultGetObject());
         Assert.assertFalse(dimSelector.isNull());
         if (dimSelectorVal == null) {
           Assert.assertNull(dimSelectorVal);
         }
         cursor.advance();
+        count++;
       }
       return null;
     });

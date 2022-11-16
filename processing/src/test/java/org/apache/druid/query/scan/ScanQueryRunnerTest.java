@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -163,6 +164,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   private final QueryRunner runner;
   private final boolean legacy;
   private final List<String> columns;
+  private final List<String> unnestedColumns;
 
   public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
   {
@@ -192,6 +194,31 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         "indexMaxFloat",
         "indexMinFloat"
     );
+    this.unnestedColumns = Lists.newArrayList(
+        getTimestampName(),
+        "expr",
+        "market",
+        "quality",
+        "qualityLong",
+        "qualityFloat",
+        "qualityDouble",
+        "qualityNumericString",
+        "longNumericNull",
+        "floatNumericNull",
+        "doubleNumericNull",
+        "placement",
+        "placementish",
+        "unnest-placementish",
+        "partial_null_column",
+        "null_column",
+        "index",
+        "indexMin",
+        "indexMaxPlusTen",
+        "quality_uniques",
+        "indexFloat",
+        "indexMaxFloat",
+        "indexMinFloat"
+    );
   }
 
   private Druids.ScanQueryBuilder newTestQuery()
@@ -202,6 +229,53 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                  .eternityInterval()
                  .limit(3)
                  .legacy(legacy);
+  }
+
+  private Druids.ScanQueryBuilder newUnnestTestQuery()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(UnnestDataSource.create(
+                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+                     "placementish",
+                     "unnest-placementish",
+                     null
+                 ))
+                 .columns(Collections.emptyList())
+                 .eternityInterval()
+                 .limit(3)
+                 .legacy(legacy);
+  }
+
+  @Test
+  public void testFullOnSelectOverUnnest()
+  {
+
+    ScanQuery query = newUnnestTestQuery()
+        .intervals(I_0112_0114)
+        .virtualColumns(EXPR_COLUMN)
+        .columns(unnestedColumns)
+        .build();
+
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<ScanResultValue> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ScanResultValue>(
+            stubServiceEmitter,
+            TOOL_CHEST,
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
+
+    List<ScanResultValue> expectedResults = toExpected(
+        toFullEvents(V_0112_0114),
+        columns,
+        0,
+        3
+    );
+    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
+    Assert.assertEquals(false, stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
+    verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
   @Test

@@ -294,6 +294,10 @@ public class DataSourceAnalysis
                                  || (baseDataSource instanceof UnionDataSource &&
                                      baseDataSource.getChildren()
                                                    .stream()
+                                                   .allMatch(ds -> ds instanceof TableDataSource))
+                                 || (baseDataSource instanceof UnnestDataSource &&
+                                     baseDataSource.getChildren()
+                                                   .stream()
                                                    .allMatch(ds -> ds instanceof TableDataSource)));
   }
 
@@ -303,6 +307,14 @@ public class DataSourceAnalysis
   public boolean isQuery()
   {
     return dataSource instanceof QueryDataSource;
+  }
+
+  /**
+   * Returns true if this datasource represents an Unnest (that is, whether it is an {@link UnnestDataSource}).
+   */
+  public boolean isUnnest()
+  {
+    return dataSource instanceof UnnestDataSource;
   }
 
   /**
