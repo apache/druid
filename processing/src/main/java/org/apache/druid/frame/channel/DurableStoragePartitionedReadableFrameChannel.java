@@ -60,8 +60,12 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
     int startFrame = frameFileFooter.getPartitionStartFrame(partitionNumber);
     int endFrame = frameFileFooter.getPartitionStartFrame(partitionNumber + 1);
     long startByte = startFrame == 0 ? FrameFileWriter.MAGIC.length : frameFileFooter.getFrameEndPosition(startFrame - 1);
-    long endByte = frameFileFooter.getFrameEndPosition(endFrame - 1);
+    long endByte = endFrame == 0 ? FrameFileWriter.MAGIC.length : frameFileFooter.getFrameEndPosition(endFrame - 1);
 
+    long size = endByte - startByte;
+    if (size <= 0) {
+      return ReadableNilFrameChannel.INSTANCE;
+    }
     try {
       return ReadableInputStreamFrameChannel.open(
           storageConnector.readRange(frameFileFullPath, startByte, endByte - startByte),
