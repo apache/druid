@@ -78,6 +78,23 @@ FROM TABLE(
   ) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
 ```
 
+Note that the `EXTEND` keyword is optional. The following is equally valid (and perhaps
+more convenient):
+
+```sql
+SELECT
+ <column>
+FROM TABLE(
+  http(
+    userName => 'bob',
+    password => 'secret',
+    uris => 'http:foo.com/bar.csv',
+    format => 'csv'
+    )
+  ) (x VARCHAR, y VARCHAR, z BIGINT)
+```
+
+
 The set of table functions and formats is preliminary in this release.
 
 #### `HTTP`

@@ -296,4 +296,32 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
+
+  /**
+   * Local with parameters by name. Shows that the EXTERN keyword is optional.
+   * Logical plan and native query are identical to the basic EXTERN.
+   */
+  @Test
+  public void testLocalFnOmitExtend()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(localfiles(files => '/tmp/foo.csv, /tmp/bar.csv',\n" +
+             "                  format => 'csv'))\n" +
+             "     (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", localDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(localDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("localExtern")
+        .verify();
+  }
 }
