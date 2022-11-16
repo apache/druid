@@ -663,6 +663,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       if (existingSegmentId == null) {
         requestsForNewSegments.add(request);
       } else {
+        log.info("Found existing segment [%d] for request.", existingSegmentId);
         allocatedSegmentIds.put(request, existingSegmentId);
       }
     }
@@ -774,7 +775,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Query<Map<String, Object>> query = handle
         .createQuery(
             StringUtils.format(
-                "SELECT start, %2$send%2$s, sequence_name, payload "
+                "SELECT start, %2$send%2$s, sequence_name, sequence_prev_id, payload "
                 + "FROM %s WHERE "
                 + "dataSource = :dataSource AND "
                 + "start = :start AND "
@@ -883,7 +884,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (Map.Entry<SegmentCreateRequest, SegmentIdWithShardSpec> entry : createdSegments.entrySet()) {
       final SegmentCreateRequest request = entry.getKey();
       final SegmentIdWithShardSpec segmentId = entry.getValue();
-      insertBatch.bind("id", segmentId.toString())
+      insertBatch.add()
+                 .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
                  .bind("created_date", DateTimes.nowUtc().toString())
                  .bind("start", interval.getStart().toString())
@@ -893,6 +895,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1.apply(request))
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId));
     }
+    insertBatch.execute();
   }
 
   private void insertPendingSegmentIntoMetastore(
@@ -934,6 +937,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       List<SegmentCreateRequest> requests
   ) throws IOException
   {
+    if (requests.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     // Get the time chunk and associated data segments for the given interval, if any
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
         getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
@@ -1004,6 +1011,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           pendingSegments
       );
       if (createdSegment != null) {
+        log.info("Created new segment [%s]", createdSegment);
         createdSegments.put(request, createdSegment);
       }
     }
@@ -1787,7 +1795,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
      *   <li>start</li>
      *   <li>end</li>
      *   <li>sequence_name</li>
-     *   <li>previous_segment_id</li>
+     *   <li>sequence_prev_id</li>
      *   <li>payload</li>
      * </ol>
      */
