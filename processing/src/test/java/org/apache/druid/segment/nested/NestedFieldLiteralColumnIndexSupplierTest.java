@@ -127,7 +127,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     doubleWriter.write(9.9);
     writeToBuffer(doubleBuffer, doubleWriter);
 
-    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
     globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);

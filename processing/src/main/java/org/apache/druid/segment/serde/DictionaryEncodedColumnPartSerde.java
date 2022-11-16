@@ -353,7 +353,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
             buffer,
-            GenericIndexed.BYTE_BUFFER_STRATEGY,
+            GenericIndexed.UTF8_STRATEGY,
             builder.getFileMapper()
         );
 

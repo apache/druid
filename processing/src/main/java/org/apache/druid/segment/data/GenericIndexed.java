@@ -100,13 +100,16 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
   /**
-   * An ObjectStrategy that returns a big-endian ByteBuffer pointing to the original data.
+   * An ObjectStrategy that returns a big-endian ByteBuffer pointing to original data.
    *
    * The returned ByteBuffer is a fresh read-only instance, so it is OK for callers to modify its position, limit, etc.
    * However, it does point to the original data, so callers must take care not to use it if the original data may
    * have been freed.
+   *
+   * The compare method of this instance uses {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}
+   * so that behavior is consistent with {@link #STRING_STRATEGY}.
    */
-  public static final ObjectStrategy<ByteBuffer> BYTE_BUFFER_STRATEGY = new ObjectStrategy<ByteBuffer>()
+  public static final ObjectStrategy<ByteBuffer> UTF8_STRATEGY = new ObjectStrategy<ByteBuffer>()
   {
     @Override
     public Class<ByteBuffer> getClazz()
@@ -140,7 +143,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     @Override
     public int compare(@Nullable ByteBuffer o1, @Nullable ByteBuffer o2)
     {
-      return ByteBufferUtils.unsignedComparator().compare(o1, o2);
+      return ByteBufferUtils.utf8Comparator().compare(o1, o2);
     }
   };
 
@@ -541,7 +544,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
       }
 
       //noinspection ObjectEquality
-      final boolean isByteBufferStrategy = strategy == BYTE_BUFFER_STRATEGY;
+      final boolean isByteBufferStrategy = strategy == UTF8_STRATEGY;
 
       int minIndex = 0;
       int maxIndex = size - 1;
@@ -553,7 +556,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
         if (isByteBufferStrategy) {
           // Specialization avoids ByteBuffer allocation in strategy.fromByteBuffer.
           ByteBuffer currValue = getByteBuffer(currIndex);
-          comparison = ByteBufferUtils.compareByteBuffers(currValue, (ByteBuffer) value);
+          comparison = ByteBufferUtils.compareUtf8ByteBuffers(currValue, (ByteBuffer) value);
         } else {
           T currValue = get(currIndex);
           comparison = strategy.compare(currValue, value);
