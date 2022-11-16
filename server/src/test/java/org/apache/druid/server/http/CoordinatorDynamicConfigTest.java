@@ -228,7 +228,8 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testConstructorWithNullsShouldKillUnusedSegmentsInAllDataSources()
   {
-    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(1,
+    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
+        1,
         1,
         1,
         1,
@@ -245,7 +246,9 @@ public class CoordinatorDynamicConfigTest
         5,
         true,
         true,
-        10);
+        10,
+        false
+    );
     Assert.assertTrue(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
   }
@@ -253,24 +256,27 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testConstructorWithSpecificDataSourcesToKillShouldNotKillUnusedSegmentsInAllDatasources()
   {
-    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(1,
-                                                                   1,
-                                                                   1,
-                                                                   1,
-                                                                   null,
-                                                                   false,
-                                                                   1,
-                                                                   2,
-                                                                   10,
-                                                                   true,
-                                                                   ImmutableSet.of("test1"),
-                                                                   null,
-                                                                   null,
-                                                                   ImmutableSet.of("host1"),
-                                                                   5,
-                                                                   true,
-                                                                   true,
-                                                                   10);
+    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
+        1,
+        1,
+        1,
+        1,
+        null,
+        false,
+        1,
+        2,
+        10,
+        true,
+        ImmutableSet.of("test1"),
+        null,
+        null,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10,
+        false
+    );
     Assert.assertFalse(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
   }
@@ -715,6 +721,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(
         current,
         new CoordinatorDynamicConfig.Builder(
+            null,
             null,
             null,
             null,

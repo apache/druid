@@ -34,6 +34,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
   private final boolean isDecommissioning;
+  private final int maxSegmentsInLoadQueue;
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -42,9 +43,20 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
   {
+    this(server, peon, isDecommissioning, 0);
+  }
+
+  public ServerHolder(
+      ImmutableDruidServer server,
+      LoadQueuePeon peon,
+      boolean isDecommissioning,
+      int maxSegmentsInNodeLoadingQueue
+  )
+  {
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
+    this.maxSegmentsInLoadQueue = maxSegmentsInNodeLoadingQueue;
   }
 
   public ImmutableDruidServer getServer()
@@ -136,6 +148,27 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean isServingSegment(SegmentId segmentId)
   {
     return server.getSegment(segmentId) != null;
+  }
+
+  /**
+   * Checks if the server can load the given segment.
+   * <p>
+   * A load is possible only if the server meets all of the following criteria:
+   * <ul>
+   *   <li>is not being decommissioned</li>
+   *   <li>is not already serving the segment</li>
+   *   <li>is not performing any other action on the segment</li>
+   *   <li>has not already exceeded the load queue limit in this run</li>
+   *   <li>has available disk space</li>
+   * </ul>
+   */
+  public boolean canLoadSegment(DataSegment segment)
+  {
+    return !isDecommissioning
+           && !isServingSegment(segment.getId())
+           && !isLoadingSegment(segment)
+           && (maxSegmentsInLoadQueue == 0 || maxSegmentsInLoadQueue > peon.getNumberOfSegmentsInQueue())
+           && getAvailableSize() >= segment.getSize();
   }
 
   @Override
