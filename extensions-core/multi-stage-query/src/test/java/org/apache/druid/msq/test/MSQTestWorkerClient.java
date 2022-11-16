@@ -53,23 +53,46 @@ public class MSQTestWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
-      throws ExecutionException, InterruptedException
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber
+  )
   {
     StageId stageId = new StageId(queryId, stageNumber);
-    return inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId);
+    try {
+      return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
+    }
+    catch (ExecutionException e) {
+      // TODO: fix
+      throw new RuntimeException(e);
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
-  ) throws ExecutionException, InterruptedException
+  )
   {
     StageId stageId = new StageId(queryId, stageNumber);
-    return inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
+    try {
+      return Futures.immediateFuture(
+          inMemoryWorkers.get(workerTaskId)
+                         .fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+      );
+    }
+    catch (ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

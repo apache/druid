@@ -60,7 +60,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class IndexerWorkerClient implements WorkerClient
@@ -106,44 +105,44 @@ public class IndexerWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
       String queryId,
       int stageNumber
-  ) throws ExecutionException, InterruptedException
+  )
   {
     String path = StringUtils.format("/keyStatistics/%s/%d",
                                      StringUtils.urlEncode(queryId),
                                      stageNumber);
 
-    return deserialize(
-        getClient(workerTaskId).request(
+    return FutureUtils.transform(
+        getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.POST, path),
             new BytesFullResponseHandler()
         ),
-        new TypeReference<ClusterByStatisticsSnapshot>() {}
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
     );
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
-  ) throws ExecutionException, InterruptedException
+  )
   {
     String path = StringUtils.format("/keyStatisticsForTimeChunk/%s/%d/%d",
                                      StringUtils.urlEncode(queryId),
                                      stageNumber,
                                      timeChunk);
 
-    return deserialize(
-        getClient(workerTaskId).request(
+    return FutureUtils.transform(
+        getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.POST, path),
             new BytesFullResponseHandler()
         ),
-        new TypeReference<ClusterByStatisticsSnapshot>() {}
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
     );
   }
 

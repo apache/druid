@@ -28,7 +28,6 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Client for multi-stage query workers. Used by the controller task.
@@ -44,19 +43,22 @@ public interface WorkerClient extends AutoCloseable
    * Fetches the {@link ClusterByStatisticsSnapshot} from a worker. This is intended to be used by the
    * {@link WorkerSketchFetcher} under PARALLEL or AUTO modes.
    */
-  ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
-      throws ExecutionException, InterruptedException;
+  ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
+      String workerTaskId,
+      String queryId,
+      int stageNumber
+  );
 
   /**
    * Fetches a {@link ClusterByStatisticsSnapshot} which contains only the sketch of the specified timeChunk.
    * This is intended to be used by the {@link WorkerSketchFetcher} under SEQUENTIAL or AUTO modes.
    */
-  ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
+  ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
-  ) throws ExecutionException, InterruptedException;
+  );
 
   /**
    * Worker's client method to inform it of the partition boundaries for the given stage. This is usually invoked by the

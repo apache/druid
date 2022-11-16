@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -115,19 +116,17 @@ public class WorkerSketchFetcher
     // Submit a task for each worker to fetch statistics
     IntStream.range(0, workerCount).forEach(workerNo -> {
       executorService.submit(() -> {
-        try {
-          ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = workerClient.fetchClusterByStatisticsSnapshot(
-              workerTaskIds.get(workerNo),
-              stageDefinition.getId().getQueryId(),
-              stageDefinition.getStageNumber()
-          );
+        ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
+            workerClient.fetchClusterByStatisticsSnapshot(
+                workerTaskIds.get(workerNo),
+                stageDefinition.getId().getQueryId(),
+                stageDefinition.getStageNumber()
+            );
+        partitionFuture.whenComplete((result, exception) -> snapshotFuture.cancel(true));
 
-          // If the future already failed for some reason, stop the task.
-          if (partitionFuture.isDone()) {
-            return;
-          }
-
-          synchronized (mergedStatisticsCollector) {
+        synchronized (mergedStatisticsCollector) {
+          try {
+            ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
             mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
             finishedWorkers.add(workerNo);
 
@@ -135,9 +134,9 @@ public class WorkerSketchFetcher
               partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
             }
           }
-        }
-        catch (Exception e) {
-          partitionFuture.completeExceptionally(e);
+          catch (Exception e) {
+            partitionFuture.completeExceptionally(e);
+          }
         }
       });
     });
@@ -204,19 +203,18 @@ public class WorkerSketchFetcher
         // Submits a task for every worker which has a certain time chunk
         for (int workerNo : workerIdsWithTimeChunk) {
           executorService.submit(() -> {
-            try {
-              ClusterByStatisticsSnapshot snapshotForTimeChunk =
-                  workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
-                      workerTaskIds.get(workerNo),
-                      stageDefinition.getId().getQueryId(),
-                      stageDefinition.getStageNumber(),
-                      timeChunk
-                  );
-              // If the future already failed for some reason, stop the task.
-              if (partitionFuture.isDone()) {
-                return;
-              }
-              synchronized (mergedStatisticsCollector) {
+            ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
+                workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
+                    workerTaskIds.get(workerNo),
+                    stageDefinition.getId().getQueryId(),
+                    stageDefinition.getStageNumber(),
+                    timeChunk
+                );
+            partitionFuture.whenComplete((result, exception) -> snapshotFuture.cancel(true));
+
+            synchronized (mergedStatisticsCollector) {
+              try {
+                ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
                 mergedStatisticsCollector.addAll(snapshotForTimeChunk);
                 finishedWorkers.add(workerNo);
 
@@ -234,12 +232,17 @@ public class WorkerSketchFetcher
                                      .ranges();
                   abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
 
-                  submitFetchingTasksForNextTimeChunk();
+                  if (finalPartitionBoundries.size() > stageDefinition.getMaxPartitionCount()) {
+                    // Fail fast if more partitions than the maximum have been reached.
+                    partitionFuture.complete(Either.error((long) finalPartitionBoundries.size()));
+                  } else {
+                    submitFetchingTasksForNextTimeChunk();
+                  }
                 }
               }
-            }
-            catch (Exception e) {
-              partitionFuture.completeExceptionally(e);
+              catch (Exception e) {
+                partitionFuture.completeExceptionally(e);
+              }
             }
           });
         }

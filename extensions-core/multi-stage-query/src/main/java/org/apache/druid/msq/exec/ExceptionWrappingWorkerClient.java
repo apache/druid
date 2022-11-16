@@ -35,7 +35,6 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Wrapper around any {@link WorkerClient} that converts exceptions into {@link MSQException}
@@ -58,19 +57,18 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
-      throws ExecutionException, InterruptedException
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(String workerTaskId, String queryId, int stageNumber)
   {
     return client.fetchClusterByStatisticsSnapshot(workerTaskId, queryId, stageNumber);
   }
 
   @Override
-  public ClusterByStatisticsSnapshot fetchClusterByStatisticsSnapshotForTimeChunk(
+  public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       String queryId,
       int stageNumber,
       long timeChunk
-  ) throws ExecutionException, InterruptedException
+  )
   {
     return client.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, queryId, stageNumber, timeChunk);
   }
