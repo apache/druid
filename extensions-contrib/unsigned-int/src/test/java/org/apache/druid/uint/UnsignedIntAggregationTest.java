@@ -53,7 +53,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
   @Test
   public void testSumAgg() throws Exception
   {
-    createSegmentFromDataFile(groupByTestHelper, "u_int_data.dat", segmentDir);
+    createSegmentFromDataFile(groupByTestHelper, "u_int_data.data", segmentDir);
     Sequence<ResultRow> sequence = groupByTestHelper.runQueryOnSegments(
         ImmutableList.of(segmentDir),
         readJsonAsString("queries/group_by_sum_query.json")
@@ -72,7 +72,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
   @Test
   public void testMaxAgg() throws Exception
   {
-    createSegmentFromDataFile(groupByTestHelper, "u_int_data.dat", segmentDir);
+    createSegmentFromDataFile(groupByTestHelper, "u_int_data.data", segmentDir);
     Sequence<ResultRow> sequence = groupByTestHelper.runQueryOnSegments(
         ImmutableList.of(segmentDir),
         readJsonAsString("queries/group_by_max_query.json")
@@ -91,7 +91,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
   @Test
   public void testMinAgg() throws Exception
   {
-    createSegmentFromDataFile(groupByTestHelper, "u_int_data.dat", segmentDir);
+    createSegmentFromDataFile(groupByTestHelper, "u_int_data.data", segmentDir);
     Sequence<ResultRow> sequence = groupByTestHelper.runQueryOnSegments(
         ImmutableList.of(segmentDir),
         readJsonAsString("queries/group_by_min_query.json")

@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 
 public abstract class DruidBaseTest
@@ -82,10 +83,19 @@ public abstract class DruidBaseTest
 
   public static String readJsonAsString(String s) throws IOException, URISyntaxException
   {
-    return String.join(" ", Files.readAllLines(Paths
-                                                   .get(Objects.requireNonNull(DruidBaseTest.class.getClassLoader()
-                                                                                                  .getResource(s))
-                                                               .toURI())));
+    List<String> lines = Files.readAllLines(
+        Paths
+            .get(Objects.requireNonNull(DruidBaseTest.class.getClassLoader()
+                                                           .getResource(
+                                                               s))
+                        .toURI()));
+    StringBuilder builder = new StringBuilder();
+    for (String line : lines) {
+      if (!line.trim().startsWith("//")) {
+        builder.append(line).append(" ");
+      }
+    }
+    return builder.toString();
   }
 
 }
