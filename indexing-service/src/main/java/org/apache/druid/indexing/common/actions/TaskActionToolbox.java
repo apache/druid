@@ -130,4 +130,9 @@ public class TaskActionToolbox
   {
     return segmentAllocationQueue;
   }
+
+  public boolean canBatchSegmentAllocation()
+  {
+    return segmentAllocationQueue != null && segmentAllocationQueue.isEnabled();
+  }
 }

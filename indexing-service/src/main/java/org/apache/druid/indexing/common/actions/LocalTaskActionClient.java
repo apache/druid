@@ -76,9 +76,32 @@ public class LocalTaskActionClient implements TaskActionClient
     }
 
     final long performStartTime = System.currentTimeMillis();
-    final RetType result = taskAction.perform(task, toolbox);
+    final RetType result;
+    if (isBatchAllocateAction(taskAction)) {
+      result = performBatchAllocateAction(taskAction);
+    } else {
+      result = taskAction.perform(task, toolbox);
+    }
     emitTimerMetric("task/action/run/time", taskAction, System.currentTimeMillis() - performStartTime);
     return result;
+  }
+
+  private <R> boolean isBatchAllocateAction(TaskAction<R> taskAction)
+  {
+    return toolbox.canBatchSegmentAllocation()
+        && taskAction instanceof SegmentAllocateAction;
+  }
+
+  @SuppressWarnings("unchecked")
+  private <R> R performBatchAllocateAction(TaskAction<R> taskAction)
+  {
+    try {
+      SegmentAllocateAction allocateAction = (SegmentAllocateAction) taskAction;
+      return (R) allocateAction.performAsync(task, toolbox).get();
+    }
+    catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
   }
 
   private void emitTimerMetric(final String metric, final TaskAction<?> action, final long time)

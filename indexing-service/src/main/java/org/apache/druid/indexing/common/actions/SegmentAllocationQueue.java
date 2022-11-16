@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -69,7 +70,9 @@ import java.util.stream.Collectors;
 public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
 {
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
-  private static final long MAX_WAIT_TIME_MILLIS = 1_000;
+
+  private final long maxWaitTimeMillis;
+  private final boolean enabled;
 
   private final TaskLockbox taskLockbox;
   private final ScheduledExecutorService executor;
@@ -83,6 +86,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
   @Inject
   public SegmentAllocationQueue(
       TaskLockbox taskLockbox,
+      TaskLockConfig taskLockConfig,
       IndexerMetadataStorageCoordinator metadataStorage,
       @IndexingService DruidLeaderSelector leaderSelector,
       ServiceEmitter emitter
@@ -92,6 +96,9 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.leaderSelector = leaderSelector;
+    this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationMaxWaitTime();
+    this.enabled = taskLockConfig.isBatchSegmentAllocation();
+
     this.executor = ScheduledExecutors.fixed(1, "SegmentAllocQueue-%s");
   }
 
@@ -100,7 +107,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
   {
     log.info("Starting queue.");
     if (leaderSelector.isLeader()) {
-      scheduleQueuePoll(MAX_WAIT_TIME_MILLIS);
+      scheduleQueuePoll(maxWaitTimeMillis);
       log.info("Scheduled queue processing.");
     }
     leaderSelector.registerListener(this);
@@ -111,6 +118,11 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
   {
     log.info("Stopping queue.");
     executor.shutdownNow();
+  }
+
+  public boolean isEnabled()
+  {
+    return enabled;
   }
 
   private void scheduleQueuePoll(long delay)
@@ -202,11 +214,11 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     // Schedule the next round of processing
     final long nextScheduleDelay;
     if (processingQueue.isEmpty()) {
-      nextScheduleDelay = MAX_WAIT_TIME_MILLIS;
+      nextScheduleDelay = maxWaitTimeMillis;
     } else {
       nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
-      nextScheduleDelay = Math.max(0, MAX_WAIT_TIME_MILLIS - timeElapsed);
+      nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
     }
     scheduleQueuePoll(nextScheduleDelay);
   }
@@ -376,7 +388,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     log.info("Elected leader. Starting queue processing.");
 
     // Start polling the queue
-    scheduleQueuePoll(MAX_WAIT_TIME_MILLIS);
+    scheduleQueuePoll(maxWaitTimeMillis);
   }
 
   @Override
@@ -483,7 +495,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
 
     boolean isDue()
     {
-      return System.currentTimeMillis() - queueTimeMillis > MAX_WAIT_TIME_MILLIS;
+      return System.currentTimeMillis() - queueTimeMillis > maxWaitTimeMillis;
     }
   }
 
