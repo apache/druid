@@ -472,6 +472,7 @@ public class TaskLockbox
       LockGranularity lockGranularity
   )
   {
+    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
@@ -517,11 +518,10 @@ public class TaskLockbox
   private void acquireTaskLock(SegmentAllocationHolder holder, boolean isTimeChunkLock)
   {
     final LockRequest lockRequest;
-    final LockRequestForNewSegment lockRequestForNewSegment = holder.createLockRequest();
     if (isTimeChunkLock) {
-      lockRequest = new TimeChunkLockRequest(lockRequestForNewSegment);
+      lockRequest = new TimeChunkLockRequest(holder.lockRequest);
     } else {
-      lockRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, holder.allocatedSegment);
+      lockRequest = new SpecificSegmentLockRequest(holder.lockRequest, holder.allocatedSegment);
     }
 
     // Create or find the task lock for the created lock request
@@ -532,10 +532,7 @@ public class TaskLockbox
     } else if (acquiredLock.isRevoked()) {
       holder.markFailed("Lock was revoked.");
     } else {
-      // Update the holder
-      holder.lockRequest = lockRequest;
-      holder.taskLockPosse = posseToUse;
-      holder.acquiredLock = acquiredLock;
+      holder.setAcquiredLock(posseToUse, lockRequest.getInterval());
     }
   }
 
@@ -557,7 +554,7 @@ public class TaskLockbox
       if (!success) {
         final Integer partitionId = isTimeChunkLock
                                     ? null : ((SegmentLock) acquiredLock).getPartitionId();
-        unlock(task, holder.lockRequest.getInterval(), partitionId);
+        unlock(task, holder.lockRequestInterval, partitionId);
         holder.markFailed("Could not update task lock in metadata store.");
       }
     } else {
@@ -698,6 +695,11 @@ public class TaskLockbox
     }
   }
 
+  /**
+   * Makes a call to the {@link #metadataStorageCoordinator} to allocate segments
+   * for the given requests. Updates the holder with the allocated segment if
+   * the allocation succeeds, otherwise marks it as failed.
+   */
   private void allocateSegmentIds(
       String dataSource,
       Interval interval,
@@ -709,9 +711,10 @@ public class TaskLockbox
       return;
     }
 
-    final List<SegmentCreateRequest> createRequests = holders.stream()
-        .map(SegmentAllocationHolder::getSegmentRequest)
-        .collect(Collectors.toList());
+    final List<SegmentCreateRequest> createRequests =
+        holders.stream()
+               .map(SegmentAllocationHolder::getSegmentRequest)
+               .collect(Collectors.toList());
 
     Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatedSegments =
         metadataStorageCoordinator.allocatePendingSegments(
@@ -1422,32 +1425,30 @@ public class TaskLockbox
     final AllocationHolderList list;
 
     final Task task;
-    final Interval interval;
+    final Interval allocateInterval;
     final SegmentAllocateAction action;
+    final LockRequestForNewSegment lockRequest;
     SegmentCreateRequest segmentRequest;
 
-    SegmentIdWithShardSpec allocatedSegment;
-    SegmentAllocateResult result;
     TaskLock acquiredLock;
     TaskLockPosse taskLockPosse;
-    LockRequest lockRequest;
+    Interval lockRequestInterval;
+    SegmentIdWithShardSpec allocatedSegment;
+    SegmentAllocateResult result;
 
-    SegmentAllocationHolder(SegmentAllocateRequest request, Interval interval, AllocationHolderList list)
+    SegmentAllocationHolder(SegmentAllocateRequest request, Interval allocateInterval, AllocationHolderList list)
     {
       this.list = list;
-      this.interval = interval;
+      this.allocateInterval = allocateInterval;
       this.task = request.getTask();
       this.action = request.getAction();
-    }
 
-    LockRequestForNewSegment createLockRequest()
-    {
-      return new LockRequestForNewSegment(
+      this.lockRequest = new LockRequestForNewSegment(
           action.getLockGranularity(),
           action.getTaskLockType(),
           task.getGroupId(),
           action.getDataSource(),
-          interval,
+          allocateInterval,
           action.getPartialShardSpec(),
           task.getPriority(),
           action.getSequenceName(),
@@ -1463,7 +1464,7 @@ public class TaskLockbox
         segmentRequest = new SegmentCreateRequest(
             action.getSequenceName(),
             action.getPreviousSegmentId(),
-            acquiredLock.getVersion(),
+            acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
             action.getPartialShardSpec()
         );
       }
@@ -1486,6 +1487,13 @@ public class TaskLockbox
     void setAllocatedSegment(SegmentIdWithShardSpec segmentId)
     {
       this.allocatedSegment = segmentId;
+    }
+
+    void setAcquiredLock(TaskLockPosse lockPosse, Interval lockRequestInterval)
+    {
+      this.taskLockPosse = lockPosse;
+      this.acquiredLock = lockPosse == null ? null : lockPosse.getTaskLock();
+      this.lockRequestInterval = lockRequestInterval;
     }
   }
 }

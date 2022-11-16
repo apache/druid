@@ -51,6 +51,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -79,20 +80,26 @@ public class SegmentAllocateActionTest
   private static final DateTime PARTY_TIME = DateTimes.of("1999");
   private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
 
+  private final boolean useBatch;
   private final LockGranularity lockGranularity;
 
-  @Parameterized.Parameters(name = "{0}")
+  private SegmentAllocationQueue allocationQueue;
+
+  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT},
-        new Object[]{LockGranularity.TIME_CHUNK}
+        new Object[]{LockGranularity.SEGMENT, true},
+        new Object[]{LockGranularity.SEGMENT, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false}
     );
   }
 
-  public SegmentAllocateActionTest(LockGranularity lockGranularity)
+  public SegmentAllocateActionTest(LockGranularity lockGranularity, boolean useBatch)
   {
     this.lockGranularity = lockGranularity;
+    this.useBatch = useBatch;
   }
 
   @Before
@@ -101,6 +108,18 @@ public class SegmentAllocateActionTest
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
+    allocationQueue = taskActionTestKit.getTaskActionToolbox().getSegmentAllocationQueue();
+    if (allocationQueue != null) {
+      allocationQueue.start();
+    }
+  }
+
+  @After
+  public void tearDown()
+  {
+    if (allocationQueue != null) {
+      allocationQueue.stop();
+    }
   }
 
   @Test
@@ -990,7 +1009,17 @@ public class SegmentAllocateActionTest
         lockGranularity,
         null
     );
-    return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+
+    try {
+      if (useBatch) {
+        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox()).get();
+      } else {
+        return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void assertSameIdentifier(final SegmentIdWithShardSpec expected, final SegmentIdWithShardSpec actual)

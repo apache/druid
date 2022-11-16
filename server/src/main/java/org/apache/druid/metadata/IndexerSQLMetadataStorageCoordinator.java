@@ -993,6 +993,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
     for (SegmentCreateRequest request : requests) {
+      // TODO: create new segment should maybe also take the segments created so far as argument
+      //  so that we assign the right partition id to all of them
       SegmentIdWithShardSpec createdSegment = createNewSegment(
           request,
           dataSource,

@@ -19,9 +19,11 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -31,6 +33,8 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -55,15 +59,17 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
  * Queue for {@link SegmentAllocateRequest}s.
  */
+@ManageLifecycle
 public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
 {
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
-  private static final long MAX_WAIT_TIME_MILLIS = 5_000;
+  private static final long MAX_WAIT_TIME_MILLIS = 1_000;
 
   private final TaskLockbox taskLockbox;
   private final ScheduledExecutorService executor;
@@ -86,12 +92,25 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.leaderSelector = leaderSelector;
-    this.executor = ScheduledExecutors.fixed(1, "SegmentAllocationQueue-%s");
+    this.executor = ScheduledExecutors.fixed(1, "SegmentAllocQueue-%s");
+  }
 
+  @LifecycleStart
+  public void start()
+  {
+    log.info("Starting queue.");
     if (leaderSelector.isLeader()) {
       scheduleQueuePoll(MAX_WAIT_TIME_MILLIS);
+      log.info("Scheduled queue processing.");
     }
     leaderSelector.registerListener(this);
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    log.info("Stopping queue.");
+    executor.shutdownNow();
   }
 
   private void scheduleQueuePoll(long delay)
@@ -110,24 +129,41 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     }
 
     SegmentAllocateAction action = request.getAction();
+
+    // Requests for exclusive time chunks cannot be batched with other requests
     boolean isExclusiveTimeChunkLock = action.getLockGranularity() == LockGranularity.TIME_CHUNK
                                        && action.getTaskLockType() == TaskLockType.EXCLUSIVE;
+    final AllocateRequestKey requestKey = new AllocateRequestKey(action, isExclusiveTimeChunkLock);
 
-    final AllocateRequestBatch batch;
-    final AllocateRequestKey requestKey = AllocateRequestKey.forAction(action);
-    if (isExclusiveTimeChunkLock) {
-      // Cannot batch exclusive time chunk locks
-      batch = new AllocateRequestBatch(requestKey);
-      processingQueue.add(batch);
-    } else {
-      batch = keyToBatch.computeIfAbsent(requestKey, k -> {
-        AllocateRequestBatch b = new AllocateRequestBatch(k);
-        processingQueue.add(b);
-        return b;
-      });
-    }
+    final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
+    keyToBatch.compute(requestKey, (key, existingBatch) -> {
+      AllocateRequestBatch computedBatch = existingBatch;
+      if (computedBatch == null) {
+        computedBatch = new AllocateRequestBatch(key);
+        computedBatch.resetQueueTime();
+        processingQueue.offer(computedBatch);
+      }
 
-    return batch.add(request);
+      requestFuture.set(computedBatch.add(request));
+      return computedBatch;
+    });
+
+    return requestFuture.get();
+  }
+
+  private void requeueBatch(AllocateRequestBatch batch)
+  {
+    log.info("Requeueing [%d] failed requests in batch [%s].", batch.size(), batch.key);
+    keyToBatch.compute(batch.key, (key, existingBatch) -> {
+      if (existingBatch == null) {
+        batch.resetQueueTime();
+        return batch;
+      }
+
+      // Merge requests from this batch to existing one
+      existingBatch.merge(batch);
+      return existingBatch;
+    });
   }
 
   private void processBatchesDue()
@@ -141,9 +177,25 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     }
 
     // Process all batches which are due
+    log.info("Processing all batches which are due for execution.");
     AllocateRequestBatch nextBatch = processingQueue.peek();
     while (nextBatch != null && nextBatch.isDue()) {
-      processNextBatch();
+      processingQueue.poll();
+      boolean processed;
+      try {
+        processed = processBatch(nextBatch);
+      }
+      catch (Throwable t) {
+        processed = true;
+        log.error(t, "Error while processing batch [%s]", nextBatch.key);
+      }
+
+      if (processed) {
+        nextBatch.markCompleted();
+      } else {
+        requeueBatch(nextBatch);
+      }
+
       nextBatch = processingQueue.peek();
     }
 
@@ -159,23 +211,30 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     scheduleQueuePoll(nextScheduleDelay);
   }
 
-  private void processNextBatch()
+  /**
+   * Processes the given batch. Returns true if the batch was completely processed
+   * and should not be requeued.
+   */
+  private boolean processBatch(AllocateRequestBatch requestBatch)
   {
-    final AllocateRequestBatch requestBatch = processingQueue.poll();
-    if (requestBatch == null || requestBatch.isEmpty()) {
-      return;
-    }
-
     final AllocateRequestKey requestKey = requestBatch.key;
     keyToBatch.remove(requestKey);
+    if (requestBatch.isEmpty()) {
+      return true;
+    }
 
-    log.info("Processing [%d] requests for batch [%s].", requestBatch.size(), requestKey);
+    log.info(
+        "Processing [%d] requests for batch [%s], queue time [%s].",
+        requestBatch.size(),
+        requestKey,
+        requestBatch.getQueueTime()
+    );
 
     final long startTimeMillis = System.currentTimeMillis();
-    emitBatchMetric("task/action/batch/size", requestBatch.size(), requestKey);
+    final int batchSize = requestBatch.size();
+    emitBatchMetric("task/action/batch/size", batchSize, requestKey);
     emitBatchMetric("task/action/batch/queueTime", (startTimeMillis - requestBatch.getQueueTime()), requestKey);
 
-    final int batchSize = requestBatch.size();
     final Set<DataSegment> usedSegments = retrieveUsedSegments(requestKey);
     final int successCount = allocateSegmentsForBatch(requestBatch, usedSegments);
 
@@ -184,26 +243,19 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
 
     if (requestBatch.isEmpty()) {
       log.info("All requests in batch [%s] have been processed.", requestKey);
-    } else {
-      // Requeue the batch only if used segments have changed
-      final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
-      if (updatedUsedSegments.equals(usedSegments)) {
-        log.error(
-            "Used segments have not changed. Not requeueing [%d] failed requests in batch [%s].",
-            requestBatch.size(),
-            requestKey
-        );
-      } else {
-        log.info(
-            "Used segment set changed from [%d] segments to [%d].",
-            usedSegments.size(),
-            updatedUsedSegments.size()
-        );
-        log.info("Requeueing [%d] failed requests in batch [%s].", requestBatch.size(), requestKey);
+      return true;
+    }
 
-        requestBatch.resetQueueTime();
-        processingQueue.offer(requestBatch);
-      }
+    // Requeue the batch only if used segments have changed
+    log.info("There are [%d] failed requests in batch [%s].", requestBatch.size(), requestKey);
+    final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
+
+    if (updatedUsedSegments.equals(usedSegments)) {
+      log.error("Used segments have not changed. Not requeueing failed requests.");
+      return true;
+    } else {
+      log.info("Used segments have changed. Requeuing failed requests");
+      return false;
     }
   }
 
@@ -229,7 +281,14 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
 
     int successCount = 0;
     for (Interval tryInterval : tryIntervals) {
-      final List<SegmentAllocateRequest> requests = new ArrayList<>(requestBatch.requestToFuture.keySet());
+      final List<SegmentAllocateRequest> requests = requestBatch.getPendingRequests();
+      log.info(
+          "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
+          requests.size(),
+          tryInterval,
+          requestKey
+      );
+
       final List<SegmentAllocateResult> results = taskLockbox.allocateSegments(
           requests,
           requestKey.dataSource,
@@ -327,22 +386,50 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
    */
   private class AllocateRequestBatch
   {
+    private long queueTimeMillis;
     private final AllocateRequestKey key;
+
+    /**
+     * This must be accessed through methods synchronized on this batch.
+     * It is to avoid races between a new request being added just when the batch
+     * is being processed.
+     */
+    @GuardedBy("this")
     private final Map<SegmentAllocateRequest, CompletableFuture<SegmentIdWithShardSpec>>
         requestToFuture = new HashMap<>();
-    private long queueTimeMillis;
 
     AllocateRequestBatch(AllocateRequestKey key)
     {
+      log.info("Creating a new batch with key: %s", key);
       this.key = key;
     }
 
-    Future<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
+    synchronized Future<SegmentIdWithShardSpec> add(SegmentAllocateRequest request)
     {
+      log.info("Adding request to batch [%s]: %s", key, request.getAction());
       return requestToFuture.computeIfAbsent(request, req -> new CompletableFuture<>());
     }
 
-    void handleResult(SegmentAllocateResult result, SegmentAllocateRequest request)
+    synchronized void merge(AllocateRequestBatch batch)
+    {
+      requestToFuture.putAll(batch.requestToFuture);
+      batch.requestToFuture.clear();
+    }
+
+    synchronized List<SegmentAllocateRequest> getPendingRequests()
+    {
+      return new ArrayList<>(requestToFuture.keySet());
+    }
+
+    synchronized void markCompleted()
+    {
+      if (!requestToFuture.isEmpty()) {
+        log.info("Marking [%d] requests in batch [%s] as failed.", size(), key);
+        requestToFuture.values().forEach(future -> future.complete(null));
+      }
+    }
+
+    synchronized void handleResult(SegmentAllocateResult result, SegmentAllocateRequest request)
     {
       request.incrementAttempts();
       emitTaskMetric("task/action/attempt/count", request.getAttempts(), request);
@@ -370,12 +457,12 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
       }
     }
 
-    boolean isEmpty()
+    synchronized boolean isEmpty()
     {
       return requestToFuture.isEmpty();
     }
 
-    int size()
+    synchronized int size()
     {
       return requestToFuture.size();
     }
@@ -401,6 +488,8 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
    */
   private static class AllocateRequestKey
   {
+    private final boolean unique;
+
     private final String dataSource;
     private final Interval rowInterval;
     private final Granularity queryGranularity;
@@ -413,13 +502,13 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     private final boolean useNonRootGenPartitionSpace;
     private final int hash;
 
-    static AllocateRequestKey forAction(SegmentAllocateAction action)
+    /**
+     * Creates a new key for the given action. The batch for a unique key will
+     * always contain a single request.
+     */
+    AllocateRequestKey(SegmentAllocateAction action, boolean unique)
     {
-      return new AllocateRequestKey(action);
-    }
-
-    AllocateRequestKey(SegmentAllocateAction action)
-    {
+      this.unique = unique;
       this.dataSource = action.getDataSource();
       this.queryGranularity = action.getQueryGranularity();
       this.preferredSegmentGranularity = action.getPreferredSegmentGranularity();
@@ -432,7 +521,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
       this.rowInterval = queryGranularity.bucket(action.getTimestamp())
                                          .withChronology(ISOChronology.getInstanceUTC());
 
-      this.hash = Objects.hash(
+      this.hash = unique ? super.hashCode() : Objects.hash(
           skipSegmentLineageCheck,
           useNonRootGenPartitionSpace,
           dataSource,
@@ -447,6 +536,9 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     @Override
     public boolean equals(Object o)
     {
+      if (unique) {
+        return this == o;
+      }
       if (this == o) {
         return true;
       }
@@ -473,9 +565,9 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     @Override
     public String toString()
     {
-      return "AllocateRequestKey{" +
-             "dataSource='" + dataSource + '\'' +
-             ", rowInterval=" + rowInterval +
+      return "{" +
+             "ds='" + dataSource + '\'' +
+             ", row=" + rowInterval +
              '}';
     }
   }
