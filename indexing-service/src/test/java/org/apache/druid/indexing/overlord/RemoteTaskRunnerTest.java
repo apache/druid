@@ -568,6 +568,7 @@ public class RemoteTaskRunnerTest
   public void testRunPendingTaskFailToAssignTask() throws Exception
   {
     doSetup();
+    Thread.sleep(100);
     RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
     // modify taskId to make task assignment failed
     RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);

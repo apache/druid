@@ -1574,7 +1574,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        OBJECT_MAPPER
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

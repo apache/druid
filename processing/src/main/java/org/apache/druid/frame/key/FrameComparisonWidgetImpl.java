@@ -89,8 +89,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         frame.region(RowBasedFrameWriter.ROW_OFFSET_REGION),
         frame.region(RowBasedFrameWriter.ROW_DATA_REGION),
         sortColumns.size(),
-        RowKeyComparator.computeFirstFieldPosition(frameReader.signature().size()),
-        RowKeyComparator.computeAscDescRunLengths(sortColumns)
+        ByteRowKeyComparator.computeFirstFieldPosition(frameReader.signature().size()),
+        ByteRowKeyComparator.computeAscDescRunLengths(sortColumns)
     );
   }
 

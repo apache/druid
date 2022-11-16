@@ -28,6 +28,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -37,6 +38,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Describes the basic shape for any 'nested data' ({@link StructuredData}) {@link ComplexColumn} implementation along
@@ -113,6 +115,14 @@ public abstract class NestedDataComplexColumn implements ComplexColumn
       List<NestedPathPart> path,
       ReadableVectorOffset readableOffset
   );
+
+  public abstract List<List<NestedPathPart>> getNestedFields();
+
+  @Nullable
+  public abstract Set<ColumnType> getColumnTypes(List<NestedPathPart> path);
+
+  @Nullable
+  public abstract ColumnHolder getColumnHolder(List<NestedPathPart> path);
 
   /**
    * Make a {@link ColumnIndexSupplier} for a nested literal field column associated with this nested

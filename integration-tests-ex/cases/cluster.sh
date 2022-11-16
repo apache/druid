@@ -82,6 +82,9 @@ function category {
 		"InputFormat")
 			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
 			;;
+		"Catalog")
+			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
+			;;
 		*)
 			export DRUID_INTEGRATION_TEST_GROUP=$CATEGORY
 			;;
@@ -178,7 +181,7 @@ case $CMD in
 	    cd $CLUSTER_DIR
 		docker-compose up -d
 		# Enable the following for debugging
-		show_status
+		#show_status
 		;;
 	"status" )
 		category $*
@@ -188,7 +191,7 @@ case $CMD in
 	"down" )
 		category $*
 		# Enable the following for debugging
-		show_status
+		#show_status
 	    cd $CLUSTER_DIR
 		echo OVERRIDE_ENV="$ENV_FILE" docker-compose $CMD
 		OVERRIDE_ENV="$ENV_FILE" docker-compose $CMD
