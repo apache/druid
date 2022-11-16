@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
@@ -88,7 +89,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -502,27 +502,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(allocateInterval, "interval");
 
     final Interval interval = allocateInterval.withChronology(ISOChronology.getInstanceUTC());
-
-    @SuppressWarnings("UnstableApiUsage")
-    final Function<SegmentCreateRequest, String> sequenceShaFunction =
-        request ->
-            skipSegmentLineageCheck
-            ? BaseEncoding.base16().encode(
-                Hashing.sha1().newHasher()
-                       .putBytes(StringUtils.toUtf8(request.getSequenceName()))
-                       .putByte((byte) 0xff)
-                       .putLong(interval.getStartMillis())
-                       .putLong(interval.getEndMillis())
-                       .hash().asBytes())
-            : BaseEncoding.base16().encode(
-                Hashing.sha1().newHasher()
-                       .putBytes(StringUtils.toUtf8(request.getSequenceName()))
-                       .putByte((byte) 0xff)
-                       .putBytes(StringUtils.toUtf8(request.getPreviousSegmentId()))
-                       .hash().asBytes());
-
     return connector.retryWithHandle(
-        handle -> allocatePendingSegments(handle, dataSource, interval, requests, sequenceShaFunction)
+        handle -> allocatePendingSegments(handle, dataSource, interval, skipSegmentLineageCheck, requests)
     );
   }
 
@@ -648,23 +629,29 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final Interval interval,
-      final List<SegmentCreateRequest> requests,
-      final Function<SegmentCreateRequest, String> sequenceShaFunction
+      final boolean skipSegmentLineageCheck,
+      final List<SegmentCreateRequest> requests
   ) throws IOException
   {
-    final Map<String, SegmentIdWithShardSpec> existingSegmentIds =
-        checkAndGetExistingSegmentIds(handle, dataSource, interval);
+    final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> existingSegmentIds;
+    if (skipSegmentLineageCheck) {
+      existingSegmentIds = getExistingSegmentIdsSkipLineageCheck(handle, dataSource, interval, requests);
+    } else {
+      existingSegmentIds = getExistingSegmentIdsWithLineageCheck(handle, dataSource, interval, requests);
+    }
 
     // For every request see if a segment id already exists
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatedSegmentIds = new HashMap<>();
     final List<SegmentCreateRequest> requestsForNewSegments = new ArrayList<>();
     for (SegmentCreateRequest request : requests) {
-      SegmentIdWithShardSpec existingSegmentId = existingSegmentIds.get(request.getUniqueSequenceId());
-      if (existingSegmentId == null) {
+      CheckExistingSegmentIdResult existingSegmentId = existingSegmentIds.get(request);
+      if (existingSegmentId == null || !existingSegmentId.found) {
         requestsForNewSegments.add(request);
+      } else if (existingSegmentId.segmentIdentifier != null) {
+        log.info("Found valid existing segment [%s] for request.", existingSegmentId.segmentIdentifier);
+        allocatedSegmentIds.put(request, existingSegmentId.segmentIdentifier);
       } else {
-        log.info("Found existing segment [%d] for request.", existingSegmentId);
-        allocatedSegmentIds.put(request, existingSegmentId);
+        log.info("Found clashing existing segment [%s] for request.", existingSegmentId);
       }
     }
 
@@ -684,11 +671,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         createdSegments,
         dataSource,
         interval,
-        sequenceShaFunction
+        skipSegmentLineageCheck
     );
 
     allocatedSegmentIds.putAll(createdSegments);
     return allocatedSegmentIds;
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  private String getSequenceNameAndPrevIdSha(
+      SegmentCreateRequest request,
+      Interval interval,
+      boolean skipSegmentLineageCheck
+  )
+  {
+    final Hasher hasher = Hashing.sha1().newHasher()
+                                 .putBytes(StringUtils.toUtf8(request.getSequenceName()))
+                                 .putByte((byte) 0xff);
+    if (skipSegmentLineageCheck) {
+      hasher
+          .putLong(interval.getStartMillis())
+          .putLong(interval.getEndMillis());
+    } else {
+      hasher
+          .putBytes(StringUtils.toUtf8(request.getPreviousSegmentId()));
+    }
+
+    return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
 
   @Nullable
@@ -764,18 +773,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Returns a map from sequenceId (sequenceName + previousSegmentId) to segment id.
+   * Returns a map from sequenceName to segment id.
    */
-  private Map<String, SegmentIdWithShardSpec> checkAndGetExistingSegmentIds(
+  private Map<SegmentCreateRequest, CheckExistingSegmentIdResult> getExistingSegmentIdsSkipLineageCheck(
       Handle handle,
       String dataSource,
-      Interval interval
+      Interval interval,
+      List<SegmentCreateRequest> requests
   ) throws IOException
   {
     final Query<Map<String, Object>> query = handle
         .createQuery(
             StringUtils.format(
-                "SELECT start, %2$send%2$s, sequence_name, sequence_prev_id, payload "
+                "SELECT sequence_name, payload "
                 + "FROM %s WHERE "
                 + "dataSource = :dataSource AND "
                 + "start = :start AND "
@@ -789,19 +799,66 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         .bind("end", interval.getEnd().toString());
 
     final ResultIterator<PendingSegmentsRecord> dbSegments = query
-        .map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r, jsonMapper))
+        .map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r))
         .iterator();
 
-    // key of map should be sequenceName + previousSegmentId in a non-null thingy
-    final Map<String, SegmentIdWithShardSpec> sequenceIdToSegmentId = new HashMap<>();
+    // Map from sequenceName to segment id
+    final Map<String, SegmentIdWithShardSpec> sequenceToSegmentId = new HashMap<>();
     while (dbSegments.hasNext()) {
       final PendingSegmentsRecord record = dbSegments.next();
       final SegmentIdWithShardSpec segmentId =
           jsonMapper.readValue(record.getPayload(), SegmentIdWithShardSpec.class);
-      sequenceIdToSegmentId.put(record.getSequenceId(), segmentId);
+      sequenceToSegmentId.put(record.getSequenceName(), segmentId);
     }
 
-    return sequenceIdToSegmentId;
+    final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> requestToResult = new HashMap<>();
+    for (SegmentCreateRequest request : requests) {
+      SegmentIdWithShardSpec segmentId = sequenceToSegmentId.get(request.getSequenceName());
+      requestToResult.put(request, new CheckExistingSegmentIdResult(segmentId != null, segmentId));
+    }
+
+    return requestToResult;
+  }
+
+  /**
+   * Returns a map from sequenceName to segment id.
+   */
+  private Map<SegmentCreateRequest, CheckExistingSegmentIdResult> getExistingSegmentIdsWithLineageCheck(
+      Handle handle,
+      String dataSource,
+      Interval interval,
+      List<SegmentCreateRequest> requests
+  ) throws IOException
+  {
+    // This cannot be batched because there doesn't seem to be a clean option:
+    // 1. WHERE must have sequence_name and sequence_prev_id but not start or end.
+    //    (sequence columns are used to find the matching segment whereas start and
+    //    end are used to determine if the found segment is valid or not)
+    // 2. IN filters on sequence_name and sequence_prev_id might perform worse than individual SELECTs?
+    // 3. IN filter on sequence_name alone might be a feasible option worth evaluating
+    final String sql = String.format(
+        "SELECT payload FROM %s WHERE "
+        + "dataSource = :dataSource AND "
+        + "sequence_name = :sequence_name AND "
+        + "sequence_prev_id = :sequence_prev_id",
+        dbTables.getPendingSegmentsTable()
+    );
+
+    final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> requestToResult = new HashMap<>();
+    for (SegmentCreateRequest request : requests) {
+      CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
+          handle.createQuery(sql)
+                .bind("dataSource", dataSource)
+                .bind("sequence_name", request.getSequenceName())
+                .bind("sequence_prev_id", request.getPreviousSegmentId()),
+          interval,
+          request.getSequenceName(),
+          request.getPreviousSegmentId()
+      );
+      requestToResult.put(request, result);
+    }
+
+    return requestToResult;
   }
 
   private CheckExistingSegmentIdResult checkAndGetExistingSegmentId(
@@ -868,7 +925,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments,
       String dataSource,
       Interval interval,
-      Function<SegmentCreateRequest, String> sequenceNamePrevIdSha1
+      boolean skipSegmentLineageCheck
   ) throws JsonProcessingException
   {
     final PreparedBatch insertBatch = handle.prepareBatch(
@@ -892,7 +949,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("end", interval.getEnd().toString())
                  .bind("sequence_name", request.getSequenceName())
                  .bind("sequence_prev_id", request.getPreviousSegmentId())
-                 .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1.apply(request))
+                 .bind(
+                     "sequence_name_prev_id_sha1",
+                     getSequenceNameAndPrevIdSha(request, interval, skipSegmentLineageCheck)
+                 )
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId));
     }
     insertBatch.execute();
@@ -1785,30 +1845,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private static class PendingSegmentsRecord
   {
     private final String sequenceName;
-    private final String previousSegmentId;
-    private final Interval interval;
     private final byte[] payload;
 
     /**
      * The columns expected in the result set are:
      * <ol>
-     *   <li>start</li>
-     *   <li>end</li>
      *   <li>sequence_name</li>
-     *   <li>sequence_prev_id</li>
      *   <li>payload</li>
      * </ol>
      */
-    static PendingSegmentsRecord fromResultSet(ResultSet resultSet, ObjectMapper mapper)
+    static PendingSegmentsRecord fromResultSet(ResultSet resultSet)
     {
       try {
-        DateTime startTime = DateTimes.of(resultSet.getString(1));
-        DateTime endTime = DateTimes.of(resultSet.getString(2));
         return new PendingSegmentsRecord(
-            new Interval(startTime.toInstant(), endTime.toInstant()),
-            resultSet.getString(3),
-            resultSet.getString(4),
-            resultSet.getBytes(5)
+            resultSet.getString(1),
+            resultSet.getBytes(2)
         );
       }
       catch (SQLException e) {
@@ -1816,12 +1867,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    PendingSegmentsRecord(Interval interval, String sequenceName, String previousSegmentId, byte[] payload)
+    PendingSegmentsRecord(String sequenceName, byte[] payload)
     {
-      this.interval = interval;
       this.payload = payload;
       this.sequenceName = sequenceName;
-      this.previousSegmentId = previousSegmentId;
     }
 
     public byte[] getPayload()
@@ -1829,14 +1878,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return payload;
     }
 
-    public Interval getInterval()
+    public String getSequenceName()
     {
-      return interval;
-    }
-
-    public String getSequenceId()
-    {
-      return SegmentCreateRequest.getUniqueSequenceId(sequenceName, previousSegmentId);
+      return sequenceName;
     }
   }
 

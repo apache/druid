@@ -53,7 +53,6 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -227,7 +226,6 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  @Ignore("fix and enable this!")
   public void testResumeSequence()
   {
     final Task task = NoopTask.create();

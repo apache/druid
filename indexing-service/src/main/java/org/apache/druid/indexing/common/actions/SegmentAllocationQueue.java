@@ -282,6 +282,10 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     int successCount = 0;
     for (Interval tryInterval : tryIntervals) {
       final List<SegmentAllocateRequest> requests = requestBatch.getPendingRequests();
+      if (requests.isEmpty()) {
+        break;
+      }
+
       log.info(
           "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
           requests.size(),
@@ -500,7 +504,9 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     private final TaskLockType taskLockType;
 
     private final boolean useNonRootGenPartitionSpace;
+
     private final int hash;
+    private final String serialized;
 
     /**
      * Creates a new key for the given action. The batch for a unique key will
@@ -531,6 +537,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
           lockGranularity,
           taskLockType
       );
+      this.serialized = serialize();
     }
 
     @Override
@@ -565,9 +572,17 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     @Override
     public String toString()
     {
+      return serialized;
+    }
+
+    private String serialize()
+    {
       return "{" +
-             "ds='" + dataSource + '\'' +
+             "unique=" + unique +
+             ", skipLineageCheck=" + skipSegmentLineageCheck +
+             ", ds='" + dataSource + '\'' +
              ", row=" + rowInterval +
+             ", lock=" + lockGranularity + "/" + taskLockType +
              '}';
     }
   }
