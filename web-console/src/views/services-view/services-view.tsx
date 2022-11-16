@@ -67,7 +67,7 @@ const allColumns: string[] = [
   'Current size',
   'Max size',
   'Usage',
-  'Start Time',
+  'Start time',
   'Detail',
   ACTION_COLUMN_LABEL,
 ];
@@ -84,7 +84,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Current size',
     'Max size',
     'Usage',
-    'Start Time',
+    'Start time',
   ],
 };
 
@@ -224,7 +224,6 @@ ORDER BY
         curr_size: s.currSize,
         max_size: s.maxSize,
         tls_port: -1,
-        start_time: s.start_time,
       };
     });
   }
@@ -525,8 +524,8 @@ ORDER BY
             },
           },
           {
-            Header: 'Start Time',
-            show: visibleColumns.shown('Start Time'),
+            Header: 'Start time',
+            show: visibleColumns.shown('Start time'),
             accessor: 'start_time',
             width: 200,
             Cell: this.renderFilterableCell('start_time'),
