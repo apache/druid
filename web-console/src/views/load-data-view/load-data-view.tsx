@@ -92,7 +92,7 @@ import {
   IngestionSpec,
   INPUT_FORMAT_FIELDS,
   InputFormat,
-  inputFormatCanFlatten,
+  inputFormatCanProduceNestedData,
   invalidIoConfig,
   invalidPartitionConfig,
   IoConfig,
@@ -1439,7 +1439,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const flattenFields: FlattenField[] =
       deepGet(spec, 'spec.ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
 
-    const canFlatten = inputFormatCanFlatten(inputFormat);
+    const canHaveNestedData = inputFormatCanProduceNestedData(inputFormat);
 
     let mainFill: JSX.Element | string;
     if (parserQueryState.isInit()) {
@@ -1458,7 +1458,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               onChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
-            {canFlatten && (
+            {canHaveNestedData && (
               <Switch
                 checked={specialColumnsOnly}
                 label="Flattened columns only"
@@ -1471,7 +1471,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <ParseDataTable
               sampleData={data}
               columnFilter={columnFilter}
-              canFlatten={canFlatten}
+              canFlatten={canHaveNestedData}
               flattenedColumnsOnly={specialColumnsOnly}
               flattenFields={flattenFields}
               onFlattenFieldSelect={this.onFlattenFieldSelect}
@@ -1486,7 +1486,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     let suggestedFlattenFields: FlattenField[] | undefined;
-    if (canFlatten && !flattenFields.length && parserQueryState.data) {
+    if (canHaveNestedData && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
         'ignore-arrays',
@@ -1500,7 +1500,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <ParserMessage canFlatten={canFlatten} />
+          <ParserMessage canHaveNestedData={canHaveNestedData} />
           {!selectedFlattenField && (
             <>
               <AutoForm
@@ -1516,7 +1516,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               )}
             </>
           )}
-          {canFlatten && this.renderFlattenControls()}
+          {canHaveNestedData && this.renderFlattenControls()}
           {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button
@@ -1564,7 +1564,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
     const { spec, unsavedChange } = this.state;
     const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    if (unsavedChange || !inputFormatCanFlatten(inputFormat)) return;
+    if (unsavedChange || !inputFormatCanProduceNestedData(inputFormat)) return;
 
     this.setState({
       selectedFlattenField: { value: field, index },

@@ -229,7 +229,7 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
   return AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS);
 }
 
-export const inputFormatCanFlatten: (inputFormat: InputFormat) => boolean = typeIs(
+export const inputFormatCanProduceNestedData: (inputFormat: InputFormat) => boolean = typeIs(
   'json',
   'parquet',
   'orc',
