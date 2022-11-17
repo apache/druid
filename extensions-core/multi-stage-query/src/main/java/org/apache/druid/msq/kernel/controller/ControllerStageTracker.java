@@ -28,6 +28,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -257,6 +258,13 @@ class ControllerStageTracker
 
     try {
       if (workersWithReportedKeyStatistics.add(workerNumber)) {
+
+        if (partialKeyStatisticsInformation.getTimeSegments().contains(null)) {
+          // Time should not contain null value
+          failForReason(InsertTimeNullFault.instance());
+          return getPhase();
+        }
+
         completeKeyStatisticsInformation.mergePartialInformation(workerNumber, partialKeyStatisticsInformation);
 
         if (workersWithReportedKeyStatistics.size() == workerCount) {
