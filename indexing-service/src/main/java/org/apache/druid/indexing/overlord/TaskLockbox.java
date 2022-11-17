@@ -477,27 +477,26 @@ public class TaskLockbox
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
-    holderList.pending.forEach(this::verifyTaskIsActive);
+    holderList.getPending().forEach(this::verifyTaskIsActive);
 
     giant.lock();
     try {
       if (isTimeChunkLock) {
-        holderList.pending.forEach(holder -> acquireTaskLock(holder, true));
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.pending);
+        holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
       } else {
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.pending);
-        holderList.pending.forEach(holder -> acquireTaskLock(holder, false));
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
 
       // TODO: for failed allocations, cleanup newly created locks from the posse map
-
-      holderList.pending.forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
+      holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
     }
     finally {
       giant.unlock();
     }
 
-    return holderList.all.stream().map(holder -> holder.result).collect(Collectors.toList());
+    return holderList.getResults();
   }
 
   /**
@@ -1403,6 +1402,7 @@ public class TaskLockbox
   {
     final List<SegmentAllocationHolder> all = new ArrayList<>();
     final Set<SegmentAllocationHolder> pending = new HashSet<>();
+    final Set<SegmentAllocationHolder> recentlyCompleted = new HashSet<>();
 
     AllocationHolderList(List<SegmentAllocateRequest> requests, Interval interval)
     {
@@ -1415,7 +1415,20 @@ public class TaskLockbox
 
     void markCompleted(SegmentAllocationHolder holder)
     {
-      pending.remove(holder);
+      recentlyCompleted.add(holder);
+    }
+
+    Set<SegmentAllocationHolder> getPending()
+    {
+      pending.removeAll(recentlyCompleted);
+      recentlyCompleted.clear();
+      return pending;
+    }
+
+
+    List<SegmentAllocateResult> getResults()
+    {
+      return all.stream().map(holder -> holder.result).collect(Collectors.toList());
     }
   }
 
