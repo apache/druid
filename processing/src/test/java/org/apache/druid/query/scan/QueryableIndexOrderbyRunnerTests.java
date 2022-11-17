@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.scan;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
@@ -180,7 +179,7 @@ public class QueryableIndexOrderbyRunnerTests extends NullHandlingTest
   }
 
   @Test
-  public void testSimpleScanQueryOrderBy() throws JsonProcessingException
+  public void testScanQueryOrderByLimitOffset()
   {
     ScanQuery query = new Druids.ScanQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -233,6 +232,335 @@ public class QueryableIndexOrderbyRunnerTests extends NullHandlingTest
       for (int i = 0; i < events.size(); i++) {
         Assert.assertEquals(expected.get(i).get("market"), events.get(i).get("market"));
         Assert.assertEquals(expected.get(i).get("__time").toString(), events.get(i).get("__time").toString());
+        Assert.assertEquals(expected.get(i).get("quality"), events.get(i).get("quality"));
+      }
+    }
+  }
+
+
+  @Test
+  public void testScanQueryOrderByLong()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("qualityLong", ScanQuery.Order.DESCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("qualityLong", "1800"));
+    expected.add(ImmutableMap.of("qualityLong", "1800"));
+    expected.add(ImmutableMap.of("qualityLong", "1700"));
+    expected.add(ImmutableMap.of("qualityLong", "1700"));
+    expected.add(ImmutableMap.of("qualityLong", "1600"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size(), events.size());
+      for (int i = 0; i < events.size(); i++) {
+        Assert.assertEquals(expected.get(i).get("qualityLong"), events.get(i).get("qualityLong").toString());
+      }
+    }
+  }
+
+  @Test
+  public void testScanQueryOrderByString()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("quality", "automotive"));
+    expected.add(ImmutableMap.of("quality", "automotive"));
+    expected.add(ImmutableMap.of("quality", "business"));
+    expected.add(ImmutableMap.of("quality", "business"));
+    expected.add(ImmutableMap.of("quality", "entertainment"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size(), events.size());
+      for (int i = 0; i < events.size(); i++) {
+        Assert.assertEquals(expected.get(i).get("quality"), events.get(i).get("quality").toString());
+      }
+    }
+  }
+
+
+  @Test
+  public void testScanQueryOrderByFloat()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("qualityFloat", ScanQuery.Order.DESCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("qualityFloat", "18000.0"));
+    expected.add(ImmutableMap.of("qualityFloat", "18000.0"));
+    expected.add(ImmutableMap.of("qualityFloat", "17000.0"));
+    expected.add(ImmutableMap.of("qualityFloat", "17000.0"));
+    expected.add(ImmutableMap.of("qualityFloat", "16000.0"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size(), events.size());
+      for (int i = 0; i < events.size(); i++) {
+        Assert.assertEquals(expected.get(i).get("qualityFloat"), events.get(i).get("qualityFloat").toString());
+      }
+    }
+  }
+
+  @Test
+  public void testScanQueryOrderByDouble()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("qualityDouble", ScanQuery.Order.DESCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("qualityDouble", "18000.0"));
+    expected.add(ImmutableMap.of("qualityDouble", "18000.0"));
+    expected.add(ImmutableMap.of("qualityDouble", "17000.0"));
+    expected.add(ImmutableMap.of("qualityDouble", "17000.0"));
+    expected.add(ImmutableMap.of("qualityDouble", "16000.0"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size(), events.size());
+      for (int i = 0; i < events.size(); i++) {
+        Assert.assertEquals(expected.get(i).get("qualityDouble"), events.get(i).get("qualityDouble").toString());
+      }
+    }
+  }
+
+  @Test
+  public void testScanQueryOrderByNull()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull",
+            "placement"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("placement", ScanQuery.Order.DESCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("placement", "value"));
+    expected.add(ImmutableMap.of("placement", "value"));
+    expected.add(ImmutableMap.of("placement", "value"));
+    expected.add(ImmutableMap.of("placement", "value"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size() + 1, events.size());
+      for (int i = 0; i < events.size() - 1; i++) {
+        Assert.assertEquals(expected.get(i).get("placement"), events.get(i).get("placement").toString());
+      }
+      Assert.assertNull(events.get(events.size() - 1).get("placement"));
+    }
+  }
+
+  @Test
+  public void testScanQueryOrderByStringAndLong()
+  {
+    ScanQuery query = new Druids.ScanQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(I_0112_0114_SPEC)
+        .columns(
+            "market",
+            "__time",
+            "quality",
+            "qualityLong",
+            "qualityFloat",
+            "qualityDouble",
+            "qualityNumericString",
+            "longNumericNull",
+            "floatNumericNull"
+        )
+        .orderBy(ImmutableList.of(
+            new ScanQuery.OrderBy("qualityLong", ScanQuery.Order.DESCENDING),
+            new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)
+        ))
+        .legacy(false)
+        .limit(5)
+        .build();
+
+
+    List<ScanResultValue> results = FACTORY.getToolchest().mergeResults(FACTORY
+                                                                            .mergeRunners(
+                                                                                DirectQueryProcessingPool.INSTANCE,
+                                                                                ImmutableList.of(
+                                                                                    FACTORY.createRunner(
+                                                                                        segment0),
+                                                                                    FACTORY.createRunner(
+                                                                                        segment1)
+                                                                                )
+                                                                            )).run(QueryPlus.wrap(query)).toList();
+
+
+    List<Map<String, Object>> expected = new ArrayList<>();
+    expected.add(ImmutableMap.of("qualityLong", "1800", "quality", "travel"));
+    expected.add(ImmutableMap.of("qualityLong", "1800", "quality", "travel"));
+    expected.add(ImmutableMap.of("qualityLong", "1700", "quality", "technology"));
+    expected.add(ImmutableMap.of("qualityLong", "1700", "quality", "technology"));
+    expected.add(ImmutableMap.of("qualityLong", "1600", "quality", "premium"));
+    Assert.assertNotNull(results);
+
+    for (ScanResultValue scanResultValue : results) {
+      List<Map<String, Object>> events = (List<Map<String, Object>>) scanResultValue.getEvents();
+      Assert.assertEquals(expected.size(), events.size());
+      for (int i = 0; i < events.size(); i++) {
+        Assert.assertEquals(expected.get(i).get("qualityLong"), events.get(i).get("qualityLong").toString());
         Assert.assertEquals(expected.get(i).get("quality"), events.get(i).get("quality"));
       }
     }
