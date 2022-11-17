@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.common.actions;
 
 import org.apache.druid.indexing.common.task.Task;
+import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 /**
  * Request received by the overlord for segment allocation.
@@ -29,6 +31,7 @@ public class SegmentAllocateRequest
   private final Task task;
   private final SegmentAllocateAction action;
   private final int maxAttempts;
+  private final Interval rowInterval;
 
   private int attempts;
 
@@ -37,6 +40,9 @@ public class SegmentAllocateRequest
     this.task = task;
     this.action = action;
     this.maxAttempts = maxAttempts;
+    this.rowInterval = action.getQueryGranularity()
+                             .bucket(action.getTimestamp())
+                             .withChronology(ISOChronology.getInstanceUTC());
   }
 
   public Task getTask()
@@ -64,4 +70,8 @@ public class SegmentAllocateRequest
     return attempts;
   }
 
+  public Interval getRowInterval()
+  {
+    return rowInterval;
+  }
 }

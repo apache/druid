@@ -24,8 +24,8 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,9 +43,9 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -53,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -60,7 +62,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * Queue for {@link SegmentAllocateRequest}s.
@@ -136,13 +137,7 @@ public class SegmentAllocationQueue
       throw new ISE("Batched segment allocation is disabled.");
     }
 
-    SegmentAllocateAction action = request.getAction();
-
-    // Requests for exclusive time chunks cannot be batched with other requests
-    boolean isExclusiveTimeChunkLock = action.getLockGranularity() == LockGranularity.TIME_CHUNK
-                                       && action.getTaskLockType() == TaskLockType.EXCLUSIVE;
-    final AllocateRequestKey requestKey = new AllocateRequestKey(action, isExclusiveTimeChunkLock);
-
+    final AllocateRequestKey requestKey = new AllocateRequestKey(request, false);
     final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
       AllocateRequestBatch computedBatch = existingBatch;
@@ -272,7 +267,7 @@ public class SegmentAllocationQueue
     return new HashSet<>(
         metadataStorage.retrieveUsedSegmentsForInterval(
             key.dataSource,
-            key.rowInterval,
+            key.preferredAllocationInterval,
             Segments.ONLY_VISIBLE
         )
     );
@@ -280,87 +275,165 @@ public class SegmentAllocationQueue
 
   private int allocateSegmentsForBatch(AllocateRequestBatch requestBatch, Set<DataSegment> usedSegments)
   {
-    final AllocateRequestKey requestKey = requestBatch.key;
-    final List<Interval> tryIntervals = getTryIntervals(requestKey, usedSegments);
-    if (tryIntervals.isEmpty()) {
-      log.error("Found no valid interval containing the row interval [%s]", requestKey.rowInterval);
-      return 0;
-    }
-
     int successCount = 0;
-    for (Interval tryInterval : tryIntervals) {
-      final List<SegmentAllocateRequest> requests = requestBatch.getPendingRequests();
-      if (requests.isEmpty()) {
-        break;
+
+    final List<SegmentAllocateRequest> allRequests = requestBatch.getRequests();
+    final Set<SegmentAllocateRequest> pendingRequests = new HashSet<>();
+
+    if (usedSegments.isEmpty()) {
+      pendingRequests.addAll(allRequests);
+    } else {
+      final Interval[] sortedUsedSegmentIntervals = getSortedIntervals(usedSegments);
+      final Map<Interval, List<SegmentAllocateRequest>> usedIntervalToRequests = new HashMap<>();
+
+      for (SegmentAllocateRequest request : allRequests) {
+        // If there is an overlapping used segment interval, that interval is
+        // the only candidate for allocation
+        Interval overlappingInterval = findOverlappingInterval(
+            request.getRowInterval(),
+            sortedUsedSegmentIntervals
+        );
+
+        if (overlappingInterval == null) {
+          pendingRequests.add(request);
+        } else if (overlappingInterval.contains(request.getRowInterval())) {
+          // Found an enclosing interval, use this for allocation
+          usedIntervalToRequests.computeIfAbsent(overlappingInterval, i -> new ArrayList<>())
+                                .add(request);
+        }
       }
 
-      log.info(
-          "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
-          requests.size(),
-          tryInterval,
-          requestKey
-      );
+      // Try to allocate segments for the identified used segment intervals
+      // Do not retry the failed requests with other intervals unless the batch is requeued
+      for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : usedIntervalToRequests.entrySet()) {
+        List<SegmentAllocateRequest> successfulRequests = allocateSegmentsForInterval(
+            entry.getKey(),
+            entry.getValue(),
+            requestBatch
+        );
+        successCount += successfulRequests.size();
+      }
+    }
 
-      final List<SegmentAllocateResult> results = taskLockbox.allocateSegments(
-          requests,
-          requestKey.dataSource,
-          tryInterval,
-          requestKey.skipSegmentLineageCheck,
-          requestKey.lockGranularity
-      );
-      emitBatchMetric("task/action/batch/retries", 1L, requestKey);
+    // For requests that do not overlap with a used segment, first try to allocate
+    // using the preferred granularity, then smaller granularities
+    for (Granularity granularity :
+        Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity)) {
+      Map<Interval, List<SegmentAllocateRequest>> requestsByInterval =
+          getRequestsByInterval(pendingRequests, requestBatch.key, granularity);
 
-      successCount += updateBatchWithResults(requestBatch, requests, results);
+      for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : requestsByInterval.entrySet()) {
+        List<SegmentAllocateRequest> successfulRequests = allocateSegmentsForInterval(
+            entry.getKey(),
+            entry.getValue(),
+            requestBatch
+        );
+        successCount += successfulRequests.size();
+        pendingRequests.removeAll(successfulRequests);
+      }
     }
 
     return successCount;
+  }
+
+  private Interval findOverlappingInterval(Interval searchInterval, Interval[] sortedIntervals)
+  {
+    int index = Arrays.binarySearch(
+        sortedIntervals,
+        searchInterval,
+        Comparators.intervalsByStartThenEnd()
+    );
+
+    // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
+    if (index < sortedIntervals.length) {
+      if (sortedIntervals[index].overlaps(searchInterval)) {
+        return sortedIntervals[index];
+      }
+    }
+
+    // If the interval at (index - 1) doesn't overlap, (index - 2) wouldn't overlap either
+    if (index > 0) {
+      if (sortedIntervals[index - 1].overlaps(searchInterval)) {
+        return sortedIntervals[index - 1];
+      }
+    }
+
+    return null;
+  }
+
+  private Interval[] getSortedIntervals(Set<DataSegment> usedSegments)
+  {
+    TreeSet<Interval> sortedSet = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+    usedSegments.forEach(segment -> sortedSet.add(segment.getInterval()));
+    return sortedSet.toArray(new Interval[0]);
   }
 
   /**
-   * Gets the intervals for which allocation should be tried.
-   * <p>
-   * If there are no used segments for this row, first try to allocate segments
-   * using the preferred segment granularity. If that fails due to other nearby
-   * segments, try progressively smaller granularities.
-   * <p>
-   * If there are used segments for this row, try only the interval of those used
-   * segments (we assume that all of them must have the same interval).
+   * Tries to allocate segments for the given requests over the specified interval.
+   * Returns the list of requests for which segments were successfully allocated.
    */
-  private List<Interval> getTryIntervals(AllocateRequestKey key, Set<DataSegment> usedSegments)
-  {
-    final Interval rowInterval = key.rowInterval;
-    if (usedSegments.isEmpty()) {
-      return Granularity.granularitiesFinerThan(key.preferredSegmentGranularity)
-                        .stream()
-                        .map(granularity -> granularity.bucket(rowInterval.getStart()))
-                        .filter(interval -> interval.contains(rowInterval))
-                        .collect(Collectors.toList());
-    } else {
-      Interval existingInterval = usedSegments.iterator().next().getInterval();
-      if (existingInterval.contains(rowInterval)) {
-        return Collections.singletonList(existingInterval);
-      } else {
-        return Collections.emptyList();
-      }
-    }
-  }
-
-  private int updateBatchWithResults(
-      AllocateRequestBatch requestBatch,
+  private List<SegmentAllocateRequest> allocateSegmentsForInterval(
+      Interval tryInterval,
       List<SegmentAllocateRequest> requests,
-      List<SegmentAllocateResult> results
+      AllocateRequestBatch requestBatch
   )
   {
-    int successCount = 0;
+    if (requests.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    final AllocateRequestKey requestKey = requestBatch.key;
+    log.info(
+        "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
+        requests.size(),
+        tryInterval,
+        requestKey
+    );
+
+    final List<SegmentAllocateResult> results = taskLockbox.allocateSegments(
+        requests,
+        requestKey.dataSource,
+        tryInterval,
+        requestKey.skipSegmentLineageCheck,
+        requestKey.lockGranularity
+    );
+    emitBatchMetric("task/action/batch/retries", 1L, requestKey);
+
+    final List<SegmentAllocateRequest> successfulRequests = new ArrayList<>();
     for (int i = 0; i < requests.size(); ++i) {
+      SegmentAllocateRequest request = requests.get(i);
       SegmentAllocateResult result = results.get(i);
       if (result.isSuccess()) {
-        ++successCount;
+        successfulRequests.add(request);
       }
 
-      requestBatch.handleResult(result, requests.get(i));
+      requestBatch.handleResult(result, request);
     }
-    return successCount;
+
+    return successfulRequests;
+  }
+
+  private Map<Interval, List<SegmentAllocateRequest>> getRequestsByInterval(
+      Set<SegmentAllocateRequest> requests,
+      AllocateRequestKey requestKey,
+      Granularity tryGranularity
+  )
+  {
+    if (tryGranularity.equals(requestKey.preferredSegmentGranularity)) {
+      return Collections.singletonMap(
+          requestKey.preferredAllocationInterval,
+          new ArrayList<>(requests)
+      );
+    }
+
+    final Map<Interval, List<SegmentAllocateRequest>> tryIntervalToRequests = new HashMap<>();
+    for (SegmentAllocateRequest request : requests) {
+      Interval tryInterval = tryGranularity.bucket(request.getAction().getTimestamp());
+      if (tryInterval.contains(request.getRowInterval())) {
+        tryIntervalToRequests.computeIfAbsent(tryInterval, i -> new ArrayList<>()).add(request);
+      }
+    }
+    return tryIntervalToRequests;
   }
 
   private void emitTaskMetric(String metric, long value, SegmentAllocateRequest request)
@@ -376,7 +449,7 @@ public class SegmentAllocationQueue
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, key.dataSource);
-    metricBuilder.setDimension(DruidMetrics.INTERVAL, key.rowInterval.toString());
+    metricBuilder.setDimension(DruidMetrics.INTERVAL, key.preferredAllocationInterval.toString());
     emitter.emit(metricBuilder.build(metric, value));
   }
 
@@ -430,7 +503,7 @@ public class SegmentAllocationQueue
       batch.requestToFuture.clear();
     }
 
-    synchronized List<SegmentAllocateRequest> getPendingRequests()
+    synchronized List<SegmentAllocateRequest> getRequests()
     {
       return new ArrayList<>(requestToFuture.keySet());
     }
@@ -505,13 +578,12 @@ public class SegmentAllocationQueue
     private final boolean unique;
 
     private final String dataSource;
-    private final Interval rowInterval;
-    private final Granularity queryGranularity;
+    private final String groupId;
+    private final Interval preferredAllocationInterval;
     private final Granularity preferredSegmentGranularity;
 
     private final boolean skipSegmentLineageCheck;
     private final LockGranularity lockGranularity;
-    private final TaskLockType taskLockType;
 
     private final boolean useNonRootGenPartitionSpace;
 
@@ -519,33 +591,32 @@ public class SegmentAllocationQueue
     private final String serialized;
 
     /**
-     * Creates a new key for the given action. The batch for a unique key will
+     * Creates a new key for the given request. The batch for a unique key will
      * always contain a single request.
      */
-    AllocateRequestKey(SegmentAllocateAction action, boolean unique)
+    AllocateRequestKey(SegmentAllocateRequest request, boolean unique)
     {
+      final SegmentAllocateAction action = request.getAction();
+      final Task task = request.getTask();
+
       this.unique = unique;
       this.dataSource = action.getDataSource();
-      this.queryGranularity = action.getQueryGranularity();
-      this.preferredSegmentGranularity = action.getPreferredSegmentGranularity();
+      this.groupId = task.getGroupId();
       this.skipSegmentLineageCheck = action.isSkipSegmentLineageCheck();
       this.lockGranularity = action.getLockGranularity();
-      this.taskLockType = action.getTaskLockType();
-
       this.useNonRootGenPartitionSpace = action.getPartialShardSpec()
                                                .useNonRootGenerationPartitionSpace();
-      this.rowInterval = queryGranularity.bucket(action.getTimestamp())
-                                         .withChronology(ISOChronology.getInstanceUTC());
+      this.preferredSegmentGranularity = action.getPreferredSegmentGranularity();
+      this.preferredAllocationInterval = action.getPreferredSegmentGranularity()
+                                               .bucket(action.getTimestamp());
 
       this.hash = unique ? super.hashCode() : Objects.hash(
           skipSegmentLineageCheck,
           useNonRootGenPartitionSpace,
           dataSource,
-          rowInterval,
-          queryGranularity,
-          preferredSegmentGranularity,
-          lockGranularity,
-          taskLockType
+          groupId,
+          preferredAllocationInterval,
+          lockGranularity
       );
       this.serialized = serialize();
     }
@@ -566,11 +637,9 @@ public class SegmentAllocationQueue
       return skipSegmentLineageCheck == that.skipSegmentLineageCheck
              && useNonRootGenPartitionSpace == that.useNonRootGenPartitionSpace
              && dataSource.equals(that.dataSource)
-             && rowInterval.equals(that.rowInterval)
-             && queryGranularity.equals(that.queryGranularity)
-             && preferredSegmentGranularity.equals(that.preferredSegmentGranularity)
-             && lockGranularity == that.lockGranularity
-             && taskLockType == that.taskLockType;
+             && groupId.equals(that.groupId)
+             && preferredAllocationInterval.equals(that.preferredAllocationInterval)
+             && lockGranularity == that.lockGranularity;
     }
 
     @Override
@@ -591,8 +660,9 @@ public class SegmentAllocationQueue
              "unique=" + unique +
              ", skipLineageCheck=" + skipSegmentLineageCheck +
              ", ds='" + dataSource + '\'' +
-             ", row=" + rowInterval +
-             ", lock=" + lockGranularity + "/" + taskLockType +
+             ", groupId='" + groupId + '\'' +
+             ", interval=" + preferredAllocationInterval +
+             ", lock=" + lockGranularity +
              '}';
     }
   }
