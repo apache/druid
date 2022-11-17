@@ -180,7 +180,7 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public SysMonitor getSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();

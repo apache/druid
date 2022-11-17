@@ -20,6 +20,7 @@
 package org.apache.druid.initialization;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -91,8 +92,8 @@ public class ServerInjectorBuilder
 
   public Injector build()
   {
-    assert baseInjector != null;
-    assert nodeRoles != null;
+    Preconditions.checkNotNull(baseInjector);
+    Preconditions.checkNotNull(nodeRoles);
 
     Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
 
