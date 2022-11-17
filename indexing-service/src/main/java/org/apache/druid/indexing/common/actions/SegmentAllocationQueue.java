@@ -251,6 +251,7 @@ public class SegmentAllocationQueue
     final Set<DataSegment> usedSegments = retrieveUsedSegments(requestKey);
     final int successCount = allocateSegmentsForBatch(requestBatch, usedSegments);
 
+    emitBatchMetric("task/action/batch/retries", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
     log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
 
@@ -353,6 +354,12 @@ public class SegmentAllocationQueue
         searchInterval,
         Comparators.intervalsByStartThenEnd()
     );
+    if (index >= 0) {
+      return sortedIntervals[index];
+    }
+
+    // Key was not found, returned index is (-(insertionPoint) - 1)
+    index = -(index + 1);
 
     // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
     if (index < sortedIntervals.length) {
@@ -407,7 +414,6 @@ public class SegmentAllocationQueue
         requestKey.skipSegmentLineageCheck,
         requestKey.lockGranularity
     );
-    emitBatchMetric("task/action/batch/retries", 1L, requestKey);
 
     final List<SegmentAllocateRequest> successfulRequests = new ArrayList<>();
     for (int i = 0; i < requests.size(); ++i) {
