@@ -24,6 +24,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -39,7 +40,15 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   @Test
   public void test_list_unnest_cursors()
   {
-    ListCursor listCursor = new ListCursor();
+    ArrayList<Object> baseList = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      List<Object> newList = new ArrayList<>();
+      for (int j = 0; j < 2; j++) {
+        newList.add(String.valueOf(i * 2 + j));
+      }
+      baseList.add(newList);
+    }
+    ListCursor listCursor = new ListCursor(baseList);
     ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
         listCursor,
         listCursor.getColumnSelectorFactory(),
@@ -56,6 +65,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
       j++;
       unnestCursor.advance();
     }
+    Assert.assertEquals(j, 4);
   }
 
   @Test
@@ -262,7 +272,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnestof_unnest_cursors_user_supplied_list_three_level_array()
+  public void test_list_unnest_of_unnest_cursors_user_supplied_list_three_level_array()
   {
     List<Object> inputList = Arrays.asList(
         Arrays.asList("a", "b", "c"),
@@ -363,46 +373,6 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
         OUTPUT_NAME,
         IGNORE_SET
     );
-    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
-                                                                .makeColumnValueSelector(OUTPUT_NAME);
-    int k = 0;
-    while (!unnestCursor.isDone()) {
-      Object valueSelectorVal = unnestColumnValueSelector.getObject();
-      if (valueSelectorVal == null) {
-        Assert.assertEquals(null, expectedResults.get(k));
-      } else {
-        Assert.assertEquals(valueSelectorVal.toString(), expectedResults.get(k));
-      }
-      k++;
-      unnestCursor.advance();
-    }
-    Assert.assertEquals(k, 10);
-  }
-
-  @Test
-  public void test_list_unnest_cursors_user_supplied_list_with_dims()
-  {
-    List<Object> inputList = Arrays.asList(
-        Arrays.asList("a", "b", "c"),
-        Arrays.asList("e", "f", "g", "h", "i", null),
-        Collections.singletonList("j")
-    );
-
-    List<Object> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", null, "j");
-
-    //Create base cursor
-    ListCursor listCursor = new ListCursor(inputList);
-
-    //Create unnest cursor
-    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
-        listCursor,
-        listCursor.getColumnSelectorFactory(),
-        "dummy",
-        OUTPUT_NAME,
-        IGNORE_SET
-    );
-    DimensionSelector unnestDimSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(
-        DefaultDimensionSpec.of("dummy"));
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
     int k = 0;
@@ -600,6 +570,5 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     Assert.assertFalse(unnestCursor.isDoneOrInterrupted());
     Assert.assertEquals(dimensionSelector.getObject().toString(), Arrays.asList("a", "b", "c").toString());
   }
-
 }
 

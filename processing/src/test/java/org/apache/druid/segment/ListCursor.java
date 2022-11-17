@@ -29,36 +29,16 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ListCursor implements Cursor
 {
-  public static int LIMIT = 2;
   List<Object> baseList;
   private int index;
-
-  public ListCursor()
-  {
-    this.index = 0;
-    populateList();
-  }
 
   public ListCursor(List<Object> inputList)
   {
     this.baseList = inputList;
-  }
-
-  void populateList()
-  {
-    baseList = new ArrayList<>();
-    for (int i = 0; i < LIMIT; i++) {
-      List<Object> newList = new ArrayList<>();
-      for (int j = 0; j < LIMIT; j++) {
-        newList.add(String.valueOf(i * LIMIT + j));
-      }
-      baseList.add(newList);
-    }
   }
 
   @Override

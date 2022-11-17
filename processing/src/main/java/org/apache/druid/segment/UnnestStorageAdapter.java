@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -120,16 +119,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     for (String dim : baseAdapter.getAvailableDimensions()) {
       availableDimensions.add(dim);
     }
-    // check to see if output name provided is already
-    // a part of available dimensions
-    if (availableDimensions.contains(outputColumnName)) {
-      throw new IAE(
-          "Provided output name [%s] already exists in table to be unnested. Please use a different name.",
-          outputColumnName
-      );
-    } else {
-      availableDimensions.add(outputColumnName);
-    }
+    availableDimensions.add(outputColumnName);
     return new ListIndexed<>(Lists.newArrayList(availableDimensions));
   }
 

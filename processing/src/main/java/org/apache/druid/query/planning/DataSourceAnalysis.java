@@ -113,6 +113,13 @@ public class DataSourceAnalysis
     Query<?> baseQuery = null;
     DataSource current = dataSource;
 
+    // This needs to be an or condition between QueryDataSource and UnnestDataSource
+    // As queries can have interleaving query and unnest data sources.
+    // Ideally if each data source generate their own analysis object we can avoid the or here
+    // and have cleaner code. Especially as we increase the types of data sources in future
+    // these or checks will be tedious. Future development should move forDataSource method
+    // into each data source.
+
     while (current instanceof QueryDataSource || current instanceof UnnestDataSource) {
       if (current instanceof QueryDataSource) {
         final Query<?> subQuery = ((QueryDataSource) current).getQuery();

@@ -141,7 +141,7 @@ public class ColumnarValueUnnestCursor implements Cursor
           }
 
           @Override
-          public Class classOfObject()
+          public Class<?> classOfObject()
           {
             return Object.class;
           }
@@ -228,7 +228,7 @@ public class ColumnarValueUnnestCursor implements Cursor
   }
 
   /**
-   * This initializes the unnest cursor and creates daa=ta structures
+   * This initializes the unnest cursor and creates data structures
    * to start iterating over the values to be unnested.
    * This would also create a bitset for dictonary encoded columns to
    * check for matching values specified in allowedList of UnnestDataSource.
@@ -253,7 +253,6 @@ public class ColumnarValueUnnestCursor implements Cursor
    * to move the base cursor to the next row for unnesting and repopulates
    * the data structures, created during initialize(), to point to the new row
    */
-
   public void advanceAndUpdate()
   {
     if (unnestListForCurrentRow.isEmpty() || index >= unnestListForCurrentRow.size() - 1) {

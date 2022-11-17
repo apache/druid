@@ -42,7 +42,6 @@ public class UnnestDataSource implements DataSource
   private final String outputName;
   private final LinkedHashSet<String> allowList;
 
-
   private UnnestDataSource(
       DataSource dataSource,
       String columnName,
@@ -56,9 +55,6 @@ public class UnnestDataSource implements DataSource
     this.allowList = allowList;
   }
 
-  /**
-   * Create an unnest dataSource from a string condition.
-   */
   @JsonCreator
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
@@ -170,7 +166,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return newSource;
+    return new UnnestDataSource(newSource, column, outputName, allowList);
   }
 
   @Override
