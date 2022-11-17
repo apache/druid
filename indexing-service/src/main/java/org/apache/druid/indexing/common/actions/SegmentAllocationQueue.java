@@ -132,6 +132,8 @@ public class SegmentAllocationQueue
   {
     if (!leaderSelector.isLeader()) {
       throw new ISE("Cannot allocate segment if not leader.");
+    } else if (!isEnabled()) {
+      throw new ISE("Batched segment allocation is disabled.");
     }
 
     SegmentAllocateAction action = request.getAction();
@@ -380,10 +382,13 @@ public class SegmentAllocationQueue
 
   public void becomeLeader()
   {
-    log.info("Elected leader. Starting queue processing.");
-
-    // Start polling the queue
-    scheduleQueuePoll(maxWaitTimeMillis);
+    if (isEnabled()) {
+      // Start polling the queue
+      log.info("Elected leader. Starting queue processing.");
+      scheduleQueuePoll(maxWaitTimeMillis);
+    } else {
+      log.info("Elected leader but batched segment allocation is disabled.");
+    }
   }
 
   public void stopBeingLeader()
