@@ -139,16 +139,25 @@ public class SegmentAllocationQueue
 
     final AllocateRequestKey requestKey = new AllocateRequestKey(request, false);
     final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
+
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
-      AllocateRequestBatch computedBatch = existingBatch;
-      if (computedBatch == null) {
-        computedBatch = new AllocateRequestBatch(key);
-        computedBatch.resetQueueTime();
-        processingQueue.offer(computedBatch);
+      AllocateRequestBatch batch = existingBatch;
+      if (batch == null) {
+        batch = new AllocateRequestBatch(key);
+        batch.resetQueueTime();
+        processingQueue.offer(batch);
       }
 
-      requestFuture.set(computedBatch.add(request));
-      return computedBatch;
+      // Possible race condition:
+      // t1 -> new batch is added to queue or batch already exists in queue
+      // t2 -> executor pops batch, processes all requests in it
+      // t1 -> new request is added to dangling batch and is never picked up
+      // Solution: For existing batch, call keyToBatch.remove() on the key to
+      // wait on keyToBatch.compute() to finish before proceeding with processBatch().
+      // For new batch, keyToBatch.remove() would not wait as key is not in map yet
+      // but a new batch is unlikely to be due immediately, so it won't get popped right away.
+      requestFuture.set(batch.add(request));
+      return batch;
     });
 
     return requestFuture.get();
@@ -160,6 +169,7 @@ public class SegmentAllocationQueue
     keyToBatch.compute(batch.key, (key, existingBatch) -> {
       if (existingBatch == null) {
         batch.resetQueueTime();
+        processingQueue.offer(batch);
         return batch;
       }
 
@@ -513,6 +523,10 @@ public class SegmentAllocationQueue
       if (!requestToFuture.isEmpty()) {
         log.info("Marking [%d] requests in batch [%s] as failed.", size(), key);
         requestToFuture.values().forEach(future -> future.complete(null));
+        requestToFuture.keySet().forEach(
+            request -> emitTaskMetric("task/action/failed/count", 1L, request)
+        );
+        requestToFuture.clear();
       }
     }
 
