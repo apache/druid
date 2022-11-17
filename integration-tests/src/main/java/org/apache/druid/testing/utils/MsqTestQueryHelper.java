@@ -43,6 +43,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -95,7 +96,15 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public SqlTaskStatus submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
   {
-    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of("finalizeAggregations", false), null));
+    return submitMsqTask(sqlQueryString, ImmutableMap.of());
+  }
+
+  /**
+   * Submits a task to the MSQ API with the given query string, and default headers and custom context parameters
+   */
+  public SqlTaskStatus submitMsqTask(String sqlQueryString, Map<String, Object> context) throws ExecutionException, InterruptedException
+  {
+    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, context, null));
   }
 
   // Run the task, wait for it to complete, fetch the reports, verify the results,
@@ -248,6 +257,22 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       pollTaskIdForCompletion(taskId);
       compareResults(taskId, queryWithResults);
     }
+  }
+
+  public void submitMsqTaskAndWaitForCompletion(String sqlQueryString, Map<String, Object> context)
+      throws Exception
+  {
+    SqlTaskStatus sqlTaskStatus = submitMsqTask(sqlQueryString, context);
+
+    LOG.info("Sql Task submitted with task Id - %s", sqlTaskStatus.getTaskId());
+
+    if (sqlTaskStatus.getState().isFailure()) {
+      Assert.fail(StringUtils.format(
+          "Unable to start the task successfully.\nPossible exception: %s",
+          sqlTaskStatus.getError()
+      ));
+    }
+    pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
   }
 
   private static class TaskStillRunningException extends Exception
