@@ -309,14 +309,7 @@ public class DataSourceAnalysis
   {
     return dataSource instanceof QueryDataSource;
   }
-
-  /**
-   * Returns true if this datasource represents an Unnest (that is, whether it is an {@link UnnestDataSource}).
-   */
-  public boolean isUnnest()
-  {
-    return dataSource instanceof UnnestDataSource;
-  }
+  
 
   /**
    * Returns true if this datasource is made out of a join operation
