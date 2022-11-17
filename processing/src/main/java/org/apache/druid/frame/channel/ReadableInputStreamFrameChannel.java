@@ -155,7 +155,9 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
         if (!keepReading) {
           try {
             synchronized (readMonitor) {
-              readMonitor.wait(nextRetrySleepMillis(nTry));
+              if (!keepReading) {
+                readMonitor.wait(nextRetrySleepMillis(nTry));
+              }
             }
             synchronized (lock) {
               if (inputStreamFinished || inputStreamError || delegate.isErrorOrFinished()) {
@@ -192,8 +194,8 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
                   keepReading = false;
                   backpressureFuture.addListener(
                       () -> {
-                        keepReading = true;
                         synchronized (readMonitor) {
+                          keepReading = true;
                           readMonitor.notify();
                         }
                       },
