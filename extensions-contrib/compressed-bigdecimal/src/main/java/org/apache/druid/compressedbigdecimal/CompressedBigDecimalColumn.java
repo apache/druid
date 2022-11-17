@@ -30,7 +30,6 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 
 /**
@@ -40,6 +39,7 @@ public class CompressedBigDecimalColumn implements ComplexColumn
 {
   public static final Logger LOGGER = new Logger(CompressedBigDecimalColumn.class);
 
+  private final int length;
   private final ColumnarInts scale;
   private final ColumnarMultiInts magnitude;
 
@@ -49,8 +49,9 @@ public class CompressedBigDecimalColumn implements ComplexColumn
    * @param scale     scale of the rows
    * @param magnitude LongColumn representing magnitudes
    */
-  public CompressedBigDecimalColumn(ColumnarInts scale, ColumnarMultiInts magnitude)
+  public CompressedBigDecimalColumn(int length, ColumnarInts scale, ColumnarMultiInts magnitude)
   {
+    this.length = length;
     this.scale = scale;
     this.magnitude = magnitude;
   }
@@ -87,7 +88,7 @@ public class CompressedBigDecimalColumn implements ComplexColumn
   @Override
   public int getLength()
   {
-    return scale.size();
+    return length;
   }
 
   @Override
