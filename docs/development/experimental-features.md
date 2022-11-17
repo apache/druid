@@ -60,6 +60,10 @@ This document includes each page that mentions an experimental feature. To gradu
 
 - [Aggregations](../querying/aggregations.md)
 
+## Front coding
+
+- [Ingestion spec reference](../ingestion/ingestion-spec.md#front-coding)
+
 ## Other configuration properties
 
 - [Configuration reference](../configuration/index.md)
