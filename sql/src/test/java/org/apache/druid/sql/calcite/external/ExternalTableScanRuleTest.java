@@ -64,7 +64,6 @@ public class ExternalTableScanRuleTest
         ),
         engine,
         Collections.emptyMap(),
-        Collections.emptySet(),
         CalciteTests.createJoinableFactoryWrapper()
     );
     plannerContext.setQueryMaker(

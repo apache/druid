@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
@@ -45,6 +44,9 @@ import org.apache.druid.utils.Streams;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -77,11 +79,11 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("filter") @Nullable String filter,
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, filter);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -134,7 +136,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getFilter(),
+        getObjectGlob(),
         getOssInputSourceConfig()
     );
   }
@@ -168,7 +170,7 @@ public class OssInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
-           ", filter=" + getFilter() +
+           ", objectGlob=" + getObjectGlob() +
            ", ossInputSourceConfig=" + getOssInputSourceConfig() +
            '}';
   }
@@ -182,11 +184,13 @@ public class OssInputSource extends CloudObjectInputSource
           inputDataConfig.getMaxListingLength()
       );
 
-      // Skip files that didn't match filter.
-      if (StringUtils.isNotBlank(getFilter())) {
+      // Skip files that didn't match glob filter.
+      if (StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
+
         iterator = Iterators.filter(
             iterator,
-            object -> FilenameUtils.wildcardMatch(object.getKey(), getFilter())
+            object -> m.matches(Paths.get(object.getKey()))
         );
       }
 

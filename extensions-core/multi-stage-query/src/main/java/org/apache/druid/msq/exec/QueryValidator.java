@@ -23,6 +23,7 @@ import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
@@ -46,6 +47,17 @@ public class QueryValidator
 
       if (numColumns > Limits.MAX_FRAME_COLUMNS) {
         throw new MSQException(new TooManyColumnsFault(numColumns, Limits.MAX_FRAME_COLUMNS));
+      }
+
+      final int numClusteredByColumns = stageDef.getClusterBy().getColumns().size();
+      if (numClusteredByColumns > Limits.MAX_CLUSTERED_BY_COLUMNS) {
+        throw new MSQException(
+            new TooManyClusteredByColumnsFault(
+                numClusteredByColumns,
+                Limits.MAX_CLUSTERED_BY_COLUMNS,
+                stageDef.getStageNumber()
+            )
+        );
       }
 
       final int numWorkers = stageDef.getMaxWorkerCount();

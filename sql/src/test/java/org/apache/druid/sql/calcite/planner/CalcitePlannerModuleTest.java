@@ -179,7 +179,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         rootSchema,
         null,
         Collections.emptyMap(),
-        Collections.emptySet(),
         joinableFactoryWrapper
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)

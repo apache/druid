@@ -64,12 +64,13 @@ public class MSQFaultSerdeTest
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
     assertFaultSerde(new InvalidNullByteFault("the column"));
-    assertFaultSerde(new NotEnoughMemoryFault(1000, 1, 2));
+    assertFaultSerde(new NotEnoughMemoryFault(1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new RowTooLargeFault(1000));
     assertFaultSerde(new TaskStartTimeoutFault(10));
     assertFaultSerde(new TooManyBucketsFault(10));
     assertFaultSerde(new TooManyColumnsFault(10, 8));
+    assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));

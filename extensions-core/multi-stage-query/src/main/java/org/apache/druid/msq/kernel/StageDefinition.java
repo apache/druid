@@ -69,12 +69,11 @@ import java.util.function.Supplier;
  * The rarely-used parameter {@link #getShuffleCheckHasMultipleValues()} controls whether the execution system
  * checks, while shuffling, if the key used for shuffling has any multi-value fields. When this is true, the method
  * {@link ClusterByStatisticsCollector#hasMultipleValues} is enabled on collectors
- * {@link #createResultKeyStatisticsCollector()}. Its primary purpose is to allow ingestion jobs to detect whether the
+ * {@link #createResultKeyStatisticsCollector}. Its primary purpose is to allow ingestion jobs to detect whether the
  * secondary partitioning (CLUSTERED BY) key is multivalued or not.
  */
 public class StageDefinition
 {
-  private static final int PARTITION_STATS_MAX_BYTES = 300_000_000; // Avoid immediate downsample of single-bucket collectors
   private static final int PARTITION_STATS_MAX_BUCKETS = 5_000; // Limit for TooManyBuckets
   private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
 
@@ -280,7 +279,7 @@ public class StageDefinition
     }
   }
 
-  public ClusterByStatisticsCollector createResultKeyStatisticsCollector()
+  public ClusterByStatisticsCollector createResultKeyStatisticsCollector(final int maxRetainedBytes)
   {
     if (!mustGatherResultKeyStatistics()) {
       throw new ISE("No statistics needed");
@@ -289,7 +288,7 @@ public class StageDefinition
     return ClusterByStatisticsCollectorImpl.create(
         shuffleSpec.getClusterBy(),
         signature,
-        PARTITION_STATS_MAX_BYTES,
+        maxRetainedBytes,
         PARTITION_STATS_MAX_BUCKETS,
         shuffleSpec.doesAggregateByClusterKey(),
         shuffleCheckHasMultipleValues

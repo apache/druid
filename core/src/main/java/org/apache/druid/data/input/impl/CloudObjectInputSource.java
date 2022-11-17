@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
@@ -36,6 +35,9 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -48,7 +50,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
-  private final String filter;
+  private final String objectGlob;
 
   public CloudObjectInputSource(
       String scheme,
@@ -61,7 +63,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    this.filter = null;
+    this.objectGlob = null;
 
     illegalArgsChecker();
   }
@@ -71,14 +73,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects,
-      @Nullable String filter
+      @Nullable String objectGlob
   )
   {
     this.scheme = scheme;
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
-    this.filter = filter;
+    this.objectGlob = objectGlob;
 
     illegalArgsChecker();
   }
@@ -108,9 +110,9 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getFilter()
+  public String getObjectGlob()
   {
-    return filter;
+    return objectGlob;
   }
 
   /**
@@ -125,8 +127,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
    * only if {@link #prefixes} is set, otherwise the splits are created directly from {@link #uris} or {@link #objects}.
    * Calling if {@link #prefixes} is not set is likely to either lead to an empty iterator or null pointer exception.
    *
-   * If {@link #filter} is set, the filter will be applied on {@link #uris} or {@link #objects}.
-   * {@link #filter} uses a glob notation, for example: "*.parquet".
+   * If {@link #objectGlob} is set, the objectGlob will be applied on {@link #uris} or {@link #objects}.
+   * {@link #objectGlob} uses a glob notation, for example: "**.parquet".
    */
   protected abstract Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(SplitHintSpec splitHintSpec);
 
@@ -139,8 +141,9 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     if (!CollectionUtils.isNullOrEmpty(objects)) {
       Stream<CloudObjectLocation> objectStream = objects.stream();
 
-      if (StringUtils.isNotBlank(filter)) {
-        objectStream = objectStream.filter(object -> FilenameUtils.wildcardMatch(object.getPath(), filter));
+      if (StringUtils.isNotBlank(objectGlob)) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
+        objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
       }
 
       return objectStream.map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -149,8 +152,9 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     if (!CollectionUtils.isNullOrEmpty(uris)) {
       Stream<URI> uriStream = uris.stream();
 
-      if (StringUtils.isNotBlank(filter)) {
-        uriStream = uriStream.filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter));
+      if (StringUtils.isNotBlank(objectGlob)) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
+        uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
       }
 
       return uriStream.map(CloudObjectLocation::new).map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -208,13 +212,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
            Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
            Objects.equals(objects, that.objects) &&
-           Objects.equals(filter, that.filter);
+           Objects.equals(objectGlob, that.objectGlob);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scheme, uris, prefixes, objects, filter);
+    return Objects.hash(scheme, uris, prefixes, objects, objectGlob);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException

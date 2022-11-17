@@ -113,7 +113,6 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
-      final Set<String> contextKeys,
       final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
@@ -146,7 +145,6 @@ public class PlannerContext
       final DruidSchemaCatalog rootSchema,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
-      final Set<String> contextKeys,
       final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
@@ -187,7 +185,6 @@ public class PlannerContext
         rootSchema,
         engine,
         queryContext,
-        contextKeys,
         joinableFactoryWrapper
     );
   }
