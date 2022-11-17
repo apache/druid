@@ -56,7 +56,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}
-              text="Save"
+              text="Download"
               minimal
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />

@@ -85,7 +85,6 @@ import {
   getRequiredModule,
   getRollup,
   getSecondaryPartitionRelatedFormFields,
-  getSpecType,
   getTimestampExpressionFields,
   getTimestampSchema,
   getTuningFormFields,
@@ -99,9 +98,9 @@ import {
   IoConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isStreamingSpec,
   issueWithIoConfig,
   issueWithSampleData,
-  isTask,
   joinFilter,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
@@ -113,6 +112,7 @@ import {
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   splitFilter,
+  STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
@@ -140,7 +140,6 @@ import {
   localStorageSetJson,
   moveElement,
   moveToIndex,
-  oneOf,
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
@@ -1205,7 +1204,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderConnectStep() {
     const { inputQueryState, sampleStrategy } = this.state;
     const spec = this.getEffectiveSpec();
-    const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
@@ -1294,7 +1292,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {oneOf(specType, 'kafka', 'kinesis') && (
+          {isStreamingSpec(spec) && (
             <FormGroup label="Where should the data be sampled from?">
               <RadioGroup
                 selectedValue={sampleStrategy}
@@ -1495,6 +1493,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       );
     }
 
+    const inputFormatFields = isStreamingSpec(spec)
+      ? STREAMING_INPUT_FORMAT_FIELDS
+      : INPUT_FORMAT_FIELDS;
     return (
       <>
         <div className="main">{mainFill}</div>
@@ -1503,7 +1504,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={INPUT_FORMAT_FIELDS}
+                fields={inputFormatFields}
                 model={inputFormat}
                 onChange={p =>
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -1511,7 +1512,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
               {this.renderApplyButtonBar(
                 parserQueryState,
-                AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS),
+                AutoForm.issueWithModel(inputFormat, inputFormatFields),
               )}
             </>
           )}
@@ -3265,7 +3266,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (submitting) return;
 
     this.setState({ submitting: true });
-    if (isTask(spec)) {
+    if (isStreamingSpec(spec)) {
+      try {
+        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Supervisor submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToIngestion(undefined); // Can we get the supervisor ID here?
+      }, 1000);
+    } else {
       let taskResp: any;
       try {
         taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
@@ -3285,26 +3306,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       setTimeout(() => {
         goToIngestion(taskResp.data.task);
-      }, 1000);
-    } else {
-      try {
-        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
-      AppToaster.show({
-        message: 'Supervisor submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
-      });
-
-      setTimeout(() => {
-        goToIngestion(undefined); // Can we get the supervisor ID here?
       }, 1000);
     }
   };
