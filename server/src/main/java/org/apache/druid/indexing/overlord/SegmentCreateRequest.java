@@ -49,11 +49,6 @@ public class SegmentCreateRequest
     this.partialShardSpec = partialShardSpec;
   }
 
-  public String getUniqueSequenceId()
-  {
-    return getUniqueSequenceId(sequenceName, previousSegmentId);
-  }
-
   public String getSequenceName()
   {
     return sequenceName;
@@ -76,14 +71,5 @@ public class SegmentCreateRequest
   public PartialShardSpec getPartialShardSpec()
   {
     return partialShardSpec;
-  }
-
-  /**
-   * Returns a String representing (sequenceName + previousSegmentId) used to
-   * uniquely identify a segment.
-   */
-  public static String getUniqueSequenceId(String sequenceName, String previousSegmentId)
-  {
-    return sequenceName + "####" + previousSegmentId;
   }
 }
