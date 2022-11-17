@@ -19,7 +19,7 @@
 
 package org.apache.druid.msq.statistics;
 
-import org.apache.curator.shaded.com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 import java.util.HashSet;
 import java.util.Set;

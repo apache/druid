@@ -150,10 +150,8 @@ public class WorkerSketchFetcher
           }
         }
         catch (Exception e) {
-          synchronized (mergedStatisticsCollector) {
-            partitionFuture.completeExceptionally(e);
-            mergedStatisticsCollector.clear();
-          }
+          partitionFuture.completeExceptionally(e);
+          mergedStatisticsCollector.clear();
         }
       });
     });
@@ -287,10 +285,8 @@ public class WorkerSketchFetcher
               }
             }
             catch (Exception e) {
-              synchronized (mergedStatisticsCollector) {
-                partitionFuture.completeExceptionally(e);
-                mergedStatisticsCollector.clear();
-              }
+              partitionFuture.completeExceptionally(e);
+              mergedStatisticsCollector.clear();
             }
           });
         }
