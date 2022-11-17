@@ -370,3 +370,53 @@ always be correct.
 - Join algorithms other than broadcast hash-joins.
 - Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
+
+### `unnest`
+
+Use the `unnest` datasource to unnest a column with multiple values in an array. 
+For example, you have a source column that looks like this:
+
+| Nested | 
+| -- | 
+| [a, b] |
+| [c, d] |
+| [e, [f,g]] |
+
+When you use the `unnest` datasource, the unnested column looks like this:
+
+| Unnested | 
+| -- |
+| a |
+| b |
+| c |
+| d |
+| e |
+| [f, g] |
+
+When unnesting data, keep the following in mind:
+
+- The total number of rows will grow to accommodate the new rows that the unnested data occupy.
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows though depending on your dataset.
+
+The `unnest` datasource uses the following syntax:
+
+```json
+"datasource": {
+  "type": "unnest",
+  "base": {
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data"
+    },
+    "column": "nested_source_column1",
+    "outputName": "unnest_target_column1",
+    "allowList": []
+  },
+  "column": "nested_source_column2",
+  "outputName": "unnest_target_column2",
+  "allowList": []
+  },
+```
+
+The block for `nested_source_column2` is optional and is used to unnest a second column with nested values in the `nested_data` table.

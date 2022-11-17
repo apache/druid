@@ -23,7 +23,8 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-msq-convert-spec",
-      "tutorials/tutorial-jdbc"
+      "tutorials/tutorial-jdbc",
+      "tutorials/tutorial-unnest-datasource"
     ],
     "Design": [
       "design/architecture",
