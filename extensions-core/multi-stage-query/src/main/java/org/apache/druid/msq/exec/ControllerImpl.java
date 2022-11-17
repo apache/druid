@@ -584,7 +584,7 @@ public class ControllerImpl implements Controller
    * partiton boundaries. This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
   @Override
-  public void updatePartialKeyStatistics(int stageNumber, int workerNumber, Object partialKeyStatisticsObject)
+  public void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject)
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -600,7 +600,7 @@ public class ControllerImpl implements Controller
 
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
           try {
-            partialKeyStatisticsInformation = mapper.convertValue(partialKeyStatisticsObject, PartialKeyStatisticsInformation.class);
+            partialKeyStatisticsInformation = mapper.convertValue(partialKeyStatisticsInformationObject, PartialKeyStatisticsInformation.class);
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -628,13 +628,14 @@ public class ControllerImpl implements Controller
 
             // Add the listener to handle completion.
             clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
-              kernelManipulationQueue.add(holder -> {
+              addToKernelManipulationQueue(holder -> {
                 if (throwable != null) {
-                  queryKernel.failStageForReason(stageId, UnknownFault.forException(throwable));
+                  holder.failStageForReason(stageId, UnknownFault.forException(throwable));
                 } else if (clusterByPartitionsEither.isError()) {
-                  queryKernel.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+                  holder.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
                 } else {
-                  queryKernel.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
+                  log.debug("Query [%s] Partition boundaries generated for stage %s", id(), stageId);
+                  holder.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
                 }
                 holder.transitionStageKernel(stageId, queryKernel.getStagePhase(stageId));
               });

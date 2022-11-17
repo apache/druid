@@ -85,7 +85,7 @@ public interface Controller
    * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
    * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
-  void updatePartialKeyStatistics(int stageNumber, int workerNumber, Object partialKeyStatisticsObject);
+  void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by

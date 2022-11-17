@@ -47,7 +47,7 @@ public class MSQTestControllerClient implements ControllerClient
   )
   {
     try {
-      controller.updatePartialKeyStatistics(stageId.getStageNumber(), workerNumber, partialKeyStatisticsInformation);
+      controller.updatePartialKeyStatisticsInformation(stageId.getStageNumber(), workerNumber, partialKeyStatisticsInformation);
     }
     catch (Exception e) {
       throw new ISE(e, "unable to post partial key statistics");

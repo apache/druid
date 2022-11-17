@@ -65,7 +65,7 @@ public class ControllerChatHandler implements ChatHandler
    * for the client-side code that calls this API.
    */
   @POST
-  @Path("/partialKeyStatistics/{queryId}/{stageNumber}/{workerNumber}")
+  @Path("/partialKeyStatisticsInformation/{queryId}/{stageNumber}/{workerNumber}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpPostPartialKeyStatistics(
@@ -77,7 +77,7 @@ public class ControllerChatHandler implements ChatHandler
   )
   {
     ChatHandlers.authorizationCheck(req, Action.WRITE, task.getDataSource(), toolbox.getAuthorizerMapper());
-    controller.updatePartialKeyStatistics(stageNumber, workerNumber, partialKeyStatisticsObject);
+    controller.updatePartialKeyStatisticsInformation(stageNumber, workerNumber, partialKeyStatisticsObject);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 

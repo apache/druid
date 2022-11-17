@@ -56,7 +56,7 @@ public class PartialKeyStatisticsInformationSerdeTest
         PartialKeyStatisticsInformation.class
     );
     Assert.assertEquals(json, partialInformation.getTimeSegments(), deserializedKeyStatistics.getTimeSegments());
-    Assert.assertEquals(json, partialInformation.isHasMultipleValues(), deserializedKeyStatistics.isHasMultipleValues());
+    Assert.assertEquals(json, partialInformation.hasMultipleValues(), deserializedKeyStatistics.hasMultipleValues());
     Assert.assertEquals(json, partialInformation.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0);
   }
 }

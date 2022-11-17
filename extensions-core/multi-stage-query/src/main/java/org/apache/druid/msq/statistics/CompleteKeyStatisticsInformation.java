@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.statistics;
 
+import org.apache.curator.shaded.com.google.common.collect.ImmutableSortedMap;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
@@ -30,21 +32,28 @@ public class CompleteKeyStatisticsInformation
 {
   private final SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap;
 
-  private boolean hasMultipleValues;
+  private boolean multipleValues;
 
   private double bytesRetained;
 
   public CompleteKeyStatisticsInformation(
       final SortedMap<Long, Set<Integer>> timeChunks,
-      boolean hasMultipleValues,
+      boolean multipleValues,
       double bytesRetained
   )
   {
     this.timeSegmentVsWorkerMap = timeChunks;
-    this.hasMultipleValues = hasMultipleValues;
+    this.multipleValues = multipleValues;
     this.bytesRetained = bytesRetained;
   }
 
+  /**
+   * Merges the {@link PartialKeyStatisticsInformation} into the complete key statistics information object.
+   * {@link #timeSegmentVsWorkerMap} is updated in sorted order with the timechunks from
+   * {@param partialKeyStatisticsInformation}, {@link #multipleValues} is set to true if
+   * {@param partialKeyStatisticsInformation} contains multipleValues and the bytes retained by the partial sketch
+   * is added to {@link #bytesRetained}.
+   */
   public void mergePartialInformation(int workerNumber, PartialKeyStatisticsInformation partialKeyStatisticsInformation)
   {
     for (Long timeSegment : partialKeyStatisticsInformation.getTimeSegments()) {
@@ -52,18 +61,18 @@ public class CompleteKeyStatisticsInformation
           .computeIfAbsent(timeSegment, key -> new HashSet<>())
           .add(workerNumber);
     }
-    this.hasMultipleValues = this.hasMultipleValues || partialKeyStatisticsInformation.isHasMultipleValues();
+    this.multipleValues = this.multipleValues || partialKeyStatisticsInformation.hasMultipleValues();
     this.bytesRetained += bytesRetained;
   }
 
   public SortedMap<Long, Set<Integer>> getTimeSegmentVsWorkerMap()
   {
-    return timeSegmentVsWorkerMap;
+    return ImmutableSortedMap.copyOfSorted(timeSegmentVsWorkerMap);
   }
 
-  public boolean isHasMultipleValues()
+  public boolean hasMultipleValues()
   {
-    return hasMultipleValues;
+    return multipleValues;
   }
 
   public double getBytesRetained()

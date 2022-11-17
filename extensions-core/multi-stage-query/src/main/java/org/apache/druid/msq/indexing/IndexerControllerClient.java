@@ -66,7 +66,7 @@ public class IndexerControllerClient implements ControllerClient
   ) throws IOException
   {
     final String path = StringUtils.format(
-        "/partialKeyStatistics/%s/%d/%d",
+        "/partialKeyStatisticsInformation/%s/%d/%d",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         workerNumber

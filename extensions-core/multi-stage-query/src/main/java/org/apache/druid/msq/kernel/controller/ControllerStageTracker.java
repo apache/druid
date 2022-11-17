@@ -180,7 +180,7 @@ class ControllerStageTracker
     } else if (workersWithReportedKeyStatistics.size() != workerCount) {
       throw new ISE("Result key statistics are not ready");
     } else {
-      return completeKeyStatisticsInformation.isHasMultipleValues();
+      return completeKeyStatisticsInformation.hasMultipleValues();
     }
   }
 
@@ -248,7 +248,7 @@ class ControllerStageTracker
     if (phase != ControllerStagePhase.READING_INPUT) {
       throw new ISE("Cannot add result key statistics from stage [%s]", phase);
     }
-    if (!stageDef.doesShuffle() || completeKeyStatisticsInformation == null) {
+    if (!stageDef.mustGatherResultKeyStatistics() || !stageDef.doesShuffle() || completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
@@ -268,7 +268,7 @@ class ControllerStageTracker
         completeKeyStatisticsInformation.mergePartialInformation(workerNumber, partialKeyStatisticsInformation);
 
         if (workersWithReportedKeyStatistics.size() == workerCount) {
-          // All workers have sent the report.
+          // All workers have sent the partial key statistics information.
           // Transition to MERGING_STATISTICS state to queue fetch clustering statistics from workers.
           transitionTo(ControllerStagePhase.MERGING_STATISTICS);
 
@@ -290,6 +290,14 @@ class ControllerStageTracker
   {
     if (resultPartitions != null) {
       throw new ISE("Result partitions have already been generated");
+    }
+
+    if (!stageDef.mustGatherResultKeyStatistics()) {
+      throw new ISE("Result partitions does not require key statistics, should not have set partition boundries here");
+    }
+
+    if (!ControllerStagePhase.MERGING_STATISTICS.equals(getPhase())) {
+      throw new ISE("Cannot set partition boundires from key statistics from stage [%s]", getPhase());
     }
 
     this.resultPartitionBoundaries = clusterByPartitions;

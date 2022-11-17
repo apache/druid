@@ -49,6 +49,7 @@ public enum ControllerStagePhase
   },
 
   // Waiting to fetch key statistics in the background from the workers and incrementally generate partitions.
+  // Transitioning to this phase should also enqueue the task to fetch key statistics to WorkerSketchFetcher.
   MERGING_STATISTICS {
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)

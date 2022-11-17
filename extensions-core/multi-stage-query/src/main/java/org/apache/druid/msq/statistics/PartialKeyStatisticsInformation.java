@@ -31,19 +31,19 @@ public class PartialKeyStatisticsInformation
 {
   private final Set<Long> timeSegments;
 
-  private final boolean hasMultipleValues;
+  private final boolean multipleValues;
 
   private final double bytesRetained;
 
   @JsonCreator
   public PartialKeyStatisticsInformation(
       @JsonProperty("timeSegments") Set<Long> timeSegments,
-      @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
+      @JsonProperty("multipleValues") boolean hasMultipleValues,
       @JsonProperty("bytesRetained") double bytesRetained
   )
   {
     this.timeSegments = timeSegments;
-    this.hasMultipleValues = hasMultipleValues;
+    this.multipleValues = hasMultipleValues;
     this.bytesRetained = bytesRetained;
   }
 
@@ -53,10 +53,10 @@ public class PartialKeyStatisticsInformation
     return timeSegments;
   }
 
-  @JsonProperty("hasMultipleValues")
-  public boolean isHasMultipleValues()
+  @JsonProperty("multipleValues")
+  public boolean hasMultipleValues()
   {
-    return hasMultipleValues;
+    return multipleValues;
   }
 
   @JsonProperty("bytesRetained")
