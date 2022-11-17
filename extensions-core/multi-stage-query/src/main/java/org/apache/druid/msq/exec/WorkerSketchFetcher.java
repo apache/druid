@@ -144,6 +144,7 @@ public class WorkerSketchFetcher
             finishedWorkers.add(workerNo);
 
             if (finishedWorkers.size() == workerCount) {
+              log.debug("Query [%s] parallel mode. Received all statistics, generating partitions", stageDefinition.getId().getQueryId());
               partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
             }
           }
@@ -231,6 +232,11 @@ public class WorkerSketchFetcher
         // Guarded by synchronized mergedStatisticsCollector
         Set<Integer> finishedWorkers = new HashSet<>();
 
+        log.debug("Query [%s]. Submitting request for statistics for time chunk %s to %s workers",
+                  stageDefinition.getId().getQueryId(),
+                  timeChunk,
+                  workerIdsWithTimeChunk.size());
+
         // Submits a task for every worker which has a certain time chunk
         for (int workerNo : workerIdsWithTimeChunk) {
           executorService.submit(() -> {
@@ -260,20 +266,21 @@ public class WorkerSketchFetcher
                   Either<Long, ClusterByPartitions> longClusterByPartitionsEither =
                       stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector);
 
-                  if (longClusterByPartitionsEither.isError()) {
-                    partitionFuture.complete(longClusterByPartitionsEither);
-                  }
+                  log.debug("Query [%s]. Received all statistics for time chunk %s, generating partitions",
+                            stageDefinition.getId().getQueryId(),
+                            timeChunk);
 
-                  List<ClusterByPartition> timeSketchPartitions =
-                      stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector)
-                                     .valueOrThrow()
-                                     .ranges();
-                  abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
-
-                  if (finalPartitionBoundries.size() > stageDefinition.getMaxPartitionCount()) {
+                  long totalPartitionCount = finalPartitionBoundries.size() + getPartitionCountFromEither(longClusterByPartitionsEither);
+                  if (totalPartitionCount > stageDefinition.getMaxPartitionCount()) {
                     // Fail fast if more partitions than the maximum have been reached.
-                    partitionFuture.complete(Either.error((long) finalPartitionBoundries.size()));
+                    partitionFuture.complete(Either.error(totalPartitionCount));
                   } else {
+                    List<ClusterByPartition> timeSketchPartitions = longClusterByPartitionsEither.valueOrThrow().ranges();
+                    abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
+                    log.debug("Query [%s]. Finished generating partitions for time chunk %s, total count so far %s",
+                              stageDefinition.getId().getQueryId(),
+                              timeChunk,
+                              finalPartitionBoundries.size());
                     submitFetchingTasksForNextTimeChunk();
                   }
                 }
@@ -314,6 +321,19 @@ public class WorkerSketchFetcher
     public CompletableFuture<Either<Long, ClusterByPartitions>> getPartitionFuture()
     {
       return partitionFuture;
+    }
+  }
+
+  /**
+   * Gets the partition size from an {@link Either}. If it is an error, the long denotes the number of partitions
+   * (in the case of creating too many partitions), otherwise checks the size of the list.
+   */
+  private static long getPartitionCountFromEither(Either<Long, ClusterByPartitions> either)
+  {
+    if (either.isError()) {
+      return either.error();
+    } else {
+      return either.valueOrThrow().size();
     }
   }
 }
