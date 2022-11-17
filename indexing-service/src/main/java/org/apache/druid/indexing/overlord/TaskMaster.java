@@ -26,6 +26,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -91,7 +92,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+      final SegmentAllocationQueue segmentAllocationQueue
   )
   {
     this.supervisorManager = supervisorManager;
@@ -136,6 +138,22 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
           leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start()
+                {
+                  segmentAllocationQueue.becomeLeader();
+                }
+
+                @Override
+                public void stop()
+                {
+                  segmentAllocationQueue.stopBeingLeader();
+                }
+              }
+          );
 
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()

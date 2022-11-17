@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
  * Queue for {@link SegmentAllocateRequest}s.
  */
 @ManageLifecycle
-public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
+public class SegmentAllocationQueue
 {
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
 
@@ -105,11 +105,6 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
   public void start()
   {
     log.info("Starting queue.");
-    if (leaderSelector.isLeader()) {
-      scheduleQueuePoll(maxWaitTimeMillis);
-      log.info("Scheduled queue processing.");
-    }
-    leaderSelector.registerListener(this);
   }
 
   @LifecycleStop
@@ -188,7 +183,7 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     }
 
     // Process all batches which are due
-    log.info("Processing all batches which are due for execution.");
+    log.debug("Processing all batches which are due for execution.");
     AllocateRequestBatch nextBatch = processingQueue.peek();
     while (nextBatch != null && nextBatch.isDue()) {
       processingQueue.poll();
@@ -383,7 +378,6 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     emitter.emit(metricBuilder.build(metric, value));
   }
 
-  @Override
   public void becomeLeader()
   {
     log.info("Elected leader. Starting queue processing.");
@@ -392,7 +386,6 @@ public class SegmentAllocationQueue implements DruidLeaderSelector.Listener
     scheduleQueuePoll(maxWaitTimeMillis);
   }
 
-  @Override
   public void stopBeingLeader()
   {
     log.info("Not leader anymore. Stopping queue processing.");
