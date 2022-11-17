@@ -234,6 +234,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
         } else if (currentRow.size() == 1) {
           Assert.assertEquals(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING), vectorSelector.lookupName(currentRow.get(0)));
         } else {
+          // noinspection SSBasedInspection
           for (int j = 0; j < currentRow.size(); j++) {
             List expected = (List) RAW_ROWS.get(rowCounter + i).get(MULTI_STRING);
             Assert.assertEquals(expected.get(j), vectorSelector.lookupName(currentRow.get(j)));

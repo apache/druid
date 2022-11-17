@@ -777,6 +777,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
           strings[i] = lookupName(ithRow.get(0));
         } else {
           List<String> row = new ArrayList<>(ithRow.size());
+          // noinspection SSBasedInspection
           for (int j = 0; j < ithRow.size(); j++) {
             row.add(lookupName(ithRow.get(j)));
           }
