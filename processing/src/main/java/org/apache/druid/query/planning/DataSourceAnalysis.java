@@ -282,7 +282,8 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if this datasource is concrete-based (see {@link #isConcreteBased()}, and the base datasource is a
-   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}. This is an
+   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}
+   * or an {@link UnnestDataSource} composed entirely of {@link TableDataSource} . This is an
    * important property, because it corresponds to datasources that can be handled by Druid's distributed query stack.
    */
   public boolean isConcreteTableBased()
