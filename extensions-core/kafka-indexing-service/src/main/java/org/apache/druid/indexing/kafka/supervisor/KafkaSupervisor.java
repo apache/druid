@@ -273,6 +273,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
+  // Used while calculating cummulative lag for entire stream
   private Map<Integer, Long> getRecordLagPerPartitionInLatestSequences(Map<Integer, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null) {
@@ -295,6 +296,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   @Override
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
+  // Used while generating Supervisor lag reports per task
   protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null || currentOffsets == null) {
