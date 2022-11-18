@@ -85,7 +85,6 @@ import {
   getRequiredModule,
   getRollup,
   getSecondaryPartitionRelatedFormFields,
-  getSpecType,
   getTimestampExpressionFields,
   getTimestampSchema,
   getTuningFormFields,
@@ -93,15 +92,15 @@ import {
   IngestionSpec,
   INPUT_FORMAT_FIELDS,
   InputFormat,
-  inputFormatCanFlatten,
+  inputFormatCanProduceNestedData,
   invalidIoConfig,
   invalidPartitionConfig,
   IoConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isStreamingSpec,
   issueWithIoConfig,
   issueWithSampleData,
-  isTask,
   joinFilter,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
@@ -113,6 +112,7 @@ import {
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
   splitFilter,
+  STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
   TIMESTAMP_SPEC_FIELDS,
   TimestampSpec,
@@ -140,7 +140,6 @@ import {
   localStorageSetJson,
   moveElement,
   moveToIndex,
-  oneOf,
   pluralIfNeeded,
   QueryState,
 } from '../../utils';
@@ -1205,7 +1204,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderConnectStep() {
     const { inputQueryState, sampleStrategy } = this.state;
     const spec = this.getEffectiveSpec();
-    const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
@@ -1294,7 +1292,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </Callout>
             </FormGroup>
           )}
-          {oneOf(specType, 'kafka', 'kinesis') && (
+          {isStreamingSpec(spec) && (
             <FormGroup label="Where should the data be sampled from?">
               <RadioGroup
                 selectedValue={sampleStrategy}
@@ -1441,7 +1439,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const flattenFields: FlattenField[] =
       deepGet(spec, 'spec.ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
 
-    const canFlatten = inputFormatCanFlatten(inputFormat);
+    const canHaveNestedData = inputFormatCanProduceNestedData(inputFormat);
 
     let mainFill: JSX.Element | string;
     if (parserQueryState.isInit()) {
@@ -1460,7 +1458,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               onChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
-            {canFlatten && (
+            {canHaveNestedData && (
               <Switch
                 checked={specialColumnsOnly}
                 label="Flattened columns only"
@@ -1473,7 +1471,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <ParseDataTable
               sampleData={data}
               columnFilter={columnFilter}
-              canFlatten={canFlatten}
+              canFlatten={canHaveNestedData}
               flattenedColumnsOnly={specialColumnsOnly}
               flattenFields={flattenFields}
               onFlattenFieldSelect={this.onFlattenFieldSelect}
@@ -1488,22 +1486,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     let suggestedFlattenFields: FlattenField[] | undefined;
-    if (canFlatten && !flattenFields.length && parserQueryState.data) {
+    if (canHaveNestedData && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
         filterMap(parserQueryState.data.rows, r => r.input),
         'ignore-arrays',
       );
     }
 
+    const inputFormatFields = isStreamingSpec(spec)
+      ? STREAMING_INPUT_FORMAT_FIELDS
+      : INPUT_FORMAT_FIELDS;
     return (
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <ParserMessage canFlatten={canFlatten} />
+          <ParserMessage canHaveNestedData={canHaveNestedData} />
           {!selectedFlattenField && (
             <>
               <AutoForm
-                fields={INPUT_FORMAT_FIELDS}
+                fields={inputFormatFields}
                 model={inputFormat}
                 onChange={p =>
                   this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -1511,11 +1512,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               />
               {this.renderApplyButtonBar(
                 parserQueryState,
-                AutoForm.issueWithModel(inputFormat, INPUT_FORMAT_FIELDS),
+                AutoForm.issueWithModel(inputFormat, inputFormatFields),
               )}
             </>
           )}
-          {canFlatten && this.renderFlattenControls()}
+          {canHaveNestedData && this.renderFlattenControls()}
           {suggestedFlattenFields && suggestedFlattenFields.length ? (
             <FormGroup>
               <Button
@@ -1563,7 +1564,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   private readonly onFlattenFieldSelect = (field: FlattenField, index: number) => {
     const { spec, unsavedChange } = this.state;
     const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    if (unsavedChange || !inputFormatCanFlatten(inputFormat)) return;
+    if (unsavedChange || !inputFormatCanProduceNestedData(inputFormat)) return;
 
     this.setState({
       selectedFlattenField: { value: field, index },
@@ -3265,7 +3266,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (submitting) return;
 
     this.setState({ submitting: true });
-    if (isTask(spec)) {
+    if (isStreamingSpec(spec)) {
+      try {
+        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
+      } catch (e) {
+        AppToaster.show({
+          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
+          intent: Intent.DANGER,
+        });
+        this.setState({ submitting: false });
+        return;
+      }
+
+      AppToaster.show({
+        message: 'Supervisor submitted successfully. Going to task view...',
+        intent: Intent.SUCCESS,
+      });
+
+      setTimeout(() => {
+        goToIngestion(undefined); // Can we get the supervisor ID here?
+      }, 1000);
+    } else {
       let taskResp: any;
       try {
         taskResp = await Api.instance.post('/druid/indexer/v1/task', spec);
@@ -3285,26 +3306,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       setTimeout(() => {
         goToIngestion(taskResp.data.task);
-      }, 1000);
-    } else {
-      try {
-        await Api.instance.post('/druid/indexer/v1/supervisor', spec);
-      } catch (e) {
-        AppToaster.show({
-          message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
-          intent: Intent.DANGER,
-        });
-        this.setState({ submitting: false });
-        return;
-      }
-
-      AppToaster.show({
-        message: 'Supervisor submitted successfully. Going to task view...',
-        intent: Intent.SUCCESS,
-      });
-
-      setTimeout(() => {
-        goToIngestion(undefined); // Can we get the supervisor ID here?
       }, 1000);
     }
   };

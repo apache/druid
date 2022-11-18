@@ -285,12 +285,8 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   );
 }
 
-export function isTask(spec: Partial<IngestionSpec>) {
-  const type = String(getSpecType(spec));
-  return (
-    type.startsWith('index_') ||
-    oneOf(type, 'index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge')
-  );
+export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(getSpecType(spec), 'kafka', 'kinesis');
 }
 
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
