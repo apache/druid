@@ -31,6 +31,9 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
  */
 public class SegmentCreateRequest
 {
+  // DO NOT IMPLEMENT equals or hashCode for this class as each request must be
+  // treated as unique even if it is for the same parameters
+
   private final String version;
   private final String sequenceName;
   private final String previousSegmentId;

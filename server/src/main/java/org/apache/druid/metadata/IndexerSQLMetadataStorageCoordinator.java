@@ -657,7 +657,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // For each of the remaining requests, create a new segment
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments =
-        createNewSegments(handle, dataSource, interval, requestsForNewSegments);
+        createNewSegments(handle, dataSource, interval, skipSegmentLineageCheck, requestsForNewSegments);
 
     // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
     // Avoiding ON DUPLICATE KEY since it's not portable.
@@ -938,9 +938,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         connector.getQuoteString()
     ));
 
-    for (Map.Entry<SegmentCreateRequest, SegmentIdWithShardSpec> entry : createdSegments.entrySet()) {
-      final SegmentCreateRequest request = entry.getKey();
-      final SegmentIdWithShardSpec segmentId = entry.getValue();
+    // Deduplicate the segment ids by inverting the map
+    Map<SegmentIdWithShardSpec, SegmentCreateRequest> segmentIdToRequest = new HashMap<>();
+    createdSegments.forEach((request, segmentId) -> segmentIdToRequest.put(segmentId, request));
+
+    for (Map.Entry<SegmentIdWithShardSpec, SegmentCreateRequest> entry : segmentIdToRequest.entrySet()) {
+      final SegmentCreateRequest request = entry.getValue();
+      final SegmentIdWithShardSpec segmentId = entry.getKey();
       insertBatch.add()
                  .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
@@ -994,6 +998,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Handle handle,
       String dataSource,
       Interval interval,
+      boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests
   ) throws IOException
   {
@@ -1058,22 +1063,40 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       pendingSegments.add(committedMaxId);
     }
 
-    Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
+    final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
+    final Map<String, SegmentIdWithShardSpec> sequenceHashToSegment = new HashMap<>();
+
     for (SegmentCreateRequest request : requests) {
-      SegmentIdWithShardSpec createdSegment = createNewSegment(
-          request,
-          dataSource,
-          interval,
-          versionOfExistingChunk,
-          committedMaxId,
-          pendingSegments
-      );
+      // Check if the required segment has already been created in this batch
+      final String sequenceHash = getSequenceNameAndPrevIdSha(request, interval, skipSegmentLineageCheck);
+
+      final SegmentIdWithShardSpec createdSegment;
+      if (sequenceHashToSegment.containsKey(sequenceHash)) {
+        createdSegment = sequenceHashToSegment.get(sequenceHash);
+      } else {
+        createdSegment = createNewSegment(
+            request,
+            dataSource,
+            interval,
+            versionOfExistingChunk,
+            committedMaxId,
+            pendingSegments
+        );
+
+        // Add to pendingSegments to consider for partitionId
+        if (createdSegment != null) {
+          pendingSegments.add(createdSegment);
+          sequenceHashToSegment.put(sequenceHash, createdSegment);
+          log.info("Created new segment [%s]", createdSegment);
+        }
+      }
+
       if (createdSegment != null) {
-        log.info("Created new segment [%s]", createdSegment);
         createdSegments.put(request, createdSegment);
-        pendingSegments.add(createdSegment);
       }
     }
+
+    log.info("Created [%d] new segments for [%d] allocate requests.", sequenceHashToSegment.size(), requests.size());
     return createdSegments;
   }
 
