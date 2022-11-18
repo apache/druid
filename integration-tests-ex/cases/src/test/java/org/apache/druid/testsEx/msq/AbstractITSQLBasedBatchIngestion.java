@@ -51,7 +51,7 @@ public class AbstractITSQLBasedBatchIngestion
   protected String getFileWithFormatFromDir(String dir, String format) throws URISyntaxException
   {
     File[] file = (new File(getClass().getResource(dir).toURI())).listFiles(pathname -> {
-      String name = pathname.getName().toLowerCase();
+      String name = pathname.getName();
       return name.endsWith(format) && pathname.isFile();
     });
     return dir + '/' + file[0].getName();

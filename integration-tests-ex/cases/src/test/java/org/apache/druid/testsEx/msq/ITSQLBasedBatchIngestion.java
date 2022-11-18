@@ -33,31 +33,30 @@ import java.util.Arrays;
 @Category(MultiStageQuery.class)
 public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedBatchIngestion
 {
-  private static final String BATCH_INDEX_TASKS_DIRs = "/multi-stage-query/batch-index/";
+  private static final String BATCH_INDEX_TASKS_DIR = "/multi-stage-query/batch-index/";
 
   @Test
   public void testSQLBasedBatchIngestion() throws Exception
   {
     // Get list of all directories in batch-index folder. Each folder is considered a test case.
-    File[] Directories = (new File(getClass().getResource(BATCH_INDEX_TASKS_DIRs).toURI())).listFiles(File::isDirectory);
+    File[] directories = (new File(getClass().getResource(BATCH_INDEX_TASKS_DIR).toURI())).listFiles(File::isDirectory);
     int fail_count = 0;
-    LOG.info("Test will be run for sql in the following directories - \n %s", Arrays.toString(Directories));
-    Directories= new File[]{new File("/Users/abhishekagrawal/abhagraw/druid/integration-tests-ex/cases/src/test/resources/multi-stage-query/batch-index/wikipedia_with_transform")};
-    for (File dir : Directories) {
+    LOG.info("Test will be run for sql in the following directories - \n %s", Arrays.toString(directories));
+    for (File dir : directories) {
       try {
-        runMSQTaskandTestQueries(BATCH_INDEX_TASKS_DIRs + dir.getName(), "msqBatchIndex_" + dir.getName(),
+        runMSQTaskandTestQueries(BATCH_INDEX_TASKS_DIR + dir.getName(), "msqBatchIndex_" + dir.getName(),
                                  ImmutableMap.of("finalizeAggregations", false,
                                                  "maxNumTasks", 10,
                                                  "groupByEnableMultiValueUnnesting", false
                                  ));
       }
       catch (Exception e) {
-          LOG.error(e, "Error while testing %s", dir.getName());
-          fail_count++;
+        LOG.error(e, "Error while testing %s", dir.getName());
+        fail_count++;
       }
     }
-    if (fail_count > 0){
-      LOG.error("%s tests were run out of which %s FAILED", Directories.length, fail_count);
+    if (fail_count > 0) {
+      LOG.error("%s tests were run out of which %s FAILED", directories.length, fail_count);
       throw new RuntimeException();
     }
   }
