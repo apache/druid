@@ -49,7 +49,7 @@ This document includes each page that mentions an experimental feature. To gradu
 ## Segment locking
 
 - [Configuration reference](../configuration/index.md)
-- [Task reference](../ingestion/tasks.md)
+- [Task reference](../ingestion/tasks.md#locking)
 - [Design](../design/architecture.md)
 
 ## Materialized view
