@@ -137,14 +137,14 @@ public class WorkerSketchFetcher
         try {
           ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
           if (clusterByStatisticsSnapshot == null) {
-            throw new ISE("Worker %s returned empty sketch, this should never happen", workerNo);
+            throw new ISE("Worker %s returned null sketch, this should never happen", workerNo);
           }
           synchronized (mergedStatisticsCollector) {
             mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
             finishedWorkers.add(workerNo);
 
             if (finishedWorkers.size() == workerCount) {
-              log.debug("Query [%s] parallel mode. Received all statistics, generating partitions", stageDefinition.getId().getQueryId());
+              log.debug("Query [%s] Received all statistics, generating partitions", stageDefinition.getId().getQueryId());
               partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
             }
           }
@@ -254,7 +254,7 @@ public class WorkerSketchFetcher
             try {
               ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
               if (snapshotForTimeChunk == null) {
-                throw new ISE("Worker %s returned empty sketch for %s, this should never happen", workerNo, timeChunk);
+                throw new ISE("Worker %s returned null sketch for %s, this should never happen", workerNo, timeChunk);
               }
               synchronized (mergedStatisticsCollector) {
                 mergedStatisticsCollector.addAll(snapshotForTimeChunk);
