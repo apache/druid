@@ -150,8 +150,10 @@ public class WorkerSketchFetcher
           }
         }
         catch (Exception e) {
-          partitionFuture.completeExceptionally(e);
-          mergedStatisticsCollector.clear();
+          synchronized (mergedStatisticsCollector) {
+            partitionFuture.completeExceptionally(e);
+            mergedStatisticsCollector.clear();
+          }
         }
       });
     });
@@ -272,6 +274,7 @@ public class WorkerSketchFetcher
                   if (totalPartitionCount > stageDefinition.getMaxPartitionCount()) {
                     // Fail fast if more partitions than the maximum have been reached.
                     partitionFuture.complete(Either.error(totalPartitionCount));
+                    mergedStatisticsCollector.clear();
                   } else {
                     List<ClusterByPartition> timeSketchPartitions = longClusterByPartitionsEither.valueOrThrow().ranges();
                     abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
@@ -285,8 +288,10 @@ public class WorkerSketchFetcher
               }
             }
             catch (Exception e) {
-              partitionFuture.completeExceptionally(e);
-              mergedStatisticsCollector.clear();
+              synchronized (mergedStatisticsCollector) {
+                partitionFuture.completeExceptionally(e);
+                mergedStatisticsCollector.clear();
+              }
             }
           });
         }
