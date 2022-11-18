@@ -233,7 +233,7 @@ public class ColumnarValueUnnestCursor implements Cursor
    * This would also create a bitset for dictonary encoded columns to
    * check for matching values specified in allowedList of UnnestDataSource.
    */
-  public void initialize()
+  private void initialize()
   {
     this.unnestListForCurrentRow = new ArrayList<>();
     getNextRow(needInitialization);
@@ -253,7 +253,7 @@ public class ColumnarValueUnnestCursor implements Cursor
    * to move the base cursor to the next row for unnesting and repopulates
    * the data structures, created during initialize(), to point to the new row
    */
-  public void advanceAndUpdate()
+  private void advanceAndUpdate()
   {
     if (unnestListForCurrentRow.isEmpty() || index >= unnestListForCurrentRow.size() - 1) {
       index = 0;
@@ -273,7 +273,7 @@ public class ColumnarValueUnnestCursor implements Cursor
    *
    * @return a boolean to indicate whether to stay or move cursor
    */
-  public boolean matchAndProceed()
+  private boolean matchAndProceed()
   {
     boolean matchStatus;
     if (allowSet == null || allowSet.isEmpty()) {

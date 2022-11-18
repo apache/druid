@@ -78,12 +78,13 @@ public class DimensionUnnestCursor implements Cursor
           return baseColumnSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
 
-        //final DimensionSpec actualDimensionSpec = dimensionSpec.withDimension(columnName);
         return new DimensionSelector()
         {
           @Override
           public IndexedInts getRow()
           {
+            // This object reference has been created
+            // during the call to initialize and referenced henceforth
             return indexIntsForRow;
           }
 
@@ -120,7 +121,6 @@ public class DimensionUnnestCursor implements Cursor
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
                 dimSelector.inspectRuntimeShape(inspector);
-                //baseColumnSelectorFactory.makeDimensionSelector(actualDimensionSpec).inspectRuntimeShape(inspector);
               }
             };
           }
@@ -262,7 +262,7 @@ public class DimensionUnnestCursor implements Cursor
    * This would also create a bitset for dictonary encoded columns to
    * check for matching values specified in allowedList of UnnestDataSource.
    */
-  public void initialize()
+  private void initialize()
   {
     IdLookup idLookup = dimSelector.idLookup();
     this.indexIntsForRow = new SingleIndexInts();
@@ -290,7 +290,7 @@ public class DimensionUnnestCursor implements Cursor
    * to move the base cursor to the next row for unnesting and repopulates
    * the data structures, created during initialize(), to point to the new row
    */
-  public void advanceAndUpdate()
+  private void advanceAndUpdate()
   {
     if (index >= indexedIntsForCurrentRow.size() - 1) {
       if (!baseCursor.isDone()) {
@@ -312,7 +312,7 @@ public class DimensionUnnestCursor implements Cursor
    *
    * @return a boolean to indicate whether to stay or move cursor
    */
-  public boolean matchAndProceed()
+  private boolean matchAndProceed()
   {
     boolean matchStatus;
     if ((allowSet == null || allowSet.isEmpty()) && allowedBitSet.isEmpty()) {

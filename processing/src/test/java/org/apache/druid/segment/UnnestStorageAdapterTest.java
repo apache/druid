@@ -52,6 +52,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER1;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER2;
+  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER3;
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
@@ -96,7 +97,18 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         OUTPUT_COLUMN_NAME1,
         null
     );
-    ADAPTERS = ImmutableList.of(UNNEST_STORAGE_ADAPTER);
+    UNNEST_STORAGE_ADAPTER3 = new UnnestStorageAdapter(
+        UNNEST_STORAGE_ADAPTER1,
+        COLUMNNAME,
+        OUTPUT_COLUMN_NAME1,
+        IGNORE_SET
+    );
+    ADAPTERS = ImmutableList.of(
+        UNNEST_STORAGE_ADAPTER,
+        UNNEST_STORAGE_ADAPTER1,
+        UNNEST_STORAGE_ADAPTER2,
+        UNNEST_STORAGE_ADAPTER3
+    );
   }
 
   @AfterClass
@@ -107,7 +119,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_unnest_adapter_methods()
+  public void test_group_of_unnest_adapters_methods()
   {
     String colName = "multi-string1";
     for (StorageAdapter adapter : ADAPTERS) {
@@ -130,48 +142,48 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           adapter.getColumnCapabilities(colName).toColumnType(),
           INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(colName).toColumnType()
       );
-      Assert.assertEquals(UNNEST_STORAGE_ADAPTER.getDimensionToUnnest(), colName);
+      Assert.assertEquals(((UnnestStorageAdapter) adapter).getDimensionToUnnest(), colName);
     }
   }
 
   @Test
   public void test_unnest_adapters_basic()
   {
-    for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
 
-      cursorSequence.accumulate(null, (accumulated, cursor) -> {
-        ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
 
-        DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-        int count = 0;
-        while (!cursor.isDone()) {
-          Object dimSelectorVal = dimSelector.getObject();
-          if (dimSelectorVal == null) {
-            Assert.assertNull(dimSelectorVal);
-          }
-          cursor.advance();
-          count++;
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
         }
+        cursor.advance();
+        count++;
+      }
         /*
       each row has 8 entries.
       unnest 2 rows -> 16 rows after unnest
        */
-        Assert.assertEquals(count, 16);
-        return null;
-      });
-    }
+      Assert.assertEquals(count, 16);
+      return null;
+    });
+
   }
 
   @Test
-  public void test_unnest_adapters_unnest_again()
+  public void test_two_levels_of_unnest_adapters()
   {
     Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER2.makeCursors(
         null,
@@ -213,7 +225,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_unnest_adapters_allowList()
+  public void test_unnest_adapters_with_allowList()
   {
     final String columnName = "multi-string1";
 
@@ -256,19 +268,19 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_dim_unnest_adapters()
+  public void test_two_levels_of_unnest_adapters_with_allowList()
   {
     final String columnName = "multi-string1";
 
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER3.makeCursors(
         null,
-        UNNEST_STORAGE_ADAPTER1.getInterval(),
+        UNNEST_STORAGE_ADAPTER3.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
         null
     );
-    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER1;
+    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER3;
     Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
     Assert.assertEquals(
         adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
@@ -280,22 +292,35 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME1));
+      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME1);
 
-
+      int count = 0;
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
+        Object valueSelectorVal = valueSelector.getObject();
         if (dimSelectorVal == null) {
           Assert.assertNull(dimSelectorVal);
+        } else if (valueSelectorVal == null) {
+          Assert.assertNull(valueSelectorVal);
         }
         cursor.advance();
+        count++;
       }
+      /*
+      each row has 8 distinct entries.
+      allowlist has 3 entries also the value cardinality
+      unnest will have 3 distinct entries
+      unnest of that unnest will have 3*3 = 9 entries
+       */
+      Assert.assertEquals(count, 9);
+      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
       return null;
     });
   }
 
   @Test
-  public void test_dim_unnest_adapters_methods()
+  public void test_unnest_adapters_methods_with_allowList()
   {
     final String columnName = "multi-string1";
 
@@ -321,21 +346,22 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
       IdLookup idlookUp = dimSelector.idLookup();
+      Assert.assertFalse(dimSelector.isNull());
       int[] indices = new int[]{1, 3, 5};
       int count = 0;
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
         Assert.assertEquals(idlookUp.lookupId((String) dimSelectorVal), indices[count]);
+        // after unnest first entry in get row should equal the object
+        // and the row size will always be 1
         Assert.assertEquals(dimSelector.getRow().get(0), indices[count]);
-        Assert.assertEquals(dimSelector.getValueCardinality(), 3);
+        Assert.assertEquals(dimSelector.getRow().size(), 1);
         Assert.assertNotNull(dimSelector.makeValueMatcher(OUTPUT_COLUMN_NAME));
-        Assert.assertFalse(dimSelector.isNull());
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        }
         cursor.advance();
         count++;
       }
+      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
+      Assert.assertEquals(count, 3);
       return null;
     });
   }

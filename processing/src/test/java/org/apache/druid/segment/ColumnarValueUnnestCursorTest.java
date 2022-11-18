@@ -103,7 +103,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_cursors_user_supplied_list_nulls()
+  public void test_list_unnest_cursors_user_supplied_list_only_nulls()
   {
     List<Object> inputList = Arrays.asList(
         Collections.singletonList(null),
@@ -137,7 +137,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_cursors_user_supplied_list_mixed()
+  public void test_list_unnest_cursors_user_supplied_list_mixed_with_nulls()
   {
     List<Object> inputList = Arrays.asList(
         Arrays.asList("a", "b"),
@@ -178,7 +178,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_cursors_user_supplied_strings()
+  public void test_list_unnest_cursors_user_supplied_strings_and_no_lists()
   {
     List<Object> inputList = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", "j");
 
@@ -208,7 +208,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_cursors_user_supplied_strings_list_mixed()
+  public void test_list_unnest_cursors_user_supplied_strings_mixed_with_list()
   {
     List<Object> inputList = Arrays.asList("a", "b", "c", "e", "f", Arrays.asList("g", "h"), "i", "j");
 
@@ -238,7 +238,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_cursors_user_supplied_list_three_level_arrays()
+  public void test_list_unnest_cursors_user_supplied_lists_three_levels()
   {
     List<Object> inputList = Arrays.asList(
         Arrays.asList("a", "b", "c"),
@@ -272,7 +272,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_list_unnest_of_unnest_cursors_user_supplied_list_three_level_array()
+  public void test_list_unnest_of_unnest_cursors_user_supplied_list_three_levels()
   {
     List<Object> inputList = Arrays.asList(
         Arrays.asList("a", "b", "c"),
