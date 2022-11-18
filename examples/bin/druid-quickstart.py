@@ -7,7 +7,7 @@ QUICKSTART_BASE_CONFIG_PATH = "conf/druid/single-server/quickstart"
 HELP_ARG_IDENTIFIER = "help"
 COMPUTE_ONLY_ARG_IDENTIFIER = "computeOnly"
 RUN_ZK_IDENTIFIER = "runZk"
-BASE_CONFIG_PATH_IDENTIFIER = "baseConfigPath"
+ROOT_CONFIG_PATH_IDENTIFIER = "rootConfigPath"
 MEMORY_ARG_IDENTIFIER = "totalMemory"
 MEMORY_GIGABYTES_IDENTIFIER = "g"
 MEMORY_MEGABYTES_IDENTIFIER = "m"
@@ -59,7 +59,7 @@ def get_argument_value(argument):
 def parse_arguments():
     service_list = []
     service_path_list = []
-    base_config_path = ""
+    root_config_path = ""
     total_memory = ""
     compute_only = False
     run_zk = False
@@ -69,8 +69,8 @@ def parse_arguments():
             compute_only = True
         elif check_argument_type(argument, RUN_ZK_IDENTIFIER):
             run_zk = True
-        elif check_argument_type(argument, BASE_CONFIG_PATH_IDENTIFIER):
-            base_config_path = os.path.join(os.getcwd(), get_argument_value(argument))
+        elif check_argument_type(argument, ROOT_CONFIG_PATH_IDENTIFIER):
+            root_config_path = os.path.join(os.getcwd(), get_argument_value(argument))
         elif (check_argument_type(argument, MEMORY_ARG_IDENTIFIER)):
             total_memory = get_argument_value(argument)
         else:
@@ -80,13 +80,16 @@ def parse_arguments():
             if service not in DEFAULT_SERVICES:
                 raise Exception(f'{service} is not a valid service name, should be one of {DEFAULT_SERVICES}')
 
+            if service in service_list:
+                raise Exception(f'{service} is specified multiple times')
+
             subdirectory = ""
 
             if len(split_args) == 2:
                 subdirectory = split_args[1]
 
             if subdirectory != "":
-                complete_path = os.path.join(base_config_path, subdirectory)
+                complete_path = os.path.join(root_config_path, subdirectory)
                 if os.path.exists(os.path.join(complete_path)) is False:
                     raise Exception(f'Path `{complete_path}` specified for service `{service}` doesn\'t exist')
 
@@ -99,9 +102,9 @@ def parse_arguments():
         service_path_list = [""] * len(DEFAULT_SERVICES)
         run_zk = True
 
-    return base_config_path, total_memory, list(zip(service_list, service_path_list)), run_zk, compute_only
+    return root_config_path, total_memory, list(zip(service_list, service_path_list)), run_zk, compute_only
 
-def should_compute_memory(base_config_path, total_memory, service_config):
+def should_compute_memory(root_config_path, total_memory, service_config):
     # if jvm file is present for any of the services
     # it should be present for all services and totalMemory should not be specified
     # if totalMemory is given, jvm file shouldn't be present for any service
@@ -109,7 +112,7 @@ def should_compute_memory(base_config_path, total_memory, service_config):
     jvm_config_count = 0
     for item in service_config:
         if item[1] != "":
-            if Path(f'{base_config_path}/{item[1]}/jvm.config').is_file():
+            if Path(f'{root_config_path}/{item[1]}/jvm.config').is_file():
                 jvm_config_count += 1
             elif jvm_config_count > 0:
                 raise Exception('jvm.config file is missing for service {item[0]}, jvm.config should be specified for all the services or none')
@@ -130,7 +133,7 @@ def compute_system_memory():
 def convert_total_memory_string(memory):
     if memory == "":
         computed_memory = compute_system_memory()
-        print(f'`{MEMORY_ARG_IDENTIFIER}` argument is not specified Druid will use 80% of system memory: {computed_memory}m')
+        print(f'`{MEMORY_ARG_IDENTIFIER}` argument is not specified, Druid will use 80% of system memory: {computed_memory}m')
         return computed_memory
     elif memory.endswith(MEMORY_MEGABYTES_IDENTIFIER):
         return int(memory[:-1])
@@ -146,57 +149,57 @@ def build_memory_config_string(heap_memory, direct_memory):
 
 def distribute_memory_over_services(service_config, total_memory):
     service_memory_config = {}
-    service_instance_map = {}
-
-    for item in service_config:
-        service_instance_map[item[0]] = service_instance_map.get(item[0], 0) + 1
 
     memory_weight_sum = 0
-    for key, value in service_instance_map.items():
-        memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * value
+    for item in service_config:
+        memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(item[0])
 
     multiplier = total_memory / memory_weight_sum
 
     lower_bound_memory_allocation = 0
     allocated_services = set()
-    for key, value in service_instance_map.items():
-        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * multiplier
-        if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
-            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
-            heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(key) * allocated_memory
+
+    for item in service_config:
+        service = item[0]
+        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service) * multiplier
+        if service in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(service):
+            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(service)
+            heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(service) * allocated_memory
             direct_memory = allocated_memory - heap_memory
-            service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
+            service_memory_config[service] = build_memory_config_string(int(heap_memory), int(direct_memory))
             lower_bound_memory_allocation += allocated_memory
-            allocated_services.add(key)
+            allocated_services.add(service)
 
     if lower_bound_memory_allocation > 0:
         # compute the multiplier again for remaing services
         memory_weight_sum = 0
-        for key, value in service_instance_map.items():
-            if key in allocated_services:
+        for item in service_config:
+            service = item[0]
+            if service in allocated_services:
                 continue
-            memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * value
+            memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service) * value
         multiplier = (total_memory - lower_bound_memory_allocation) / memory_weight_sum
 
-    for key, value in service_instance_map.items():
-        if key in allocated_services:
+    for item in service_config:
+        service = item[0]
+        if service in allocated_services:
             continue
-        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * multiplier
-        if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
-            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
+        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service) * multiplier
+        if service in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(service):
+            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(service)
 
-        heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(key) * allocated_memory
+        heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(service) * allocated_memory
         direct_memory = allocated_memory - heap_memory
-        service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
+        service_memory_config[service] = build_memory_config_string(int(heap_memory), int(direct_memory))
 
     print(f'\nMemory distribution for services:')
     for key, value in service_memory_config.items():
-        print(f'{key}, memory_config: {value}, instance_count: {service_instance_map[key]}')
+        print(f'{key}, memory_config: {value}')
     print('\n')
 
     return service_memory_config
 
-def build_supervise_script_arguments(service_config, service_memory_config, base_config_path, run_zk):
+def build_supervise_script_arguments(service_config, service_memory_config, root_config_path, run_zk):
     argument_list = []
 
     argument_list.append("\":verify bin/verify-java\"")
@@ -219,11 +222,11 @@ def build_supervise_script_arguments(service_config, service_memory_config, base
         jvm_args = service_memory_config.get(item[0])
 
         if jvm_args is None:
-            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {base_config_path} {service_path}\"')
+            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {root_config_path} {service_path}\"')
         else:
-            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {base_config_path} {service_path} \'{jvm_args}\'\"')
+            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {root_config_path} {service_path} \'{jvm_args}\'\"')
 
-    print('Commands for supervise script:')
+    print('Command for supervise script:')
     for item in argument_list:
         print(item)
 
@@ -231,13 +234,13 @@ def build_supervise_script_arguments(service_config, service_memory_config, base
 
     return ",".join(argument_list)
 
-def print_service_config(service_config, base_config_path, run_zk):
+def print_service_config(service_config, root_config_path, run_zk):
     print('Services to start:')
     for item in service_config:
         if item[1] == "":
             print(f'{item[0]}, using default config from {os.getcwd()}/../{QUICKSTART_BASE_CONFIG_PATH}')
         else:
-            print(f'{item[0]}, using config from {base_config_path}/{item[1]}')
+            print(f'{item[0]}, using config from {root_config_path}/{item[1]}')
     if run_zk:
         print(f'zk, using default config from {os.getcwd()}/../conf/zk')
     print('\n')
@@ -251,58 +254,53 @@ def display_help():
             memory for druid cluster, if totalMemory is not specified
             80 percent of system memory is used.
             Note, if service specific jvm config is present,
-            totalMemory shouldn't be specified
-            Integer value is supported with `m` or `g` suffix,
-            denoting memory in mb or gb
+            totalMemory shouldn't be specified.
+            Integer value is supported with `m` or `g` suffix.
             Memory should be greater than equals 2g
-       baseConfigPath=<path>
-            relative path to base directory, containing common and service specific
+       rootConfigPath=<path>
+            directory containing common and service specific
             properties to be overridden, this directory must contain `_common`
             directory with `common.jvm.config` & `common.runtime.properties`
-            if `baseConfigPath` is not specified, config from
+            if `rootConfigPath` is not specified, config from
             conf/druid/single-server/quickstart directory is used
        computeOnly
             command dry-run, validates the arguments and
             display the memory distribution for services
        runZk
             specification to run zookeeper, zk config is picked up from conf/zk
-       <service_identifier>=[subdirectory]
+       <service_identifier>[=subdirectory]
             service_identifier is the service to be started, multiple services
             can be specified, `service_identifier` should be one of
             [broker, router, middleManager, historical, coordinator-overlord]
-            `subdirectory` is optional directory within `baseConfigPath`
+            `subdirectory` is optional directory within `rootConfigPath`
             containing runtime properties or/and jvm properties
-            Note, if jvm.config file is present for one service, it must be
-            present for all other services
-            If no service is specified, all services and zookeeper are started
+            Note, if jvm.config file is present for one of the service,
+            it must be present for all other services.
+            If service is not explicitly specified, all services
+            alongwith zookeeper is started
+            Note each service should be specified at most once
 
     sample usage:
         start-druid
-            start up all the services using the default system memory
+            start up all the services (including zk) using the default system memory
         start-druid totalMemory=100g
             start up all the services using the given memory
         start-druid totalMemory=100g computeOnly
             compute memory distribution for all the services
         start-druid totalMemory=100g broker router historical
             starts `broker`, `router` and `historical` services, using `100g` of memory
-        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker router historical
-            starts `broker`, `router` and `historical` service, using 100g of memory,
-            use common configs from specified `baseConfigPath`
-        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker=broker router=router historical=historical
+        start-druid totalMemory=100g rootConfigPath=../conf/druid/single-server/large broker router historical
+            start `broker`, `router` and `historical` service, using 100g of memory,
+            use common configs from specified `rootConfigPath`
+        start-druid totalMemory=100g rootConfigPath=../conf/druid/single-server/large broker=broker router=router historical=historical
             starts `broker`, `router` and `historical` services, using 100g of memory, use common configs
-            from specified `baseConfigPath`, use service specific config from specified directories
-            if jvm.config is specified for all the services, memory distribution is not computed
-        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker=broker1 broker=broker2
-            starts 2 instances of `broker`
-            config is read from respective directories, depending on whether jvm.config is specified,
+            from specified `rootConfigPath`, use service specific config from specified sub directories
+            Since totalMemory is specific, the service specific folder shouldn't contain jvm.config
+        start-druid rootConfigPath=../conf/druid/profile broker=broker historical=historical
+            exception is thrown if either of `broker`, `historical`
+            subdirectory contains jvm.config but not both.
+            If none of the service specific subdirectory contains jvm.config,
             memory distribution is computed
-        start-druid totalMemory=100g baseConfigPath=../conf/druid/profile broker=broker1 historical=historical1
-            if either of `broker1`, `historical1` subdirectory contains jvm.config,
-            exception is thrown since `totalMemory` argument is specified
-        start-druid baseConfigPath=../conf/druid/profile broker=broker1 historical=historical1
-            exception is thrown if either of `broker1`, `historical1`
-            subdirectory contains jvm.config but not both
-            If none of the subdirectory contains jvm.config, memory distribution is computed
     """
 
     print(text)
@@ -316,26 +314,26 @@ def main():
 
     print("Druid quickstart\n")
 
-    base_config_path, total_memory, service_config, run_zk, compute_only = parse_arguments()
+    root_config_path, total_memory, service_config, run_zk, compute_only = parse_arguments()
 
     # change directory to bin
     os.chdir(os.path.dirname(sys.argv[0]))
 
-    print(f'Arguments passed: baseConfigPath: "{base_config_path}", totalMemory: "{total_memory}"\n')
-    print_service_config(service_config, base_config_path, run_zk)
+    print(f'Arguments passed: rootConfigPath: "{root_config_path}", totalMemory: "{total_memory}"\n')
+    print_service_config(service_config, root_config_path, run_zk)
 
     service_memory_config = {}
-    if (should_compute_memory(base_config_path, total_memory, service_config)):
+    if (should_compute_memory(root_config_path, total_memory, service_config)):
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
         service_memory_config = distribute_memory_over_services(service_config, memory_in_mega_bytes)
 
+    if root_config_path == "":
+        root_config_path = QUICKSTART_BASE_CONFIG_PATH
+
+    script_arguments = build_supervise_script_arguments(service_config, service_memory_config, root_config_path, run_zk)
+
     if compute_only:
         return
-
-    if base_config_path == "":
-        base_config_path = QUICKSTART_BASE_CONFIG_PATH
-
-    script_arguments = build_supervise_script_arguments(service_config, service_memory_config, base_config_path, run_zk)
 
     os.system(f'exec ./supervise -a {script_arguments}')
 

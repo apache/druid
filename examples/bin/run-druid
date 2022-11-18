@@ -56,11 +56,13 @@ fi
 
 if [ "$#" -eq 3 ]
 then
+  # arguments for this case is <service> <root_conf_dir> <service_subdirectory>
   cd "$WHEREAMI/.."
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$3"/jvm.config | xargs` \
     -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
 elif [ "$#" -eq 4 ]
 then
+  # arguments for this case is <service> <root_conf_dir> <service_subdirectory> <jvm_args>
   JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
   JVMARGS+=' '
   JVMARGS+=$4
