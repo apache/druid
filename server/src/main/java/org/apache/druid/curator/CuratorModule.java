@@ -33,6 +33,7 @@ import org.apache.curator.shaded.com.google.common.base.Strings;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -100,7 +101,7 @@ public class CuratorModule implements Module
     framework.getUnhandledErrorListenable().addListener((message, e) -> {
       final long startTime = System.currentTimeMillis();
       log.error(e, "Unhandled error in Curator, stopping server.");
-      final Thread exiter = new Thread(
+      final Thread stopper = new Thread(
           () -> {
             try {
               Threads.sleepFor(30, TimeUnit.SECONDS);
@@ -108,16 +109,15 @@ public class CuratorModule implements Module
             catch (InterruptedException ignored) {
 
             }
-            log.warn(
-                "Could not stop server within %,d millis after unhandled Curator error. Exiting immediately.",
+            throw new ISE(
+                "Could not stop server within %,d millis after unhandled Curator error. Stop Lifecycle ASAP.",
                 System.currentTimeMillis() - startTime
             );
-            Runtime.getRuntime().exit(1);
           },
-          "exiter-thread"
+          "stopper-thread"
       );
-      exiter.setDaemon(true);
-      exiter.start();
+      stopper.setDaemon(true);
+      stopper.start();
       shutdown(lifecycle);
     });
 
