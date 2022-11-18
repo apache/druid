@@ -3,7 +3,6 @@ import os
 import psutil
 from pathlib import Path
 
-SUPERVISE_CONFIG_FILE_PATH = "../conf/supervise/single-server/quickstart.conf"
 QUICKSTART_BASE_CONFIG_PATH = "conf/druid/single-server/quickstart"
 HELP_ARG_IDENTIFIER = "help"
 COMPUTE_ONLY_ARG_IDENTIFIER = "computeOnly"
@@ -29,11 +28,11 @@ DEFAULT_SERVICES = [
 ]
 
 SERVICE_MEMORY_DISTRIBUTION_WEIGHT = {
-    MIDDLE_MANAGER_SERVICE_NAME: 0.5,
-    ROUTER_SERVICE_NAME: 1,
-    COORDINATOR_SERVICE_NAME: 18,
-    BROKER_SERVICE_NAME: 28,
-    HISTORICAL_SERVICE_NAME: 45
+    MIDDLE_MANAGER_SERVICE_NAME: 1,
+    ROUTER_SERVICE_NAME: 2,
+    COORDINATOR_SERVICE_NAME: 36,
+    BROKER_SERVICE_NAME: 56,
+    HISTORICAL_SERVICE_NAME: 90
 }
 
 SERVICE_MEMORY_LOWER_BOUND = {
@@ -41,7 +40,7 @@ SERVICE_MEMORY_LOWER_BOUND = {
     ROUTER_SERVICE_NAME: 128
 }
 
-SERVICE_MEMORY_HEAP_RATIO = {
+SERVICE_MEMORY_HEAP_PERCENTAGE = {
     MIDDLE_MANAGER_SERVICE_NAME: 1,
     ROUTER_SERVICE_NAME: 1,
     COORDINATOR_SERVICE_NAME: 1,
@@ -81,15 +80,18 @@ def parse_arguments():
             if service not in DEFAULT_SERVICES:
                 raise Exception(f'{service} is not a valid service name, should be one of {DEFAULT_SERVICES}')
 
-            path = ""
+            subdirectory = ""
 
             if len(split_args) == 2:
-                path = split_args[1]
-            complete_path = os.path.join(base_config_path, path)
-            if os.path.exists(os.path.join(complete_path)) is False:
-                raise Exception(f'Path `{complete_path}` specified for service `{service}` doesn\'t exist ')
+                subdirectory = split_args[1]
+
+            if subdirectory != "":
+                complete_path = os.path.join(base_config_path, subdirectory)
+                if os.path.exists(os.path.join(complete_path)) is False:
+                    raise Exception(f'Path `{complete_path}` specified for service `{service}` doesn\'t exist')
+
             service_list.append(service)
-            service_path_list.append(path)
+            service_path_list.append(subdirectory)
 
     if len(service_list) == 0:
         # start all services
@@ -161,7 +163,7 @@ def distribute_memory_over_services(service_config, total_memory):
         allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(key) * multiplier
         if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
             allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
-            heap_memory = SERVICE_MEMORY_HEAP_RATIO.get(key) * allocated_memory
+            heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(key) * allocated_memory
             direct_memory = allocated_memory - heap_memory
             service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
             lower_bound_memory_allocation += allocated_memory
@@ -183,7 +185,7 @@ def distribute_memory_over_services(service_config, total_memory):
         if key in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(key):
             allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(key)
 
-        heap_memory = SERVICE_MEMORY_HEAP_RATIO.get(key) * allocated_memory
+        heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(key) * allocated_memory
         direct_memory = allocated_memory - heap_memory
         service_memory_config[key] = build_memory_config_string(int(heap_memory), int(direct_memory))
 
@@ -194,33 +196,40 @@ def distribute_memory_over_services(service_config, total_memory):
 
     return service_memory_config
 
-def create_supervise_config_file(service_config, service_memory_config, base_config_path, run_zk):
+def build_supervise_script_arguments(service_config, service_memory_config, base_config_path, run_zk):
+    argument_list = []
 
-    with open(SUPERVISE_CONFIG_FILE_PATH, 'w+') as the_file:
-        the_file.write(":verify bin/verify-java\n")
-        the_file.write(":verify bin/verify-default-ports\n")
-        the_file.write(":notify bin/greet\n")
-        the_file.write(":kill-timeout 10\n")
-        the_file.write("\n")
+    argument_list.append("\":verify bin/verify-java\"")
+    argument_list.append("\":verify bin/verify-default-ports\"")
+    argument_list.append("\":notify bin/greet\"")
+    argument_list.append("\":kill-timeout 10\"")
 
-        if run_zk:
-            the_file.write("!p10 zk bin/run-zk conf\n")
+    if run_zk:
+        argument_list.append("\"!p10 zk bin/run-zk conf\"")
 
-        for item in service_config:
-            service = item[0]
-            prefix = ''
-            if service == MIDDLE_MANAGER_SERVICE_NAME:
-                prefix = '!p90 '
-            if item[1] == "":
-               service_path = item[0]
-            else:
-                service_path = item[1]
-            jvm_args = service_memory_config.get(item[0])
+    for item in service_config:
+        service = item[0]
+        prefix = ''
+        if service == MIDDLE_MANAGER_SERVICE_NAME:
+            prefix = '!p90 '
+        if item[1] == "":
+           service_path = item[0]
+        else:
+            service_path = item[1]
+        jvm_args = service_memory_config.get(item[0])
 
-            if jvm_args == "":
-                the_file.write(f'{prefix}{service} bin/run-druid {service} {base_config_path} {service_path}\n')
-            else:
-                the_file.write(f'{prefix}{service} bin/run-druid {service} {base_config_path} {service_path} \'{jvm_args}\'\n')
+        if jvm_args is None:
+            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {base_config_path} {service_path}\"')
+        else:
+            argument_list.append(f'\"{prefix}{service} bin/run-druid {service} {base_config_path} {service_path} \'{jvm_args}\'\"')
+
+    print('Commands for supervise script:')
+    for item in argument_list:
+        print(item)
+
+    print('\n')
+
+    return ",".join(argument_list)
 
 def print_service_config(service_config, base_config_path, run_zk):
     print('Services to start:')
@@ -231,6 +240,7 @@ def print_service_config(service_config, base_config_path, run_zk):
             print(f'{item[0]}, using config from {base_config_path}/{item[1]}')
     if run_zk:
         print(f'zk, using default config from {os.getcwd()}/../conf/zk')
+    print('\n')
 
 def display_help():
     text = """
@@ -246,11 +256,11 @@ def display_help():
             denoting memory in mb or gb
             Memory should be greater than equals 2g
        baseConfigPath=<path>
-            relative path to base directory containing common and service specific
+            relative path to base directory, containing common and service specific
             properties to be overridden, this directory must contain `_common`
             directory with `common.jvm.config` & `common.runtime.properties`
             if `baseConfigPath` is not specified, config from
-            conf/druid/single-server/quickstart direcotry is used
+            conf/druid/single-server/quickstart directory is used
        computeOnly
             command dry-run, validates the arguments and
             display the memory distribution for services
@@ -275,21 +285,21 @@ def display_help():
             compute memory distribution for all the services
         start-druid totalMemory=100g broker router historical
             starts `broker`, `router` and `historical` services, using `100g` of memory
-        start-druid totalMemory=100g baseConfigPath=/conf/druid/single-server/large broker router historical
+        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker router historical
             starts `broker`, `router` and `historical` service, using 100g of memory,
             use common configs from specified `baseConfigPath`
-        start-druid totalMemory=100g baseConfigPath=/conf/druid/single-server/large broker=broker router=router historical=historical
+        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker=broker router=router historical=historical
             starts `broker`, `router` and `historical` services, using 100g of memory, use common configs
             from specified `baseConfigPath`, use service specific config from specified directories
             if jvm.config is specified for all the services, memory distribution is not computed
-        start-druid totalMemory=100g baseConfigPath=/conf/druid/single-server/large broker=broker1 broker=broker2
+        start-druid totalMemory=100g baseConfigPath=../conf/druid/single-server/large broker=broker1 broker=broker2
             starts 2 instances of `broker`
             config is read from respective directories, depending on whether jvm.config is specified,
             memory distribution is computed
-        start-druid totalMemory=100g baseConfigPath=conf/druid/profile broker=broker1 historical=historical1
+        start-druid totalMemory=100g baseConfigPath=../conf/druid/profile broker=broker1 historical=historical1
             if either of `broker1`, `historical1` subdirectory contains jvm.config,
             exception is thrown since `totalMemory` argument is specified
-        start-druid baseConfigPath=conf/druid/profile broker=broker1 historical=historical1
+        start-druid baseConfigPath=../conf/druid/profile broker=broker1 historical=historical1
             exception is thrown if either of `broker1`, `historical1`
             subdirectory contains jvm.config but not both
             If none of the subdirectory contains jvm.config, memory distribution is computed
@@ -304,7 +314,7 @@ def main():
             display_help()
             return
 
-    print("Druid automated quickstart\n")
+    print("Druid quickstart\n")
 
     base_config_path, total_memory, service_config, run_zk, compute_only = parse_arguments()
 
@@ -325,9 +335,9 @@ def main():
     if base_config_path == "":
         base_config_path = QUICKSTART_BASE_CONFIG_PATH
 
-    create_supervise_config_file(service_config, service_memory_config, base_config_path, run_zk)
+    script_arguments = build_supervise_script_arguments(service_config, service_memory_config, base_config_path, run_zk)
 
-    os.system(f'exec ./supervise -c {SUPERVISE_CONFIG_FILE_PATH}')
+    os.system(f'exec ./supervise -a {script_arguments}')
 
 if __name__ == '__main__':
     main()
