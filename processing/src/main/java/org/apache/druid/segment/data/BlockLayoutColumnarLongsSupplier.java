@@ -204,7 +204,10 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        buffer = null;
       }
     }
 
