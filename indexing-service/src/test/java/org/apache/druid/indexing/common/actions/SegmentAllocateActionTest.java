@@ -110,6 +110,7 @@ public class SegmentAllocateActionTest
     allocationQueue = taskActionTestKit.getTaskActionToolbox().getSegmentAllocationQueue();
     if (allocationQueue != null) {
       allocationQueue.start();
+      allocationQueue.becomeLeader();
     }
   }
 

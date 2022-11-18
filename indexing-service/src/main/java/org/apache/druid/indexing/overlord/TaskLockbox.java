@@ -553,7 +553,7 @@ public class TaskLockbox
       boolean success = updateLockInStorage(task, acquiredLock);
       if (success) {
         holder.markSucceeded();
-      } else  {
+      } else {
         final Integer partitionId = isTimeChunkLock
                                     ? null : ((SegmentLock) acquiredLock).getPartitionId();
         unlock(task, holder.lockRequestInterval, partitionId);

@@ -141,11 +141,11 @@ public class SegmentAllocationQueue
     final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
 
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
-      AllocateRequestBatch batch = existingBatch;
-      if (batch == null) {
-        batch = new AllocateRequestBatch(key);
-        batch.resetQueueTime();
-        processingQueue.offer(batch);
+      AllocateRequestBatch computedBatch = existingBatch;
+      if (computedBatch == null) {
+        computedBatch = new AllocateRequestBatch(key);
+        computedBatch.resetQueueTime();
+        processingQueue.offer(computedBatch);
       }
 
       // Possible race condition:
@@ -156,8 +156,8 @@ public class SegmentAllocationQueue
       // wait on keyToBatch.compute() to finish before proceeding with processBatch().
       // For new batch, keyToBatch.remove() would not wait as key is not in map yet
       // but a new batch is unlikely to be due immediately, so it won't get popped right away.
-      requestFuture.set(batch.add(request));
-      return batch;
+      requestFuture.set(computedBatch.add(request));
+      return computedBatch;
     });
 
     return requestFuture.get();
@@ -171,11 +171,11 @@ public class SegmentAllocationQueue
         batch.resetQueueTime();
         processingQueue.offer(batch);
         return batch;
+      } else {
+        // Merge requests from this batch to existing one
+        existingBatch.merge(batch);
+        return existingBatch;
       }
-
-      // Merge requests from this batch to existing one
-      existingBatch.merge(batch);
-      return existingBatch;
     });
   }
 
@@ -191,12 +191,15 @@ public class SegmentAllocationQueue
 
     // Process all batches which are due
     log.debug("Processing all batches which are due for execution.");
+    int numProcessedBatches = 0;
+
     AllocateRequestBatch nextBatch = processingQueue.peek();
     while (nextBatch != null && nextBatch.isDue()) {
       processingQueue.poll();
       boolean processed;
       try {
         processed = processBatch(nextBatch);
+        ++numProcessedBatches;
       }
       catch (Throwable t) {
         processed = true;
@@ -222,6 +225,7 @@ public class SegmentAllocationQueue
       nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
     }
     scheduleQueuePoll(nextScheduleDelay);
+    log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
   }
 
   /**
@@ -331,7 +335,7 @@ public class SegmentAllocationQueue
     for (Granularity granularity :
         Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity)) {
       Map<Interval, List<SegmentAllocateRequest>> requestsByInterval =
-          getRequestsByInterval(pendingRequests, requestBatch.key, granularity);
+          getRequestsByInterval(pendingRequests, granularity);
 
       for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : requestsByInterval.entrySet()) {
         List<SegmentAllocateRequest> successfulRequests = allocateSegmentsForInterval(
@@ -431,17 +435,9 @@ public class SegmentAllocationQueue
 
   private Map<Interval, List<SegmentAllocateRequest>> getRequestsByInterval(
       Set<SegmentAllocateRequest> requests,
-      AllocateRequestKey requestKey,
       Granularity tryGranularity
   )
   {
-    if (tryGranularity.equals(requestKey.preferredSegmentGranularity)) {
-      return Collections.singletonMap(
-          requestKey.preferredAllocationInterval,
-          new ArrayList<>(requests)
-      );
-    }
-
     final Map<Interval, List<SegmentAllocateRequest>> tryIntervalToRequests = new HashMap<>();
     for (SegmentAllocateRequest request : requests) {
       Interval tryInterval = tryGranularity.bucket(request.getAction().getTimestamp());
