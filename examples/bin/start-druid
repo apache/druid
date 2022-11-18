@@ -21,4 +21,4 @@ PWD="$(pwd)"
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
-python3 "$WHEREAMI"/druid-automated-quickstart.py $@
+python3 "$WHEREAMI"/druid-quickstart.py $@
