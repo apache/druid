@@ -19,6 +19,8 @@
 
 package org.apache.druid.testsEx.msq;
 
+import junitparams.Parameters;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
@@ -26,7 +28,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.io.File;
+import java.util.List;
 import java.util.Arrays;
 
 @RunWith(DruidTestRunner.class)
@@ -35,29 +37,34 @@ public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedBatchIngestion
 {
   private static final String BATCH_INDEX_TASKS_DIR = "/multi-stage-query/batch-index/";
 
-  @Test
-  public void testSQLBasedBatchIngestion() throws Exception
+  public static List<List<String>> test_cases()
   {
-    // Get list of all directories in batch-index folder. Each folder is considered a test case.
-    File[] directories = (new File(getClass().getResource(BATCH_INDEX_TASKS_DIR).toURI())).listFiles(File::isDirectory);
-    int fail_count = 0;
-    LOG.info("Test will be run for sql in the following directories - \n %s", Arrays.toString(directories));
-    for (File dir : directories) {
-      try {
-        runMSQTaskandTestQueries(BATCH_INDEX_TASKS_DIR + dir.getName(), "msqBatchIndex_" + dir.getName(),
-                                 ImmutableMap.of("finalizeAggregations", false,
-                                                 "maxNumTasks", 10,
-                                                 "groupByEnableMultiValueUnnesting", false
-                                 ));
-      }
-      catch (Exception e) {
-        LOG.error(e, "Error while testing %s", dir.getName());
-        fail_count++;
-      }
+    return Arrays.asList(
+        Arrays.asList("msq_inline.sql", "json_path_index_queries.json"),
+        Arrays.asList("sparse_column_msq.sql", "sparse_column_msq.json"),
+        Arrays.asList("wikipedia_http_inputsource_msq.sql", "wikipedia_http_inputsource_queries.json"),
+        Arrays.asList("wikipedia_index_msq.sql", "wikipedia_index_queries.json"),
+        Arrays.asList("wikipedia_merge_index_task.sql", "wikipedia_index_queries.json"),
+        Arrays.asList("wikipedia_index_task_with_transform.sql", "wikipedia_index_queries_with_transform.json")
+    );
+
+  }
+
+  @Test
+  @Parameters(method = "test_cases")
+  public void testSQLBasedBatchIngestion(String sqlFileName, String queryFileName)
+  {
+    try {
+      runMSQTaskandTestQueries(BATCH_INDEX_TASKS_DIR + sqlFileName,
+                               BATCH_INDEX_TASKS_DIR + queryFileName,
+                               FilenameUtils.removeExtension(sqlFileName),
+                               ImmutableMap.of("finalizeAggregations", false,
+                                               "maxNumTasks", 10,
+                                               "groupByEnableMultiValueUnnesting", false
+                               ));
     }
-    if (fail_count > 0) {
-      LOG.error("%s tests were run out of which %s FAILED", directories.length, fail_count);
-      throw new RuntimeException();
+    catch (Exception e) {
+      LOG.error(e, "Error while testing %s", sqlFileName);
     }
   }
 }

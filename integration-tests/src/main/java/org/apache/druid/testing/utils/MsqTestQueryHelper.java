@@ -259,6 +259,9 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     }
   }
 
+  /**
+   * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the created task to be completed.
+   */
   public void submitMsqTaskAndWaitForCompletion(String sqlQueryString, Map<String, Object> context)
       throws Exception
   {

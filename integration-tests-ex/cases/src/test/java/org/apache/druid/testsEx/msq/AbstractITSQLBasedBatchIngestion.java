@@ -29,10 +29,8 @@ import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -48,56 +46,37 @@ public class AbstractITSQLBasedBatchIngestion
   @Inject
   private DataLoaderHelper dataLoaderHelper;
 
-  protected String getFileWithFormatFromDir(String dir, String format) throws URISyntaxException
+  /**
+   * Reads file as utf-8 string and replace %%DATASOURCE%% with the provide datasource value.
+   */
+  protected String getStringFromFileAndReplaceDatasource(String filePath, String datasource)
   {
-    File[] file = (new File(getClass().getResource(dir).toURI())).listFiles(pathname -> {
-      String name = pathname.getName();
-      return name.endsWith(format) && pathname.isFile();
-    });
-    return dir + '/' + file[0].getName();
-  }
-
-  protected String getSqlStringFromDir(String dir, String datasource) throws URISyntaxException
-  {
-    String filePath = getFileWithFormatFromDir(dir, ".sql");
-    String sqlString;
+    String fileString;
     try {
       InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(filePath);
-      sqlString = IOUtils.toString(is, StandardCharsets.UTF_8);
+      fileString = IOUtils.toString(is, StandardCharsets.UTF_8);
     }
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", filePath);
     }
 
-    sqlString = StringUtils.replace(
-        sqlString,
+    fileString = StringUtils.replace(
+        fileString,
         "%%DATASOURCE%%",
         datasource
     );
 
-    return sqlString;
+    return fileString;
   }
 
-  protected void doTestQuery(String dir, String dataSource) throws URISyntaxException
+  /**
+   * Reads native queries from a file and runs against the provided datasource.
+   */
+  protected void doTestQuery(String queryFilePath, String dataSource)
   {
-    String queryFilePath = getFileWithFormatFromDir(dir, ".json");
     try {
-      String queryResponseTemplate;
-      try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", queryFilePath);
-      }
-
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          dataSource
-      );
-      queryHelper.testQueriesFromString(queryResponseTemplate);
-
+      String query = getStringFromFileAndReplaceDatasource(queryFilePath, dataSource);
+      queryHelper.testQueriesFromString(query);
     }
     catch (Exception e) {
       LOG.error(e, "Error while running test query");
@@ -105,11 +84,21 @@ public class AbstractITSQLBasedBatchIngestion
     }
   }
 
-  protected void runMSQTaskandTestQueries(String relativePath, String datasource, Map<String, Object> msqContext) throws Exception
-  {
-    LOG.info("Starting MSQ test for [%s]", relativePath);
+  /**
+   * Runs a MSQ ingest sql test.
+   *
+   * @param  sqlFilePath path of file containing the sql query.
+   * @param  queryFilePath path of file containing the native test queries to be run on the ingested datasource.
+   * @param  datasource name of the datasource. %%DATASOURCE%% in the sql and queries will be replaced with this value.
+   * @param  msqContext context parameters to be passed with MSQ API call.
 
-    String sqlTask = getSqlStringFromDir(relativePath, datasource);
+   */
+  protected void runMSQTaskandTestQueries(String sqlFilePath, String queryFilePath, String datasource,
+                                          Map<String, Object> msqContext) throws Exception
+  {
+    LOG.info("Starting MSQ test for [%s]", sqlFilePath);
+
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
 
     LOG.info("SqlTask - \n %s", sqlTask);
 
@@ -120,6 +109,6 @@ public class AbstractITSQLBasedBatchIngestion
     );
 
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-    doTestQuery(relativePath, datasource);
+    doTestQuery(queryFilePath, datasource);
   }
 }
