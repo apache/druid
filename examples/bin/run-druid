@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ "$#" -gt 4 ] || [ "$#" -eq 0 ]
+if [ "$#" -gt 3 ] || [ "$#" -eq 0 ]
 then
   >&2 echo "usage: $0 <service> [conf-dir]"
   exit 1
@@ -47,25 +47,18 @@ if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
 
 echo "Running [$1], logging to [$LOG_DIR/$1.log] if no changes made to log4j2.xml"
 
-if [ "$WHATAMI" = 'coordinator-overlord' ]
-then
-    SERVER_NAME=coordinator
-else
-    SERVER_NAME="$WHATAMI"
-fi
-
 if [ "$#" -eq 3 ]
 then
-  # arguments for this case is <service> <root_conf_dir> <service_subdirectory>
-  cd "$WHEREAMI/.."
-  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$3"/jvm.config | xargs` \
-    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
-elif [ "$#" -eq 4 ]
-then
-  # arguments for this case is <service> <root_conf_dir> <service_subdirectory> <jvm_args>
   JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
   JVMARGS+=' '
-  JVMARGS+=$4
+  JVMARGS+=$3
+
+  if [ "$WHATAMI" = 'coordinator-overlord' ]
+  then
+      SERVER_NAME=coordinator
+  else
+      SERVER_NAME="$WHATAMI"
+  fi
 
   cd "$WHEREAMI/.."
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
