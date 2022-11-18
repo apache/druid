@@ -28,8 +28,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
