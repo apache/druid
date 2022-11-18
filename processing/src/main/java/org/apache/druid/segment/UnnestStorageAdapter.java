@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 
 public class UnnestStorageAdapter implements StorageAdapter
 {
@@ -91,7 +92,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     return Sequences.map(
         baseCursorSequence,
         cursor -> {
-          assert cursor != null;
+          Objects.requireNonNull(cursor);
           Cursor retVal = cursor;
           ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
           if (capabilities.isDictionaryEncoded() == ColumnCapabilities.Capable.TRUE
