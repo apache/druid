@@ -31,6 +31,7 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.InlineDataSource;
@@ -1270,16 +1271,6 @@ public class MSQSelectTest extends MSQTestBase
                     .setInterval(querySegmentSpec(Filtration.eternity()))
                     .setGranularity(Granularities.ALL)
                     .setDimensions(dimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
-                    .setAggregatorSpecs(
-                        aggregators(
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0"),
-                                new NotDimFilter(new SelectorDimFilter("dim3", null, null)),
-                                "a0"
-                            )
-                        )
-                    )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
                     .build();
 
 
@@ -1316,6 +1307,8 @@ public class MSQSelectTest extends MSQTestBase
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
+        .setExpectedMSQFault(new CannotParseExternalDataFault(
+            "Unable to add the selection to the frame. Type conversion might be required."))
         .verifyResults();
   }
 
