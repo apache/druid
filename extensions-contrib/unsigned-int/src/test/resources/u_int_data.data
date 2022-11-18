@@ -4,3 +4,5 @@
 {"timestamp":  104, "dim": "b", "foo":  1}
 {"timestamp":  104, "dim": "c", "foo":  4294967295}
 {"timestamp":  105, "dim": "c", "foo":  4294967295}
+{"timestamp":  106, "dim": "d", "foo":  4294967296}
+{"timestamp":  107, "dim": "d", "foo":  4294967296}

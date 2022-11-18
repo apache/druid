@@ -19,7 +19,7 @@
   "granularity": "ALL",
   "aggregations": [
     {
-      "type": "unsigned_int_sum",
+      "type": "unsignedIntSum",
       "name": "foo",
       "fieldName": "foo"
     }

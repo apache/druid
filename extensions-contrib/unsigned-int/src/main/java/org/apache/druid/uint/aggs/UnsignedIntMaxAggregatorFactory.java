@@ -51,10 +51,5 @@ public class UnsignedIntMaxAggregatorFactory extends LongMaxAggregatorFactory
     return TYPE;
   }
 
-  @Override
-  public ColumnType getResultType()
-  {
-    return ColumnType.LONG;
-  }
 
 }

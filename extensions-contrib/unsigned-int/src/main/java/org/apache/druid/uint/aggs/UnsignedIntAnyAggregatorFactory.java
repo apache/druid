@@ -45,9 +45,4 @@ public class UnsignedIntAnyAggregatorFactory extends LongAnyAggregatorFactory
     return TYPE;
   }
 
-  @Override
-  public ColumnType getResultType()
-  {
-    return ColumnType.LONG;
-  }
 }

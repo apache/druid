@@ -19,7 +19,7 @@
   "granularity": "ALL",
   "aggregations": [
     {
-      "type": "longMin",
+      "type": "unsignedIntMin",
       "name": "out",
       "fieldName": "foo"
     }

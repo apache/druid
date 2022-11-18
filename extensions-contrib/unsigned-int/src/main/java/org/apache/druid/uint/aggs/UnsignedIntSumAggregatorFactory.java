@@ -54,9 +54,4 @@ public class UnsignedIntSumAggregatorFactory extends LongSumAggregatorFactory
     return TYPE;
   }
 
-  @Override
-  public ColumnType getResultType()
-  {
-    return TYPE;
-  }
 }

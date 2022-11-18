@@ -51,9 +51,4 @@ public class UnsignedIntMinAggregatorFactory extends LongMinAggregatorFactory
     return TYPE;
   }
 
-  @Override
-  public ColumnType getResultType()
-  {
-    return ColumnType.LONG;
-  }
 }

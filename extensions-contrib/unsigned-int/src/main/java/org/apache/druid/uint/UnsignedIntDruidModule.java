@@ -43,19 +43,19 @@ public class UnsignedIntDruidModule implements DruidModule
             .registerSubtypes(
                 new NamedType(
                     UnsignedIntSumAggregatorFactory.class,
-                    "unsigned_int_sum"
+                    "unsignedIntSum"
                 ),
                 new NamedType(
                     UnsignedIntMaxAggregatorFactory.class,
-                    "unsigned_int_max"
+                    "unsignedIntMax"
                 ),
                 new NamedType(
                     UnsignedIntMinAggregatorFactory.class,
-                    "unsigned_int_min"
+                    "unsignedIntMin"
                 ),
                 new NamedType(
                     UnsignedIntAnyAggregatorFactory.class,
-                    "unsigned_int_any"
+                    "unsignedIntAny"
                 )
             )
     );

@@ -19,7 +19,7 @@
   "granularity": "ALL",
   "aggregations": [
     {
-      "type": "longMax",
+      "type": "unsignedIntMax",
       "name": "out",
       "fieldName": "foo"
     }
