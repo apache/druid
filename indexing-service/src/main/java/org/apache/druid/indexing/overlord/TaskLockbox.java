@@ -551,7 +551,9 @@ public class TaskLockbox
 
       // This can also be batched later
       boolean success = updateLockInStorage(task, acquiredLock);
-      if (!success) {
+      if (success) {
+        holder.markSucceeded();
+      } else  {
         final Integer partitionId = isTimeChunkLock
                                     ? null : ((SegmentLock) acquiredLock).getPartitionId();
         unlock(task, holder.lockRequestInterval, partitionId);
@@ -559,9 +561,8 @@ public class TaskLockbox
       }
     } else {
       log.info("Task [%s] already present in TaskLock [%s]", task.getId(), acquiredLock.getGroupId());
+      holder.markSucceeded();
     }
-
-    holder.markSucceeded();
   }
 
   private boolean updateLockInStorage(Task task, TaskLock taskLock)
