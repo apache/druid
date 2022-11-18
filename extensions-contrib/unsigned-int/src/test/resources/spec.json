@@ -22,11 +22,12 @@
       "format": "auto"
     },
     "dimensionsSpec": {
-      "dimensions": [],
+      "dimensions": ["dim"],
       "dimensionExclusions": [
-        "timestamp"
+        "timestamp", "foo"
       ],
       "spatialDimensions": []
     }
   }
+
 }

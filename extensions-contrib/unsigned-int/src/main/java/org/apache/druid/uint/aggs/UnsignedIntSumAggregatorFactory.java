@@ -23,8 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.uint.UnsignedIntComplexSerde;
 
 import javax.annotation.Nullable;
@@ -51,4 +54,9 @@ public class UnsignedIntSumAggregatorFactory extends LongSumAggregatorFactory
     return TYPE;
   }
 
+  @Override
+  public ColumnType getResultType()
+  {
+    return TYPE;
+  }
 }

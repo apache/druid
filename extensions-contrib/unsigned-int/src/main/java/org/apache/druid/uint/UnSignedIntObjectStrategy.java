@@ -44,7 +44,8 @@ public class UnSignedIntObjectStrategy implements ObjectStrategy<Long>
     buffer.get(cache);
     ByteBuffer result = ByteBuffer.allocate(8).put(new byte[]{0, 0, 0, 0}).put(cache);
     result.position(0);
-    return result.getLong();
+    long toReturn = result.getLong();
+    return toReturn;
 
   }
 

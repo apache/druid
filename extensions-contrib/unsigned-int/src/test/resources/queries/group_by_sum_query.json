@@ -19,8 +19,8 @@
   "granularity": "ALL",
   "aggregations": [
     {
-      "type": "longSum",
-      "name": "out",
+      "type": "unsigned_int_sum",
+      "name": "foo",
       "fieldName": "foo"
     }
   ],

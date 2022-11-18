@@ -15,8 +15,8 @@
 
 [
   {
-    "name": "u_int",
-    "type": "unsigned_int",
+    "name": "foo",
+    "type": "unsigned_int_sum",
     "fieldName": "foo"
   }
 ]

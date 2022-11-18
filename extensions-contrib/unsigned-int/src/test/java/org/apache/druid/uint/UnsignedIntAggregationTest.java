@@ -63,7 +63,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
     List<ResultRow> expected = Lists.newArrayList(
         ResultRow.of("a", 199L),
         ResultRow.of("b", 98L),
-        ResultRow.of("c", (long) 2 * Integer.MAX_VALUE) // if only int agg, it would overflow.
+        ResultRow.of("c", 8589934590L) // if only int agg, it would overflow.
     );
     assertEquals(3, actual.size());
     assertArrayEquals(expected.toArray(), actual.toArray());
@@ -82,7 +82,7 @@ public class UnsignedIntAggregationTest extends DruidBaseTest
     List<ResultRow> expected = Lists.newArrayList(
         ResultRow.of("a", 100L),
         ResultRow.of("b", 97L),
-        ResultRow.of("c", (long) Integer.MAX_VALUE) // if only int agg, it would overflow.
+        ResultRow.of("c", 0L) // if only int agg, it would overflow.
     );
     assertEquals(3, actual.size());
     assertArrayEquals(expected.toArray(), actual.toArray());
