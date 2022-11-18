@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DefaultPasswordProvider implements PasswordProvider
 {
+  public static final String TYPE_KEY = "default";
+
   private final String password;
 
   @JsonCreator

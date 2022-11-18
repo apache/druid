@@ -37,6 +37,8 @@ import java.util.regex.Pattern;
 
 public class RegexInputFormat implements InputFormat
 {
+  public static final String TYPE_KEY = "regex";
+
   private final String pattern;
   private final String listDelimiter;
   private final List<String> columns;

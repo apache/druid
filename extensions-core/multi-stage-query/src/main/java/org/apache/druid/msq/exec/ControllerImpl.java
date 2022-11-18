@@ -59,8 +59,9 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -90,6 +91,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -145,7 +147,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -174,7 +176,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -447,7 +449,8 @@ public class ControllerImpl implements Controller
               errorForReport,
               workerWarnings,
               queryStartTime,
-              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+              new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+              workerTaskLauncher
           ),
           stagesReport,
           countersSnapshot,
@@ -716,7 +719,8 @@ public class ControllerImpl implements Controller
                     null,
                     workerWarnings,
                     queryStartTime,
-                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis()
+                    queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
+                    workerTaskLauncher
                 ),
                 makeStageReport(
                     queryDef,
@@ -954,7 +958,7 @@ public class ControllerImpl implements Controller
       if (dataSegments.isEmpty()) {
         return Optional.empty();
       } else {
-        return Optional.of(VersionedIntervalTimeline.forSegments(dataSegments));
+        return Optional.of(SegmentTimeline.forSegments(dataSegments));
       }
     };
   }
@@ -1087,30 +1091,17 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(task.getDataSource(), interval));
         }
       } else {
-        try {
-          context.taskActionClient()
-                 .submit(SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments));
-        }
-        catch (Exception e) {
-          if (isTaskLockPreemptedException(e)) {
-            throw new MSQException(e, InsertLockPreemptedFault.instance());
-          } else {
-            throw e;
-          }
-        }
+        performSegmentPublish(
+            context.taskActionClient(),
+            SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments)
+        );
       }
     } else if (!segments.isEmpty()) {
       // Append mode.
-      try {
-        context.taskActionClient().submit(new SegmentInsertAction(segments));
-      }
-      catch (Exception e) {
-        if (isTaskLockPreemptedException(e)) {
-          throw new MSQException(e, InsertLockPreemptedFault.instance());
-        } else {
-          throw e;
-        }
-      }
+      performSegmentPublish(
+          context.taskActionClient(),
+          SegmentTransactionalInsertAction.appendAction(segments, null, null)
+      );
     }
   }
 
@@ -1199,7 +1190,6 @@ public class ControllerImpl implements Controller
       if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
-            () -> taskIds,
             MSQTasks.makeStorageConnector(context.injector()),
             closer
         );
@@ -1300,7 +1290,7 @@ public class ControllerImpl implements Controller
   private void cleanUpDurableStorageIfNeeded()
   {
     if (MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context())) {
-      final String controllerDirName = DurableStorageOutputChannelFactory.getControllerDirectory(task.getId());
+      final String controllerDirName = DurableStorageUtils.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
         MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(controllerDirName);
@@ -1807,10 +1797,27 @@ public class ControllerImpl implements Controller
       @Nullable final MSQErrorReport errorReport,
       final Queue<MSQErrorReport> errorReports,
       @Nullable final DateTime queryStartTime,
-      final long queryDuration
+      final long queryDuration,
+      MSQWorkerTaskLauncher taskLauncher
   )
   {
-    return new MSQStatusReport(taskState, errorReport, errorReports, queryStartTime, queryDuration);
+    int pendingTasks = -1;
+    int runningTasks = 1;
+
+    if (taskLauncher != null) {
+      WorkerCount workerTaskCount = taskLauncher.getWorkerTaskCount();
+      pendingTasks = workerTaskCount.getPendingWorkerCount();
+      runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
+    }
+    return new MSQStatusReport(
+        taskState,
+        errorReport,
+        errorReports,
+        queryStartTime,
+        queryDuration,
+        pendingTasks,
+        runningTasks
+    );
   }
 
   private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final DataSegmentTimelineView timelineView)
@@ -1845,6 +1852,32 @@ public class ControllerImpl implements Controller
   }
 
   /**
+   * Performs a particular {@link SegmentTransactionalInsertAction}, publishing segments.
+   *
+   * Throws {@link MSQException} with {@link InsertLockPreemptedFault} if the action fails due to lock preemption.
+   */
+  static void performSegmentPublish(
+      final TaskActionClient client,
+      final SegmentTransactionalInsertAction action
+  ) throws IOException
+  {
+    try {
+      final SegmentPublishResult result = client.submit(action);
+
+      if (!result.isSuccess()) {
+        throw new MSQException(InsertLockPreemptedFault.instance());
+      }
+    }
+    catch (Exception e) {
+      if (isTaskLockPreemptedException(e)) {
+        throw new MSQException(e, InsertLockPreemptedFault.instance());
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  /**
    * Method that determines whether an exception was raised due to the task lock for the controller task being
    * preempted. Uses string comparison, because the relevant Overlord APIs do not have a more reliable way of
    * discerning the cause of errors.
@@ -1855,6 +1888,9 @@ public class ControllerImpl implements Controller
   private static boolean isTaskLockPreemptedException(Exception e)
   {
     final String exceptionMsg = e.getMessage();
+    if (exceptionMsg == null) {
+      return false;
+    }
     final List<String> validExceptionExcerpts = ImmutableList.of(
         "are not covered by locks" /* From TaskLocks */,
         "is preempted and no longer valid" /* From SegmentAllocateAction */
@@ -1923,7 +1959,11 @@ public class ControllerImpl implements Controller
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
       this.closer = closer;
-      this.queryKernel = new ControllerQueryKernel(queryDef);
+      this.queryKernel = new ControllerQueryKernel(
+          queryDef,
+          WorkerMemoryParameters.createProductionInstanceForController(context.injector())
+                                .getPartitionStatisticsMaxRetainedBytes()
+      );
     }
 
     /**

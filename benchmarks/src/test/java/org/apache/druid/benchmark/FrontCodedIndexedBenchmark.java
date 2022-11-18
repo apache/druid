@@ -174,7 +174,7 @@ public class FrontCodedIndexedBenchmark
 
     genericIndexed = GenericIndexed.read(
         byteBufferGeneric,
-        GenericIndexed.BYTE_BUFFER_STRATEGY,
+        GenericIndexed.UTF8_STRATEGY,
         SmooshedFileMapper.load(smooshDirFrontCoded)
     );
     frontCodedIndexed = FrontCodedIndexed.read(

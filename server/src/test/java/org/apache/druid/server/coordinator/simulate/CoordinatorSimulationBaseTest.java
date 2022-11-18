@@ -130,6 +130,18 @@ public abstract class CoordinatorSimulationBaseTest
   }
 
   @Override
+  public void addServer(DruidServer server)
+  {
+    sim.cluster().addServer(server);
+  }
+
+  @Override
+  public void addSegments(List<DataSegment> segments)
+  {
+    sim.cluster().addSegments(segments);
+  }
+
+  @Override
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);
@@ -254,6 +266,7 @@ public abstract class CoordinatorSimulationBaseTest
   static class DS
   {
     static final String WIKI = "wiki";
+    static final String KOALA = "koala";
   }
 
   static class Tier
@@ -267,6 +280,7 @@ public abstract class CoordinatorSimulationBaseTest
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
+    static final String UNMOVED_COUNT = "segment/unmoved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
   }
@@ -275,13 +289,35 @@ public abstract class CoordinatorSimulationBaseTest
   {
     /**
      * Segments of datasource {@link DS#WIKI}, size 500 MB each,
-     * spanning 1 day containing 10 partitions.
+     * spanning 1 day containing 10 partitions each.
      */
     static final List<DataSegment> WIKI_10X1D =
         CreateDataSegments.ofDatasource(DS.WIKI)
                           .forIntervals(1, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
+                          .eachOfSizeInMb(500);
+
+    /**
+     * Segments of datasource {@link DS#WIKI}, size 500 MB each,
+     * spanning 100 days containing 10 partitions each.
+     */
+    static final List<DataSegment> WIKI_10X100D =
+        CreateDataSegments.ofDatasource(DS.WIKI)
+                          .forIntervals(100, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(10)
+                          .eachOfSizeInMb(500);
+
+    /**
+     * Segments of datasource {@link DS#KOALA}, size 500 MB each,
+     * spanning 100 days containing 100 partitions each.
+     */
+    static final List<DataSegment> KOALA_100X100D =
+        CreateDataSegments.ofDatasource(DS.KOALA)
+                          .forIntervals(100, Granularities.DAY)
+                          .startingAt("2022-01-01")
+                          .withNumPartitions(100)
                           .eachOfSizeInMb(500);
   }
 

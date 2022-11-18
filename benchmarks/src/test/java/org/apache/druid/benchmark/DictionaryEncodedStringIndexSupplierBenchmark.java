@@ -101,7 +101,7 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
       final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
           FluentIterable.from(ints)
                         .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-          GenericIndexed.BYTE_BUFFER_STRATEGY
+          GenericIndexed.UTF8_STRATEGY
       );
       final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
           () -> IntStream.range(0, dictionarySize)

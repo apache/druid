@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
 
@@ -103,5 +104,15 @@ public interface CoordinatorSimulation
      * Removes the specified server from the cluster.
      */
     void removeServer(DruidServer server);
+
+    /**
+     * Adds the specified server to the cluster.
+     */
+    void addServer(DruidServer server);
+
+    /**
+     * Publishes the given segments to the cluster.
+     */
+    void addSegments(List<DataSegment> segments);
   }
 }

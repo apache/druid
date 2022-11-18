@@ -35,10 +35,10 @@ PARTITIONED BY ALL TIME
 
 export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
-    task: 'query-32ced762-7679-4a25-9220-3915c5976961',
+    task: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
     payload: {
       type: 'query_controller',
-      id: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      id: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
       spec: {
         query: {
           queryType: 'scan',
@@ -47,14 +47,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             inputSource: {
               type: 'http',
               uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz'],
-              httpAuthenticationUsername: null,
-              httpAuthenticationPassword: null,
             },
             inputFormat: {
               type: 'json',
-              flattenSpec: null,
-              featureSpec: {},
               keepNullColumns: false,
+              assumeNewlineDelimited: false,
+              useJsonNodeReader: false,
             },
             signature: [
               { name: 'timestamp', type: 'STRING' },
@@ -80,9 +78,10 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             finalize: false,
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
             scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
             sqlInsertSegmentGranularity: '{"type":"all"}',
-            sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
+            sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
             sqlReplaceTimeChunks: 'all',
           },
           granularity: { type: 'all' },
@@ -104,18 +103,19 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
         'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT TIME_PARSE("timestamp") AS "__time", agent_type\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\',\n    \'[{"name":"timestamp","type":"string"},{"name":"agent_type","type":"string"}]\'\n  )\n)\nPARTITIONED BY ALL TIME',
       sqlQueryContext: {
         finalizeAggregations: false,
-        groupByEnableMultiValueUnnesting: false,
         maxParseExceptions: 0,
+        sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
+        groupByEnableMultiValueUnnesting: false,
         sqlInsertSegmentGranularity: '{"type":"all"}',
-        sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
         sqlReplaceTimeChunks: 'all',
+        queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
       context: { forceTimeChunkLock: true, useLineageBasedSegmentAllocation: true },
-      groupId: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      groupId: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
       dataSource: 'kttm_simple',
       resource: {
-        availabilityGroup: 'query-32ced762-7679-4a25-9220-3915c5976961',
+        availabilityGroup: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
         requiredCapacity: 1,
       },
     },
@@ -124,14 +124,20 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
   {
     multiStageQuery: {
       type: 'multiStageQuery',
-      taskId: 'query-32ced762-7679-4a25-9220-3915c5976961',
+      taskId: 'query-09af0c1e-1c0f-4539-917c-b0458849d0d9',
       payload: {
-        status: { status: 'SUCCESS', startTime: '2022-08-22T20:12:51.391Z', durationMs: 25097 },
+        status: {
+          status: 'SUCCESS',
+          startTime: '2022-10-31T16:11:13.160Z',
+          durationMs: 9012,
+          pendingTasks: 0,
+          runningTasks: 2,
+        },
         stages: [
           {
             stageNumber: 0,
             definition: {
-              id: '0b353011-6ea1-480a-8ca8-386771621672_0',
+              id: 'b94caff0-f693-47ed-a242-ccf837550383_0',
               input: [
                 {
                   type: 'external',
@@ -140,14 +146,12 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     uris: [
                       'https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz',
                     ],
-                    httpAuthenticationUsername: null,
-                    httpAuthenticationPassword: null,
                   },
                   inputFormat: {
                     type: 'json',
-                    flattenSpec: null,
-                    featureSpec: {},
                     keepNullColumns: false,
+                    assumeNewlineDelimited: false,
+                    useJsonNodeReader: false,
                   },
                   signature: [
                     { name: 'timestamp', type: 'STRING' },
@@ -180,10 +184,11 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
                     finalize: false,
                     finalizeAggregations: false,
                     groupByEnableMultiValueUnnesting: false,
+                    queryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
                     scanSignature:
                       '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                     sqlInsertSegmentGranularity: '{"type":"all"}',
-                    sqlQueryId: '32ced762-7679-4a25-9220-3915c5976961',
+                    sqlQueryId: '09af0c1e-1c0f-4539-917c-b0458849d0d9',
                     sqlReplaceTimeChunks: 'all',
                   },
                   granularity: { type: 'all' },
@@ -205,14 +210,14 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-22T20:12:53.790Z',
-            duration: 20229,
+            startTime: '2022-10-31T16:11:15.380Z',
+            duration: 4887,
             sort: true,
           },
           {
             stageNumber: 1,
             definition: {
-              id: '0b353011-6ea1-480a-8ca8-386771621672_1',
+              id: 'b94caff0-f693-47ed-a242-ccf837550383_1',
               input: [{ type: 'stage', stage: 0 }],
               processor: {
                 type: 'segmentGenerator',
@@ -256,8 +261,8 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
             phase: 'FINISHED',
             workerCount: 1,
             partitionCount: 1,
-            startTime: '2022-08-22T20:13:13.991Z',
-            duration: 2497,
+            startTime: '2022-10-31T16:11:20.264Z',
+            duration: 1908,
           },
         ],
         counters: {
@@ -269,8 +274,8 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskPayloadAndReport(
               sortProgress: {
                 type: 'sortProgress',
                 totalMergingLevels: 3,
-                levelToTotalBatches: { '0': 1, '1': 1, '2': 1 },
-                levelToMergedBatches: { '0': 1, '1': 1, '2': 1 },
+                levelToTotalBatches: { '0': 2, '1': 1, '2': 1 },
+                levelToMergedBatches: { '0': 2, '1': 1, '2': 1 },
                 totalMergersForUltimateLevel: 1,
                 progressDigest: 1.0,
               },
