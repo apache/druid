@@ -34,7 +34,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-public class AbstractITSQLBasedBatchIngestion
+public class AbstractITSQLBasedIngestion
 {
   public static final Logger LOG = new Logger(TestQueryHelper.class);
   @Inject
@@ -85,21 +85,11 @@ public class AbstractITSQLBasedBatchIngestion
   }
 
   /**
-   * Runs a MSQ ingest sql test.
-   *
-   * @param  sqlFilePath path of file containing the sql query.
-   * @param  queryFilePath path of file containing the native test queries to be run on the ingested datasource.
-   * @param  datasource name of the datasource. %%DATASOURCE%% in the sql and queries will be replaced with this value.
-   * @param  msqContext context parameters to be passed with MSQ API call.
-
+   * Sumits a sqlTask, waits for task completion and then runs test queries on ingested datasource.
    */
-  protected void runMSQTaskandTestQueries(String sqlFilePath, String queryFilePath, String datasource,
+  protected void submitTaskAnddoTestQuery(String sqlTask, String queryFilePath, String datasource,
                                           Map<String, Object> msqContext) throws Exception
   {
-    LOG.info("Starting MSQ test for [%s]", sqlFilePath);
-
-    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
-
     LOG.info("SqlTask - \n %s", sqlTask);
 
     // Submit the tasks and wait for the datasource to get loaded
@@ -110,5 +100,22 @@ public class AbstractITSQLBasedBatchIngestion
 
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
     doTestQuery(queryFilePath, datasource);
+  }
+
+  /**
+   * Runs a MSQ ingest sql test.
+   *
+   * @param  sqlFilePath path of file containing the sql query.
+   * @param  queryFilePath path of file containing the native test queries to be run on the ingested datasource.
+   * @param  datasource name of the datasource. %%DATASOURCE%% in the sql and queries will be replaced with this value.
+   * @param  msqContext context parameters to be passed with MSQ API call.
+   */
+  protected void runMSQTaskandTestQueries(String sqlFilePath, String queryFilePath, String datasource,
+                                          Map<String, Object> msqContext) throws Exception
+  {
+    LOG.info("Starting MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
+
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
+    submitTaskAnddoTestQuery(sqlTask, queryFilePath, datasource, msqContext);
   }
 }

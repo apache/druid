@@ -33,7 +33,7 @@ import java.util.List;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
-public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedBatchIngestion
+public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedIngestion
 {
   private static final String BATCH_INDEX_TASKS_DIR = "/multi-stage-query/batch-index/";
 
@@ -59,12 +59,13 @@ public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedBatchIngestion
                                BATCH_INDEX_TASKS_DIR + queryFileName,
                                FilenameUtils.removeExtension(sqlFileName),
                                ImmutableMap.of("finalizeAggregations", false,
-                                               "maxNumTasks", 10,
+                                               "maxNumTasks", 5,
                                                "groupByEnableMultiValueUnnesting", false
                                ));
     }
     catch (Exception e) {
-      LOG.error(e, "Error while testing %s", sqlFileName);
+      LOG.error(e, "Error while testing [%s, %s]", sqlFileName, queryFileName);
+      throw new RuntimeException(e);
     }
   }
 }
