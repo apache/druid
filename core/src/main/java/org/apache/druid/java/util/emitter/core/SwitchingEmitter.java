@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * An emitter than that offers the ability to direct an event to multiple emitters based on the event's feed.
+ */
 public class SwitchingEmitter implements Emitter
 {
 
@@ -40,6 +43,12 @@ public class SwitchingEmitter implements Emitter
   private final Map<String, List<Emitter>> feedToEmitters;
   private final Set<Emitter> knownEmitters;
 
+  /**
+   * Constructor for the SwitchingEmitter
+   *
+   * @param feedToEmitters Map of feed to a list of emitters that correspond to each feed,
+   * @param defaultEmitter A list of emitters to use if there isn't a match of feed to an emitter
+   */
   public SwitchingEmitter(Map<String, List<Emitter>> feedToEmitters, Emitter[] defaultEmitter)
   {
     this.feedToEmitters = feedToEmitters;
@@ -54,6 +63,9 @@ public class SwitchingEmitter implements Emitter
     this.knownEmitters = emittersSetBuilder.build();
   }
 
+  /**
+   * Start the emitter. This will start all the emitters the SwitchingEmitter uses.
+   */
   @Override
   @LifecycleStart
   public void start()
@@ -66,11 +78,27 @@ public class SwitchingEmitter implements Emitter
     }
   }
 
+  /**
+   * Emit an event. This method must not throw exceptions or block. The emitters that this uses must also not throw
+   * exceptions or block.
+   * <p>
+   * This emitter will direct events based on feed to a list of emitters specified. If there is no match the event will
+   * use a list of default emitters instead.
+   * <p>
+   * Emitters that this emitter uses that receive too many events and internal queues fill up, should drop events rather
+   * than blocking or consuming excessive memory.
+   * <p>
+   * If an emitter that this emitter uses receives input it considers to be invalid, or has an internal problem, it
+   * should deal with that by logging a warning rather than throwing an exception. Emitters that log warnings
+   * should consider throttling warnings to avoid excessive logs, since a busy Druid cluster can emit a high volume of
+   * events.
+   *
+   * @param event The event that will be emitted.
+   */
   @Override
   public void emit(Event event)
   {
     // linear search is likely faster than hashed lookup
-    // todo dont use a hashmap here. use something that will be more efficient for this kind of lookups
     for (Map.Entry<String, List<Emitter>> feedToEmitters : feedToEmitters.entrySet()) {
       if (feedToEmitters.getKey().equals(event.getFeed())) {
         for (Emitter emitter : feedToEmitters.getValue()) {
@@ -84,6 +112,10 @@ public class SwitchingEmitter implements Emitter
     }
   }
 
+  /**
+   * Triggers this emitter to tell all emitters that this uses to flush.
+   * @throws IOException
+   */
   @Override
   public void flush() throws IOException
   {
@@ -106,6 +138,10 @@ public class SwitchingEmitter implements Emitter
     }
   }
 
+  /**
+   * Closes all emitters that the SwitchingEmitter uses
+   * @throws IOException
+   */
   @Override
   @LifecycleStop
   public void close() throws IOException
