@@ -120,10 +120,14 @@ public class KillUnusedSegmentsTest
         )
     ).thenAnswer(invocation -> {
       DateTime maxEndTime = invocation.getArgument(1);
-      return unusedSegments.stream()
-                           .map(DataSegment::getInterval)
-                           .filter(i -> i.getEnd().isBefore(maxEndTime))
-                           .collect(Collectors.toList());
+      List<Interval> unusedIntervals =
+          unusedSegments.stream()
+                        .map(DataSegment::getInterval)
+                        .filter(i -> i.getEnd().isBefore(maxEndTime))
+                        .collect(Collectors.toList());
+
+      int limit = invocation.getArgument(2);
+      return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
     });
 
     target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
@@ -196,6 +200,17 @@ public class KillUnusedSegmentsTest
         nextMonthSegment.getInterval().getEnd()
     );
     runAndVerifyKillInterval(expectedKillInterval);
+  }
+
+  @Test
+  public void testMaxSegmentsToKill()
+  {
+    Mockito.doReturn(1)
+           .when(config).getCoordinatorKillMaxSegments();
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
+
+    // Only 1 unused segment is killed
+    runAndVerifyKillInterval(yearOldSegment.getInterval());
   }
 
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
