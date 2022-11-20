@@ -46,8 +46,8 @@ public class SegmentReplicantLookup
 
               // Add segments queued for load, drop or move on this server
               serverHolder.getQueuedSegments().forEach(
-                  (segmentId, state) ->
-                      computeIfAbsent(replicaCounts, segmentId, tier).addQueued(state)
+                  (segment, state) ->
+                      computeIfAbsent(replicaCounts, segment.getId(), tier).addQueued(state)
               );
             }
         )

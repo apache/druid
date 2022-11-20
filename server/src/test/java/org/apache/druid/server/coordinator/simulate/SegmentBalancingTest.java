@@ -171,4 +171,37 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
   }
+
+  @Test
+  public void testBalancingMovesSegmentsInLoadQueue()
+  {
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned to the first historical
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 10);
+
+    // Run 2: Add new historical, some segments in the queue will be moved
+    addServer(historicalT12);
+    runCoordinatorCycle();
+    verifyNoEvent(Metric.ASSIGNED_COUNT);
+    verifyValue(Metric.CANCELLED_LOADS, 5L);
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT11.getName()), 5);
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filter(DruidMetrics.SERVER, historicalT12.getName()), 5);
+
+    // Complete loading the segments
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
 }

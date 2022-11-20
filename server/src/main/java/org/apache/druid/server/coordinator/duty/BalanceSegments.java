@@ -153,11 +153,12 @@ public class BalanceSegments implements CoordinatorDuty
 
     int numSegments = 0;
     for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getNumSegments();
+      numSegments += sourceHolder.getServer().getNumSegments()
+                     + sourceHolder.getPeon().getNumberOfSegmentsInQueue();
     }
 
     if (numSegments == 0) {
-      log.info("Skipping balance for tier [%s] as there are no served segments.", tier);
+      log.info("Skipping balance for tier [%s] as there are no loaded or loading segments.", tier);
       // suppress emit zero stats
       return;
     }

@@ -19,173 +19,66 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.Lists;
-import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.ImmutableDruidServerTests;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ReservoirSegmentSamplerTest
 {
-  private ImmutableDruidServer druidServer1;
-  private ImmutableDruidServer druidServer2;
-  private ImmutableDruidServer druidServer3;
-  private ImmutableDruidServer druidServer4;
 
-  private ServerHolder holder1;
-  private ServerHolder holder2;
-  private ServerHolder holder3;
-  private ServerHolder holder4;
-
-  private DataSegment segment1;
-  private DataSegment segment2;
-  private DataSegment segment3;
-  private DataSegment segment4;
-  List<DataSegment> segments1;
-  List<DataSegment> segments2;
-  List<DataSegment> segments3;
-  List<DataSegment> segments4;
-  List<DataSegment> segments;
+  /**
+   * num segments = 10 x 100 days
+   */
+  private final List<DataSegment> segments =
+      CreateDataSegments.ofDatasource("wiki")
+                        .forIntervals(100, Granularities.DAY)
+                        .startingAt("2022-01-01")
+                        .withNumPartitions(10)
+                        .eachOfSizeInMb(100);
 
   @Before
   public void setUp()
   {
-    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
-    druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
-    druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
-    druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
-    holder1 = EasyMock.createMock(ServerHolder.class);
-    holder2 = EasyMock.createMock(ServerHolder.class);
-    holder3 = EasyMock.createMock(ServerHolder.class);
-    holder4 = EasyMock.createMock(ServerHolder.class);
-    segment1 = EasyMock.createMock(DataSegment.class);
-    segment2 = EasyMock.createMock(DataSegment.class);
-    segment3 = EasyMock.createMock(DataSegment.class);
-    segment4 = EasyMock.createMock(DataSegment.class);
-
-    DateTime start1 = DateTimes.of("2012-01-01");
-    DateTime start2 = DateTimes.of("2012-02-01");
-    DateTime version = DateTimes.of("2012-03-01");
-    segment1 = new DataSegment(
-        "datasource1",
-        new Interval(start1, start1.plusHours(1)),
-        version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        11L
-    );
-    segment2 = new DataSegment(
-        "datasource1",
-        new Interval(start2, start2.plusHours(1)),
-        version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        7L
-    );
-    segment3 = new DataSegment(
-        "datasource2",
-        new Interval(start1, start1.plusHours(1)),
-        version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        4L
-    );
-    segment4 = new DataSegment(
-        "datasource2",
-        new Interval(start2, start2.plusHours(1)),
-        version.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        0,
-        8L
-    );
-
-    segments = Lists.newArrayList(segment1, segment2, segment3, segment4);
-
-    segments1 = Collections.singletonList(segment1);
-    segments2 = Collections.singletonList(segment2);
-    segments3 = Collections.singletonList(segment3);
-    segments4 = Collections.singletonList(segment4);
   }
 
-  //checks if every segment is selected at least once out of 5000 trials
+  //checks if every segment is selected at least once out of 50 trials
   @Test
-  public void getRandomBalancerSegmentHolderTest()
+  public void testEverySegmentGetsPickedAtleastOnce()
   {
-    int iterations = 5000;
+    int iterations = 50;
 
-    EasyMock.expect(druidServer1.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer1, segments1);
-    EasyMock.replay(druidServer1);
-
-    EasyMock.expect(druidServer2.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer2, segments2);
-    EasyMock.replay(druidServer2);
-
-    EasyMock.expect(druidServer3.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer3, segments3);
-    EasyMock.replay(druidServer3);
-
-    EasyMock.expect(druidServer4.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
-    EasyMock.replay(druidServer4);
-
-    // Have to use anyTimes() because the number of times a segment on a given server is chosen is indetermistic.
-    EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
-    EasyMock.replay(holder1);
-    EasyMock.expect(holder2.getServer()).andReturn(druidServer2).anyTimes();
-    EasyMock.replay(holder2);
-    EasyMock.expect(holder3.getServer()).andReturn(druidServer3).anyTimes();
-    EasyMock.replay(holder3);
-    EasyMock.expect(holder4.getServer()).andReturn(druidServer4).anyTimes();
-    EasyMock.replay(holder4);
-
-    List<ServerHolder> holderList = new ArrayList<>();
-    holderList.add(holder1);
-    holderList.add(holder2);
-    holderList.add(holder3);
-    holderList.add(holder4);
-
+    final List<ServerHolder> servers = Arrays.asList(
+        createHistorical("server1", segments.get(0)),
+        createHistorical("server2", segments.get(1)),
+        createHistorical("server3", segments.get(2)),
+        createHistorical("server4", segments.get(3))
+    );
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < iterations; i++) {
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
-      segmentCountMap.put(
-          ReservoirSegmentSampler.getRandomBalancerSegmentHolders(holderList, Collections.emptySet(), 1).get(0).getSegment(),
-          1
+      segmentCountMap.compute(
+          ReservoirSegmentSampler
+              .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), 1)
+              .get(0).getSegment(),
+          (segment, count) -> count == null ? 1 : count + 1
       );
     }
 
-    for (DataSegment segment : segments) {
-      Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
-    }
-
-    EasyMock.verify(druidServer1, druidServer2, druidServer3, druidServer4);
-    EasyMock.verify(holder1, holder2, holder3, holder4);
+    // Verify that each segment has been chosen at least once
+    Assert.assertEquals(4, segmentCountMap.size());
   }
 
   /**
@@ -195,56 +88,170 @@ public class ReservoirSegmentSamplerTest
   @Test
   public void getRandomBalancerSegmentHolderTestSegmentsToConsiderLimit()
   {
-    int iterations = 5000;
+    int iterations = 50;
 
-    EasyMock.expect(druidServer1.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer1, segments1);
-    EasyMock.replay(druidServer1);
-
-    EasyMock.expect(druidServer2.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer2, segments2);
-    EasyMock.replay(druidServer2);
-
-    EasyMock.expect(druidServer3.getType()).andReturn(ServerType.HISTORICAL).times(iterations);
-    ImmutableDruidServerTests.expectSegments(druidServer3, segments3);
-    EasyMock.replay(druidServer3);
-
-    ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
-    EasyMock.replay(druidServer4);
-
-    // Have to use anyTimes() because the number of times a segment on a given server is chosen is indetermistic.
-    EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
-    EasyMock.replay(holder1);
-    EasyMock.expect(holder2.getServer()).andReturn(druidServer2).anyTimes();
-    EasyMock.replay(holder2);
-    EasyMock.expect(holder3.getServer()).andReturn(druidServer3).anyTimes();
-    EasyMock.replay(holder3);
-    // We only run getServer() each time we calculate the limit on segments to consider. Always 5k
-    EasyMock.expect(holder4.getServer()).andReturn(druidServer4).times(5000);
-    EasyMock.replay(holder4);
-
-    List<ServerHolder> holderList = new ArrayList<>();
-    holderList.add(holder1);
-    holderList.add(holder2);
-    holderList.add(holder3);
-    holderList.add(holder4);
+    final DataSegment excludedSegment = segments.get(3);
+    final List<ServerHolder> servers = Arrays.asList(
+        createHistorical("server1", segments.get(0)),
+        createHistorical("server2", segments.get(1)),
+        createHistorical("server3", segments.get(2)),
+        createHistorical("server4", excludedSegment)
+    );
 
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
+
+    final double percentOfSegmentsToConsider = 75.0;
     for (int i = 0; i < iterations; i++) {
-      segmentCountMap.put(
-          ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 75).getSegment(), 1
+      segmentCountMap.compute(
+          ReservoirSegmentSampler
+              .getRandomBalancerSegmentHolder(servers, Collections.emptySet(), percentOfSegmentsToConsider)
+              .getSegment(),
+          (segment, count) -> count == null ? 1 : count + 1
       );
     }
 
-    for (DataSegment segment : segments) {
-      if (!segment.equals(segment4)) {
-        Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
-      } else {
-        Assert.assertNull(segmentCountMap.get(segment));
+    // Verify that the segment on server4 is never chosen because of limit
+    Assert.assertFalse(segmentCountMap.containsKey(excludedSegment));
+    Assert.assertEquals(3, segmentCountMap.size());
+  }
+
+  @Test
+  public void testLoadingSegmentGetsPicked()
+  {
+    final List<DataSegment> loadedSegments = Arrays.asList(segments.get(0), segments.get(1));
+    final List<DataSegment> loadingSegments = Arrays.asList(segments.get(2), segments.get(3));
+
+    final ServerHolder server1 = createHistorical("server1", loadedSegments.get(0));
+    server1.startOperation(SegmentAction.LOAD, loadingSegments.get(0));
+
+    final ServerHolder server2 = createHistorical("server2", loadedSegments.get(1));
+    server2.startOperation(SegmentAction.LOAD, loadingSegments.get(1));
+
+    Set<DataSegment> pickedSegments = ReservoirSegmentSampler
+        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10)
+        .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
+
+    // Verify that both loaded and loading segments are picked
+    Assert.assertTrue(pickedSegments.containsAll(loadedSegments));
+    Assert.assertTrue(pickedSegments.containsAll(loadingSegments));
+  }
+
+  @Test
+  public void testSegmentsOnBrokersAreIgnored()
+  {
+    final ServerHolder historical = createHistorical("hist1", segments.get(0), segments.get(1));
+
+    final ServerHolder broker = new ServerHolder(
+        new DruidServer("broker1", "broker1", null, 1000, ServerType.BROKER, null, 1)
+            .addDataSegment(segments.get(2))
+            .addDataSegment(segments.get(3))
+            .toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    // Try to pick all the segments on the servers
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+        Arrays.asList(historical, broker),
+        Collections.emptySet(),
+        10
+    );
+
+    // Verify that only the segments on the historical are picked
+    Assert.assertEquals(2, pickedSegments.size());
+    for (BalancerSegmentHolder holder : pickedSegments) {
+      Assert.assertEquals(historical, holder.getFromServer());
+    }
+  }
+
+  @Test
+  public void testBroadcastSegmentsAreIgnored()
+  {
+    // num segments = 1 x 4 days
+    final String broadcastDatasource = "ds_broadcast";
+    final List<DataSegment> broadcastSegments
+        = CreateDataSegments.ofDatasource(broadcastDatasource)
+                            .forIntervals(4, Granularities.DAY)
+                            .startingAt("2022-01-01")
+                            .withNumPartitions(1)
+                            .eachOfSizeInMb(100);
+
+    final List<ServerHolder> servers = Arrays.asList(
+        createHistorical("server1", broadcastSegments.toArray(new DataSegment[0])),
+        createHistorical("server2", segments.get(0), segments.get(1))
+    );
+
+    // Try to pick all the segments on the servers
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
+        .getRandomBalancerSegmentHolders(servers, Collections.singleton(broadcastDatasource), 10);
+
+    // Verify that none of the broadcast segments are picked
+    Assert.assertEquals(2, pickedSegments.size());
+    for (BalancerSegmentHolder holder : pickedSegments) {
+      Assert.assertNotEquals(broadcastDatasource, holder.getSegment().getDataSource());
+    }
+  }
+
+  @Test(timeout = 60_000)
+  public void testNumberOfIterationsToCycleThroughAllSegments()
+  {
+    // The number of runs required for each sample percentage
+    // remains more or less fixed, even with a larger number of segments
+    final int[] samplePercentages = {100, 50, 10, 5, 1};
+    final int[] expectedIterations = {1, 20, 100, 200, 1000};
+
+    final int[] totalObservedIterations = new int[5];
+    for (int i = 0; i < 50; ++i) {
+      for (int j = 0; j < samplePercentages.length; ++j) {
+        totalObservedIterations[j] += countMinRunsWithSamplePercent(samplePercentages[j]);
       }
     }
 
-    EasyMock.verify(druidServer1, druidServer2, druidServer3, druidServer4);
-    EasyMock.verify(holder1, holder2, holder3, holder4);
+    for (int j = 0; j < samplePercentages.length; ++j) {
+      double avgObservedIterations = totalObservedIterations[j] / 50.0;
+      Assert.assertTrue(avgObservedIterations <= expectedIterations[j]);
+    }
+
+  }
+
+  /**
+   * Returns the minimum number of iterations of the reservoir sampling required
+   * to pick each segment atleast once.
+   * <p>
+   * {@code k = sampleSize = totalNumSegments * samplePercentage}
+   */
+  private int countMinRunsWithSamplePercent(int samplePercentage)
+  {
+    final int numSegments = segments.size();
+    final List<ServerHolder> servers = Arrays.asList(
+        createHistorical("server1", segments.subList(0, numSegments / 2).toArray(new DataSegment[0])),
+        createHistorical("server2", segments.subList(numSegments / 2, numSegments).toArray(new DataSegment[0]))
+    );
+
+    final Set<DataSegment> pickedSegments = new HashSet<>();
+
+    int sampleSize = (int) (numSegments * samplePercentage / 100.0);
+
+    int numIterations = 1;
+    for (; numIterations < 10000; ++numIterations) {
+      ReservoirSegmentSampler
+          .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), sampleSize)
+          .forEach(holder -> pickedSegments.add(holder.getSegment()));
+
+      if (pickedSegments.size() >= numSegments) {
+        break;
+      }
+    }
+
+    return numIterations;
+  }
+
+  private ServerHolder createHistorical(String serverName, DataSegment... loadedSegments)
+  {
+    final DruidServer server =
+        new DruidServer(serverName, serverName, null, 100000, ServerType.HISTORICAL, "normal", 1);
+    for (DataSegment segment : loadedSegments) {
+      server.addDataSegment(segment);
+    }
+    return new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester());
   }
 }

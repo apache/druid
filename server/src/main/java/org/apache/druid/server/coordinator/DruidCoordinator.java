@@ -896,19 +896,10 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
-      final RoundRobinServerSelector roundRobinServerSelector;
-      if (params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()) {
-        roundRobinServerSelector = new RoundRobinServerSelector(cluster);
-        log.info("Using round-robin segment assignment.");
-      } else {
-        roundRobinServerSelector = null;
-      }
-
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
-                   .withRoundRobinServerSelector(roundRobinServerSelector)
                    .build();
     }
 

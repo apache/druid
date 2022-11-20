@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -317,29 +317,22 @@ public class CostBalancerStrategy implements BalancerStrategy
       final boolean includeCurrentServer
   )
   {
-    final long proposalSegmentSize = proposalSegment.getSize();
-
-    // (optional) Don't include server if it is already serving segment
-    if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
-    // Don't calculate cost if the server doesn't have enough space or is loading the segment
-    if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
+    // (optional) Don't include server if it cannot load the segment
+    if (!includeCurrentServer && !server.canLoadSegment(proposalSegment)) {
       return Double.POSITIVE_INFINITY;
     }
 
     // The contribution to the total cost of a given server by proposing to move the segment to that server is...
     double cost = 0d;
 
-    // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
-    cost += computeJointSegmentsCost(
-        proposalSegment,
-        Iterables.filter(server.getServer().iterateAllSegments(), segment -> !proposalSegment.equals(segment))
-    );
+    // the sum of the costs of segments expected to be on the server (loaded + loading - dropping)
+    Set<DataSegment> projectedSegments = server.getProjectedSegments(true);
+    cost += computeJointSegmentsCost(proposalSegment, projectedSegments);
 
-    // plus the costs of segments that will be loaded
-    cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+    // minus the self cost of the segment
+    if (projectedSegments.contains(proposalSegment)) {
+      cost -= computeJointSegmentsCost(proposalSegment, proposalSegment);
+    }
 
     // minus the costs of segments that are marked to be dropped
     cost -= computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsMarkedToDrop());
@@ -381,7 +374,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     // Include current server only if specified
     return costPrioritizedServers.stream()
-                      .filter(pair -> includeCurrentServer || !pair.rhs.isServingSegment(proposalSegment))
+                      .filter(pair -> includeCurrentServer || pair.rhs.canLoadSegment(proposalSegment))
                       .map(pair -> pair.rhs).iterator();
   }
 

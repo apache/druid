@@ -25,8 +25,10 @@ import org.apache.druid.timeline.SegmentId;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *
@@ -45,7 +47,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Remove entries from this map only if the operation is cancelled.
    * Do not remove entries on load/drop success or failure during the run.
    */
-  private final Map<SegmentId, SegmentAction> queuedSegments = new HashMap<>();
+  private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -70,8 +72,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
 
     peon.getSegmentsInQueue().forEach(
-        (segment, action) ->
-            queuedSegments.put(segment.getId(), simplify(action))
+        (segment, action) -> queuedSegments.put(segment, simplify(action))
     );
   }
 
@@ -141,7 +142,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public SegmentAction getActionOnSegment(DataSegment segment)
   {
-    return queuedSegments.get(segment.getId());
+    return queuedSegments.get(segment);
   }
 
   /**
@@ -153,10 +154,33 @@ public class ServerHolder implements Comparable<ServerHolder>
    * <li>Does not contain segments whose actions were cancelled.</li>
    * </ul>
    */
-  public Map<SegmentId, SegmentAction> getQueuedSegments()
+  public Map<DataSegment, SegmentAction> getQueuedSegments()
   {
     return Collections.unmodifiableMap(queuedSegments);
   }
+
+  /**
+   * Segments that are expected to be loaded on this server once all the
+   * operations in progress have completed.
+   *
+   * @param includeMoving true if segments moving to this server should also be included.
+   */
+  public Set<DataSegment> getProjectedSegments(boolean includeMoving)
+  {
+    final Set<DataSegment> segments = new HashSet<>(server.iterateAllSegments());
+    queuedSegments.forEach((segment, action) -> {
+      if (action == SegmentAction.LOAD) {
+        segments.add(segment);
+      } else if (action == SegmentAction.DROP) {
+        segments.remove(segment);
+      } else if (action == SegmentAction.MOVE_TO && includeMoving) {
+        segments.add(segment);
+      }
+    });
+
+    return segments;
+  }
+
 
   /**
    * Returns true if this server has the segment loaded and is not dropping it.
@@ -178,7 +202,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean startOperation(SegmentAction action, DataSegment segment)
   {
-    if (queuedSegments.containsKey(segment.getId())) {
+    if (queuedSegments.containsKey(segment)) {
       return false;
     }
 
@@ -187,13 +211,13 @@ public class ServerHolder implements Comparable<ServerHolder>
       ++segmentsQueuedForLoad;
       sizeOfLoadingSegments += segment.getSize();
     }
-    queuedSegments.put(segment.getId(), simpleAction);
+    queuedSegments.put(segment, simpleAction);
     return true;
   }
 
   public boolean cancelOperation(SegmentAction action, DataSegment segment)
   {
-    return queuedSegments.get(segment.getId()) == simplify(action)
+    return queuedSegments.get(segment) == simplify(action)
            && peon.cancelOperation(segment)
            && cleanupState(segment);
   }
@@ -210,7 +234,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   private boolean cleanupState(DataSegment segment)
   {
-    final SegmentAction action = queuedSegments.remove(segment.getId());
+    final SegmentAction action = queuedSegments.remove(segment);
     if (action == SegmentAction.LOAD || action == SegmentAction.MOVE_TO) {
       --segmentsQueuedForLoad;
       sizeOfLoadingSegments -= segment.getSize();

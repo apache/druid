@@ -517,7 +517,7 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
-    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = false;
+    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = true;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
