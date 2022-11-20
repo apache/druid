@@ -285,12 +285,8 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   );
 }
 
-export function isTask(spec: Partial<IngestionSpec>) {
-  const type = String(getSpecType(spec));
-  return (
-    type.startsWith('index_') ||
-    oneOf(type, 'index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge')
-  );
+export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(getSpecType(spec), 'kafka', 'kinesis');
 }
 
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
@@ -1871,6 +1867,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
+
   {
     name: 'spec.tuningConfig.indexSpec.bitmap.type',
     label: 'Index bitmap type',
@@ -1881,20 +1878,66 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     info: <>Compression format for bitmap indexes.</>,
   },
   {
+    name: 'spec.tuningConfig.indexSpec.bitmap.compressRunOnSerialization',
+    type: 'boolean',
+    defaultValue: true,
+    defined: spec => deepGet(spec, 'spec.tuningConfig.indexSpec.bitmap.type') === 'roaring',
+    info: (
+      <>
+        Controls whether or not run-length encoding will be used when it is determined to be more
+        space-efficient.
+      </>
+    ),
+  },
+
+  {
     name: 'spec.tuningConfig.indexSpec.dimensionCompression',
     label: 'Index dimension compression',
     type: 'string',
     defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'uncompressed'],
+    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
     hideInMore: true,
     info: <>Compression format for dimension columns.</>,
   },
+
+  {
+    name: 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.type',
+    label: 'Index string dictionary encoding',
+    type: 'string',
+    defaultValue: 'utf8',
+    suggestions: ['utf8', 'frontCoded'],
+    hideInMore: true,
+    info: (
+      <>
+        Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt;
+        columns.
+      </>
+    ),
+  },
+  {
+    name: 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.bucketSize',
+    label: 'Index string dictionary encoding bucket size',
+    type: 'number',
+    defaultValue: 4,
+    min: 1,
+    max: 128,
+    defined: spec =>
+      deepGet(spec, 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.type') === 'frontCoded',
+    hideInMore: true,
+    info: (
+      <>
+        The number of values to place in a bucket to perform delta encoding. Must be a power of 2,
+        maximum is 128.
+      </>
+    ),
+  },
+
   {
     name: 'spec.tuningConfig.indexSpec.metricCompression',
     label: 'Index metric compression',
     type: 'string',
     defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'uncompressed'],
+    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
     hideInMore: true,
     info: <>Compression format for primitive type metric columns.</>,
   },
@@ -1913,6 +1956,15 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
         as-is with 8 bytes each.
       </>
     ),
+  },
+  {
+    name: 'spec.tuningConfig.indexSpec.jsonCompression',
+    label: 'Index JSON compression',
+    type: 'string',
+    defaultValue: 'lz4',
+    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
+    hideInMore: true,
+    info: <>Compression format to use for nested column raw data. </>,
   },
   {
     name: 'spec.tuningConfig.splitHintSpec.maxSplitSize',

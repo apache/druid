@@ -45,6 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,11 +53,13 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 
-public class StringLastTimeseriesQueryTest
+public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
 {
   private static final String VISITOR_ID = "visitor_id";
   private static final String CLIENT_TYPE = "client_type";
   private static final String LAST_CLIENT_TYPE = "last_client_type";
+
+  private static final String MULTI_VALUE = "mv";
 
   private static final DateTime TIME1 = DateTimes.of("2016-03-04T00:00:00.000Z");
   private static final DateTime TIME2 = DateTimes.of("2016-03-04T01:00:00.000Z");
@@ -84,22 +87,22 @@ public class StringLastTimeseriesQueryTest
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME1,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "iphone")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "iphone", MULTI_VALUE, ImmutableList.of("a", "b"))
         )
     );
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME1,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "1", CLIENT_TYPE, "iphone")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "1", CLIENT_TYPE, "iphone", MULTI_VALUE, ImmutableList.of("c", "d"))
         )
     );
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME2,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "android")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "android", MULTI_VALUE, ImmutableList.of("a", "e"))
         )
     );
 
@@ -121,7 +124,8 @@ public class StringLastTimeseriesQueryTest
                                           new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
                                           new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, null, 1024),
                                           new StringLastAggregatorFactory("nonexistent", "nonexistent", null, 1024),
-                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024)
+                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024),
+                                          new StringLastAggregatorFactory("multiValue", MULTI_VALUE, null, 1024)
                                       )
                                   )
                                   .build();
@@ -135,6 +139,7 @@ public class StringLastTimeseriesQueryTest
                     .put("folding", new SerializablePairLongString(TIME2.getMillis(), "android"))
                     .put("nonexistent", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
                     .put("numeric", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
+                    .put("multiValue", new SerializablePairLongString(TIME2.getMillis(), "[a, e]"))
                     .build()
             )
         )

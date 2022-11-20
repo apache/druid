@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -212,6 +213,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> rawSelector = column.makeColumnValueSelector(offset);
 
     final List<NestedPathPart> xPath = NestedPathFinder.parseJsonPath("$.x");
+    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getColumnTypes(xPath));
+    Assert.assertEquals(ColumnType.LONG, column.getColumnHolder(xPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, offset);
     ColumnIndexSupplier xIndexSupplier = column.getColumnIndexSupplier(xPath);
     Assert.assertNotNull(xIndexSupplier);
@@ -219,6 +222,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NullValueIndex xNulls = xIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> yPath = NestedPathFinder.parseJsonPath("$.y");
+    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getColumnTypes(yPath));
+    Assert.assertEquals(ColumnType.DOUBLE, column.getColumnHolder(yPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, offset);
     ColumnIndexSupplier yIndexSupplier = column.getColumnIndexSupplier(yPath);
     Assert.assertNotNull(yIndexSupplier);
@@ -226,11 +231,15 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     NullValueIndex yNulls = yIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> zPath = NestedPathFinder.parseJsonPath("$.z");
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(zPath));
+    Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(zPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, offset);
     ColumnIndexSupplier zIndexSupplier = column.getColumnIndexSupplier(zPath);
     Assert.assertNotNull(zIndexSupplier);
     StringValueSetIndex zValueIndex = zIndexSupplier.as(StringValueSetIndex.class);
     NullValueIndex zNulls = zIndexSupplier.as(NullValueIndex.class);
+
+    Assert.assertEquals(ImmutableList.of(xPath, yPath, zPath), column.getNestedFields());
 
     for (int i = 0; i < data.size(); i++) {
       Map row = data.get(i);
