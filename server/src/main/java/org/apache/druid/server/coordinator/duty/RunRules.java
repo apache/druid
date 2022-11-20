@@ -110,7 +110,8 @@ public class RunRules implements CoordinatorDuty
         cluster,
         params.getSegmentReplicantLookup(),
         replicationThrottler,
-        params.getBalancerStrategy()
+        params.getBalancerStrategy(),
+        params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()
     );
     for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment)) {

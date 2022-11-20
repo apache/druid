@@ -419,7 +419,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertNotEquals(-1, task.getRunner().getFireDepartmentMetrics().processingCompletionTime());
+    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -560,7 +560,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertNotEquals(-1, task.getRunner().getFireDepartmentMetrics().processingCompletionTime());
+    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -613,7 +613,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertNotEquals(-1, task.getRunner().getFireDepartmentMetrics().processingCompletionTime());
+    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -3121,7 +3121,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             );
             return true;
           }
-        }
+        },
+        objectMapper
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

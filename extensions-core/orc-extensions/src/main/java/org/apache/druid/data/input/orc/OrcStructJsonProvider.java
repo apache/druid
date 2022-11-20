@@ -21,6 +21,8 @@ package org.apache.druid.data.input.orc;
 
 import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.hadoop.io.Text;
+import org.apache.orc.mapred.OrcMap;
 import org.apache.orc.mapred.OrcStruct;
 
 import java.io.InputStream;
@@ -103,6 +105,9 @@ public class OrcStructJsonProvider implements JsonProvider
   {
     if (o == null) {
       return null;
+    } else if (o instanceof OrcMap) {
+      OrcMap map = (OrcMap) o;
+      return map.get(new Text(s));
     } else if (o instanceof Map) {
       return ((Map) o).get(s);
     } else if (o instanceof OrcStruct) {

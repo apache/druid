@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -36,6 +38,7 @@ public class TaskActionToolbox
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
+  private final ObjectMapper jsonMapper;
   private Optional<TaskRunnerFactory> factory = Optional.absent();
 
   @Inject
@@ -44,7 +47,8 @@ public class TaskActionToolbox
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager
+      SupervisorManager supervisorManager,
+      @Json ObjectMapper jsonMapper
   )
   {
     this.taskLockbox = taskLockbox;
@@ -52,6 +56,7 @@ public class TaskActionToolbox
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
+    this.jsonMapper = jsonMapper;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -77,6 +82,11 @@ public class TaskActionToolbox
   public SupervisorManager getSupervisorManager()
   {
     return supervisorManager;
+  }
+
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
   }
 
   @Inject(optional = true)

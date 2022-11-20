@@ -105,7 +105,8 @@ public class BalanceSegments implements CoordinatorDuty
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
         params.getReplicationManager(),
-        params.getBalancerStrategy()
+        params.getBalancerStrategy(),
+        params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()
     );
 
     final Set<String> busyTiers = reduceLifetimesAndGetBusyTiers(

@@ -88,7 +88,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://bar/foo/file2.csv.gz")
   );
 
-  private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
+  private static final List<URI> URIS_BEFORE_GLOB = Arrays.asList(
       URI.create("gs://foo/bar/file.csv"),
       URI.create("gs://bar/foo/file2.csv"),
       URI.create("gs://bar/foo/file3.txt")
@@ -166,15 +166,15 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisFilter()
+  public void testWithUrisGlob()
   {
     GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
         STORAGE,
         INPUT_DATA_CONFIG,
-        URIS_BEFORE_FILTER,
+        URIS_BEFORE_GLOB,
         null,
         null,
-        "*.csv"
+        "**.csv"
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -195,7 +195,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null,
         PREFIXES,
         EXPECTED_OBJECTS.get(0),
-        "*.csv"
+        "**.csv"
     );
   }
 
@@ -207,10 +207,10 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     new GoogleCloudStorageInputSource(
         STORAGE,
         INPUT_DATA_CONFIG,
-        URIS_BEFORE_FILTER,
+        URIS_BEFORE_GLOB,
         PREFIXES,
         null,
-        "*.csv"
+        "**.csv"
     );
   }
 

@@ -86,7 +86,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     // Run 2: nothing is assigned, nothing is moved as servers are already balanced
     runCoordinatorCycle();
     loadQueuedSegments();
-    verifyValue(Metric.ASSIGNED_COUNT, 0L);
+    verifyNoEvent(Metric.ASSIGNED_COUNT);
     verifyValue(Metric.MOVED_COUNT, 0L);
     verifyValue(Metric.UNMOVED_COUNT, 1000L);
   }

@@ -46,7 +46,10 @@ public class SegmentLoader
   private final CoordinatorStats stats = new CoordinatorStats();
   private final SegmentReplicantLookup replicantLookup;
   private final ReplicationThrottler replicationThrottler;
+  private final RoundRobinServerSelector serverSelector;
   private final BalancerStrategy strategy;
+
+  private final boolean useRoundRobinAssignment;
 
   private final Set<String> emptyTiers = new HashSet<>();
 
@@ -55,7 +58,8 @@ public class SegmentLoader
       DruidCluster cluster,
       SegmentReplicantLookup replicantLookup,
       ReplicationThrottler replicationThrottler,
-      BalancerStrategy strategy
+      BalancerStrategy strategy,
+      boolean useRoundRobinAssigment
   )
   {
     this.cluster = cluster;
@@ -63,6 +67,8 @@ public class SegmentLoader
     this.stateManager = stateManager;
     this.replicantLookup = replicantLookup;
     this.replicationThrottler = replicationThrottler;
+    this.useRoundRobinAssignment = useRoundRobinAssigment;
+    this.serverSelector = useRoundRobinAssigment ? new RoundRobinServerSelector(cluster) : null;
   }
 
   public CoordinatorStats getStats()
@@ -392,7 +398,9 @@ public class SegmentLoader
     }
 
     final Iterator<ServerHolder> serverIterator =
-        strategy.findNewSegmentHomeReplicator(segment, eligibleServers);
+        useRoundRobinAssignment
+        ? serverSelector.getServersInTierToLoadSegment(tier, segment)
+        : strategy.findNewSegmentHomeReplicator(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
       log.warn("No candidate server to load replica of segment [%s]", segment.getId());
       return 0;

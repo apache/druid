@@ -482,7 +482,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
         throttler,
-        params.getBalancerStrategy()
+        params.getBalancerStrategy(),
+        false
     );
   }
 }

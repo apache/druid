@@ -443,7 +443,8 @@ public class BroadcastDistributionRuleTest
         params.getDruidCluster(),
         params.getSegmentReplicantLookup(),
         throttler,
-        params.getBalancerStrategy()
+        params.getBalancerStrategy(),
+        dynamicConfig.isUseRoundRobinSegmentAssignment()
     );
     rule.run(segment, loader);
     return loader.getStats();

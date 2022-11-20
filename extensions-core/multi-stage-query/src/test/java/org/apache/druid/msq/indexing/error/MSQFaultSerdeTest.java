@@ -70,6 +70,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TaskStartTimeoutFault(10));
     assertFaultSerde(new TooManyBucketsFault(10));
     assertFaultSerde(new TooManyColumnsFault(10, 8));
+    assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));

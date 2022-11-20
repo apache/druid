@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -43,8 +44,8 @@ import java.nio.channels.WritableByteChannel;
  * the bucket is written entirely, and remaining values are stored as pairs of an integer which indicates how much
  * of the first byte array of the bucket to use as a prefix, followed by the remaining value bytes after the prefix.
  *
- * This is valid to use for any values which can be compared byte by byte with unsigned comparison. Otherwise, this
- * is not the collection for you.
+ * This writer is designed for use with UTF-8 encoded strings that are written in an order compatible with
+ * {@link String#compareTo(String)}.
  *
  * @see FrontCodedIndexed for additional details.
  */
@@ -76,8 +77,8 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       int bucketSize
   )
   {
-    if (Integer.bitCount(bucketSize) != 1) {
-      throw new ISE("bucketSize must be a power of two but was[%,d]", bucketSize);
+    if (Integer.bitCount(bucketSize) != 1 || bucketSize < 1 || bucketSize > 128) {
+      throw new IAE("bucketSize must be a power of two (from 1 up to 128) but was[%,d]", bucketSize);
     }
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.scratch = ByteBuffer.allocate(1 << logScratchSize).order(byteOrder);
@@ -98,7 +99,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   @Override
   public void write(@Nullable byte[] value) throws IOException
   {
-    if (prevObject != null && unsignedCompare(prevObject, value) >= 0) {
+    if (prevObject != null && compareNullableUtf8UsingJavaStringOrdering(prevObject, value) >= 0) {
       throw new ISE(
           "Values must be sorted and unique. Element [%s] with value [%s] is before or equivalent to [%s]",
           numWritten,
@@ -282,7 +283,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
         // all other values must be partitioned into a prefix length and suffix bytes
         int prefixLength = 0;
         for (; prefixLength < first.length; prefixLength++) {
-          final int cmp = FrontCodedIndexed.unsignedByteCompare(first[prefixLength], next[prefixLength]);
+          final int cmp = StringUtils.compareUtf8UsingJavaStringOrdering(first[prefixLength], next[prefixLength]);
           if (cmp != 0) {
             break;
           }
@@ -324,7 +325,11 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     return buffer.position() - pos;
   }
 
-  public static int unsignedCompare(
+  /**
+   * Same as {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}, but accepts nulls. Nulls are
+   * sorted first.
+   */
+  private static int compareNullableUtf8UsingJavaStringOrdering(
       @Nullable final byte[] b1,
       @Nullable final byte[] b2
   )
@@ -336,15 +341,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     if (b2 == null) {
       return 1;
     }
-    final int commonLength = Math.min(b1.length, b2.length);
 
-    for (int i = 0; i < commonLength; i++) {
-      final int cmp = FrontCodedIndexed.unsignedByteCompare(b1[i], b2[i]);
-      if (cmp != 0) {
-        return cmp;
-      }
-    }
-
-    return Integer.compare(b1.length, b2.length);
+    return StringUtils.compareUtf8UsingJavaStringOrdering(b1, b2);
   }
 }
