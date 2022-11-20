@@ -75,7 +75,6 @@ public class HttpLoadQueuePeonTest
 
   final TestDruidCoordinatorConfig config = new TestDruidCoordinatorConfig.Builder()
       .withCoordinatorKillMaxSegments(10)
-      .withLoadQueuePeonRepeatDelay(Duration.ZERO)
       .withCoordinatorKillIgnoreDurationToRetain(false)
       .withHttpLoadQueuePeonBatchSize(2)
       .build();

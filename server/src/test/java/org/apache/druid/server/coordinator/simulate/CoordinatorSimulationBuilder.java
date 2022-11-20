@@ -453,7 +453,6 @@ public class CoordinatorSimulationBuilder
           .withCoordinatorStartDelay(new Duration(1L))
           .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
           .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-          .withLoadQueuePeonRepeatDelay(new Duration("PT0S"))
           .withLoadQueuePeonType("http")
           .withCoordinatorKillIgnoreDurationToRetain(false)
           .build();
