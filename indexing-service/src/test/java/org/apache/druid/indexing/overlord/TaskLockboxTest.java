@@ -176,7 +176,7 @@ public class TaskLockboxTest
     final Set<TaskLock> activeLocks = new HashSet<>();
 
     // Add an exclusive lock entry of the highest priority
-    Task exclusiveHigherPriorityRevokedLockTask =  NoopTask.create(100);
+    Task exclusiveHigherPriorityRevokedLockTask = NoopTask.create(100);
     tasks.add(exclusiveHigherPriorityRevokedLockTask);
     taskStorage.insert(
         exclusiveHigherPriorityRevokedLockTask,
@@ -215,7 +215,7 @@ public class TaskLockboxTest
     Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
 
     // Adding an exclusive task lock of priority 15 should revoke all existing active locks
-    Task exclusiveLowerPriorityLockTask =  NoopTask.create(15);
+    Task exclusiveLowerPriorityLockTask = NoopTask.create(15);
     tasks.add(exclusiveLowerPriorityLockTask);
     taskStorage.insert(exclusiveLowerPriorityLockTask, TaskStatus.running(exclusiveLowerPriorityLockTask.getId()));
     lockbox.add(exclusiveLowerPriorityLockTask);
