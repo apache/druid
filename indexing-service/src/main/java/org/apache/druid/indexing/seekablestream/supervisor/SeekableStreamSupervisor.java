@@ -1508,9 +1508,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void generateAndLogReport()
   {
     if (log.isDebugEnabled()) {
-      log.debug(generateReport(true).toString());
-    } else {
-      log.info(generateReport(false).toString());
+      log.debug("%s", generateReport(true));
     }
   }
 
