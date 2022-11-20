@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -33,7 +32,6 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
@@ -125,7 +123,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     int submittedTasks = 0;
     for (String dataSource : dataSourcesToKill) {
-      final Interval intervalToKill = findIntervalForKill(dataSource, DateTimes.nowUtc());
+      final Interval intervalToKill = findIntervalForKill(dataSource);
       if (intervalToKill == null) {
         continue;
       }
@@ -149,13 +147,11 @@ public class KillUnusedSegments implements CoordinatorDuty
   /**
    * Calculates the interval for which segments are to be killed in a datasource.
    */
-  @VisibleForTesting
-  @Nullable
-  Interval findIntervalForKill(String dataSource, DateTime currentTime)
+  private Interval findIntervalForKill(String dataSource)
   {
     final DateTime maxEndTime = ignoreRetainDuration
                                 ? DateTimes.COMPARE_DATE_AS_STRING_MAX
-                                : currentTime.minus(retainDuration);
+                                : DateTimes.nowUtc().minus(retainDuration);
 
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
         .getUnusedSegmentIntervals(dataSource, maxEndTime, maxSegmentsToKill);
