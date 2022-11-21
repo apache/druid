@@ -208,6 +208,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
         holder.close();
         holder = null;
         buffer = null;
+        longBuffer = null;
       }
     }
 

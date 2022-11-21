@@ -94,29 +94,29 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     // Write a segment with two rows in it, with columns: s (string), d (double), cnt (long), met_s (complex).
     dimensionsSpec = new DimensionsSpec(
         ImmutableList.of(
-            StringDimensionSchema.create("s"),
-            new DoubleDimensionSchema("d")
+            StringDimensionSchema.create("strCol"),
+            new DoubleDimensionSchema("dblCol")
         )
     );
     metrics = ImmutableList.of(
         new CountAggregatorFactory("cnt"),
-        new HyperUniquesAggregatorFactory("met_s", "s")
+        new HyperUniquesAggregatorFactory("met_s", "strCol")
     );
     rows = ImmutableList.of(
         new MapBasedInputRow(
             DateTimes.of("2000"),
-            ImmutableList.of("s", "d"),
+            ImmutableList.of("strCol", "dblCol"),
             ImmutableMap.<String, Object>builder()
-                .put("s", "foo")
-                .put("d", 1.23)
+                .put("strCol", "foo")
+                .put("dblCol", 1.23)
                 .build()
         ),
         new MapBasedInputRow(
             DateTimes.of("2000T01"),
-            ImmutableList.of("s", "d"),
+            ImmutableList.of("strCol", "dblCol"),
             ImmutableMap.<String, Object>builder()
-                .put("s", "bar")
-                .put("d", 4.56)
+                .put("strCol", "bar")
+                .put("dblCol", 4.56)
                 .build()
         )
     );
@@ -133,8 +133,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
@@ -146,22 +146,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("2000"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("2000T01"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -284,8 +284,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "auto", DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
@@ -297,22 +297,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("2000"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("2000T01"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -329,7 +329,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
-        DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "s", "cnt", "met_s")).build(),
+        DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "strCol", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
         temporaryFolder.newFolder()
@@ -339,22 +339,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("2000"),
-                ImmutableList.of("d"),
+                ImmutableList.of("dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("2000T01"),
-                ImmutableList.of("d"),
+                ImmutableList.of("dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -373,11 +373,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
-        ColumnsFilter.inclusionBased(ImmutableSet.of("__time", "s", "d")),
+        ColumnsFilter.inclusionBased(ImmutableSet.of("__time", "strCol", "dblCol")),
         null,
         temporaryFolder.newFolder()
     );
@@ -386,20 +386,20 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("2000"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("2000T01"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .build()
             )
         ),
@@ -416,11 +416,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
-        ColumnsFilter.inclusionBased(ImmutableSet.of("s", "d")),
+        ColumnsFilter.inclusionBased(ImmutableSet.of("strCol", "dblCol")),
         null,
         temporaryFolder.newFolder()
     );
@@ -429,18 +429,18 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("1971"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("1971"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .build()
             )
         ),
@@ -457,12 +457,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
-        new SelectorDimFilter("d", "1.23", null),
+        new SelectorDimFilter("dblCol", "1.23", null),
         temporaryFolder.newFolder()
     );
 
@@ -470,11 +470,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("2000"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
@@ -490,11 +490,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     final DruidSegmentReader reader = new DruidSegmentReader(
         makeInputEntity(Intervals.of("2000/P1D")),
         indexIO,
-        new TimestampSpec("d", "posix", null),
+        new TimestampSpec("dblCol", "posix", null),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
@@ -506,22 +506,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("1970-01-01T00:00:01.000Z"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("1970-01-01T00:00:04.000Z"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -540,8 +540,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec("__time", "posix", null),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
@@ -553,22 +553,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("31969-04-01T00:00:00.000Z"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("31969-05-12T16:00:00.000Z"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -587,8 +587,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new TimestampSpec(null, null, DateTimes.of("1971")),
         new DimensionsSpec(
             ImmutableList.of(
-                StringDimensionSchema.create("s"),
-                new DoubleDimensionSchema("d")
+                StringDimensionSchema.create("strCol"),
+                new DoubleDimensionSchema("dblCol")
             )
         ),
         ColumnsFilter.all(),
@@ -600,22 +600,22 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ImmutableList.of(
             new MapBasedInputRow(
                 DateTimes.of("1971"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T").getMillis())
-                    .put("s", "foo")
-                    .put("d", 1.23d)
+                    .put("strCol", "foo")
+                    .put("dblCol", 1.23d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("foo"))
                     .build()
             ),
             new MapBasedInputRow(
                 DateTimes.of("1971"),
-                ImmutableList.of("s", "d"),
+                ImmutableList.of("strCol", "dblCol"),
                 ImmutableMap.<String, Object>builder()
                     .put("__time", DateTimes.of("2000T01").getMillis())
-                    .put("s", "bar")
-                    .put("d", 4.56d)
+                    .put("strCol", "bar")
+                    .put("dblCol", 4.56d)
                     .put("cnt", 1L)
                     .put("met_s", makeHLLC("bar"))
                     .build()
@@ -672,7 +672,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
   private DruidSegmentInputEntity makeInputEntity(final Interval interval)
   {
-    return makeInputEntity(interval, segmentDirectory, ImmutableList.of("s", "d"), ImmutableList.of("cnt", "met_s"));
+    return makeInputEntity(interval, segmentDirectory, ImmutableList.of("strCol", "dblCol"), ImmutableList.of("cnt", "met_s"));
   }
 
   private DruidSegmentInputEntity makeInputEntityWithParams(final Interval interval, final List<String> dimensions, final List<String> metrics)

@@ -180,7 +180,10 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        floatBuffer = null;
       }
     }
 

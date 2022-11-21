@@ -180,7 +180,10 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        doubleBuffer = null;
       }
     }
 
