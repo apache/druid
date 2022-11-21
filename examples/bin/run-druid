@@ -47,25 +47,35 @@ if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
 
 echo "Running [$1], logging to [$LOG_DIR/$1.log] if no changes made to log4j2.xml"
 
+if [ "$WHATAMI" = 'coordinator-overlord' ]
+then
+    SERVER_NAME=coordinator
+else
+    SERVER_NAME="$WHATAMI"
+fi
+
+
+if [ ! -f "$CONFDIR"/$WHATAMI/main.config ];
+  then
+    MAIN_CLASS="org.apache.druid.cli.Main server $SERVER_NAME"
+  else
+    MAIN_CLASS=`cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+fi
+
+cd "$WHEREAMI/.."
+
 if [ "$#" -eq 3 ]
+then
+
+elif [ "$#" -eq 4 ]
 then
   JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
   JVMARGS+=' '
   JVMARGS+=$3
 
-  if [ "$WHATAMI" = 'coordinator-overlord' ]
-  then
-      SERVER_NAME=coordinator
-  else
-      SERVER_NAME="$WHATAMI"
-  fi
-
-  cd "$WHEREAMI/.."
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
-    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
+    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" $MAIN_CLASS
 else
-  cd "$WHEREAMI/.."
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
-    `cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" $MAIN_CLASS
 fi
