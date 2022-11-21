@@ -467,6 +467,8 @@ public class MSQWorkerTaskLauncher
       } else {
         // wait on taskIds so we can wake up early if needed.
         synchronized (taskIds) {
+          // desiredTaskCount is set by launchTasksIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
+          // it acknowledges a new target. If these are not equal, do another run immediately and launch more tasks.
           if (acknowledgedDesiredTaskCount == desiredTaskCount) {
             taskIds.wait(sleepMillis);
           }
