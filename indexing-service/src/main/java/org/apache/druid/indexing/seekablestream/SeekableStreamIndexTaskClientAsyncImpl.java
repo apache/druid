@@ -577,7 +577,14 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     private ServiceClient makeClient(final String taskId, final boolean retry)
     {
       final ServiceRetryPolicy retryPolicy = makeRetryPolicy(taskId, retry);
+
+      // We're creating a new locator for each request and not closing it. This is OK, since SeekableStreamTaskLocator
+      // is stateless, cheap to create, and its close() method does nothing.
       final SeekableStreamTaskLocator locator = new SeekableStreamTaskLocator(taskInfoProvider, taskId);
+
+      // We're creating a new client for each request. This is OK, clients are cheap to create and do not contain
+      // state that is important for us to retain across requests. (The main state they retain is preferred location
+      // from prior redirects; but tasks don't do redirects.)
       return serviceClientFactory.makeClient(taskId, locator, retryPolicy);
     }
 

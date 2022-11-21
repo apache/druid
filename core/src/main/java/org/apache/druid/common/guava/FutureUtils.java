@@ -114,7 +114,7 @@ public class FutureUtils
    * Like {@link Futures#transform(ListenableFuture, AsyncFunction)}, but works better with lambdas due to not having
    * overloads.
    *
-   * One can write {@code FutureUtils.transform(future, v -> ...)} instead of
+   * One can write {@code FutureUtils.transformAsync(future, v -> ...)} instead of
    * {@code Futures.transform(future, (Function<? super T, ?>) v -> ...)}
    */
   public static <T, R> ListenableFuture<R> transformAsync(final ListenableFuture<T> future, final AsyncFunction<T, R> fn)
@@ -123,7 +123,7 @@ public class FutureUtils
   }
 
   /**
-   * Like {@link Futures#successfulAsList}, but returns {@link Either} instead of using {@code} null in case of error.
+   * Like {@link Futures#successfulAsList}, but returns {@link Either} instead of using {@code null} in case of error.
    */
   public static <T> ListenableFuture<List<Either<Throwable, T>>> coalesce(final List<ListenableFuture<T>> futures)
   {

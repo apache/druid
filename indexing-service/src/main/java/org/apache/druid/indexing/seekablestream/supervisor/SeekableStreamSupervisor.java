@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -1968,27 +1967,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     resumeAllActivelyReadingTasks();
   }
 
+  /**
+   * Returns a Pair of information about a task:
+   *
+   * Left-hand side: Status of the task from {@link SeekableStreamIndexTaskClient#getStatusAsync}.
+   *
+   * Right-hand side: If status is {@link SeekableStreamIndexTaskRunner.Status#PUBLISHING}, end offsets from
+   * {@link SeekableStreamIndexTaskClient#getEndOffsetsAsync}. Otherwise, null.
+   *
+   * Used by {@link #discoverTasks()}.
+   */
   private ListenableFuture<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>> getStatusAndPossiblyEndOffsets(
       final String taskId
   )
   {
-    return Futures.transform(
+    return FutureUtils.transformAsync(
         taskClient.getStatusAsync(taskId),
-        new AsyncFunction<SeekableStreamIndexTaskRunner.Status, Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>>()
-        {
-          @Override
-          public ListenableFuture<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>> apply(
-              SeekableStreamIndexTaskRunner.Status status
-          )
-          {
-            if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
-              return FutureUtils.transform(
-                  taskClient.getEndOffsetsAsync(taskId),
-                  endOffsets -> Pair.of(status, endOffsets)
-              );
-            } else {
-              return Futures.immediateFuture(Pair.of(status, null));
-            }
+        status -> {
+          if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
+            return FutureUtils.transform(
+                taskClient.getEndOffsetsAsync(taskId),
+                endOffsets -> Pair.of(status, endOffsets)
+            );
+          } else {
+            return Futures.immediateFuture(Pair.of(status, null));
           }
         }
     );
