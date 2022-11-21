@@ -47,7 +47,6 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,10 +54,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,6 +71,8 @@ public class SegmentAllocationQueue
 {
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
 
+  private static final int MAX_QUEUE_SIZE = 5000;
+
   private final long maxWaitTimeMillis;
   private final boolean enabled;
 
@@ -81,7 +83,7 @@ public class SegmentAllocationQueue
   private final ServiceEmitter emitter;
 
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
-  private final Deque<AllocateRequestBatch> processingQueue = new ConcurrentLinkedDeque<>();
+  private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
   @Inject
   public SegmentAllocationQueue(
@@ -105,13 +107,13 @@ public class SegmentAllocationQueue
   @LifecycleStart
   public void start()
   {
-    log.info("Starting queue.");
+    log.info("Initializing segment allocation queue.");
   }
 
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping queue.");
+    log.info("Tearing down segment allocation queue.");
     executor.shutdownNow();
   }
 
@@ -140,40 +142,60 @@ public class SegmentAllocationQueue
     final AllocateRequestKey requestKey = new AllocateRequestKey(request, false);
     final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
 
+    // Possible race condition:
+    // t1 -> new batch is added to queue or batch already exists in queue
+    // t2 -> executor pops batch, processes all requests in it
+    // t1 -> new request is added to dangling batch and is never picked up
+    // Solution: For existing batch, call keyToBatch.remove() on the key to
+    // wait on keyToBatch.compute() to finish before proceeding with processBatch().
+    // For new batch, keyToBatch.remove() would not wait as key is not in map yet
+    // but a new batch is unlikely to be due immediately, so it won't get popped right away.
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
-      AllocateRequestBatch computedBatch = existingBatch;
-      if (computedBatch == null) {
-        computedBatch = new AllocateRequestBatch(key);
-        computedBatch.resetQueueTime();
-        processingQueue.offer(computedBatch);
+      if (existingBatch == null) {
+        AllocateRequestBatch newBatch = new AllocateRequestBatch(key);
+        requestFuture.set(newBatch.add(request));
+        return addBatchToQueue(newBatch) ? newBatch : null;
+      } else {
+        requestFuture.set(existingBatch.add(request));
+        return existingBatch;
       }
-
-      // Possible race condition:
-      // t1 -> new batch is added to queue or batch already exists in queue
-      // t2 -> executor pops batch, processes all requests in it
-      // t1 -> new request is added to dangling batch and is never picked up
-      // Solution: For existing batch, call keyToBatch.remove() on the key to
-      // wait on keyToBatch.compute() to finish before proceeding with processBatch().
-      // For new batch, keyToBatch.remove() would not wait as key is not in map yet
-      // but a new batch is unlikely to be due immediately, so it won't get popped right away.
-      requestFuture.set(computedBatch.add(request));
-      return computedBatch;
     });
 
     return requestFuture.get();
   }
 
+  /**
+   * Tries to add the given batch to the processing queue. If the queue is full,
+   * marks the batch as completed failing all the pending requests.
+   */
+  private boolean addBatchToQueue(AllocateRequestBatch batch)
+  {
+    batch.resetQueueTime();
+    if (processingQueue.offer(batch)) {
+      log.debug("Added a new batch [%s] to queue.", batch.key);
+      return true;
+    } else {
+      log.warn("Cannot add batch [%s] as queue is full. Failing [%d] requests.", batch.key, batch.size());
+      batch.markCompleted();
+      return false;
+    }
+  }
+
+  /**
+   * Tries to add the given batch to the processing queue. If a batch already
+   * exists for this key, transfers all the requests from this batch to the
+   * existing one.
+   */
   private void requeueBatch(AllocateRequestBatch batch)
   {
     log.info("Requeueing [%d] failed requests in batch [%s].", batch.size(), batch.key);
     keyToBatch.compute(batch.key, (key, existingBatch) -> {
       if (existingBatch == null) {
         batch.resetQueueTime();
-        processingQueue.offer(batch);
-        return batch;
+        return addBatchToQueue(batch) ? batch : null;
       } else {
         // Merge requests from this batch to existing one
-        existingBatch.merge(batch);
+        existingBatch.transferRequestsFrom(batch);
         return existingBatch;
       }
     });
@@ -183,19 +205,25 @@ public class SegmentAllocationQueue
   {
     // If not leader, clear the queue and do not schedule any more rounds of processing
     if (!leaderSelector.isLeader()) {
-      log.info("Not leader anymore. Clearing [%d] batches from queue.", processingQueue.size());
-      processingQueue.clear();
+      log.info("Not leader anymore. Failing [%d] batches in queue.", processingQueue.size());
+
+      AllocateRequestBatch nextBatch = processingQueue.pollFirst();
+      while (nextBatch != null) {
+        nextBatch.markCompleted();
+        nextBatch = processingQueue.pollFirst();
+      }
+
       keyToBatch.clear();
       return;
     }
 
     // Process all batches which are due
-    log.debug("Processing all batches which are due for execution.");
+    log.debug("Processing all batches which are due for execution. Overall queue size [%d].", processingQueue.size());
     int numProcessedBatches = 0;
 
-    AllocateRequestBatch nextBatch = processingQueue.peek();
+    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
     while (nextBatch != null && nextBatch.isDue()) {
-      processingQueue.poll();
+      processingQueue.pollFirst();
       boolean processed;
       try {
         processed = processBatch(nextBatch);
@@ -362,7 +390,7 @@ public class SegmentAllocationQueue
       return sortedIntervals[index];
     }
 
-    // Key was not found, returned index is (-(insertionPoint) - 1)
+    // Key was not found, index returned from binarySearch is (-(insertionPoint) - 1)
     index = -(index + 1);
 
     // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
@@ -472,13 +500,20 @@ public class SegmentAllocationQueue
       log.info("Elected leader. Starting queue processing.");
       scheduleQueuePoll(maxWaitTimeMillis);
     } else {
-      log.info("Elected leader but batched segment allocation is disabled.");
+      log.info(
+          "Elected leader but batched segment allocation is disabled. "
+          + "Segment allocation queue will not be used."
+      );
     }
   }
 
   public void stopBeingLeader()
   {
-    log.info("Not leader anymore. Stopping queue processing.");
+    if (isEnabled()) {
+      log.info("Not leader anymore. Stopping queue processing.");
+    } else {
+      log.info("Not leader anymore. Segment allocation queue is already disabled.");
+    }
   }
 
   /**
@@ -490,6 +525,9 @@ public class SegmentAllocationQueue
     private final AllocateRequestKey key;
 
     /**
+     * Map from allocate requests (represents a single SegmentAllocateAction)
+     * to the future of allocated segment id.
+     * <p>
      * This must be accessed through methods synchronized on this batch.
      * It is to avoid races between a new request being added just when the batch
      * is being processed.
@@ -499,7 +537,6 @@ public class SegmentAllocationQueue
 
     AllocateRequestBatch(AllocateRequestKey key)
     {
-      log.info("Creating a new batch with key: %s", key);
       this.key = key;
     }
 
@@ -509,7 +546,7 @@ public class SegmentAllocationQueue
       return requestToFuture.computeIfAbsent(request, req -> new CompletableFuture<>());
     }
 
-    synchronized void merge(AllocateRequestBatch batch)
+    synchronized void transferRequestsFrom(AllocateRequestBatch batch)
     {
       requestToFuture.putAll(batch.requestToFuture);
       batch.requestToFuture.clear();
@@ -539,22 +576,20 @@ public class SegmentAllocationQueue
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
-        return;
-      }
-
-      log.info("Failed to allocate segment for action [%s]: %s", request.getAction(), result.getErrorMessage());
-      if (request.canRetry()) {
+      } else if (request.canRetry()) {
         log.debug(
-            "Can requeue action [%s] after [%d] failed attempts.",
+            "Action [%s] failed in attempt [%d]. Can still retry. Latest error: %s",
             request.getAction(),
-            request.getAttempts()
+            request.getAttempts(),
+            result.getErrorMessage()
         );
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Removing allocation action [%s] from batch after [%d] failed attempts.",
+            "Failing allocate action [%s] after [%d] attempts. Latest error: %s",
             request.getAction(),
-            request.getAttempts()
+            request.getAttempts(),
+            result.getErrorMessage()
         );
         requestToFuture.remove(request).complete(null);
       }
@@ -604,7 +639,6 @@ public class SegmentAllocationQueue
     private final boolean useNonRootGenPartitionSpace;
 
     private final int hash;
-    private final String serialized;
 
     /**
      * Creates a new key for the given request. The batch for a unique key will
@@ -634,7 +668,6 @@ public class SegmentAllocationQueue
           preferredAllocationInterval,
           lockGranularity
       );
-      this.serialized = serialize();
     }
 
     @Override
@@ -666,11 +699,6 @@ public class SegmentAllocationQueue
 
     @Override
     public String toString()
-    {
-      return serialized;
-    }
-
-    private String serialize()
     {
       return "{" +
              "unique=" + unique +

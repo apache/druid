@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
@@ -97,7 +98,7 @@ public class LocalTaskActionClient implements TaskActionClient
   {
     try {
       SegmentAllocateAction allocateAction = (SegmentAllocateAction) taskAction;
-      return (R) allocateAction.performAsync(task, toolbox).get();
+      return (R) allocateAction.performAsync(task, toolbox).get(5, TimeUnit.MINUTES);
     }
     catch (Throwable t) {
       throw new RuntimeException(t);
