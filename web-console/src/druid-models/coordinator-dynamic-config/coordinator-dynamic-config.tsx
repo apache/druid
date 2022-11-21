@@ -197,7 +197,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'useBatchedSegmentSampler',
     type: 'boolean',
-    defaultValue: false,
+    defaultValue: true,
     info: (
       <>
         Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of

@@ -101,12 +101,6 @@ public abstract class DruidCoordinatorConfig
     return new Duration(15 * 60 * 1000);
   }
 
-  @Config("druid.coordinator.loadqueuepeon.repeatDelay")
-  public Duration getLoadQueuePeonRepeatDelay()
-  {
-    return Duration.millis(50);
-  }
-
   @Config("druid.coordinator.loadqueuepeon.type")
   public String getLoadQueuePeonType()
   {

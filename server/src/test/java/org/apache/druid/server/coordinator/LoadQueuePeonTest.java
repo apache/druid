@@ -90,7 +90,6 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.singleThreaded("test_load_queue_peon-%d"),
         new TestDruidCoordinatorConfig.Builder()
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(Duration.millis(0))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
@@ -281,7 +280,6 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new TestDruidCoordinatorConfig.Builder()
             .withLoadTimeoutDelay(new Duration(1))
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
@@ -322,7 +320,6 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new TestDruidCoordinatorConfig.Builder()
             .withLoadTimeoutDelay(new Duration(1))
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
