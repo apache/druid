@@ -47,6 +47,7 @@ https://github.com/apache/druid/pull/13275
 ### Added task start status to the worker report
 
 Added `pendingTasks` and `runningTasks` fields to the worker report for the MSQ task engine.
+See [Query task status information](#query-task-status-information) for related web console changes.
 
 https://github.com/apache/druid/pull/13263
 
