@@ -110,7 +110,7 @@ public class WorkerSketchFetcherTest
   }
 
   @Test
-  public void test_submitFetcherTask_parallelFetch_workerThrowsException_shouldCancelOtherTasks()
+  public void test_submitFetcherTask_parallelFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
   {
     // Store futures in a queue
     final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
@@ -144,6 +144,8 @@ public class WorkerSketchFetcherTest
 
     // Assert that the final result is failed and all other task futures are also cancelled.
     Assert.assertThrows(CompletionException.class, eitherCompletableFuture::join);
+    Thread.sleep(1000);
+
     Assert.assertTrue(eitherCompletableFuture.isCompletedExceptionally());
     // Verify that the statistics collector was cleared due to the error.
     verify(mergedClusterByStatisticsCollector1, times(1)).clear();
@@ -181,6 +183,7 @@ public class WorkerSketchFetcherTest
 
     // Assert that the final result is complete and all other sketches returned have been merged.
     eitherCompletableFuture.join();
+    Thread.sleep(1000);
     Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
     Assert.assertFalse(snapshotQueue.isEmpty());
     // Verify that all statistics were added to controller.
@@ -192,7 +195,7 @@ public class WorkerSketchFetcherTest
   }
 
   @Test
-  public void test_submitFetcherTask_sequentialFetch_workerThrowsException_shouldCancelOtherTasks()
+  public void test_submitFetcherTask_sequentialFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
   {
     // Store futures in a queue
     final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
@@ -226,6 +229,8 @@ public class WorkerSketchFetcherTest
 
     // Assert that the final result is failed and all other task futures are also cancelled.
     Assert.assertThrows(CompletionException.class, eitherCompletableFuture::join);
+    Thread.sleep(1000);
+
     Assert.assertTrue(eitherCompletableFuture.isCompletedExceptionally());
     // Verify that the correct statistics collector was cleared due to the error.
     verify(mergedClusterByStatisticsCollector1, times(0)).clear();
@@ -266,6 +271,8 @@ public class WorkerSketchFetcherTest
 
     // Assert that the final result is complete and all other sketches returned have been merged.
     eitherCompletableFuture.join();
+    Thread.sleep(1000);
+
     Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
     Assert.assertFalse(snapshotQueue.isEmpty());
     // Verify that all statistics were added to controller.
