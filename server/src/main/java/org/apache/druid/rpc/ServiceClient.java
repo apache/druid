@@ -52,8 +52,9 @@ public interface ServiceClient
    * attempts. Redirects are validated against the targets returned by {@link ServiceLocator}: the client will not
    * follow a redirect to a target that does not appear in the returned {@link ServiceLocations}.
    *
-   * If the service is unavailable at the time an attempt is made -- i.e. if {@link ServiceLocator#locate()} returns an
-   * empty set -- then an attempt is consumed and the client will try to locate the service again on the next attempt.
+   * If the service is unavailable at the time an attempt is made, the client will automatically retry based on
+   * {@link ServiceRetryPolicy#retryNotAvailable()}. If true, an attempt is consumed and the client will try to locate
+   * the service again on the next attempt. If false, the call immediately returns {@link ServiceNotAvailableException}.
    *
    * If an exception occurs midstream after an OK HTTP response (2xx) then the behavior depends on the handler. If
    * the handler has not yet returned a finished object, the service client will automatically retry based on the
