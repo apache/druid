@@ -41,8 +41,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(LocalDataSegmentPusher.class);
 
-  private static final String INDEX_DIR = "index";
-  private static final String INDEX_ZIP_FILENAME = "index.zip";
+  public static final String INDEX_DIR = "index";
+  public static final String INDEX_ZIP_FILENAME = "index.zip";
 
   private final LocalDataSegmentPusherConfig config;
 
