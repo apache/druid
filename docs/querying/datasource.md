@@ -302,12 +302,12 @@ use join datasources.
 SQL joins take the form:
 
 ```
-<o1> [ INNER | LEFT [OUTER] ] JOIN <o2> ON <condition>
+<o1> [ INNER | LEFT [OUTER] | CROSS ] JOIN <o2> ON <condition>
 ```
 
-The condition must involve only equalities, but functions are okay, and there can be multiple equalities ANDed together.
-Conditions like `t1.x = t2.x`, or `LOWER(t1.x) = t2.x`, or `t1.x = t2.x AND t1.y = t2.y` can all be handled. Conditions
-like `t1.x <> t2.x` cannot currently be handled.
+JOIN conditions must involve only equalities, but functions are okay. You can apply multiple equalities with the AND operator.
+For example, Druid supports the following types of equality conditions: `t1.x = t2.x`, or `LOWER(t1.x) = t2.x`, or `t1.x = t2.x AND t1.y = t2.y`. Inequality conditions like `t1.x <> t2.x` are unsupported.
+Conditions are optional for CROSS JOIN.
 
 Note that Druid SQL is less rigid than what native join datasources can handle. In cases where a SQL query does
 something that is not allowed as-is with a native join datasource, Druid SQL will generate a subquery. This can have
@@ -334,7 +334,7 @@ Native join datasources have the following properties. All are required.
 |`right`|Right-hand datasource. Must be of type `lookup`, `query`, or `inline`. Note that this is more rigid than what Druid SQL requires.|
 |`rightPrefix`|String prefix that will be applied to all columns from the right-hand datasource, to prevent them from colliding with columns from the left-hand datasource. Can be any string, so long as it is nonempty and is not be a prefix of the string `__time`. Any columns from the left-hand side that start with your `rightPrefix` will be shadowed. It is up to you to provide a prefix that will not shadow any important columns from the left side.|
 |`condition`|[Expression](../misc/math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
-|`joinType`|`INNER` or `LEFT`.|
+|`joinType`|`INNER`, `LEFT`|
 
 #### Join performance
 
