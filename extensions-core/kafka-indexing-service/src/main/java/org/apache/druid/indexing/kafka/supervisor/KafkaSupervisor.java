@@ -160,7 +160,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
   )
   {
     KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<Integer, Long> partitionLag = getRecordLagPerPartition(getHighestCurrentOffsets());
+    Map<Integer, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new KafkaSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getTopic(),
@@ -260,7 +260,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
       );
     }
 
-    return getRecordLagPerPartition(highestCurrentOffsets);
+    return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
   }
 
   @Nullable
@@ -271,10 +271,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
     return null;
   }
 
-  @Override
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
-  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
+  // Used while calculating cummulative lag for entire stream
+  private Map<Integer, Long> getRecordLagPerPartitionInLatestSequences(Map<Integer, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null) {
       return Collections.emptyMap();
@@ -288,6 +288,30 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long, Kaf
                 Entry::getKey,
                 e -> e.getValue() != null
                      ? e.getValue() - Optional.ofNullable(currentOffsets.get(e.getKey())).orElse(0L)
+                     : 0
+            )
+        );
+  }
+
+  @Override
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
+  // Used while generating Supervisor lag reports per task
+  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
+    if (latestSequenceFromStream == null || currentOffsets == null) {
+      return Collections.emptyMap();
+    }
+
+    return currentOffsets
+        .entrySet()
+        .stream()
+        .filter(e -> latestSequenceFromStream.get(e.getKey()) != null)
+        .collect(
+            Collectors.toMap(
+                Entry::getKey,
+                e -> e.getValue() != null
+                     ? latestSequenceFromStream.get(e.getKey()) - e.getValue()
                      : 0
             )
         );
