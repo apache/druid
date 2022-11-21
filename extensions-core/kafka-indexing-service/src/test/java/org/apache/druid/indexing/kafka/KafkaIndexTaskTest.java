@@ -3159,6 +3159,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
+    dataSegmentPusherConfig.zip = true;
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
 
     toolboxFactory = new TaskToolboxFactory(
