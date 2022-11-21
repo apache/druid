@@ -477,8 +477,8 @@ public class TaskLockbox
           if (request.getType().equals(TaskLockType.SHARED)
               && areAllEqualOrHigherPriorityLocksSharedOrRevoked(conflictPosses, request.getPriority())) {
             // Any number of shared locks can be acquired for the same dataSource and interval
-            // Non-shared locks of equal or greater priority, if present, must already be revoked
-            // Other exclusive (or any non-shared) locks of lower priority can be revoked
+            // Exclusive locks of equal or greater priority, if present, must already be revoked
+            // Exclusive locks of lower priority can be revoked
             revokeAllLowerPriorityNonSharedLocks(conflictPosses, request.getPriority());
             return createNewTaskLockPosse(request);
           } else {
@@ -1085,7 +1085,7 @@ public class TaskLockbox
   private static boolean areAllEqualOrHigherPriorityLocksSharedOrRevoked(List<TaskLockPosse> lockPosses, int priority)
   {
     return lockPosses.stream()
-                     .filter(taskLockPosse -> taskLockPosse.getTaskLock().getPriority() >= priority)
+                     .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() >= priority)
                      .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED)
                                                 || taskLockPosse.getTaskLock().isRevoked());
   }
@@ -1099,7 +1099,7 @@ public class TaskLockbox
   {
     lockPosses.stream()
               .filter(taskLockPosse -> !TaskLockType.SHARED.equals(taskLockPosse.getTaskLock().getType()))
-              .filter(taskLockPosse -> taskLockPosse.getTaskLock().getPriority() < priority)
+              .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() < priority)
               .forEach(this::revokeLock);
   }
 
