@@ -44,7 +44,7 @@ ldapwhoami -vv -H ldap://ip_address:389  -D "myuser@example.com" -W
 Enter the password for the user when prompted and verify that the command succeeded. If it failed, check the following:
 
 - Make sure you're using the correct port for your LDAP instance.
-- Check whether a network firewall is preventing connections to the LDAP port.
+- Check if a network firewall is preventing connections to the LDAP port.
 - Review your LDAP implementation details to see whether you need to specifically allow LDAP clients at the LDAP server. If so, add the Druid Coordinator server to the allow list.
 
 ### Test your LDAP search
