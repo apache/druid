@@ -155,7 +155,7 @@
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
         </dependency>
-       <dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
@@ -218,10 +218,15 @@
             <artifactId>JUnitParams</artifactId>
             <scope>test</scope>
         </dependency>
-		<dependency>
-		    <groupId>javax.ws.rs</groupId>
-		    <artifactId>jsr311-api</artifactId>
-		</dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-client</artifactId>
+            <version>5.4.0</version>
+        </dependency>
     </dependencies>
 
     <!-- Exclude ITs from surefire. Required because they end with "Test". -->
@@ -345,8 +350,8 @@
                                 <goal>integration-test</goal>
                             </goals>
                             <configuration>
-                                <!-- our tests are very verbose, let's keep the volume down -->
-                                <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
+                                <redirectTestOutputToFile>False</redirectTestOutputToFile>
                                 <!-- Can run only one test category per Maven run. -->
                                 <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
                              </configuration>
