@@ -19,20 +19,58 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
+import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class MSQFaultsTest extends MSQTestBase
 {
+
+  @Test
+  public void testInsertWithTooManySegments() throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled-30k.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("rowsPerSegment", 1)
+                                              .build();
+
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(" insert into foo1 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(new TooManyPartitionsFault(25000))
+                     .verifyResults();
+
+  }
 
   @Test
   public void testInsertWithUnsupportedColumnType()
