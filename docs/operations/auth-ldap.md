@@ -33,7 +33,7 @@ Before you start to configure LDAP for Druid, test your LDAP connection and perf
 
 ### Check your LDAP connection
 
-Verify that your LDAP connection is working by testing it with user credentials. Later in the process you [configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication) with this user as the `bindUser`.
+Test your LDAP connection to verify it works with user credentials. Later in the process you [configure Druid for LDAP authentication](#configure-druid-for-ldap-authentication) with this user as the `bindUser`.
 
 The following example command tests the connection for the user `myuser@example.com`. Insert your LDAP server IP address. Modify the port number of your LDAP instance if it listens on a port other than `389`.
 
