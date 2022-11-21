@@ -77,7 +77,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
 
           parentDir = parentDir.getParentFile();
         }
-      } else {
+      } else if (path.exists()) {
         throw new SegmentLoadingException("Unknown file type[%s]", path);
       }
     }
