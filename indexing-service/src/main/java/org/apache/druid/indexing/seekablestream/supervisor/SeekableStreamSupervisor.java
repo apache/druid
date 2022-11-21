@@ -538,11 +538,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class GracefulShutdownNotice extends ShutdownNotice
   {
+    private static final String TYPE = "graceful_shutdown_notice";
+
     @Override
     public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
       gracefulShutdownInternal();
       super.handle();
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
     }
   }
 
