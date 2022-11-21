@@ -25,24 +25,47 @@ title: "Deep storage"
 
 Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
-## Local Mount
+## Local
 
-A local mount can be used for storage of segments as well.  This allows you to use just your local file system or anything else that can be mount locally like NFS, Ceph, etc.  This is the default deep storage implementation.
+Local storage is intended for use in the following situations:
 
-In order to use a local mount for deep storage, you need to set the following configuration in your common configs.
+- You have just one server.
+- Or, you have multiple servers, and they all have access to a shared filesystem (for example: NFS).
+
+In order to use a local directory for deep storage, set the following configuration in `common.runtime.properties`.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.storage.type`|local||Must be set.|
-|`druid.storage.storageDirectory`||Directory for storing segments.|Must be set.|
+|`druid.storage.type`|`local`||Must be set.|
+|`druid.storage.storageDirectory`|any local directory|Directory for storing segments. Must be different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.|`/tmp/druid/localStorage`|
+|`druid.storage.zip`|`true`, `false`|Whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`).|`false`|
 
-Note that you should generally set `druid.storage.storageDirectory` to something different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.
+For example:
 
-If you are using the Hadoop indexer in local mode, then just give it a local file as your output directory and it will work.
+```
+druid.storage.type=local
+druid.storage.storageDirectory=/tmp/druid/localStorage
+```
 
-## S3-compatible
+When using local storage, it is recommended to use the same filesystem for `druid.storage.type` and
+`druid.segmentCache.locations` on your Historicals. When these are on the same filesystem, and
+`druid.storage.zip = false` (the default), Druid creates hard links between the two directories rather than storing
+two copies of the same data.
 
-See [druid-s3-extensions extension documentation](../development/extensions-core/s3.md).
+Local storage cannot be used if you have multiple servers without a shared filesystem. In this case, consider using
+cloud storage (Amazon S3, Google Cloud Storage, or Azure Blob Storage), S3-compatible storage (like Minio), or HDFS.
+
+## Amazon S3 or S3-compatible
+
+See [`druid-s3-extensions`](../development/extensions-core/s3.md).
+
+## Google Cloud Storage
+
+See [`druid-google-extensions`](../development/extensions-core/google.md).
+
+## Azure Blob Storage
+
+See [`druid-azure-extensions`](../development/extensions-core/azure.md).
 
 ## HDFS
 
