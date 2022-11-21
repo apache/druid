@@ -1375,7 +1375,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
-Configuration options for the experimental [Indexer process](../design/indexer.md) are also provided here.
+Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
 ### MiddleManager and Peons
 

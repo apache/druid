@@ -39,7 +39,6 @@ This document includes each page that mentions an experimental feature. To gradu
 ## Indexer process
 
 - [Indexer process](../design/indexer.md)
-- [Configuration reference](../configuration/index.md#overlord-operations)
 - [Processes and servers](../design/processes.md#indexer-process-optional)
 
 ## Kubernetes
@@ -51,10 +50,6 @@ This document includes each page that mentions an experimental feature. To gradu
 - [Configuration reference](../configuration/index.md#overlord-operations)
 - [Task reference](../ingestion/tasks.md#locking)
 - [Design](../design/architecture.md#availability-and-consistency)
-
-## Materialized view
-
-- [Materialized view](../development/extensions-contrib/materialized-view.md)
 
 ## Moments sketch
 
