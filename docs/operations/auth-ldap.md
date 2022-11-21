@@ -299,7 +299,7 @@ If your LDAP connection isn't working, check the coordinator logs. See [Logging]
 
 ### Check the Druid escalator configuration
 
-If the coordinator is working but the rest of the cluster isn't, check the escalator configuration. See the [Configuration reference](../configurations/index.md) for details. You can also check other service logs to see why the services are unable to fetch authorization details from the coordinator.
+If the coordinator is working but the rest of the cluster isn't, check the escalator configuration. See the [Configuration reference](../configuration/index.md) for details. You can also check other service logs to see why the services are unable to fetch authorization details from the coordinator.
 
 ### Check your LDAP server response time
 
