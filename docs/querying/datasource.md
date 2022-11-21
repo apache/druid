@@ -308,7 +308,7 @@ SQL joins take the form:
 JOIN conditions have the following requirements:
 - You can only use equality statements in JOIN conditions. For example: `t1.x = t2.x`
 - You can use functions on the operands in JOIN conditions. For example: `LOWER(t1.x) = t2.x`
-- You apply multiple equality conditions using the AND operator. For example: `t1.x = t2.x AND t1.y = t2.y`
+- You can apply multiple equality conditions using the AND operator. For example: `t1.x = t2.x AND t1.y = t2.y`
 - Inequality conditions are unsupported. For example: `t1.x <> t2.x`
 - Conditions are optional for CROSS JOIN.
 
