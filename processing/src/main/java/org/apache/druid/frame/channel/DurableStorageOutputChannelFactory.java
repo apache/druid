@@ -163,7 +163,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead) throws IOException
+  public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
   {
     final String fileName = DurableStorageUtils.getOutputsFileNameForPath(
         controllerTaskId,
@@ -205,6 +205,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
         int footerLength = trailer.getInt(Integer.BYTES * 2L);
 
         // read the footer into a file and map it to memory
+        FileUtils.mkdirp(footerFile.getParentFile());
+        Preconditions.checkState(footerFile.createNewFile(), "Unable to create local footer file");
         try (FileOutputStream footerFileStream = new FileOutputStream(footerFile);
             InputStream footerInputStream =
                 storageConnector.readRange(fileName, channelSize - footerLength, footerLength)) {

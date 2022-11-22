@@ -53,7 +53,7 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
   }
 
   @Override
-  public ReadableFrameChannel openChannel(int partitionNumber)
+  public ReadableFrameChannel getReadableFrameChannel(int partitionNumber)
   {
     FrameFileFooter frameFileFooter = frameFileFooterSupplier.get();
     // find the range to read for partition

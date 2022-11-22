@@ -156,7 +156,6 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -279,7 +278,7 @@ public class ControllerImpl implements Controller
     this.task = task;
     this.context = context;
     this.isDurableStageStorageEnabled = MultiStageQueryContext.isDurableShuffleStorageEnabled(
-        QueryContext.of(task.getContext())
+        task.getQuerySpec().getQuery().context()
     );
   }
 

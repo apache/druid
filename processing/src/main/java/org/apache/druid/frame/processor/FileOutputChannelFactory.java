@@ -95,7 +95,7 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead) throws IOException
+  public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
   {
     FileUtils.mkdirp(fileChannelsDirectory);
     final File file = new File(fileChannelsDirectory, name);
@@ -124,7 +124,7 @@ public class FileOutputChannelFactory implements OutputChannelFactory
         () -> new PartitionedReadableFrameChannel()
         {
           @Override
-          public ReadableFrameChannel openChannel(int partitionNumber)
+          public ReadableFrameChannel getReadableFrameChannel(int partitionNumber)
           {
             FrameFile fileHandle = frameFileSupplier.get();
             fileHandle = fileHandle.newReference();

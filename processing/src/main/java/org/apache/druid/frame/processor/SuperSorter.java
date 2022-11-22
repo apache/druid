@@ -512,7 +512,7 @@ public class SuperSorter
                     levelAndRankToReadableChannelMap.remove(levelAndRankKey)
                                                     .getReadableChannelSupplier()
                                                     .get();
-                in.add(partitionedReadableFrameChannel.openChannel(0));
+                in.add(partitionedReadableFrameChannel.getReadableFrameChannel(0));
                 partitionedReadableFrameChannels.add(partitionedReadableFrameChannel);
               }
             }
@@ -569,7 +569,7 @@ public class SuperSorter
           levelAndRankToReadableChannelMap.get(StringUtils.format("merged.%d.%d", inLevel, i))
                                           .getReadableChannelSupplier()
                                           .get()
-                                          .openChannel(ultimateMergersRunSoFar)
+                                          .getReadableFrameChannel(ultimateMergersRunSoFar)
       );
     }
 
@@ -603,7 +603,7 @@ public class SuperSorter
         writableChannel = outputChannel.getWritableChannel();
         frameAllocator = outputChannel.getFrameMemoryAllocator();
       } else {
-        PartitionedOutputChannel partitionedOutputChannel = intermediateOutputChannelFactory.openChannel(
+        PartitionedOutputChannel partitionedOutputChannel = intermediateOutputChannelFactory.openPartitionedChannel(
             levelAndRankKey,
             true
         );

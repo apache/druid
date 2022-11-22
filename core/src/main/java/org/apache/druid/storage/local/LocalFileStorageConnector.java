@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -68,6 +69,19 @@ public class LocalFileStorageConnector implements StorageConnector
   @Override
   public InputStream readRange(String path, long from, long size) throws IOException
   {
+    if (!pathExists(path)) {
+      throw new FileNotFoundException("Unable to find file " + fileWithBasePath(path).toPath() + " for reading");
+    }
+    long length = fileWithBasePath(path).length();
+    if (from < 0 || size < 0 || (from + size) > length) {
+      throw new IAE(
+          "Invalid arguments for reading %s. from = %d, readSize = %d, fileSize = %d",
+          fileWithBasePath(path).toPath(),
+          from,
+          size,
+          length
+      );
+    }
     FileChannel fileChannel = FileChannel.open(fileWithBasePath(path).toPath(), StandardOpenOption.READ);
     return new BoundedInputStream(Channels.newInputStream(fileChannel.position(from)), size);
   }

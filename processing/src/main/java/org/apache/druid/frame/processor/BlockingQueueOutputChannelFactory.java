@@ -47,7 +47,7 @@ public class BlockingQueueOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead)
+  public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead)
   {
     throw new UnsupportedOperationException("Opening in-memory partitioned channels is not supported");
   }

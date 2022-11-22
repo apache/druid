@@ -57,9 +57,9 @@ public class CountingOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead) throws IOException
+  public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
   {
-    final PartitionedOutputChannel baseChannel = baseFactory.openChannel(name, deleteAfterRead);
+    final PartitionedOutputChannel baseChannel = baseFactory.openPartitionedChannel(name, deleteAfterRead);
 
     return baseChannel.mapWritableChannel(
         baseWritableChannel ->
