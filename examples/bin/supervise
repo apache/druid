@@ -56,7 +56,6 @@ sub process_config
     for my $line (@lines)
     {
         if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
-
           my $name = $1;
           my $order = 50;
           my $command = $2;
@@ -209,6 +208,11 @@ if (not defined $opt{'conf'}) {
     @config_lines = split(',', $opt{'array'});
 } else {
     @config_lines = read_config_file($opt{'conf'});
+}
+
+for my $alpha (@config_lines)
+{
+    $alpha =~ s/;/,/g;
 }
 
 my $config = process_config(@config_lines);
