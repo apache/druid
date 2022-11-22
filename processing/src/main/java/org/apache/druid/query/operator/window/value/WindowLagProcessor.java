@@ -2,6 +2,7 @@ package org.apache.druid.query.operator.window.value;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 
@@ -42,5 +43,24 @@ public class WindowLagProcessor extends WindowValueProcessorBase
             return actualCell < 0;
           }
         }));
+  }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    if (otherProcessor instanceof WindowOffsetProcessor) {
+      WindowOffsetProcessor other = (WindowOffsetProcessor) otherProcessor;
+      return offset == other.offset && intervalValidation(other);
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowOffsetProcessor{" +
+           internalToString() +
+           ", offset=" + offset +
+           '}';
   }
 }

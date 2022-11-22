@@ -15,6 +15,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
@@ -102,5 +103,42 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         rowSignature,
         operators
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    WindowOperatorQuery that = (WindowOperatorQuery) o;
+    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
+        operators,
+        that.operators
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), rowSignature, operators);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowOperatorQuery{" +
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", context=" + getContext() +
+           ", rowSignature=" + rowSignature +
+           ", operators=" + operators +
+           '}';
   }
 }

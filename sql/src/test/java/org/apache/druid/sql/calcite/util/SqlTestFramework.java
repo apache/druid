@@ -29,6 +29,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -502,6 +503,7 @@ public class SqlTestFramework
     }
 
     @Provides
+    @LazySingleton
     public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {
       try {

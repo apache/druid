@@ -65,4 +65,22 @@ public class WindowPercentileProcessor implements Processor
 
     return retVal.addColumn(outputColumn, new IntArrayColumn(bucketVals));
   }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    if (otherProcessor instanceof WindowPercentileProcessor) {
+      return numBuckets == ((WindowPercentileProcessor) otherProcessor).numBuckets;
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowPercentileProcessor{" +
+           "numBuckets=" + numBuckets +
+           ", outputColumn='" + outputColumn + '\'' +
+           '}';
+  }
 }

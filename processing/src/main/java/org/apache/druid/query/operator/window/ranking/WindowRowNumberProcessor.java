@@ -93,4 +93,18 @@ public class WindowRowNumberProcessor implements Processor
         )
     );
   }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    return otherProcessor instanceof  WindowRowNumberProcessor;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowRowNumberProcessor{" +
+           "outputColumn='" + outputColumn + '\'' +
+           '}';
+  }
 }

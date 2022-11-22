@@ -139,21 +139,6 @@ import java.util.stream.Collectors;
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testWindow()
-  {
-    testQuery(
-        "SELECT\n"
-        + "FLOOR(__time TO DAY) t,\n"
-        + "SUM(cnt) c,\n"
-        + "SUM(SUM(cnt)) OVER (ORDER BY FLOOR(__time TO DAY)) cc\n"
-        + "FROM foo\n"
-        + "GROUP BY FLOOR(__time TO DAY)",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
-  }
-
-  @Test
   public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries()
   {
     cannotVectorize();

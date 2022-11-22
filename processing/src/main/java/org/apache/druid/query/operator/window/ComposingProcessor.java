@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.util.Arrays;
+
 public class ComposingProcessor implements Processor
 {
   private final Processor[] processors;
@@ -29,5 +31,28 @@ public class ComposingProcessor implements Processor
       retVal = processors[i].process(retVal);
     }
     return retVal;
+  }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    if (otherProcessor instanceof ComposingProcessor) {
+      ComposingProcessor other = (ComposingProcessor) otherProcessor;
+      for (int i = 0; i < processors.length; ++i) {
+        if (! processors[i].validateEquivalent(other.processors[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ComposingProcessor{" +
+           "processors=" + Arrays.toString(processors) +
+           '}';
   }
 }

@@ -14,11 +14,13 @@ import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class WindowAggregateProcessor implements Processor
 {
   @Nullable
-  private static <T> List<T> emptyToNull(List<T> list) {
+  private static <T> List<T> emptyToNull(List<T> list)
+  {
     if (list == null || list.isEmpty()) {
       return null;
     } else {
@@ -33,7 +35,8 @@ public class WindowAggregateProcessor implements Processor
   public WindowAggregateProcessor(
       @JsonProperty("aggregations") List<AggregatorFactory> aggregations,
       @JsonProperty("cumulativeAggregations") List<AggregatorFactory> cumulativeAggregations
-  ) {
+  )
+  {
     this.aggregations = emptyToNull(aggregations);
     this.cumulativeAggregations = emptyToNull(cumulativeAggregations);
   }
@@ -51,7 +54,8 @@ public class WindowAggregateProcessor implements Processor
   }
 
   @Override
-  public RowsAndColumns process(RowsAndColumns inputPartition) {
+  public RowsAndColumns process(RowsAndColumns inputPartition)
+  {
     AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(inputPartition);
 
     if (aggregations != null) {
@@ -84,5 +88,25 @@ public class WindowAggregateProcessor implements Processor
     }
 
     return retVal;
+  }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    if (otherProcessor instanceof WindowAggregateProcessor) {
+      WindowAggregateProcessor other = (WindowAggregateProcessor) otherProcessor;
+      return Objects.equals(aggregations, other.aggregations)
+             && Objects.equals(cumulativeAggregations, other.cumulativeAggregations);
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowAggregateProcessor{" +
+           "aggregations=" + aggregations +
+           ", cumulativeAggregations=" + cumulativeAggregations +
+           '}';
   }
 }

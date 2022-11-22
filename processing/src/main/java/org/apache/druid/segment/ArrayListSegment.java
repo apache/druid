@@ -28,7 +28,6 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.ObjectColumnAccessorBase;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -145,7 +144,7 @@ public class ArrayListSegment<RowType> implements Segment
         final Function<RowType, Object> adapterForValue = rowAdapter.columnFunction(name);
         final Optional<ColumnType> maybeColumnType = rowSignature.getColumnType(name);
         final ColumnType columnType = maybeColumnType.orElse(ColumnType.UNKNOWN_COMPLEX);
-        final TypeStrategy<Object> comparator = columnType.getStrategy();
+        final Comparator<Object> comparator = Comparator.nullsFirst(columnType.getStrategy());
 
         return new Column()
         {

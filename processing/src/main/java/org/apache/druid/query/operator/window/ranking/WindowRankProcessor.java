@@ -2,6 +2,7 @@ package org.apache.druid.query.operator.window.ranking;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
@@ -59,5 +60,24 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
 
       return new IntArrayColumn(ranks);
     });
+  }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    if (otherProcessor instanceof WindowRankProcessor) {
+      WindowRankProcessor other = (WindowRankProcessor) otherProcessor;
+      return asPercent == other.asPercent && intervalValidation(other);
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowRankProcessor{" +
+           internalToString() +
+           ", asPercent=" + asPercent +
+           '}';
   }
 }

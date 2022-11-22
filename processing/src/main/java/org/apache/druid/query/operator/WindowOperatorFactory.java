@@ -29,4 +29,21 @@ public class WindowOperatorFactory implements OperatorFactory
   {
     return new WindowProcessorOperator(processor, op);
   }
+
+  @Override
+  public boolean validateEquivalent(OperatorFactory other)
+  {
+    if (other instanceof WindowOperatorFactory) {
+      return processor.validateEquivalent(((WindowOperatorFactory) other).getProcessor());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowOperatorFactory{" +
+           "processor=" + processor +
+           '}';
+  }
 }

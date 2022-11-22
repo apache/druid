@@ -11,4 +11,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface OperatorFactory
 {
   Operator wrap(Operator op);
+
+  boolean validateEquivalent(OperatorFactory other);
 }
