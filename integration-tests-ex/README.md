@@ -71,7 +71,7 @@ Start the cluster:
 
 ```bash
 cd $DRUID_DEV/integration-tests-ex/cases
-./cluster.sh <category> up
+./cluster.sh up <category>
 ```
 
 Where `<category>` is one of the test categories. Then launch the
