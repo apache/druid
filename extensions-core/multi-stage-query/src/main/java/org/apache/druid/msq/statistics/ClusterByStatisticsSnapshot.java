@@ -23,22 +23,23 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.RowKey;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 public class ClusterByStatisticsSnapshot
 {
-  private final List<Bucket> buckets;
+  private final Map<Long, Bucket> buckets;
   private final Set<Integer> hasMultipleValues;
 
   @JsonCreator
   ClusterByStatisticsSnapshot(
-      @JsonProperty("buckets") final List<Bucket> buckets,
+      @JsonProperty("buckets") final Map<Long, Bucket> buckets,
       @JsonProperty("hasMultipleValues") @Nullable final Set<Integer> hasMultipleValues
   )
   {
@@ -48,13 +49,19 @@ public class ClusterByStatisticsSnapshot
 
   public static ClusterByStatisticsSnapshot empty()
   {
-    return new ClusterByStatisticsSnapshot(Collections.emptyList(), null);
+    return new ClusterByStatisticsSnapshot(Collections.emptyMap(), null);
   }
 
   @JsonProperty("buckets")
-  List<Bucket> getBuckets()
+  Map<Long, Bucket> getBuckets()
   {
     return buckets;
+  }
+
+  public ClusterByStatisticsSnapshot getSnapshotForTimeChunk(long timeChunk)
+  {
+    Bucket bucket = buckets.get(timeChunk);
+    return new ClusterByStatisticsSnapshot(ImmutableMap.of(timeChunk, bucket), null);
   }
 
   @JsonProperty("hasMultipleValues")
@@ -62,6 +69,15 @@ public class ClusterByStatisticsSnapshot
   Set<Integer> getHasMultipleValues()
   {
     return hasMultipleValues;
+  }
+
+  public PartialKeyStatisticsInformation partialKeyStatistics()
+  {
+    double bytesRetained = 0;
+    for (ClusterByStatisticsSnapshot.Bucket bucket : buckets.values()) {
+      bytesRetained += bucket.bytesRetained;
+    }
+    return new PartialKeyStatisticsInformation(buckets.keySet(), !getHasMultipleValues().isEmpty(), bytesRetained);
   }
 
   @Override
@@ -86,16 +102,19 @@ public class ClusterByStatisticsSnapshot
   static class Bucket
   {
     private final RowKey bucketKey;
+    private final double bytesRetained;
     private final KeyCollectorSnapshot keyCollectorSnapshot;
 
     @JsonCreator
     Bucket(
         @JsonProperty("bucketKey") RowKey bucketKey,
-        @JsonProperty("data") KeyCollectorSnapshot keyCollectorSnapshot
+        @JsonProperty("data") KeyCollectorSnapshot keyCollectorSnapshot,
+        @JsonProperty("bytesRetained") double bytesRetained
     )
     {
       this.bucketKey = Preconditions.checkNotNull(bucketKey, "bucketKey");
       this.keyCollectorSnapshot = Preconditions.checkNotNull(keyCollectorSnapshot, "data");
+      this.bytesRetained = bytesRetained;
     }
 
     @JsonProperty
