@@ -230,23 +230,6 @@ def should_compute_memory(config_path, total_memory, service_list):
 
     return jvm_config_count == 0
 
-def check_memory_constraint(total_memory, service_list):
-    # sum of lower bound service memory should be >= 80% of total memory
-    lower_bound_memory = 0
-
-    for service in service_list:
-        lower_bound_memory += SERVICE_MEMORY_LOWER_BOUND.get(service)
-
-    required_memory = int(lower_bound_memory / 0.8)
-
-    if total_memory < required_memory:
-        error_and_exit(f'Minimum memory required for starting services is {required_memory}m')
-
-    if total_memory >= 2 * required_memory:
-        return int(total_memory / 2)
-    else:
-        return required_memory
-
 def compute_system_memory():
     system_memory = psutil.virtual_memory().total # mem in bytes
     memory_for_druid = int(system_memory / (1024 * 1024))
@@ -262,6 +245,23 @@ def convert_total_memory_string(memory):
         return 1024 * int(memory[:-1])
     else:
         error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
+
+def check_memory_constraint(total_memory, service_list):
+    # 80% of total memory >= sum of lower bound service memory should be
+    lower_bound_memory = 0
+
+    for service in service_list:
+        lower_bound_memory += SERVICE_MEMORY_LOWER_BOUND.get(service)
+
+    required_memory = int(lower_bound_memory / 0.8)
+
+    if total_memory < required_memory:
+        error_and_exit(f'Minimum memory required for starting services is {required_memory}m')
+
+    if total_memory >= 2 * lower_bound_memory:
+        return int(total_memory / 2)
+    else:
+        return lower_bound_memory
 
 def build_mm_task_javaopts_array(memory_type):
     task_memory = f'{MM_TASK_JAVAOPTS_PROP}=['
