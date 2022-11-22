@@ -17,20 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.msq.statistics;
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+package org.apache.druid.msq.exec;
 
 /**
- * Marker interface for deserialization.
+ * Mode which dictates how {@link WorkerSketchFetcher} gets sketches for the partition boundaries from workers.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "collectorType")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DelegateOrMinKeyCollectorSnapshot.TYPE, value = DelegateOrMinKeyCollectorSnapshot.class),
-    @JsonSubTypes.Type(name = QuantilesSketchKeyCollectorSnapshot.TYPE, value = QuantilesSketchKeyCollectorSnapshot.class),
-    @JsonSubTypes.Type(name = DistinctKeySnapshot.TYPE, value = DistinctKeySnapshot.class),
-})
-public interface KeyCollectorSnapshot
+public enum ClusterStatisticsMergeMode
 {
+  /**
+   * Fetches sketch in sequential order based on time. Slower due to overhead, but more accurate.
+   */
+  SEQUENTIAL,
+
+  /**
+   * Fetch all sketches from the worker at once. Faster to generate partitions, but less accurate.
+   */
+  PARALLEL,
+
+  /**
+   * Tries to decide between sequential and parallel modes based on the number of workers and size of the input
+   *
+   * If there are more than 100 workers or if the combined sketch size among all workers is more than
+   * 1,000,000,000 bytes, SEQUENTIAL mode is chosen, otherwise, PARALLEL mode is chosen.
+   */
+  AUTO
 }
