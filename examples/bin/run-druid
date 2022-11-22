@@ -78,12 +78,11 @@ then
       -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
   else
     # args: <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
-    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4"-Ddruid.log.path=$LOG_DIR"  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005  $JVMARGS \
+    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4"-Ddruid.log.path=$LOG_DIR"  $JVMARGS \
       -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
   fi
 else
   # args: <service> <conf_path>
-  echo "case parameters count 2, $#"
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
     -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
     $MAIN_CLASS
