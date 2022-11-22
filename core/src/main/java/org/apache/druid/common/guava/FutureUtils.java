@@ -19,14 +19,18 @@
 
 package org.apache.druid.common.guava;
 
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
@@ -104,6 +108,57 @@ public class FutureUtils
   public static <T, R> ListenableFuture<R> transform(final ListenableFuture<T> future, final Function<T, R> fn)
   {
     return Futures.transform(future, fn::apply);
+  }
+
+  /**
+   * Like {@link Futures#transform(ListenableFuture, AsyncFunction)}, but works better with lambdas due to not having
+   * overloads.
+   *
+   * One can write {@code FutureUtils.transformAsync(future, v -> ...)} instead of
+   * {@code Futures.transform(future, (Function<? super T, ?>) v -> ...)}
+   */
+  public static <T, R> ListenableFuture<R> transformAsync(final ListenableFuture<T> future, final AsyncFunction<T, R> fn)
+  {
+    return Futures.transform(future, fn);
+  }
+
+  /**
+   * Like {@link Futures#successfulAsList}, but returns {@link Either} instead of using {@code null} in case of error.
+   */
+  public static <T> ListenableFuture<List<Either<Throwable, T>>> coalesce(final List<ListenableFuture<T>> futures)
+  {
+    return transform(
+        Futures.successfulAsList(futures),
+        values -> {
+          final List<Either<Throwable, T>> eithers = new ArrayList<>();
+
+          for (int i = 0; i < values.size(); i++) {
+            final ListenableFuture<T> future = futures.get(i);
+            final T value = values.get(i);
+
+            if (value != null) {
+              eithers.add(Either.value(value));
+            } else {
+              try {
+                future.get();
+              }
+              catch (ExecutionException e) {
+                eithers.add(Either.error(e.getCause()));
+                continue;
+              }
+              catch (Throwable e) {
+                eithers.add(Either.error(e));
+                continue;
+              }
+
+              // No exception: value must really have been null.
+              eithers.add(Either.value(null));
+            }
+          }
+
+          return eithers;
+        }
+    );
   }
 
   /**
