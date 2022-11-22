@@ -35,7 +35,7 @@ MM_TASK_MEMORY_TYPE_LOW = "low"
 MM_TASK_MEMORY_TYPE_HIGH = "high"
 MM_TASK_MEM_MAP = {
     MM_TASK_MEMORY_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256g"],
-    MM_TASK_MEMORY_TYPE_HIGH: ["-Xms2g", "-Xmx2g", "-XX:MaxDirectMemorySize=2g"]
+    MM_TASK_MEMORY_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
 }
 
 MM_TASK_JAVAOPTS_PROP = "-Ddruid.indexer.runner.javaOptsArray"
@@ -242,7 +242,7 @@ def check_memory_constraint(total_memory, service_list):
     if total_memory < required_memory:
         error_and_exit(f'Minimum memory required for starting services is {required_memory}m')
 
-    if total_memory > 2 * required_memory:
+    if total_memory >= 2 * required_memory:
         return int(total_memory / 2)
     else:
         return required_memory
@@ -271,7 +271,7 @@ def build_mm_task_javaopts_array(memory_type):
     javaopts_list = MM_TASK_JAVAOPTS_ARRAY + MEM_ARRAY
 
     for item in javaopts_list:
-        task_memory += f'"\"{item}\";'
+        task_memory += f'\"{item}\";'
 
     task_memory = task_memory[:-1]
     task_memory += ']'
