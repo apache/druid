@@ -152,7 +152,7 @@
     "file-loader": "^6.2.0",
     "fs-extra": "^8.1.0",
     "identity-obj-proxy": "^3.0.0",
-    "jest": "^27.5.1",
+    "jest": "^27.5.0",
     "license-checker": "^25.0.1",
     "node-sass": "^6.0.1",
     "playwright-chromium": "^1.24.1",
