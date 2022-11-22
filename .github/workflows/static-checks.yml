@@ -176,7 +176,7 @@ jobs:
         java: [ '8', '11', '17' ]
     steps:
       - uses: actions/checkout@v3
-      - name: setup java 8
+      - name: setup java ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
