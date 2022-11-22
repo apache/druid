@@ -182,6 +182,7 @@ public class SuperSorterTest
     private final int maxActiveProcessors;
     private final int maxChannelsPerProcessor;
     private final int numThreads;
+    private final boolean isDurableStorage;
 
     private StorageAdapter adapter;
     private RowSignature signature;
@@ -195,7 +196,8 @@ public class SuperSorterTest
         int numChannels,
         int maxActiveProcessors,
         int maxChannelsPerProcessor,
-        int numThreads
+        int numThreads,
+        boolean isDurableStorage
     )
     {
       this.maxRowsPerFrame = maxRowsPerFrame;
@@ -204,6 +206,7 @@ public class SuperSorterTest
       this.maxActiveProcessors = maxActiveProcessors;
       this.maxChannelsPerProcessor = maxChannelsPerProcessor;
       this.numThreads = numThreads;
+      this.isDurableStorage = isDurableStorage;
     }
 
     @Parameterized.Parameters(
@@ -212,7 +215,8 @@ public class SuperSorterTest
                + "numChannels = {2}, "
                + "maxActiveProcessors = {3}, "
                + "maxChannelsPerProcessor = {4}, "
-               + "numThreads = {5}"
+               + "numThreads = {5}, "
+               + "isDurableStorage = {6}"
     )
     public static Iterable<Object[]> constructorFeeder()
     {
@@ -224,17 +228,20 @@ public class SuperSorterTest
             for (int maxActiveProcessors : new int[]{1, 2, 4}) {
               for (int maxChannelsPerProcessor : new int[]{2, 3, 8}) {
                 for (int numThreads : new int[]{1, 3}) {
-                  if (maxActiveProcessors >= maxChannelsPerProcessor) {
-                    constructors.add(
-                        new Object[]{
-                            maxRowsPerFrame,
-                            maxBytesPerFrame,
-                            numChannels,
-                            maxActiveProcessors,
-                            maxChannelsPerProcessor,
-                            numThreads
-                        }
-                    );
+                  for (boolean isDurableStorage : new boolean[]{true, false}) {
+                    if (maxActiveProcessors >= maxChannelsPerProcessor) {
+                      constructors.add(
+                          new Object[]{
+                              maxRowsPerFrame,
+                              maxBytesPerFrame,
+                              numChannels,
+                              maxActiveProcessors,
+                              maxChannelsPerProcessor,
+                              numThreads,
+                              isDurableStorage
+                          }
+                      );
+                    }
                   }
                 }
               }
@@ -292,16 +299,24 @@ public class SuperSorterTest
 
     private OutputChannels verifySuperSorter(
         final ClusterBy clusterBy,
-        final ClusterByPartitions clusterByPartitions,
-        boolean isDurableStorage
+        final ClusterByPartitions clusterByPartitions
     ) throws Exception
     {
+      final File tempFolder = temporaryFolder.newFolder();
+      final OutputChannelFactory outputChannelFactory = isDurableStorage ? new DurableStorageOutputChannelFactory(
+          "0",
+          0,
+          0,
+          "0",
+          maxBytesPerFrame,
+          new LocalFileStorageConnector(tempFolder),
+          tempFolder
+      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame);
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator();
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
-      File tempFolder = temporaryFolder.newFolder();
       final SuperSorter superSorter = new SuperSorter(
           inputChannels,
           frameReader,
@@ -309,15 +324,7 @@ public class SuperSorterTest
           clusterByPartitionsFuture,
           exec,
           new FileOutputChannelFactory(tempFolder, maxBytesPerFrame),
-          isDurableStorage ? new DurableStorageOutputChannelFactory(
-              "0",
-              0,
-              0,
-              "0",
-              maxBytesPerFrame,
-              new LocalFileStorageConnector(tempFolder),
-              tempFolder
-          ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame),
+          outputChannelFactory,
           maxActiveProcessors,
           maxChannelsPerProcessor,
           -1,
@@ -417,7 +424,7 @@ public class SuperSorterTest
       );
 
       setUpInputChannels(clusterBy);
-      verifySuperSorter(clusterBy, ClusterByPartitions.oneUniversalPartition(), false);
+      verifySuperSorter(clusterBy, ClusterByPartitions.oneUniversalPartition());
     }
 
     @Test
@@ -441,8 +448,7 @@ public class SuperSorterTest
                   new ClusterByPartition(null, zeroZero), // empty partition
                   new ClusterByPartition(zeroZero, null) // all data goes in here
               )
-          ),
-          false
+          )
       );
 
       // Verify that one of the partitions is actually empty.
@@ -504,7 +510,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions, false);
+      verifySuperSorter(clusterBy, partitions);
     }
 
     @Test
@@ -544,7 +550,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions, false);
+      verifySuperSorter(clusterBy, partitions);
     }
 
     @Test
@@ -583,7 +589,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions, false);
+      verifySuperSorter(clusterBy, partitions);
     }
 
     @Test
@@ -622,7 +628,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions, false);
+      verifySuperSorter(clusterBy, partitions);
     }
 
     @Test
@@ -661,7 +667,7 @@ public class SuperSorterTest
 
       Assert.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions, true);
+      verifySuperSorter(clusterBy, partitions);
     }
 
     private RowKey createKey(final ClusterBy clusterBy, final Object... objects)

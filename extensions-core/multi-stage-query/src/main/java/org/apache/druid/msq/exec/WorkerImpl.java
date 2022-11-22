@@ -160,7 +160,6 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final boolean durableStageStorageEnabled;
-  private final boolean durableTaskIntermediateStorageEnabled;
 
   /**
    * Set once in {@link #runTask} and never reassigned.
@@ -185,9 +184,6 @@ public class WorkerImpl implements Worker
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableShuffleStorageEnabled(
-        QueryContext.of(task.getContext())
-    );
-    this.durableTaskIntermediateStorageEnabled = MultiStageQueryContext.isDurableTaskIntermediateStorageEnabled(
         QueryContext.of(task.getContext())
     );
   }
@@ -634,7 +630,7 @@ public class WorkerImpl implements Worker
   {
     final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
 
-    if (durableTaskIntermediateStorageEnabled) {
+    if (durableStageStorageEnabled) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),

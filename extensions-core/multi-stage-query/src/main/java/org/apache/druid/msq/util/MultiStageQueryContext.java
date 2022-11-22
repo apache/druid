@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -61,9 +60,6 @@ public class MultiStageQueryContext
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
-  public static final String CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE = "durableTaskIntermediateStorage";
-  private static final boolean DEFAULT_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE = false;
-
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
 
@@ -95,22 +91,6 @@ public class MultiStageQueryContext
         CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
         DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
     );
-  }
-
-  public static boolean isDurableTaskIntermediateStorageEnabled(final QueryContext queryContext)
-  {
-    boolean intermediateStorageEnabled = queryContext.getBoolean(
-        CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE,
-        DEFAULT_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE
-    );
-    if (!isDurableShuffleStorageEnabled(queryContext) && intermediateStorageEnabled) {
-      throw new IAE(
-          "Cannot enable the feature %s without enabling %s",
-          CTX_ENABLE_DURABLE_TASK_INTERMEDIATE_STORAGE,
-          CTX_ENABLE_DURABLE_SHUFFLE_STORAGE
-      );
-    }
-    return intermediateStorageEnabled;
   }
 
   public static boolean isFinalizeAggregations(final QueryContext queryContext)
