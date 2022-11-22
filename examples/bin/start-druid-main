@@ -178,7 +178,7 @@ def parse_arguments(args):
     if args.run_zk:
         run_zk = True
     if args.config_path is not None:
-        config_path = os.path.join(os.getcwd(), args.config_path)
+        config_path = pathlib.Path(os.path.join(os.getcwd(), args.config_path)).resolve()
         if os.path.exists(config_path) is False:
             error_and_exit(f'config_path {config_path} doesn\'t exist')
     if args.memory is not None:
