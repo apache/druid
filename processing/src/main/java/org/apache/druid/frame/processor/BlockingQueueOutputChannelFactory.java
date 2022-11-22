@@ -22,8 +22,6 @@ package org.apache.druid.frame.processor;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 
-import java.io.IOException;
-
 /**
  * An {@link OutputChannelFactory} that generates {@link BlockingQueueFrameChannel}.
  */
@@ -49,7 +47,7 @@ public class BlockingQueueOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead) throws IOException
+  public PartitionedOutputChannel openChannel(String name, boolean deleteAfterRead)
   {
     throw new UnsupportedOperationException("Opening in-memory partitioned channels is not supported");
   }

@@ -133,7 +133,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
    * Given an input worker number, stage number and the partition number, this method figures out the exact location
    * where the outputs would be present in the durable storage and returns the complete path or throws an exception
    * if no such file exists in the durable storage
-   * More information at {@link DurableStorageOutputChannelFactory#createSuccessFile(String)}
+   * More information at {@link org.apache.druid.frame.channel.DurableStorageOutputChannelFactory#createSuccessFile(String)}
    */
   public String findSuccessfulPartitionOutput(
       final String controllerTaskId,

@@ -80,7 +80,7 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     try {
       storageConnector.deleteFile(frameFileFullPath);

@@ -156,6 +156,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -268,6 +269,7 @@ public class ControllerImpl implements Controller
   private volatile WorkerClient netClient;
 
   private volatile FaultsExceededChecker faultsExceededChecker = null;
+  private final boolean isDurableStageStorageEnabled;
 
   public ControllerImpl(
       final MSQControllerTask task,
@@ -276,6 +278,9 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
+    this.isDurableStageStorageEnabled = MultiStageQueryContext.isDurableShuffleStorageEnabled(
+        QueryContext.of(task.getContext())
+    );
   }
 
   @Override
@@ -521,9 +526,6 @@ public class ControllerImpl implements Controller
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
     closer.register(netClient::close);
 
-    final boolean isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context());
-
     final QueryDefinition queryDef = makeQueryDefinition(
         id(),
         makeQueryControllerToolKit(),
@@ -534,7 +536,7 @@ public class ControllerImpl implements Controller
     QueryValidator.validateQueryDef(queryDef);
     queryDefRef.set(queryDef);
 
-    log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
+    log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStageStorageEnabled);
 
 
     long maxParseExceptions = -1;
@@ -551,7 +553,7 @@ public class ControllerImpl implements Controller
         id(),
         task.getDataSource(),
         context,
-        isDurableStorageEnabled,
+        isDurableStageStorageEnabled,
         maxParseExceptions,
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
@@ -1187,7 +1189,7 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context())) {
+      if (isDurableStageStorageEnabled) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             id(),
             MSQTasks.makeStorageConnector(context.injector()),
@@ -1289,7 +1291,7 @@ public class ControllerImpl implements Controller
    */
   private void cleanUpDurableStorageIfNeeded()
   {
-    if (MultiStageQueryContext.isDurableShuffleStorageEnabled(task.getQuerySpec().getQuery().context())) {
+    if (isDurableStageStorageEnabled) {
       final String controllerDirName = DurableStorageUtils.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe

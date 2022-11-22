@@ -50,7 +50,8 @@ public class CountingOutputChannelFactory implements OutputChannelFactory
         baseWritableChannel ->
             new CountingWritableFrameChannel(
                 baseChannel.getWritableChannel(),
-                channelCounters
+                channelCounters,
+                partitionNumber
             )
     );
   }
@@ -64,7 +65,8 @@ public class CountingOutputChannelFactory implements OutputChannelFactory
         baseWritableChannel ->
             new CountingWritableFrameChannel(
                 baseChannel.getWritableChannel(),
-                channelCounters
+                channelCounters,
+                null
             )
     );
   }
