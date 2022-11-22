@@ -38,102 +38,102 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: checkout branch
+        uses: actions/checkout@v3
+
       - name: setup java 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '8'
           cache: 'maven'
-      - run: |
+
+      - name: maven install
+        run: |
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
-  animal_sniffer_checks:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
+      - name: setup node
+        uses: actions/setup-node@v3
         with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: ${MVN} animal-sniffer:check --fail-at-end
+          node-version: 16.17.0
 
-  checkstyle:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: ${MVN} checkstyle:checkstyle --fail-at-end
+      - name: docs
+        run: |
+          (cd website && npm install)
+          cd website
+          npm run link-lint
+          npm run spellcheck
 
-  enforcer_checks:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: ${MVN} enforcer:enforce --fail-at-end
+      - name: web console
+        run: |
+          ${MVN} test -pl 'web-console'
+          cd web-console
+          { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
-  forbidden_api_checks:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+      - name: web console end-to-end test
+        run: |
+          ./.github/scripts/setup_generate_license.sh
+          sudo apt-get update && sudo apt-get install python3 -y
+          curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+          pip3 install wheel  # install wheel first explicitly
+          pip3 install --upgrade pyyaml
+          web-console/script/druid build
+          web-console/script/druid start
+          (cd web-console && npm run test-e2e)
+          web-console/script/druid stop
 
-  pmd_checks:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
+      - name: animal sniffer checks
+        run: ${MVN} animal-sniffer:check --fail-at-end
 
-  spotbugs_checks:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
+      - name: checkstyle
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
+      - name: enforcer checks
+        run: ${MVN} enforcer:enforce --fail-at-end
+
+      - name: forbidden api checks
+        run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+
+      - name: pmd checks
+        run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
+
+      - name: spotbugs checks
+        run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
+      - name: script checks
+        # who watches the watchers?
+        run: ./check_test_suite_test.py
+
+      - name: intellij inspections
+        run: |
+          docker run --rm \
+          -v $(pwd):/project \
+          -v ~/.m2:/home/inspect/.m2 \
+          ccaominh/intellij-inspect:1.0.0 \
+          /project/pom.xml \
+          /project/.idea/inspectionProfiles/Druid.xml \
+          --levels ERROR \
+          --scope JavaInspectionsScope
+
+      - name: setup java 11
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: '11'
           cache: 'maven'
-      - run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
+      - name: (openjdk11) strict compilation
+        # errorprone requires JDK 11
+        # Strict compilation requires more than 2 GB
+        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
   license_checks:
     runs-on: ubuntu-latest
-    needs: [build]
     strategy:
       matrix:
-        HADOOP_PROFILE: ['', '-Phadoop3']
+        HADOOP_PROFILE: [ '', '-Phadoop3' ]
     steps:
       - uses: actions/checkout@v3
       - name: setup java 8
@@ -146,22 +146,14 @@ jobs:
           ./.github/scripts/setup_generate_license.sh
           ${MVN} apache-rat:check -Prat --fail-at-end \
           -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-          -Drat.consoleOutput=true ${{ matrix.HADOOP_PROFILE }}
+          -Drat.consoleOutput=true
           # Generate dependency reports and checks they are valid.
           mkdir -p target
           distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
           distribution/bin/check-licenses.py licenses.yaml target/license-reports
 
-  script_checks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        # who watches the watchers?
-      - run: ./check_test_suite_test.py
-
   analyze_dependencies:
     runs-on: ubuntu-latest
-    needs: [build]
     strategy:
       matrix:
         HADOOP_PROFILE: [ '', '-Phadoop3' ]
@@ -173,22 +165,28 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
           cache: 'maven'
-      - run: |-
+      - run: |
           ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${{ matrix.HADOOP_PROFILE }} ||
           ./.github/scripts/display_dependency_analysis_error_message.sh
 
-  openjdk11_strict_compilation:
+  packaging_check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '8', '11', '17' ]
     steps:
       - uses: actions/checkout@v3
-      - name: setup java 11
+      - name: setup java 8
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: ${{ matrix.java }}
           cache: 'maven'
-
-        # errorprone requires JDK 11
-        # Strict compilation requires more than 2 GB
       - run: |
-          ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+          ./.github/scripts/setup_generate_license.sh
+          sudo apt-get update && sudo apt-get install python3 -y
+          curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+          pip3 install wheel  # install wheel first explicitly
+          pip3 install --upgrade pyyaml
+          ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+          -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
