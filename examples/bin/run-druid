@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ "$#" -gt 5 ] || [ "$#" -eq 0 ]
+if [ "$#" -gt 4 ] || [ "$#" -eq 0 ]
 then
   >&2 echo "usage: $0 <service> [conf-dir]"
   exit 1
@@ -64,28 +64,26 @@ fi
 
 cd "$WHEREAMI/.."
 
-if [ "$#" -eq 3 ] || [ "$#" -eq 5 ]
+if [ "$#" -eq 3 ] || [ "$#" -eq 4 ]
 then
-  # args: <service> <conf_path> <jvm_args> or <service> <conf_path> <jvm_args> <mm_task_count> <mm_task_java_props>
+  # args: <service> <conf_path> <jvm_args> or <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
   JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
   JVMARGS+=' '
   JVMARGS+=$3
 
   if [ "$#" -eq 3 ]
   then
-    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $3 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
+    # args: <service> <conf_path> <jvm_args>
+    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
       -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
   else
-    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $3 "-Ddruid.log.path=$LOG_DIR" $4 $5  $JVMARGS \
+    # args: <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
+    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4"-Ddruid.log.path=$LOG_DIR"  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005  $JVMARGS \
       -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
   fi
-elif [ "$#" -eq 4 ]
-then
-  # args: <service> <conf_path> <mm_task_count> <mm_task_java_props>
-  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $3 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
 else
   # args: <service> <conf_path>
+  echo "case parameters count 2, $#"
   exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
     -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
     $MAIN_CLASS

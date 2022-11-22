@@ -158,7 +158,7 @@ sample usage:
     parser.add_argument('--run_zk',  action='store_true',
                         help='Specification to run zookeeper, \n'
                              'zk config is picked up from conf/zk.')
-    parser.add_argument('--verbose', action='store_true', help='Log details.')
+    parser.add_argument('--verbose', action='store_true', help='Log details')
 
     parser.set_defaults(run_zk=False)
     parser.set_defaults(compute_only=False)
@@ -214,7 +214,6 @@ def should_compute_memory(config_path, total_memory, service_list):
     # if jvm file is present for any of the services
     # it should be present for all services and memory should not be specified
     # if memory is given, jvm file shouldn't be present for any service
-
     jvm_config_count = 0
     for service in service_list:
         if pathlib.Path(f'{config_path}/{service}/jvm.config').is_file():
@@ -236,14 +235,17 @@ def compute_system_memory():
     return memory_for_druid
 
 def convert_total_memory_string(memory):
-    if memory == "":
-        computed_memory = compute_system_memory()
-        return computed_memory
-    elif memory.endswith(MEMORY_MEGABYTES_IDENTIFIER):
-        return int(memory[:-1])
-    elif memory.endswith(MEMORY_GIGABYTES_IDENTIFIER):
-        return 1024 * int(memory[:-1])
-    else:
+    try:
+        if memory == "":
+            computed_memory = compute_system_memory()
+            return computed_memory
+        elif memory.endswith(MEMORY_MEGABYTES_IDENTIFIER):
+            return int(memory[:-1])
+        elif memory.endswith(MEMORY_GIGABYTES_IDENTIFIER):
+            return 1024 * int(memory[:-1])
+        else:
+            error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
+    except Exception:
         error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
 def check_memory_constraint(total_memory, service_list):
@@ -301,10 +303,15 @@ def build_memory_config_string(service, allocated_memory):
 
         return f'-Xms{heap_memory}m -Xmx{heap_memory}m -XX:MaxDirectMemorySize={direct_memory}m', allocated_memory
 
-def distribute_memory_over_services(service_list, total_memory):
+def distribute_memory_over_services(services, total_memory):
     service_memory_config = {}
 
     memory_weight_sum = 0
+
+    service_list = services.copy()
+    if MM in services:
+        service_list.append(MM_TASK)
+
     for service in service_list:
         memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service)
 
@@ -361,28 +368,21 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
         commands.append("!p10 zk bin/run-zk conf")
 
     for service in service_list:
-        if service == MM_TASK:
-            continue
+        jvm_args = service_memory_config.get(service)
 
         prefix = ''
         if service == MM:
             prefix = '!p90 '
 
-        jvm_args = service_memory_config.get(service)
-
-        if service == MM:
-            task_config = service_memory_config.get(MM_TASK)
-            task_count = task_config[0]
-            task_memory = task_config[1]
-            if jvm_args is None:
-                commands.append(
-                    f'{prefix}{service} bin/run-druid {service} {config_path} \'{task_count}\' \'{task_memory}\'')
-            else:
-                commands.append(
-                    f'{prefix}{service} bin/run-druid {service} {config_path} \'{task_count}\' \'{task_memory}\' \'{jvm_args}\'')
+        if jvm_args is None:
+            commands.append(f'{prefix}{service} bin/run-druid {service} {config_path}')
         else:
-            if jvm_args is None:
-                commands.append(f'{prefix}{service} bin/run-druid {service} {config_path}')
+            if service == MM:
+                task_config = service_memory_config.get(MM_TASK)
+                task_count = task_config[0]
+                task_memory = task_config[1]
+                commands.append(
+                    f'{prefix}{service} bin/run-druid {service} {config_path} \'{jvm_args}\' \'{task_count} {task_memory}\'')
             else:
                 commands.append(f'{prefix}{service} bin/run-druid {service} {config_path} \'{jvm_args}\'')
 
@@ -400,7 +400,7 @@ def main():
     args = parser.parse_args()
 
     global LOGGING_ENABLED
-    LOGGING_ENABLED = args.verbose
+    LOGGING_ENABLED = args.verbose or args.compute_only
 
     config_path, total_memory, service_list, run_zk, compute_only = parse_arguments(args)
 
@@ -413,9 +413,6 @@ def main():
     print_startup_config(service_list, config_path, run_zk)
 
     service_memory_config = {}
-
-    if MM in service_list:
-        service_list.append(MM_TASK)
 
     if (should_compute_memory(config_path, total_memory, service_list)):
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
