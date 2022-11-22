@@ -13,7 +13,7 @@
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
-      "tutorials/tutorial-sketches-theta",      
+      "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
@@ -22,7 +22,8 @@
       "tutorials/tutorial-transform-spec",
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-convert-spec"
+      "tutorials/tutorial-msq-convert-spec",
+      "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
