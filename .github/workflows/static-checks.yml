@@ -54,36 +54,6 @@ jobs:
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.17.0
-
-      - name: docs
-        run: |
-          (cd website && npm install)
-          cd website
-          npm run link-lint
-          npm run spellcheck
-
-      - name: web console
-        run: |
-          ${MVN} test -pl 'web-console'
-          cd web-console
-          { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
-
-      - name: web console end-to-end test
-        run: |
-          ./.github/scripts/setup_generate_license.sh
-          sudo apt-get update && sudo apt-get install python3 -y
-          curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
-          pip3 install wheel  # install wheel first explicitly
-          pip3 install --upgrade pyyaml
-          web-console/script/druid build
-          web-console/script/druid start
-          (cd web-console && npm run test-e2e)
-          web-console/script/druid stop
-
       - name: animal sniffer checks
         run: ${MVN} animal-sniffer:check --fail-at-end
 
@@ -116,6 +86,36 @@ jobs:
           /project/.idea/inspectionProfiles/Druid.xml \
           --levels ERROR \
           --scope JavaInspectionsScope
+
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.17.0
+
+      - name: docs
+        run: |
+          (cd website && npm install)
+          cd website
+          npm run link-lint
+          npm run spellcheck
+
+      - name: web console
+        run: |
+          ${MVN} test -pl 'web-console'
+          cd web-console
+          { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
+
+      - name: web console end-to-end test
+        run: |
+          ./.github/scripts/setup_generate_license.sh
+          sudo apt-get update && sudo apt-get install python3 -y
+          curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+          pip3 install wheel  # install wheel first explicitly
+          pip3 install --upgrade pyyaml
+          web-console/script/druid build
+          web-console/script/druid start
+          (cd web-console && npm run test-e2e)
+          web-console/script/druid stop
 
       - name: setup java 11
         uses: actions/setup-java@v3
