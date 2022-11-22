@@ -53,4 +53,29 @@ public abstract class WindowValueProcessorBase implements Processor
 
     return retVal.addColumn(outputColumn, fn.apply(column));
   }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    return getClass() == otherProcessor.getClass()
+           && intervalValidation((WindowValueProcessorBase) otherProcessor);
+  }
+
+  protected boolean intervalValidation(WindowValueProcessorBase other)
+  {
+    // Only input needs to be the same for the processors to produce equivalent results
+    return inputColumn.equals(other.inputColumn);
+  }
+
+  @Override
+  public String toString()
+  {
+    return getClass().getSimpleName() + "{" + internalToString() + '}';
+  }
+
+  protected String internalToString()
+  {
+    return "inputColumn=" + inputColumn +
+           ", outputColumn='" + outputColumn + '\'';
+  }
 }

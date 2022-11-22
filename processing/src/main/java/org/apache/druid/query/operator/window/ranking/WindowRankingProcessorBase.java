@@ -56,4 +56,29 @@ public abstract class WindowRankingProcessorBase implements Processor
 
     return retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeBoundaries(groupingCols)));
   }
+
+  @Override
+  public boolean validateEquivalent(Processor otherProcessor)
+  {
+    return getClass() == otherProcessor.getClass()
+           && intervalValidation((WindowRankingProcessorBase) otherProcessor);
+  }
+
+  protected boolean intervalValidation(WindowRankingProcessorBase other)
+  {
+    // Only input needs to be the same for the processors to produce equivalent results
+    return groupingCols.equals(other.groupingCols);
+  }
+
+  @Override
+  public String toString()
+  {
+    return getClass().getSimpleName() + "{" + internalToString() + '}';
+  }
+
+  protected String internalToString()
+  {
+    return "groupingCols=" + groupingCols +
+           ", outputColumn='" + outputColumn + '\'';
+  }
 }

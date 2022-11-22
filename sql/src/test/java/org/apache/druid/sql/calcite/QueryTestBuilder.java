@@ -36,7 +36,7 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +82,7 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
@@ -145,6 +146,21 @@ public class QueryTestBuilder
   )
   {
     this.expectedResults = expectedResults;
+    return this;
+  }
+
+  public QueryTestBuilder addCustomVerification(
+      QueryTestRunner.QueryVerifyStepFactory factory
+  ) {
+    this.customVerifications.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomVerifications(
+      List<QueryTestRunner.QueryVerifyStepFactory> factories
+  ) {
+    this.customVerifications = new ArrayList<>();
+    this.customVerifications.addAll(factories);
     return this;
   }
 
@@ -244,4 +260,5 @@ public class QueryTestBuilder
   {
     return build().resultsOnly();
   }
+
 }

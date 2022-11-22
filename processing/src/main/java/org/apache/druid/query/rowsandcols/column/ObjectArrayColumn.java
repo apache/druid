@@ -12,7 +12,7 @@ public class ObjectArrayColumn implements Column
 
   public ObjectArrayColumn(Object[] objects, ColumnType resultType)
   {
-    this(objects, resultType, resultType.getStrategy());
+    this(objects, resultType, Comparator.nullsFirst(resultType.getStrategy()));
   }
 
   public ObjectArrayColumn(Object[] objects, ColumnType resultType, Comparator<Object> comparator)

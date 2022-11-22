@@ -8,6 +8,7 @@ import org.apache.druid.query.operator.window.ranking.WindowPercentileProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowRankProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.operator.window.value.WindowFirstProcessor;
+import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
@@ -20,10 +21,13 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
     @JsonSubTypes.Type(name = "rank", value = WindowRankProcessor.class),
     @JsonSubTypes.Type(name = "rowNumber", value = WindowRowNumberProcessor.class),
     @JsonSubTypes.Type(name = "first", value = WindowFirstProcessor.class),
+    @JsonSubTypes.Type(name = "last", value = WindowLastProcessor.class),
     @JsonSubTypes.Type(name = "offset", value = WindowOffsetProcessor.class),
     @JsonSubTypes.Type(name = "aggregate", value = WindowAggregateProcessor.class),
 })
 public interface Processor
 {
    RowsAndColumns process(RowsAndColumns incomingPartition);
+
+   boolean validateEquivalent(Processor otherProcessor);
 }
