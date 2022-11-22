@@ -3085,7 +3085,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             );
             return true;
           }
-        }
+        },
+        objectMapper
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

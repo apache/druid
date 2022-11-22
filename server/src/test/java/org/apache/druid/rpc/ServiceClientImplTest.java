@@ -407,6 +407,33 @@ public class ServiceClientImplTest
   }
 
   @Test
+  public void test_request_serviceUnavailableNoRetry()
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+
+    // Service unavailable.
+    stubLocatorCall(locations());
+
+    serviceClient = makeServiceClient(
+        StandardRetryPolicy.builder()
+                           .retryNotAvailable(false)
+                           .maxAttempts(ServiceRetryPolicy.UNLIMITED)
+                           .build()
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> doRequest(serviceClient, requestBuilder)
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Service [test-service] is not available"))
+    );
+  }
+
+  @Test
   public void test_request_serviceClosed()
   {
     final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");

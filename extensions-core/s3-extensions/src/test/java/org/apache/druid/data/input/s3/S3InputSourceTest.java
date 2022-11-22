@@ -126,13 +126,13 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       URI.create("s3://bar/foo/file2.csv.gz")
   );
 
-  private static final List<CloudObjectLocation> OBJECTS_BEFORE_FILTER = Arrays.asList(
+  private static final List<CloudObjectLocation> OBJECTS_BEFORE_GLOB = Arrays.asList(
       new CloudObjectLocation(URI.create("s3://foo/bar/file.csv")),
       new CloudObjectLocation(URI.create("s3://bar/foo/file2.csv")),
       new CloudObjectLocation(URI.create("s3://bar/foo/file3.txt"))
   );
 
-  private static final List<URI> URIS_BEFORE_FILTER = Arrays.asList(
+  private static final List<URI> URIS_BEFORE_GLOB = Arrays.asList(
       URI.create("s3://foo/bar/file.csv"),
       URI.create("s3://bar/foo/file2.csv"),
       URI.create("s3://bar/foo/file3.txt")
@@ -219,7 +219,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetFilter()
+  public void testGetObjectGlob()
   {
     final S3InputSource withUris = new S3InputSource(
         SERVICE,
@@ -228,17 +228,16 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         null,
         null,
-        "*.parquet",
+        "**.parquet",
         null,
         null,
         null,
         null
-
     );
 
     Assert.assertEquals(
-        "*.parquet",
-        withUris.getFilter()
+        "**.parquet",
+        withUris.getObjectGlob()
     );
   }
 
@@ -671,16 +670,16 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithUrisFilter()
+  public void testWithUrisObjectGlob()
   {
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
         INPUT_DATA_CONFIG,
-        URIS_BEFORE_FILTER,
+        URIS_BEFORE_GLOB,
         null,
         null,
-        "*.csv",
+        "**.csv",
         null,
         null,
         null,
@@ -696,7 +695,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithObjectsFilter()
+  public void testWithObjectsGlob()
   {
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
@@ -704,8 +703,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         null,
-        OBJECTS_BEFORE_FILTER,
-        "*.csv",
+        OBJECTS_BEFORE_GLOB,
+        "**.csv",
         null,
         null,
         null,
@@ -721,7 +720,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithoutObjectsFilter()
+  public void testWithoutObjectsGlob()
   {
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
@@ -777,11 +776,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetPrefixesSplitStreamWithFilter()
+  public void testGetPrefixesSplitStreamWithObjectGlob()
   {
     EasyMock.reset(S3_CLIENT);
-    expectListObjects(PREFIXES.get(0), ImmutableList.of(URIS_BEFORE_FILTER.get(0)), CONTENT);
-    expectListObjects(PREFIXES.get(1), ImmutableList.of(URIS_BEFORE_FILTER.get(1), URIS_BEFORE_FILTER.get(2)), CONTENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(URIS_BEFORE_GLOB.get(0)), CONTENT);
+    expectListObjects(PREFIXES.get(1), ImmutableList.of(URIS_BEFORE_GLOB.get(1), URIS_BEFORE_GLOB.get(2)), CONTENT);
     EasyMock.replay(S3_CLIENT);
 
     S3InputSource inputSource = new S3InputSource(
@@ -791,7 +790,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         PREFIXES,
         null,
-        "*.csv",
+        "**.csv",
         null,
         null,
         null,

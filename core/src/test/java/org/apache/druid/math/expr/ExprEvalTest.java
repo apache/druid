@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -36,6 +37,7 @@ import org.junit.rules.ExpectedException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ExprEvalTest extends InitializedNullHandlingTest
 {
@@ -330,6 +332,70 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
+    List<List<String>> nestedLists = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of("d", "e", "f")
+    );
+    coerced = ExprEval.coerceListToArray(nestedLists, false);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY), coerced.lhs);
+    Assert.assertArrayEquals(
+        new Object[]{new Object[]{"a", "b", "c"}, new Object[]{"d", "e", "f"}},
+        coerced.rhs
+    );
+
+    Map<String, Object> unknown1 = ImmutableMap.of("x", 1L, "y", 2L);
+    Map<String, Object> unknown2 = ImmutableMap.of("x", 4L, "y", 5L);
+    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(unknown1, unknown2);
+    coerced = ExprEval.coerceListToArray(listUnknownComplex, false);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX), coerced.lhs);
+    Assert.assertArrayEquals(
+        new Object[]{unknown1, unknown2},
+        coerced.rhs
+    );
+
+
+    Map<String, Object> unknown3 = ImmutableMap.of("x", 5L, "y", 7L);
+    Map<String, Object> unknown4 = ImmutableMap.of("x", 6L, "y", 8L);
+
+    List<List<Map<String, Object>>> nestedListsComplex = ImmutableList.of(
+        ImmutableList.of(unknown1, unknown2),
+        ImmutableList.of(unknown3, unknown4)
+    );
+    coerced = ExprEval.coerceListToArray(nestedListsComplex, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{unknown1, unknown2},
+            new Object[]{unknown3, unknown4}
+        },
+        coerced.rhs
+    );
+
+    List<List<Object>> mixed = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of("a", 2L, 3.0)
+    );
+    coerced = ExprEval.coerceListToArray(mixed, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a", "b", "c"},
+            new Object[]{"1", "2", "3"},
+            new Object[]{"3.0", "4.0", "5.0"},
+            new Object[]{"a", "2", "3.0"}
+        },
+        coerced.rhs
+    );
   }
 
   @Test
