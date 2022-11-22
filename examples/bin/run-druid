@@ -64,6 +64,8 @@ fi
 
 cd "$WHEREAMI/.."
 
+CLASS_PATH="$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*"
+
 if [ "$#" -eq 3 ] || [ "$#" -eq 4 ]
 then
   # args: <service> <conf_path> <jvm_args> or <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
@@ -75,15 +77,15 @@ then
   then
     # args: <service> <conf_path> <jvm_args>
     exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
-      -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
+      -cp $CLASS_PATH $MAIN_CLASS
   else
     # args: <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
     exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4 "-Ddruid.log.path=$LOG_DIR"  $JVMARGS \
-      -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" org.apache.druid.cli.Main server $SERVER_NAME
+      -cp $CLASS_PATH $MAIN_CLASS
   fi
 else
   # args: <service> <conf_path>
-  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-    -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
-    $MAIN_CLASS
+  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" \
+    `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
+    -cp  $CLASS_PATH $MAIN_CLASS
 fi
