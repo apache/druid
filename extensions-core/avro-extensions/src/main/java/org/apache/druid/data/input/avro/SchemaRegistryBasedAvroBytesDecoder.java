@@ -140,7 +140,7 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException | RestClientException ex) {
-      throw new ParseException(null, ex, "Failed to fetch Avro schema from registry: %s (%s)", id);
+      throw new ParseException(null, ex, "Failed to fetch Avro schema from registry: %s", id);
     }
     if (schema == null) {
       throw new ParseException(null, "No Avro schema in registry: %s", id);
