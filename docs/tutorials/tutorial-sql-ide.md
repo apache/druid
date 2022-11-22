@@ -97,8 +97,8 @@ In the Druid console, click **Query > Connect external data > Example data**. Se
 
 For more information on ingestion and querying data, see the following topics:
 
-- [Quickstart](add link) for information on getting started with Druid using the micro-quickstart configuration.
-- [Tutorial: Querying data](add link) for example queries to run on Druid data.
-- [Ingestion](add link) for an overview of ingestion and the ingestion methods available in Druid.
-- [SQL-based ingestion](add link) for an overview of SQL-based ingestion.
-- [SQL-based ingestion query examples](add link) for examples of SQL-based ingestion for various use cases.
+- [Quickstart](./index.md) for information on getting started with Druid using the micro-quickstart configuration.
+- [Tutorial: Querying data](tutorial-query.md) for example queries to run on Druid data.
+- [Ingestion](../ingestion/index.md) for an overview of ingestion and the ingestion methods available in Druid.
+- [SQL-based ingestion](../multi-stage-query/index.md) for an overview of SQL-based ingestion.
+- [SQL-based ingestion query examples](../multi-stage-query/examples.md) for examples of SQL-based ingestion for various use cases.
