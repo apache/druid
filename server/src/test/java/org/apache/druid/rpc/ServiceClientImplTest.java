@@ -296,6 +296,36 @@ public class ServiceClientImplTest
     );
 
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
+    );
+  }
+
+  @Test
+  public void test_request_tooLongRedirectChainRetry() throws Exception
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    // Redirect chain longer than max length. Can be followed across retries.
+    stubLocatorCall(locations(SERVER1, SERVER2, SERVER3, SERVER4, SERVER5));
+    expectHttpCall(requestBuilder, SERVER1)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER2).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER2)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER3).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER3)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER4).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER4)
+        .thenReturn(redirectResponse(requestBuilder.build(SERVER5).getUrl().toString()));
+    expectHttpCall(requestBuilder, SERVER5)
+        .thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.builder().maxAttempts(2).build());
+
+    final Map<String, String> response = doRequest(serviceClient, requestBuilder);
+
+    Assert.assertEquals(expectedResponseObject, response);
   }
 
   @Test
@@ -316,6 +346,10 @@ public class ServiceClientImplTest
     );
 
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
+    );
   }
 
   @Test
@@ -338,6 +372,10 @@ public class ServiceClientImplTest
     );
 
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("issued too many redirects"))
+    );
   }
 
   @Test
@@ -407,6 +445,11 @@ public class ServiceClientImplTest
     );
 
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceNotAvailableException.class));
+    MatcherAssert.assertThat(
+        e.getCause(),
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+            "issued redirect to unknown URL [https://example.com:9999/q/foo]"))
+    );
   }
 
   @Test

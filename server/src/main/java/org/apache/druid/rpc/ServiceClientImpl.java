@@ -325,7 +325,7 @@ public class ServiceClientImpl implements ServiceClient
                             TimeUnit.MILLISECONDS
                         );
                       } else {
-                        retVal.setException(new ServiceNotAvailableException(serviceName));
+                        retVal.setException(new ServiceNotAvailableException(serviceName, "issued too many redirects"));
                       }
                     } else {
                       // Valid redirect. Follow it without incrementing the attempt number.
@@ -355,7 +355,13 @@ public class ServiceClientImpl implements ServiceClient
                           TimeUnit.MILLISECONDS
                       );
                     } else {
-                      retVal.setException(new ServiceNotAvailableException(serviceName));
+                      retVal.setException(
+                          new ServiceNotAvailableException(
+                              serviceName,
+                              "issued redirect to unknown URL [%s]",
+                              newUri
+                          )
+                      );
                     }
                   }
                 }
