@@ -16,20 +16,29 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-.auto-form {
-  // Popover in info label
-  label.#{$bp-ns}-label {
-    position: relative;
+import { IndexSpecDialog } from './index-spec-dialog';
 
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-    }
-  }
+describe('IndexSpecDialog', () => {
+  it('matches snapshot without compactionConfig', () => {
+    const compactionDialog = shallow(
+      <IndexSpecDialog onClose={() => {}} onSave={() => {}} indexSpec={undefined} />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
 
-  .custom-input input {
-    cursor: pointer;
-  }
-}
+  it('matches snapshot with indexSpec', () => {
+    const compactionDialog = shallow(
+      <IndexSpecDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        indexSpec={{
+          dimensionCompression: 'lzf',
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+});
