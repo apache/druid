@@ -245,7 +245,6 @@ def verify_service_config(service, config):
             raise ValueError(f'{service}/runtime.properties file is missing in the root config')
 
         java_opts_property_present = False
-        print(config)
         with open(f'{config}/{service}/runtime.properties') as file:
             for line in file:
                 if line.startswith(TASK_JAVA_OPTS_PROPERTY):
