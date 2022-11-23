@@ -110,8 +110,6 @@ sample usage:
             Starts a broker and a router, using a total memory of 100GB.
             Reads configs for each service (jvm.config, runtime.properties)
             from respective folders inside the given root config path.
-            Throws an exception if there is a jvm.config present in any
-            of the service directories inside the given root conf directory.
     start-druid -s=broker,router \\
     -c=conf/druid/single-server/custom
             Starts a broker and a router service, reading service configs
