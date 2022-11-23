@@ -146,9 +146,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
     isPrepared = true;
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
+    handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
     final RelDataType parameterTypes = validator.getParameterRowType(validatedQueryNode);
+    handlerContext.hook().captureParameterTypes(parameterTypes);
     final RelDataType returnedRowType;
 
     if (explain != null) {
@@ -291,6 +293,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
     }
 
+    handlerContext.hook().captureBindableRel(bindableRel);
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (explain != null) {
       return planExplanation(bindableRel, false);
@@ -466,6 +469,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   protected PlannerResult planWithDruidConvention() throws ValidationException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(rootQueryRel);
+    handlerContext.hook().captureQueryRel(possiblyLimitedRoot);
     final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot);
     PlannerContext plannerContext = handlerContext.plannerContext();
     plannerContext.setQueryMaker(queryMaker);
@@ -490,6 +494,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                .plus(rootQueryRel.collation),
         parameterized
     );
+    handlerContext.hook().captureDruidRel(druidRel);
 
     if (explain != null) {
       return planExplanation(druidRel, true);

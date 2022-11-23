@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -29,9 +30,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
@@ -41,12 +42,12 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.guice.annotations.Self;
@@ -55,7 +56,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -67,6 +68,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -131,6 +133,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -143,6 +146,7 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
+import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
@@ -246,12 +250,54 @@ public class MSQTestBase extends BaseCalciteQueryTest
       )
   );
 
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+
+    builder.addModule(new DruidModule() {
+
+      // Small subset of MsqSqlModule
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+      }
+
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        return new InputSourceModule().getJacksonModules();
+      }
+    });
+  }
+
   @After
   public void tearDown2()
   {
     groupByBuffers.close();
   }
 
+  // This test is a Frankenstein creation: it uses the injector set up by the
+  // SqlTestFramework to pull items from that are then used to create another
+  // injector that has the MSQ dependencies. This allows the test to create a
+  // "shadow" statement factory that is used for tests. It works... kinda.
+  //
+  // Better would be to sort through the Guice stuff and move it into the
+  // configureGuice() method above: use the SQL test framework injector so
+  // that everything is coordinated. Use the planner factory provided by that
+  // framework.
+  //
+  // Leaving well enough alone for now because any change should be done by
+  // someone familiar with the rather complex setup code below.
+  //
+  // One brute-force attempt ran afoul of circular dependencies: the SQL engine
+  // is created in the main injector, but it depends on the SegmentCacheManagerFactory
+  // which depends on the object mapper that the injector will provide, once it
+  // is built, but has not yet been build while we build the SQL engine.
   @Before
   public void setUp2()
   {
@@ -281,7 +327,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
 
-    List<Module> modules = ImmutableList.of(
+    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
@@ -293,7 +339,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           };
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-
 
           binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
           binder.bind(new TypeLiteral<Set<NodeRole>>()
@@ -380,11 +425,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             }
         ),
         new MSQExternalDataSourceModule()
-    );
-    // adding node role injection to the modules, since CliPeon would also do that through run method
-    Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
-        .addAll(modules)
-        .build();
+    ));
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(sqlModule.getJacksonModules());
@@ -413,8 +454,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        qf.operatorTable(),
+        qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         objectMapper,

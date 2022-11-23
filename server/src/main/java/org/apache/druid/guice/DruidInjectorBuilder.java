@@ -61,6 +61,7 @@ public class DruidInjectorBuilder
   private final ObjectMapper smileMapper;
   private final Set<NodeRole> nodeRoles;
   private final ModulesConfig modulesConfig;
+  private boolean ignoreLoadScopes;
 
   public DruidInjectorBuilder(final Injector baseInjector)
   {
@@ -83,6 +84,18 @@ public class DruidInjectorBuilder
     this.modulesConfig = from.modulesConfig;
     this.jsonMapper = from.jsonMapper;
     this.smileMapper = from.smileMapper;
+    this.ignoreLoadScopes = from.ignoreLoadScopes;
+  }
+
+  /**
+   * Ignore load scope annotations on modules. Primarily for testing where a unit
+   * test is not any Druid node, and may wish to load a module that is annotated
+   * with a load scope.
+   */
+  public DruidInjectorBuilder ignoreLoadScopes()
+  {
+    this.ignoreLoadScopes = true;
+    return this;
   }
 
   /**
@@ -176,6 +189,9 @@ public class DruidInjectorBuilder
       log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
       return false;
     }
+    if (ignoreLoadScopes) {
+      return true;
+    }
     LoadScope loadScope = moduleClass.getAnnotation(LoadScope.class);
     if (loadScope == null) {
       // always load if annotation is not specified
@@ -203,5 +219,10 @@ public class DruidInjectorBuilder
   public Injector build()
   {
     return Guice.createInjector(modules);
+  }
+
+  public Injector baseInjector()
+  {
+    return baseInjector;
   }
 }
