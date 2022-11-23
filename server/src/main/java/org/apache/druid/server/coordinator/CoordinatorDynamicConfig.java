@@ -56,6 +56,7 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsToMove;
   @Deprecated
   private final double percentOfSegmentsToConsiderPerMove;
+  @Deprecated
   private final boolean useBatchedSegmentSampler;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
@@ -115,7 +116,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
-      @JsonProperty("useBatchedSegmentSampler") boolean useBatchedSegmentSampler,
+      @Deprecated @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -161,7 +162,12 @@ public class CoordinatorDynamicConfig
     );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
-    this.useBatchedSegmentSampler = useBatchedSegmentSampler;
+    if (useBatchedSegmentSampler == null) {
+      this.useBatchedSegmentSampler = Builder.DEFAULT_USE_BATCHED_SEGMENT_SAMPLER;
+    } else {
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
+    }
+
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -276,6 +282,7 @@ public class CoordinatorDynamicConfig
     return percentOfSegmentsToConsiderPerMove;
   }
 
+  @Deprecated
   @JsonProperty
   public boolean useBatchedSegmentSampler()
   {
@@ -557,7 +564,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
-        @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
+        @Deprecated @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -627,6 +634,7 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    @Deprecated
     public Builder withUseBatchedSegmentSampler(boolean useBatchedSegmentSampler)
     {
       this.useBatchedSegmentSampler = useBatchedSegmentSampler;

@@ -143,7 +143,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
     pathChildrenCache = new PathChildrenCache(
@@ -730,7 +729,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
         .withCoordinatorKillMaxSegments(10)
-        .withLoadQueuePeonRepeatDelay(new Duration("PT0s"))
         .withCompactionSkippedLockedIntervals(false)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();

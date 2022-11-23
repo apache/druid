@@ -448,6 +448,12 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       }
 
       @Override
+      public boolean getChatAsync()
+      {
+        return false;
+      }
+
+      @Override
       public Integer getChatThreads()
       {
         return 1;
