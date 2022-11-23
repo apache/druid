@@ -89,10 +89,6 @@ def print_if_verbose(message):
     if LOGGING_ENABLED:
         print(message)
 
-def error_and_exit(message):
-    sys.stderr.write(message + '\n')
-    sys.exit(1)
-
 def configure_parser():
     parser = argparse.ArgumentParser(
         prog='Druid quickstart',
@@ -176,7 +172,7 @@ def parse_arguments(args):
     if args.config is not None:
         config = pathlib.Path(os.path.join(os.getcwd(), args.config)).resolve()
         if os.path.exists(config) is False:
-            error_and_exit(f'config {config} doesn\'t exist')
+            raise ValueError(f'config {config} doesn\'t exist')
     if args.memory is not None:
         total_memory = args.memory
     if args.services is not None:
@@ -184,10 +180,10 @@ def parse_arguments(args):
 
         for service in services:
             if service not in DEFAULT_SERVICES:
-                error_and_exit(f'Invalid service name {service}, should be one of {DEFAULT_SERVICES}')
+                raise ValueError(f'Invalid service name {service}, should be one of {DEFAULT_SERVICES}')
 
             if service in service_list:
-                error_and_exit(f'{service} is specified multiple times')
+                raise ValueError(f'{service} is specified multiple times')
 
             service_list.append(service)
 
@@ -215,13 +211,13 @@ def should_compute_memory(config_path, total_memory, service_list):
         if pathlib.Path(f'{config_path}/{service}/jvm.config').is_file():
             jvm_config_count += 1
         elif jvm_config_count > 0:
-            error_and_exit(f'jvm.config file is missing for service {service}, jvm.config should be specified for all the services or none')
+            raise ValueError(f'jvm.config file is missing for service {service}, jvm.config should be specified for all the services or none')
 
     if jvm_config_count > 0 and (jvm_config_count != len(service_list) or total_memory != ""):
         if jvm_config_count != len(service_list):
-            error_and_exit("jvm.config file should be present for all services or none")
+            raise ValueError("jvm.config file should be present for all services or none")
         if total_memory != "":
-            error_and_exit("If jvm.config is given for services, memory argument shouldn't be specified")
+            raise ValueError("If jvm.config is given for services, memory argument shouldn't be specified")
 
     return jvm_config_count == 0
 
@@ -240,9 +236,9 @@ def convert_total_memory_string(memory):
         elif memory.endswith(MEM_GB_SUFFIX):
             return 1024 * int(memory[:-1])
         else:
-            error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
+            raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
     except Exception:
-        error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
+        raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
 def check_memory_constraint(total_memory, service_list):
     # 80% of total memory >= sum of lower bound service memory should be
@@ -254,7 +250,7 @@ def check_memory_constraint(total_memory, service_list):
     required_memory = int(lower_bound_memory / 0.8)
 
     if total_memory < required_memory:
-        error_and_exit(f'Minimum memory required for starting services is {required_memory}m')
+        raise ValueError(f'Minimum memory required for starting services is {required_memory}m')
 
     if total_memory >= 2 * lower_bound_memory:
         return int(total_memory / 2)
@@ -427,6 +423,7 @@ def main():
     os.execv('./supervise', script_arguments)
 
 try:
-  main()
-except KeyboardInterrupt:
-  sys.exit(1)
+    main()
+except (KeyboardInterrupt, ValueError) as error:
+    print(error)
+    sys.exit(1)
