@@ -241,7 +241,7 @@ def convert_total_memory_string(memory):
         raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
 def check_memory_constraint(total_memory, service_list):
-    # 80% of total memory >= sum of lower bound service memory should be
+    # 80% of total memory >= sum of lower bound service memory
     lower_bound_memory = 0
 
     for service in service_list:
