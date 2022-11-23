@@ -101,13 +101,13 @@ sample usage:
     start-druid -m=100g
             Start up all the services (including zk)
             using a total memory of 100GB.
-    start-druid -m=100g --compute_only
+    start-druid -m=100g --compute
             Compute memory distribution and validate arguments.
     start-druid -m=100g -s=broker,router
             Starts a broker and a router, using a total memory of 100GB.
             Reads config from conf/druid/single-server/quickstart.
     start-druid -m=100g --s=broker,router \\
-    -cp=conf/druid/single-server/custom
+    -c=conf/druid/single-server/custom
             Starts a broker and a router, using a total memory of 100GB.
             Reads configs from the given config path.
             Throws an exception if there is a jvm.config present in any
@@ -123,7 +123,7 @@ sample usage:
     start-druid -m=100g \\
     -s=broker,router \\
     -c=conf/druid/single-server/custom \\
-    --run_zk
+    --zk
             Starts broker, router and zookeeper.
             zookeeper config is read from conf/zk.
 """
@@ -144,31 +144,31 @@ sample usage:
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
                              'conf/druid/single-server/quickstart directory is used.\n')
-    parser.add_argument('--compute_only', action='store_true',
+    parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
-    parser.add_argument('--run_zk',  action='store_true',
+    parser.add_argument('--zk', '-zk', action='store_true',
                         help='Specification to run zookeeper, \n'
                              'zk config is picked up from conf/zk.')
     parser.add_argument('--verbose', action='store_true', help='Log details')
 
-    parser.set_defaults(run_zk=False)
-    parser.set_defaults(compute_only=False)
+    parser.set_defaults(zk=False)
+    parser.set_defaults(compute=False)
     parser.set_defaults(verbose=False)
 
     return parser
 
 def parse_arguments(args):
     service_list = []
-    config_path = ""
+    config = ""
     total_memory = ""
-    compute_only = False
-    run_zk = False
+    compute = False
+    zk = False
 
-    if args.compute_only:
-        compute_only = True
-    if args.run_zk:
-        run_zk = True
+    if args.compute:
+        compute = True
+    if args.zk:
+        zk = True
     if args.config is not None:
         config = pathlib.Path(os.path.join(os.getcwd(), args.config)).resolve()
         if os.path.exists(config) is False:
@@ -190,25 +190,25 @@ def parse_arguments(args):
     if len(service_list) == 0:
         # start all services
         service_list = DEFAULT_SERVICES
-        run_zk = True
+        zk = True
 
-    return config_path, total_memory, service_list, run_zk, compute_only
+    return config, total_memory, service_list, zk, compute
 
-def print_startup_config(service_list, config_path, run_zk):
+def print_startup_config(service_list, config, zk):
     print_if_verbose(f'starting {service_list}')
-    print_if_verbose(f'reading config from {config_path}')
-    if run_zk:
-        zk_config_path = pathlib.Path(f'{os.getcwd()}/../conf/zk').resolve()
-        print_if_verbose(f'starting zk, reading default config from {zk_config_path}')
+    print_if_verbose(f'reading config from {config}')
+    if zk:
+        zk_config = pathlib.Path(f'{os.getcwd()}/../conf/zk').resolve()
+        print_if_verbose(f'starting zk, reading default config from {zk_config}')
     print_if_verbose('\n')
 
-def should_compute_memory(config_path, total_memory, service_list):
+def should_compute_memory(config, total_memory, service_list):
     # if jvm file is present for any of the services
     # it should be present for all services and memory should not be specified
     # if memory is given, jvm file shouldn't be present for any service
     jvm_config_count = 0
     for service in service_list:
-        if pathlib.Path(f'{config_path}/{service}/jvm.config').is_file():
+        if pathlib.Path(f'{config}/{service}/jvm.config').is_file():
             jvm_config_count += 1
         elif jvm_config_count > 0:
             raise ValueError(f'jvm.config file is missing for service {service}, jvm.config should be specified for all the services or none')
@@ -241,7 +241,7 @@ def convert_total_memory_string(memory):
         raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
 def check_memory_constraint(total_memory, service_list):
-    # 80% of total memory >= sum of lower bound service memory
+    # 80% of total memory >= sum of lower bound service memory should be
     lower_bound_memory = 0
 
     for service in service_list:
@@ -345,7 +345,7 @@ def distribute_memory_over_services(services, total_memory):
 
     return service_memory_config
 
-def build_supervise_script_arguments(service_list, service_memory_config, config_path, run_zk):
+def build_supervise_script_arguments(service_list, service_memory_config, config, zk):
     args = []
     commands = []
     args.append('supervise')
@@ -356,7 +356,7 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
     commands.append(":notify bin/greet")
     commands.append(":kill-timeout 10")
 
-    if run_zk:
+    if zk:
         commands.append("!p10 zk bin/run-zk conf")
 
     for service in service_list:
@@ -367,16 +367,16 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
             prefix = '!p90 '
 
         if jvm_args is None:
-            commands.append(f'{prefix}{service} bin/run-druid {service} {config_path}')
+            commands.append(f'{prefix}{service} bin/run-druid {service} {config}')
         else:
             if service == MIDDLE_MANAGER:
                 task_config = service_memory_config.get(TASK)
                 task_count = task_config[0]
                 task_memory = task_config[1]
                 commands.append(
-                    f'{prefix}{service} bin/run-druid {service} {config_path} \'{jvm_args}\' \'{task_count} {task_memory}\'')
+                    f'{prefix}{service} bin/run-druid {service} {config} \'{jvm_args}\' \'{task_count} {task_memory}\'')
             else:
-                commands.append(f'{prefix}{service} bin/run-druid {service} {config_path} \'{jvm_args}\'')
+                commands.append(f'{prefix}{service} bin/run-druid {service} {config} \'{jvm_args}\'')
 
     print_if_verbose('Supervise script args:')
     for item in commands:
@@ -392,21 +392,21 @@ def main():
     args = parser.parse_args()
 
     global LOGGING_ENABLED
-    LOGGING_ENABLED = args.verbose or args.compute_only
+    LOGGING_ENABLED = args.verbose or args.compute
 
-    config_path, total_memory, service_list, run_zk, compute_only = parse_arguments(args)
+    config, total_memory, service_list, zk, compute = parse_arguments(args)
 
     # change directory to bin
     os.chdir(os.path.dirname(sys.argv[0]))
 
-    if config_path == "":
-        config_path = pathlib.Path(f'{os.getcwd()}/../{QUICKSTART_ROOT_CONFIG_PATH}').resolve()
+    if config == "":
+        config = pathlib.Path(f'{os.getcwd()}/../{QUICKSTART_ROOT_CONFIG_PATH}').resolve()
 
-    print_startup_config(service_list, config_path, run_zk)
+    print_startup_config(service_list, config, zk)
 
     service_memory_config = {}
 
-    if (should_compute_memory(config_path, total_memory, service_list)):
+    if (should_compute_memory(config, total_memory, service_list)):
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
         print_if_verbose(f'total memory is {memory_in_mega_bytes}m')
         memory_to_be_used = check_memory_constraint(memory_in_mega_bytes, service_list)
@@ -415,9 +415,9 @@ def main():
     else:
         print_if_verbose('not computing memory distribution, reading memory specification from service jvm.config\n')
 
-    script_arguments = build_supervise_script_arguments(service_list, service_memory_config, config_path, run_zk)
+    script_arguments = build_supervise_script_arguments(service_list, service_memory_config, config, zk)
 
-    if compute_only:
+    if compute:
         return
 
     os.execv('./supervise', script_arguments)
