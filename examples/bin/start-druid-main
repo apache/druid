@@ -26,67 +26,66 @@ import argparse
 
 QUICKSTART_ROOT_CONFIG_PATH = "conf/druid/single-server/quickstart"
 
-MEMORY_GIGABYTES_IDENTIFIER = "g"
-MEMORY_MEGABYTES_IDENTIFIER = "m"
+MEM_GB_SUFFIX = "g"
+MEM_MB_SUFFIX = "m"
 SERVICE_SEPARATOR = ","
 
-MM_TASK_JAVAOPTS_ARRAY = ["-server", "-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]
-MM_TASK_MEMORY_TYPE_LOW = "low"
-MM_TASK_MEMORY_TYPE_HIGH = "high"
-MM_TASK_MEM_MAP = {
-    MM_TASK_MEMORY_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256g"],
-    MM_TASK_MEMORY_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
+TASK_JAVA_OPTS_ARRAY = ["-server", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-XX:+ExitOnOutOfMemoryError", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]
+TASK_JAVA_OPTS_PROPERTY = "-Ddruid.indexer.runner.javaOptsArray"
+TASK_WORKER_CAPACITY_PROPERTY = "-Ddruid.worker.capacity"
+TASK_COUNT = "task-count"
+TASK_MEM_TYPE_LOW = "low"
+TASK_MEM_TYPE_HIGH = "high"
+TASK_MEM_MAP = {
+    TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256g"],
+    TASK_MEM_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
 }
-
-MM_TASK_JAVAOPTS_PROP = "-Ddruid.indexer.runner.javaOptsArray"
-MM_TASK_WORKER_CAPACITY_PROP = "-Ddruid.worker.capacity"
 
 BROKER = "broker"
 ROUTER = "router"
 COORDINATOR = "coordinator-overlord"
 HISTORICAL = "historical"
-MM = "middleManager"
-MM_TASK = "middleManager-task"
-MM_TASK_COUNT = "task-count"
+MIDDLE_MANAGER = "middleManager"
+TASK = "task"
 
 DEFAULT_SERVICES = [
     BROKER,
     ROUTER,
     COORDINATOR,
     HISTORICAL,
-    MM
+    MIDDLE_MANAGER
 ]
 
-SERVICE_MEMORY_DISTRIBUTION_WEIGHT = {
-    MM: 0.5,
-    ROUTER: 1,
-    COORDINATOR: 15,
-    BROKER: 23,
-    HISTORICAL: 40,
-    MM_TASK: 15
+SERVICE_MEMORY_RATIO = {
+    MIDDLE_MANAGER: 1,
+    ROUTER: 2,
+    COORDINATOR: 30,
+    BROKER: 46,
+    HISTORICAL: 80,
+    TASK: 30
 }
 
-SERVICE_MEMORY_LOWER_BOUND = {
-    MM: 64,
+MINIMUM_MEMORY_MB = {
+    MIDDLE_MANAGER: 64,
     ROUTER: 128,
-    MM_TASK: 1024,
+    TASK: 1024,
     BROKER: 900,
     COORDINATOR: 256,
     HISTORICAL: 900
 }
 
-SERVICE_MEMORY_HEAP_PERCENTAGE = {
-    MM: 1,
+HEAP_TO_TOTAL_MEM_RATIO = {
+    MIDDLE_MANAGER: 1,
     ROUTER: 1,
     COORDINATOR: 1,
     BROKER: 0.60,
     HISTORICAL: 0.40,
-    MM_TASK: 0.50
+    TASK: 0.50
 }
 
 LOGGING_ENABLED = False
 
-def custom_print(message):
+def print_if_verbose(message):
     if LOGGING_ENABLED:
         print(message)
 
@@ -103,58 +102,55 @@ def configure_parser():
 sample usage:
     start-druid
             Start up all the services (including zk).
-            50 - 80 percent of system memory is used.
     start-druid -m=100g
             Start up all the services (including zk)
-            using the given memory.
+            using a total memory of 100GB.
     start-druid -m=100g --compute_only
-            Compute memory distribution and validate
-            arguments.
-    start-druid -m=100g -sl=broker,router
-            Start broker & router service, using 100g of memory.
-            Read config from conf/druid/single-server/quickstart.
-    start-druid -m=100g --sl=broker,router \\
+            Compute memory distribution and validate arguments.
+    start-druid -m=100g -s=broker,router
+            Starts a broker and a router, using a total memory of 100GB.
+            Reads config from conf/druid/single-server/quickstart.
+    start-druid -m=100g --s=broker,router \\
     -cp=conf/druid/single-server/custom
-            Start broker & router service, using 100g of memory.
-            Read config from <config_path>.
-            Since <memory> is specified, exception is thrown if
-            jvm.config is present for any of the services.
-    start-druid -sl=broker,router \\
-    -cp=conf/druid/single-server/custom
-            Start broker & router service, using system memory.
-            If jvm.config is specified for both the
-            services within <config_path>/<service>,
-            memory distribution is not calculated.
-            If jvm.config is present for either of the services,
-            exception is thrown.
-            If jvm.config is not present for both of the services,
-            memory distribution is calculated.
+            Starts a broker and a router, using a total memory of 100GB.
+            Reads configs from the given config path.
+            Throws an exception if there is a jvm.config present in any
+            of the service directories inside the given root conf directory.
+    start-druid -s=broker,router \\
+    -c=conf/druid/single-server/custom
+            Starts a broker and a router service, using upto 80% of the
+            total system memory. Calculates the memory requirements for
+            each service if no jvm.config is present for any of the
+            services. Does not calculate memory requirements if jvm.config
+            is present in all of the service directories. Throws an exception
+            if jvm.config is present in only some of the service directories.
     start-druid -m=100g \\
-    -cp=conf/druid/single-server/custom \\
-    -sl=broker,router \\
+    -s=broker,router \\
+    -c=conf/druid/single-server/custom \\
     --run_zk
-            Start broker, router and zookeeper.
-            zk config is read from conf/zk.
+            Starts broker, router and zookeeper.
+            zookeeper config is read from conf/zk.
 """
     )
     parser.add_argument('--memory', '-m', type=str, required=False,
                         help='Total memory for all processes (services and tasks, if any). \n'
                              'This parameter is ignored if each service already has a jvm.config \n'
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
-    parser.add_argument('--service_list', '-sl', type=str, required=False,
+    parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
                              '{broker, router, middleManager, historical, coordinator-overlord}. \n'
                              'If the argument is not given, all services \n'
                              'and zookeeper is started. e.g. -sl=broker,historical')
-    parser.add_argument('--config_path', '-cp', type=str, required=False,
+    parser.add_argument('--config', '-c', type=str, required=False,
                         help='Relative path to the directory containing common and service \n'
                              'specific properties to be overridden. \n'
                              'This directory must contain \'_common\' directory with \n'
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
-                             '\'conf/druid/single-server/quickstart\' directory is used.\n')
+                             'conf/druid/single-server/quickstart directory is used.\n')
     parser.add_argument('--compute_only', action='store_true',
-                        help='Validate the arguments and display memory distribution')
+                        help='Does not start Druid, only displays the memory allocated \n'
+                             'to each service if started with the given total memory.\n')
     parser.add_argument('--run_zk',  action='store_true',
                         help='Specification to run zookeeper, \n'
                              'zk config is picked up from conf/zk.')
@@ -177,14 +173,14 @@ def parse_arguments(args):
         compute_only = True
     if args.run_zk:
         run_zk = True
-    if args.config_path is not None:
-        config_path = pathlib.Path(os.path.join(os.getcwd(), args.config_path)).resolve()
-        if os.path.exists(config_path) is False:
-            error_and_exit(f'config_path {config_path} doesn\'t exist')
+    if args.config is not None:
+        config = pathlib.Path(os.path.join(os.getcwd(), args.config)).resolve()
+        if os.path.exists(config) is False:
+            error_and_exit(f'config {config} doesn\'t exist')
     if args.memory is not None:
         total_memory = args.memory
-    if args.service_list is not None:
-        services = args.service_list.split(SERVICE_SEPARATOR)
+    if args.services is not None:
+        services = args.services.split(SERVICE_SEPARATOR)
 
         for service in services:
             if service not in DEFAULT_SERVICES:
@@ -203,12 +199,12 @@ def parse_arguments(args):
     return config_path, total_memory, service_list, run_zk, compute_only
 
 def print_startup_config(service_list, config_path, run_zk):
-    custom_print(f'starting {service_list}')
-    custom_print(f'reading config from {config_path}')
+    print_if_verbose(f'starting {service_list}')
+    print_if_verbose(f'reading config from {config_path}')
     if run_zk:
         zk_config_path = pathlib.Path(f'{os.getcwd()}/../conf/zk').resolve()
-        custom_print(f'starting zk, reading default config from {zk_config_path}')
-    custom_print('\n')
+        print_if_verbose(f'starting zk, reading default config from {zk_config_path}')
+    print_if_verbose('\n')
 
 def should_compute_memory(config_path, total_memory, service_list):
     # if jvm file is present for any of the services
@@ -239,9 +235,9 @@ def convert_total_memory_string(memory):
         if memory == "":
             computed_memory = compute_system_memory()
             return computed_memory
-        elif memory.endswith(MEMORY_MEGABYTES_IDENTIFIER):
+        elif memory.endswith(MEM_MB_SUFFIX):
             return int(memory[:-1])
-        elif memory.endswith(MEMORY_GIGABYTES_IDENTIFIER):
+        elif memory.endswith(MEM_GB_SUFFIX):
             return 1024 * int(memory[:-1])
         else:
             error_and_exit('Incorrect format for memory argument, expected format is <integer_value><m/g>')
@@ -253,7 +249,7 @@ def check_memory_constraint(total_memory, service_list):
     lower_bound_memory = 0
 
     for service in service_list:
-        lower_bound_memory += SERVICE_MEMORY_LOWER_BOUND.get(service)
+        lower_bound_memory += MINIMUM_MEMORY_MB.get(service)
 
     required_memory = int(lower_bound_memory / 0.8)
 
@@ -266,11 +262,11 @@ def check_memory_constraint(total_memory, service_list):
         return lower_bound_memory
 
 def build_mm_task_javaopts_array(memory_type):
-    task_memory = f'{MM_TASK_JAVAOPTS_PROP}=['
+    task_memory = f'{TASK_JAVA_OPTS_PROPERTY}=['
 
-    MEM_ARRAY = MM_TASK_MEM_MAP.get(memory_type)
+    MEM_ARRAY = TASK_MEM_MAP.get(memory_type)
 
-    javaopts_list = MM_TASK_JAVAOPTS_ARRAY + MEM_ARRAY
+    javaopts_list = TASK_JAVA_OPTS_ARRAY + MEM_ARRAY
 
     for item in javaopts_list:
         task_memory += f'\"{item}\";'
@@ -280,21 +276,21 @@ def build_mm_task_javaopts_array(memory_type):
     return task_memory
 
 def build_memory_config_string(service, allocated_memory):
-    if service == MM_TASK:
+    if service == TASK:
         if allocated_memory >= 2048:
             task_count = int(allocated_memory / 2048)
-            memory_type = MM_TASK_MEMORY_TYPE_HIGH
+            memory_type = TASK_MEM_TYPE_HIGH
             task_memory = 2048
         else:
             task_count = int(allocated_memory / 512)
-            memory_type = MM_TASK_MEMORY_TYPE_LOW
+            memory_type = TASK_MEM_TYPE_LOW
             task_memory = 512
         task_count = min(task_count, multiprocessing.cpu_count())
 
         javaopts_array = build_mm_task_javaopts_array(memory_type)
-        return [f'{MM_TASK_WORKER_CAPACITY_PROP}={task_count}', javaopts_array], task_memory * task_count
+        return [f'{TASK_WORKER_CAPACITY_PROPERTY}={task_count}', javaopts_array], task_memory * task_count
     else:
-        heap_memory = SERVICE_MEMORY_HEAP_PERCENTAGE.get(service) * allocated_memory
+        heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
         heap_memory = int(heap_memory)
 
@@ -309,11 +305,11 @@ def distribute_memory_over_services(services, total_memory):
     memory_weight_sum = 0
 
     service_list = services.copy()
-    if MM in services:
-        service_list.append(MM_TASK)
+    if MIDDLE_MANAGER in services:
+        service_list.append(TASK)
 
     for service in service_list:
-        memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service)
+        memory_weight_sum += SERVICE_MEMORY_RATIO.get(service)
 
     multiplier = total_memory / memory_weight_sum
 
@@ -321,9 +317,9 @@ def distribute_memory_over_services(services, total_memory):
     allocated_services = set()
 
     for service in service_list:
-        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service) * multiplier
-        if service in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(service):
-            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(service)
+        allocated_memory = SERVICE_MEMORY_RATIO.get(service) * multiplier
+        if service in MINIMUM_MEMORY_MB and allocated_memory < MINIMUM_MEMORY_MB.get(service):
+            allocated_memory = MINIMUM_MEMORY_MB.get(service)
             service_memory_config[service], allocated_memory = build_memory_config_string(service, allocated_memory)
             lower_bound_memory_allocation += allocated_memory
             allocated_services.add(service)
@@ -334,22 +330,22 @@ def distribute_memory_over_services(services, total_memory):
         for service in service_list:
             if service in allocated_services:
                 continue
-            memory_weight_sum += SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service)
+            memory_weight_sum += SERVICE_MEMORY_RATIO.get(service)
         multiplier = (total_memory - lower_bound_memory_allocation) / memory_weight_sum
 
     for service in service_list:
         if service in allocated_services:
             continue
-        allocated_memory = SERVICE_MEMORY_DISTRIBUTION_WEIGHT.get(service) * multiplier
-        if service in SERVICE_MEMORY_LOWER_BOUND and allocated_memory < SERVICE_MEMORY_LOWER_BOUND.get(service):
-            allocated_memory = SERVICE_MEMORY_LOWER_BOUND.get(service)
+        allocated_memory = SERVICE_MEMORY_RATIO.get(service) * multiplier
+        if service in MINIMUM_MEMORY_MB and allocated_memory < MINIMUM_MEMORY_MB.get(service):
+            allocated_memory = MINIMUM_MEMORY_MB.get(service)
 
         service_memory_config[service], allocated_memory = build_memory_config_string(service, allocated_memory)
 
-    custom_print(f'\nMemory distribution for services:')
+    print_if_verbose(f'\nMemory distribution for services:')
     for key, value in service_memory_config.items():
-        custom_print(f'{key}, memory_config: {value}')
-    custom_print('\n')
+        print_if_verbose(f'{key}, memory_config: {value}')
+    print_if_verbose('\n')
 
     return service_memory_config
 
@@ -371,14 +367,14 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
         jvm_args = service_memory_config.get(service)
 
         prefix = ''
-        if service == MM:
+        if service == MIDDLE_MANAGER:
             prefix = '!p90 '
 
         if jvm_args is None:
             commands.append(f'{prefix}{service} bin/run-druid {service} {config_path}')
         else:
-            if service == MM:
-                task_config = service_memory_config.get(MM_TASK)
+            if service == MIDDLE_MANAGER:
+                task_config = service_memory_config.get(TASK)
                 task_count = task_config[0]
                 task_memory = task_config[1]
                 commands.append(
@@ -386,11 +382,11 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
             else:
                 commands.append(f'{prefix}{service} bin/run-druid {service} {config_path} \'{jvm_args}\'')
 
-    custom_print('Supervise script args:')
+    print_if_verbose('Supervise script args:')
     for item in commands:
-        custom_print(item)
+        print_if_verbose(item)
 
-    custom_print('\n')
+    print_if_verbose('\n')
 
     args.append(",".join(commands))
     return args
@@ -416,12 +412,12 @@ def main():
 
     if (should_compute_memory(config_path, total_memory, service_list)):
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
-        custom_print(f'total memory is {memory_in_mega_bytes}m')
+        print_if_verbose(f'total memory is {memory_in_mega_bytes}m')
         memory_to_be_used = check_memory_constraint(memory_in_mega_bytes, service_list)
-        custom_print(f'memory used for services & tasks {memory_to_be_used}m')
+        print_if_verbose(f'memory used for services & tasks {memory_to_be_used}m')
         service_memory_config = distribute_memory_over_services(service_list, memory_to_be_used)
     else:
-        custom_print('not computing memory distribution, reading memory specification from service jvm.config\n')
+        print_if_verbose('not computing memory distribution, reading memory specification from service jvm.config\n')
 
     script_arguments = build_supervise_script_arguments(service_list, service_memory_config, config_path, run_zk)
 
