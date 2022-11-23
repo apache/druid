@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
+import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -32,6 +33,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -175,6 +177,37 @@ public class MSQFaultsTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
         .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
+        .verifyResults();
+  }
+
+  @Test
+  public void testTooManyInputFiles() throws IOException
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+
+    final int numFiles = 20000;
+
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled-30k.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            "insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day",
+            externalFiles
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
         .verifyResults();
   }
 
