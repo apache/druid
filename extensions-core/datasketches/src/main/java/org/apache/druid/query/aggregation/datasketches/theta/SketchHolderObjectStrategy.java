@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.theta.Sketch;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -65,5 +66,18 @@ public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
     } else {
       return ByteArrays.EMPTY_ARRAY;
     }
+  }
+
+  @Nullable
+  @Override
+  public SketchHolder fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  {
+    if (numBytes == 0) {
+      return SketchHolder.EMPTY;
+    }
+
+    return SketchHolder.of(
+        SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    );
   }
 }

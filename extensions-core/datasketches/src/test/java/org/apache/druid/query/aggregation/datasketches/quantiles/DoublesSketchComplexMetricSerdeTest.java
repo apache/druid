@@ -22,10 +22,15 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class DoublesSketchComplexMetricSerdeTest
 {
@@ -91,5 +96,43 @@ public class DoublesSketchComplexMetricSerdeTest
     );
     Assert.assertEquals(1, sketch.getRetainedItems());
     Assert.assertEquals(0.1d, sketch.getMaxValue(), 0.01d);
+  }
+
+  @Test
+  public void testSafeRead()
+  {
+    final DoublesSketchComplexMetricSerde serde = new DoublesSketchComplexMetricSerde();
+    DoublesUnion union = DoublesUnion.builder().setMaxK(1024).build();
+    union.update(1.1);
+    final byte[] bytes = union.toByteArray();
+
+    ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+    ObjectStrategy<DoublesSketch> objectStrategy = serde.getObjectStrategy();
+
+    // valid sketch should not explode when copied, which reads the memory
+    objectStrategy.fromByteBufferSafe(buf, bytes.length).toByteArray(true);
+
+    // corrupted sketch should fail with a regular java buffer exception
+    for (int subset = 3; subset < 15; subset++) {
+      final byte[] garbage2 = new byte[subset];
+      for (int i = 0; i < garbage2.length; i++) {
+        garbage2[i] = buf.get(i);
+      }
+
+      final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
+      Assert.assertThrows(
+          "i " + subset,
+          IndexOutOfBoundsException.class,
+          () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray(true)
+      );
+    }
+
+    // non sketch that is too short to contain header should fail with regular java buffer exception
+    final byte[] garbage = new byte[]{0x01, 0x02};
+    final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
+    Assert.assertThrows(
+        IndexOutOfBoundsException.class,
+        () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).toByteArray(true)
+    );
   }
 }
