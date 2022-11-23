@@ -46,7 +46,7 @@ ROUTER = "router"
 COORDINATOR = "coordinator-overlord"
 HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
-TASK = "task"
+TASKS = "tasks"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -62,13 +62,13 @@ SERVICE_MEMORY_RATIO = {
     COORDINATOR: 30,
     BROKER: 46,
     HISTORICAL: 80,
-    TASK: 30
+    TASKS: 30
 }
 
 MINIMUM_MEMORY_MB = {
     MIDDLE_MANAGER: 64,
     ROUTER: 128,
-    TASK: 1024,
+    TASKS: 1024,
     BROKER: 900,
     COORDINATOR: 256,
     HISTORICAL: 900
@@ -80,7 +80,7 @@ HEAP_TO_TOTAL_MEM_RATIO = {
     COORDINATOR: 1,
     BROKER: 0.60,
     HISTORICAL: 0.40,
-    TASK: 0.50
+    TASKS: 0.50
 }
 
 LOGGING_ENABLED = False
@@ -105,21 +105,18 @@ sample usage:
             Compute memory distribution and validate arguments.
     start-druid -m=100g -s=broker,router
             Starts a broker and a router, using a total memory of 100GB.
-            Reads config from conf/druid/single-server/quickstart.
     start-druid -m=100g --s=broker,router \\
     -c=conf/druid/single-server/custom
             Starts a broker and a router, using a total memory of 100GB.
-            Reads configs from the given config path.
+            Reads configs for each service (jvm.config, runtime.properties)
+            from respective folders inside the given root config path.
             Throws an exception if there is a jvm.config present in any
             of the service directories inside the given root conf directory.
     start-druid -s=broker,router \\
     -c=conf/druid/single-server/custom
-            Starts a broker and a router service, using upto 80% of the
-            total system memory. Calculates the memory requirements for
-            each service if no jvm.config is present for any of the
-            services. Does not calculate memory requirements if jvm.config
-            is present in all of the service directories. Throws an exception
-            if jvm.config is present in only some of the service directories.
+            Starts a broker and a router service, reading service configs
+            from the given root directory. Calculates memory requirements for
+            each service, if required, using upto 80% of the total system memory.
     start-druid -m=100g \\
     -s=broker,router \\
     -c=conf/druid/single-server/custom \\
@@ -272,7 +269,7 @@ def build_mm_task_javaopts_array(memory_type):
     return task_memory
 
 def build_memory_config_string(service, allocated_memory):
-    if service == TASK:
+    if service == TASKS:
         if allocated_memory >= 2048:
             task_count = int(allocated_memory / 2048)
             memory_type = TASK_MEM_TYPE_HIGH
@@ -302,7 +299,7 @@ def distribute_memory_over_services(services, total_memory):
 
     service_list = services.copy()
     if MIDDLE_MANAGER in services:
-        service_list.append(TASK)
+        service_list.append(TASKS)
 
     for service in service_list:
         memory_weight_sum += SERVICE_MEMORY_RATIO.get(service)
@@ -370,7 +367,7 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
             commands.append(f'{prefix}{service} bin/run-druid {service} {config}')
         else:
             if service == MIDDLE_MANAGER:
-                task_config = service_memory_config.get(TASK)
+                task_config = service_memory_config.get(TASKS)
                 task_count = task_config[0]
                 task_memory = task_config[1]
                 commands.append(
