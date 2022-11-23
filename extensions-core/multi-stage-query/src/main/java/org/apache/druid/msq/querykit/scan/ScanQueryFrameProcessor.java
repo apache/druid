@@ -224,32 +224,34 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
-  private void populateFrameWriterAndFlushIfNeeded()
+  private void populateFrameWriterAndFlushIfNeeded() throws IOException
   {
     createFrameWriterIfNeeded();
 
-    try {
-      while (!cursor.isDone()) {
-        if (!frameWriter.addSelection()) {
-          if (frameWriter.getNumRows() > 0) {
-            final long numRowsWritten = flushFrameWriter();
-
-            if (runningCountForLimit != null) {
-              runningCountForLimit.addAndGet(numRowsWritten);
-            }
-
-            return;
-          } else {
-            throw new FrameRowTooLargeException(currentAllocatorCapacity);
-          }
-        }
-
-        cursor.advance();
-        partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
+    while (!cursor.isDone()) {
+      boolean addedSelection;
+      try {
+        addedSelection = frameWriter.addSelection();
       }
-    }
-    catch (Exception e) {
-      throw new ParseException("", e, "Unable to add the selection to the frame. Type conversion might be required.");
+      catch (UnsupportedOperationException e) {
+        throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
+      }
+      if (!addedSelection) {
+        if (frameWriter.getNumRows() > 0) {
+          final long numRowsWritten = flushFrameWriter();
+
+          if (runningCountForLimit != null) {
+            runningCountForLimit.addAndGet(numRowsWritten);
+          }
+
+          return;
+        } else {
+          throw new FrameRowTooLargeException(currentAllocatorCapacity);
+        }
+      }
+
+      cursor.advance();
+      partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
     }
   }
 

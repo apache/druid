@@ -1308,7 +1308,7 @@ public class MSQSelectTest extends MSQTestBase
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setExpectedMSQFault(new CannotParseExternalDataFault(
-            "Unable to add the selection to the frame. Type conversion might be required."))
+            "Unable to add the row to the frame. Type conversion might be required."))
         .verifyResults();
   }
 
