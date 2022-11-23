@@ -26,6 +26,8 @@ The following features are marked [experimental](./experimental.md) in the Druid
 
 This document includes each page that mentions an experimental feature. To graduate a feature, remove all mentions of its experimental status on all relevant pages.
 
+Note that this document does not track the status of contrib extensions, some of which are experimental.
+
 ## SQL-based ingestion
 
 - [SQL-based ingestion](../multi-stage-query/index.md)
