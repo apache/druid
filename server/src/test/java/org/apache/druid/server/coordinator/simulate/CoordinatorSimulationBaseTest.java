@@ -232,6 +232,7 @@ public abstract class CoordinatorSimulationBaseTest
                                    .withReplicationThrottleLimit(replicationThrottleLimit)
                                    .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInNodeLoadingQueue)
                                    .withUseBatchedSegmentSampler(true)
+                                   .withUseRoundRobinSegmentAssignment(true)
                                    .build();
   }
 

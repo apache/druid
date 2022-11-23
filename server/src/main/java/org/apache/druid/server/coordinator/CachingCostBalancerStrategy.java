@@ -43,15 +43,8 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
   @Override
   protected double computeCost(DataSegment proposalSegment, ServerHolder server, boolean includeCurrentServer)
   {
-    final long proposalSegmentSize = proposalSegment.getSize();
-
-    // (optional) Don't include server if it is already serving segment
-    if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
-
-    // Don't calculate cost if the server doesn't have enough space or is loading the segment
-    if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
+    // (optional) Don't include server if it cannot load the segment
+    if (!includeCurrentServer && !server.canLoadSegment(proposalSegment)) {
       return Double.POSITIVE_INFINITY;
     }
 

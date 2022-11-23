@@ -37,6 +37,7 @@ import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -366,7 +367,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     final PriorityQueue<Pair<Double, ServerHolder>> costPrioritizedServers =
         new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);
     try {
-      costPrioritizedServers.addAll(Futures.allAsList(futures).get());
+      costPrioritizedServers.addAll(Futures.allAsList(futures).get(5, TimeUnit.MINUTES));
     }
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
