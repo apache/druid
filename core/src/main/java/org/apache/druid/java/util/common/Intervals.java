@@ -20,9 +20,13 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+
+import javax.annotation.Nullable;
+import java.util.Arrays;
 
 public final class Intervals
 {
@@ -66,6 +70,50 @@ public final class Intervals
   public static boolean isEternity(final Interval interval)
   {
     return ETERNITY.equals(interval);
+  }
+
+  /**
+   * Finds an interval from the given set of sortedIntervals which overlaps with
+   * the searchInterval. If multiple candidate intervals overlap with the
+   * searchInterval, the "smallest" interval based on the
+   * {@link Comparators#intervalsByStartThenEnd()} is returned.
+   *
+   * @param searchInterval  Interval which should overlap with the result
+   * @param sortedIntervals Candidate overlapping intervals, sorted in ascending
+   *                        order, using {@link Comparators#intervalsByStartThenEnd()}.
+   * @return The first overlapping interval, if one exists, otherwise null.
+   */
+  @Nullable
+  public static Interval findOverlappingInterval(Interval searchInterval, Interval[] sortedIntervals)
+  {
+    Arrays.sort(sortedIntervals, Comparators.intervalsByStartThenEnd());
+    int index = Arrays.binarySearch(
+        sortedIntervals,
+        searchInterval,
+        Comparators.intervalsByStartThenEnd()
+    );
+    if (index >= 0) {
+      return sortedIntervals[index];
+    }
+
+    // Key was not found, index returned from binarySearch is (-(insertionPoint) - 1)
+    index = -(index + 1);
+
+    // If the interval at (index - 1) doesn't overlap, (index - 2) wouldn't overlap either
+    if (index > 0) {
+      if (sortedIntervals[index - 1].overlaps(searchInterval)) {
+        return sortedIntervals[index - 1];
+      }
+    }
+
+    // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
+    if (index < sortedIntervals.length) {
+      if (sortedIntervals[index].overlaps(searchInterval)) {
+        return sortedIntervals[index];
+      }
+    }
+
+    return null;
   }
 
   private Intervals()

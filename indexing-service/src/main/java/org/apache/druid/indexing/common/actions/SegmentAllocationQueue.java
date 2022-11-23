@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -45,7 +46,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,7 +71,7 @@ public class SegmentAllocationQueue
 {
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
 
-  private static final int MAX_QUEUE_SIZE = 5000;
+  private static final int MAX_QUEUE_SIZE = 2000;
 
   private final long maxWaitTimeMillis;
   private final boolean enabled;
@@ -191,7 +191,6 @@ public class SegmentAllocationQueue
     log.info("Requeueing [%d] failed requests in batch [%s].", batch.size(), batch.key);
     keyToBatch.compute(batch.key, (key, existingBatch) -> {
       if (existingBatch == null) {
-        batch.resetQueueTime();
         return addBatchToQueue(batch) ? batch : null;
       } else {
         // Merge requests from this batch to existing one
@@ -332,7 +331,7 @@ public class SegmentAllocationQueue
       for (SegmentAllocateRequest request : allRequests) {
         // If there is an overlapping used segment interval, that interval is
         // the only candidate for allocation
-        Interval overlappingInterval = findOverlappingInterval(
+        Interval overlappingInterval = Intervals.findOverlappingInterval(
             request.getRowInterval(),
             sortedUsedSegmentIntervals
         );
@@ -377,37 +376,6 @@ public class SegmentAllocationQueue
     }
 
     return successCount;
-  }
-
-  private Interval findOverlappingInterval(Interval searchInterval, Interval[] sortedIntervals)
-  {
-    int index = Arrays.binarySearch(
-        sortedIntervals,
-        searchInterval,
-        Comparators.intervalsByStartThenEnd()
-    );
-    if (index >= 0) {
-      return sortedIntervals[index];
-    }
-
-    // Key was not found, index returned from binarySearch is (-(insertionPoint) - 1)
-    index = -(index + 1);
-
-    // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
-    if (index < sortedIntervals.length) {
-      if (sortedIntervals[index].overlaps(searchInterval)) {
-        return sortedIntervals[index];
-      }
-    }
-
-    // If the interval at (index - 1) doesn't overlap, (index - 2) wouldn't overlap either
-    if (index > 0) {
-      if (sortedIntervals[index - 1].overlaps(searchInterval)) {
-        return sortedIntervals[index - 1];
-      }
-    }
-
-    return null;
   }
 
   private Interval[] getSortedIntervals(Set<DataSegment> usedSegments)
