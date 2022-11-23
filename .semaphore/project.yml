@@ -1,0 +1,33 @@
+apiVersion: v1alpha
+kind: Project
+metadata:
+  name: druid
+  description: ""
+spec:
+  visibility: private
+  repository:
+    url: git@github.com:confluentinc/druid.git
+    run_on:
+    - branches
+    - tags
+    - pull_requests
+    pipeline_file: .semaphore/semaphore.yml
+    integration_type: github_app
+    status:
+      pipeline_files:
+      - path: .semaphore/semaphore.yml
+        level: pipeline
+  custom_permissions: true
+  debug_permissions:
+  - empty
+  - default_branch
+  - non_default_branch
+  - pull_request
+  - forked_pull_request
+  - tag
+  attach_permissions:
+  - default_branch
+  - non_default_branch
+  - pull_request
+  - forked_pull_request
+  - tag
