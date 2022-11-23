@@ -403,12 +403,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
               QueryMetrics<?> queryMetrics = queryPlus.getQueryMetrics();
               if (queryMetrics != null) {
                 queryMetrics.parallelMergeParallelism(reportMetrics.getParallelism());
-                queryMetrics.reportParallelMergeParallelism(reportMetrics.getParallelism());
-                queryMetrics.reportParallelMergeInputSequences(reportMetrics.getInputSequences());
-                queryMetrics.reportParallelMergeInputRows(reportMetrics.getInputRows());
-                queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows());
-                queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount());
-                queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime());
+                queryMetrics.reportParallelMergeParallelism(reportMetrics.getParallelism()).emit(emitter);
+                queryMetrics.reportParallelMergeInputSequences(reportMetrics.getInputSequences()).emit(emitter);
+                queryMetrics.reportParallelMergeInputRows(reportMetrics.getInputRows()).emit(emitter);
+                queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows()).emit(emitter);
+                queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount()).emit(emitter);
+                queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime()).emit(emitter);
+                queryMetrics.reportParallelMergeTotalTime(reportMetrics.getTotalTime()).emit(emitter);
+                queryMetrics.reportParallelMergeSlowestPartitionTime(reportMetrics.getSlowestPartitionInitializedTime())
+                            .emit(emitter);
+                queryMetrics.reportParallelMergeFastestPartitionTime(reportMetrics.getFastestPartitionInitializedTime())
+                            .emit(emitter);
               }
             }
         );
@@ -884,7 +889,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return null;
       }
       return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
-
     }
   }
 }
