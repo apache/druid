@@ -241,7 +241,9 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   public void testFrontCodedIndexedUnicodes() throws IOException
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
-    List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr");
+
+    // "\uD83D\uDCA9" and "（請參見已被刪除版本）" are a regression test for https://github.com/apache/druid/pull/13364
+    List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr", "\uD83D\uDCA9", "（請參見已被刪除版本）");
     fillBuffer(buffer, theList, 4);
 
     buffer.position(0);

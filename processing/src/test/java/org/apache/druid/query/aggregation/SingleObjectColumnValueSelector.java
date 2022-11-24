@@ -22,17 +22,13 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import javax.annotation.Nullable;
-
-public class SingleValueColumnValueSelector<T> implements ColumnValueSelector<T>
+public abstract class SingleObjectColumnValueSelector<T> implements ColumnValueSelector<T>
 {
   private final Class<T> valueClass;
-  private final T value;
 
-  public SingleValueColumnValueSelector(Class<T> valueClass, T value)
+  public SingleObjectColumnValueSelector(Class<T> valueClass)
   {
     this.valueClass = valueClass;
-    this.value = value;
   }
 
   @Override
@@ -62,13 +58,6 @@ public class SingleValueColumnValueSelector<T> implements ColumnValueSelector<T>
   public boolean isNull()
   {
     return false;
-  }
-
-  @Nullable
-  @Override
-  public T getObject()
-  {
-    return value;
   }
 
   @Override

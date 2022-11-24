@@ -92,7 +92,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
         if (object == null || object instanceof DoublesSketch || object instanceof Memory) {
           return object;
         }
-        return DoublesSketchOperations.deserialize(object);
+        return DoublesSketchOperations.deserializeSafe(object);
       }
     };
   }

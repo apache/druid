@@ -456,6 +456,15 @@ public class OrcStructConverterTest
     final Object field = converter.convertRootField(orcStruct, fieldName);
     Assert.assertNotNull(field);
     Assert.assertEquals(expectedValue, field);
+
+
+    final int fieldIndex = orcStruct.getSchema().getFieldNames().indexOf(fieldName);
+    TypeDescription fieldDescription = orcStruct.getSchema().getChildren().get(fieldIndex);
+    if (fieldDescription.getCategory().isPrimitive()) {
+      final Object simple = converter.tryConvertPrimitive(orcStruct.getFieldValue(fieldIndex));
+      Assert.assertNotNull(simple);
+      Assert.assertEquals(expectedValue, simple);
+    }
   }
 
   private static void assertNullValue(OrcStructConverter converter, OrcStruct orcStruct, String fieldName)
