@@ -160,16 +160,20 @@ sample usage:
     return parser
 
 
+def validate_common_jvm_args(config):
+    if pathlib.Path(f'{config}/_common/common.jvm.config').is_file() is False:
+        raise ValueError(f'_common/common.jvm.config file is missing in the root config, '
+                         f'check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
+
+
 def validate_common_directory(config):
     if pathlib.Path(f'{config}/_common').is_dir() is False:
         raise ValueError(
             f'_common directory is missing in the root config, check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
 
     if pathlib.Path(f'{config}/_common/common.runtime.properties').is_file() is False:
-        raise ValueError(f'_common/common.runtime.properties file is missing in the root config, check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
-
-    if pathlib.Path(f'{config}/_common/common.jvm.config').is_file() is False:
-        raise ValueError(f'_common/jvm.config file is missing in the root config, check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
+        raise ValueError(f'_common/common.runtime.properties file is missing in the root config, '
+                         f'check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
 
 
 def parse_arguments(args):
@@ -211,12 +215,27 @@ def parse_arguments(args):
 
 
 def print_startup_config(service_list, config, zk):
-    print_if_verbose(f'starting {service_list}')
-    print_if_verbose(f'reading config from {config}')
+    print_if_verbose(f'Starting {service_list}')
+    print_if_verbose(f'Reading config from {config}')
     if zk:
         zk_config = pathlib.Path(f'{os.getcwd()}/../conf/zk').resolve()
-        print_if_verbose(f'starting zk, reading default config from {zk_config}')
+        print_if_verbose(f'Starting zk, reading default config from {zk_config}')
     print_if_verbose('\n')
+
+
+def middle_manager_task_memory_params_present(config):
+    java_opts_property_present = False
+    worker_capacity_property_present = False
+
+    if pathlib.Path(f'{config}/middleManager/runtime.properties').is_file():
+        with open(f'{config}/middleManager/runtime.properties') as file:
+            for line in file:
+                if line.startswith(TASK_JAVA_OPTS_PROPERTY):
+                    java_opts_property_present = True
+                elif line.startswith(TASK_WORKER_CAPACITY_PROPERTY):
+                    worker_capacity_property_present = True
+
+    return java_opts_property_present, worker_capacity_property_present
 
 
 def verify_service_config(service, config):
@@ -229,9 +248,9 @@ def verify_service_config(service, config):
 
     with open(path) as file:
         for line in file:
-            if line.startswith(XMX_PARAMETER):
+            if line.startswith(XMX_PARAMETER) and XMX_PARAMETER in required_parameters:
                 required_parameters.remove(XMX_PARAMETER)
-            if line.startswith(XMS_PARAMETER):
+            if line.startswith(XMS_PARAMETER) and XMS_PARAMETER in required_parameters:
                 required_parameters.remove(XMS_PARAMETER)
             if line.startswith(DIRECT_MEM_PARAMETER) and DIRECT_MEM_PARAMETER in required_parameters:
                 required_parameters.remove(DIRECT_MEM_PARAMETER)
@@ -244,38 +263,57 @@ def verify_service_config(service, config):
         if pathlib.Path(f'{config}/{service}/runtime.properties').is_file() is False:
             raise ValueError(f'{service}/runtime.properties file is missing in the root config')
 
-        java_opts_property_present = False
-        with open(f'{config}/{service}/runtime.properties') as file:
-            for line in file:
-                if line.startswith(TASK_JAVA_OPTS_PROPERTY):
-                    java_opts_property_present = True
+        mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
 
-        if java_opts_property_present is False:
+        if mm_task_java_opts_property is False:
             raise ValueError(f'{TASK_JAVA_OPTS_PROPERTY} property missing in {service}/runtime.properties')
 
 
 def should_compute_memory(config, total_memory, service_list):
-    # if jvm file is present for any of the services
-    # it should be present for all services and memory should not be specified
-    # if memory is given, jvm file shouldn't be present for any service
+    """
+    if memory argument is given, memory for services and tasks is computed, jvm.config file
+    or runtime.properties with task memory specification shouldn't be present
+    Alternatively, all memory related parameters are specified
+    which implies following should be present:
+    jvm.config file for all services with -Xmx=***, Xms=*** parameters
+    -XX:MaxDirectMemorySize=** in jvm.config for broker and historical
+    druid.indexer.runner.javaOptsArray (optionally druid.worker.capacity) in
+    rootDirectory/middleManager/runtime.properties
+    """
+
     jvm_config_count = 0
     for service in service_list:
         if pathlib.Path(f'{config}/{service}/jvm.config').is_file():
             jvm_config_count += 1
-        elif jvm_config_count > 0:
-            raise ValueError(
-                f'jvm.config file is missing for service {service}, jvm.config should be specified for all the '
-                f'services or none')
 
-    if jvm_config_count > 0:
-        if jvm_config_count != len(service_list):
-            raise ValueError("jvm.config file should be present for all services or none")
+    mm_task_property_present = False
+    if MIDDLE_MANAGER in service_list:
+        mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
+        mm_task_property_present = mm_task_java_opts_property or mm_task_worker_capacity_prop
+
+    # possible error states
+    # 1. memory argument is specified, also jvm.config or middleManger/runtime.properties having
+    # druid.indexer.runner.javaOptsArray or druid.worker.capacity parameters is present
+    # 2. jvm.config is not present for any service, but middleManger/runtime.properties has
+    # druid.indexer.runner.javaOptsArray or druid.worker.capacity parameters
+    # 3. jvm.config present for some but not all services
+    # 4. jvm.config file is present for all services, but it doesn't contain required parameters
+    # 5. lastly, if middleManager is to be started, and it is missing task memory properties
+    if jvm_config_count > 0 or mm_task_property_present:
         if total_memory != "":
             raise ValueError("If jvm.config is given for services, memory argument shouldn't be specified")
+        if jvm_config_count == 0:
+            raise ValueError("druid.indexer.runner.javaOptsArray or druid.worker.capacity is present in "
+                             "middleManager/runtime.properties, \n "
+                             "add jvm.config for all other services")
+        if jvm_config_count != len(service_list):
+            raise ValueError("jvm.config file should be present for all services or none")
         for service in service_list:
             verify_service_config(service, config)
 
-    return jvm_config_count == 0
+    # compute memory only when none of the specified services contains jvm.config,
+    # if middleManager is to be started it doesn't contain task memory properties
+    return jvm_config_count == 0 and mm_task_property_present is False
 
 
 def compute_system_memory():
@@ -476,13 +514,16 @@ def main():
     service_memory_config = {}
 
     if should_compute_memory(config, total_memory, service_list):
+        # if memory is to be computed, _common directory should contain common.jvm.config
+        validate_common_jvm_args(config)
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
-        print_if_verbose(f'total memory is {memory_in_mega_bytes}m')
+        print_if_verbose(f'Total memory is {memory_in_mega_bytes}m\n')
         memory_to_be_used = check_memory_constraint(memory_in_mega_bytes, service_list)
-        print_if_verbose(f'memory used for services & tasks {memory_to_be_used}m')
+        print_if_verbose(f'Memory used for services & tasks {memory_to_be_used}m\n')
         service_memory_config = distribute_memory(service_list, memory_to_be_used)
     else:
-        print_if_verbose('not computing memory distribution, reading memory specification from service jvm.config\n')
+        print_if_verbose('Not computing memory distribution, reading memory specification from service jvm.config & '
+                         'middleManager/runtime.properties\n')
 
     script_arguments = build_supervise_script_arguments(service_list, service_memory_config, config, zk)
 
@@ -490,6 +531,7 @@ def main():
         return
 
     os.execv('./supervise', script_arguments)
+
 
 try:
     main()
