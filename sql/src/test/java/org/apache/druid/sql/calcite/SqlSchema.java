@@ -73,7 +73,8 @@ public class SqlSchema
           && Objects.equals(type, other.type);
     }
 
-    public int hash()
+    @Override
+    public int hashCode()
     {
       return Objects.hash(name, type);
     }
