@@ -52,6 +52,7 @@ export interface Field<M> {
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: Functor<M, string>;
   min?: number;
+  max?: number;
   zeroMeansUndefined?: boolean;
   height?: string;
   disabled?: Functor<M, boolean>;
@@ -249,6 +250,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (onFinalize) onFinalize();
         }}
         min={field.min || 0}
+        max={field.max}
         fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}

@@ -281,7 +281,7 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
   @Override
   public int getLength()
   {
-    return 0;
+    return -1;
   }
 
   @Override

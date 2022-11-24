@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -38,7 +36,6 @@ import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -55,7 +52,19 @@ public class MSQDurableStorageModule implements DruidModule
       String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "enable");
 
   private Properties properties;
-  private Injector injector;
+  private Set<NodeRole> nodeRoles;
+
+  @Inject
+  public void setProperties(Properties properties)
+  {
+    this.properties = properties;
+  }
+
+  @Inject
+  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
+  {
+    this.nodeRoles = nodeRoles;
+  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -78,8 +87,7 @@ public class MSQDurableStorageModule implements DruidModule
             .toProvider(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
             .in(LazySingleton.class);
 
-      Set<NodeRole> nodeRoles = getNodeRoles(injector);
-      if (nodeRoles != null && nodeRoles.contains(NodeRole.OVERLORD)) {
+      if (nodeRoles.contains(NodeRole.OVERLORD)) {
         JsonConfigProvider.bind(
             binder,
             String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "cleaner"),
@@ -90,37 +98,6 @@ public class MSQDurableStorageModule implements DruidModule
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }
-    }
-  }
-
-  @Inject
-  public void setProperties(Properties properties)
-  {
-    this.properties = properties;
-  }
-
-  @Inject
-  public void setInjector(Injector injector)
-  {
-    this.injector = injector;
-  }
-
-
-  @Nullable
-  private static Set<NodeRole> getNodeRoles(Injector injector)
-  {
-    try {
-      return injector.getInstance(
-          Key.get(
-              new TypeLiteral<Set<NodeRole>>()
-              {
-              },
-              Self.class
-          )
-      );
-    }
-    catch (Exception e) {
-      return null;
     }
   }
 

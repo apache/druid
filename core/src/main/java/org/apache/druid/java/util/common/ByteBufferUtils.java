@@ -47,7 +47,7 @@ public class ByteBufferUtils
   // null if unmap is supported
   private static final RuntimeException UNMAP_NOT_SUPPORTED_EXCEPTION;
 
-  private static final Comparator<ByteBuffer> COMPARATOR_UNSIGNED = new UnsignedByteBufferComparator();
+  private static final Comparator<ByteBuffer> COMPARATOR_UTF8 = new Utf8ByteBufferComparator();
 
   static {
     Object unmap = null;
@@ -214,40 +214,12 @@ public class ByteBufferUtils
   }
 
   /**
-   * Compares two ByteBuffer ranges using unsigned byte ordering.
+   * Compares two ByteBuffers from their positions to their limits using ordering consistent with
+   * {@link String#compareTo(String)}. Null buffers are accepted, and are ordered earlier than any nonnull buffer.
    *
-   * Different from {@link ByteBuffer#compareTo}, which uses signed ordering.
+   * Different from {@link ByteBuffer#compareTo}, which uses signed-bytes ordering.
    */
-  public static int compareByteBuffers(
-      final ByteBuffer buf1,
-      final int position1,
-      final int length1,
-      final ByteBuffer buf2,
-      final int position2,
-      final int length2
-  )
-  {
-    final int commonLength = Math.min(length1, length2);
-
-    for (int i = 0; i < commonLength; i++) {
-      final byte byte1 = buf1.get(position1 + i);
-      final byte byte2 = buf2.get(position2 + i);
-      final int cmp = (byte1 & 0xFF) - (byte2 & 0xFF); // Unsigned comparison
-      if (cmp != 0) {
-        return cmp;
-      }
-    }
-
-    return Integer.compare(length1, length2);
-  }
-
-  /**
-   * Compares two ByteBuffers from their positions to their limits using unsigned byte ordering. Accepts null
-   * buffers, which are ordered earlier than any nonnull buffer.
-   *
-   * Different from {@link ByteBuffer#compareTo}, which uses signed ordering.
-   */
-  public static int compareByteBuffers(
+  public static int compareUtf8ByteBuffers(
       @Nullable final ByteBuffer buf1,
       @Nullable final ByteBuffer buf2
   )
@@ -260,7 +232,7 @@ public class ByteBufferUtils
       return 1;
     }
 
-    return ByteBufferUtils.compareByteBuffers(
+    return StringUtils.compareUtf8UsingJavaStringOrdering(
         buf1,
         buf1.position(),
         buf1.remaining(),
@@ -271,20 +243,20 @@ public class ByteBufferUtils
   }
 
   /**
-   * Comparator that compares two {@link ByteBuffer} using unsigned ordering. Null buffers are accepted, and
-   * are ordered earlier than any nonnull buffer.
+   * Comparator that compares two {@link ByteBuffer} using ordering consistent with {@link String#compareTo(String)}.
+   * Null buffers are accepted, and are ordered earlier than any nonnull buffer.
    */
-  public static Comparator<ByteBuffer> unsignedComparator()
+  public static Comparator<ByteBuffer> utf8Comparator()
   {
-    return COMPARATOR_UNSIGNED;
+    return COMPARATOR_UTF8;
   }
 
-  private static class UnsignedByteBufferComparator implements Comparator<ByteBuffer>
+  private static class Utf8ByteBufferComparator implements Comparator<ByteBuffer>
   {
     @Override
     public int compare(@Nullable ByteBuffer o1, @Nullable ByteBuffer o2)
     {
-      return ByteBufferUtils.compareByteBuffers(o1, o2);
+      return compareUtf8ByteBuffers(o1, o2);
     }
   }
 }

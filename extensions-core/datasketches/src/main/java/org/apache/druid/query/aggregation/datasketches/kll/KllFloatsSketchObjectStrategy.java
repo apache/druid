@@ -23,7 +23,9 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.datasketches.kll.KllFloatsSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -60,4 +62,15 @@ public class KllFloatsSketchObjectStrategy implements ObjectStrategy<KllFloatsSk
     return sketch.toByteArray();
   }
 
+  @Nullable
+  @Override
+  public KllFloatsSketch fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  {
+    if (numBytes == 0) {
+      return KllFloatsSketchOperations.EMPTY_SKETCH;
+    }
+    return KllFloatsSketch.wrap(
+        SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    );
+  }
 }

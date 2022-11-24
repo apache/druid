@@ -155,7 +155,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
               <AnchorButton
-                text="Save"
+                text="Download"
                 minimal
                 download={downloadFilename}
                 href={UrlBaser.base(endpoint)}

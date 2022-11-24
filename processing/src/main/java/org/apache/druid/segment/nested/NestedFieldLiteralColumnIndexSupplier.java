@@ -228,16 +228,17 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       // valid global index in local dictionary, start here
       localStartIndex = localFound;
     }
-    // global end index is exclusive already, so we don't adjust local end index even for missing values
+
     int localEndFound = localDictionary.indexOf(globalEndIndex);
     if (localEndFound < 0) {
-      localEndIndex = -localEndFound;
+      localEndIndex = -(localEndFound + 1);
     } else {
       localEndIndex = localEndFound;
     }
 
     localStartIndex = Math.min(localStartIndex, localDictionary.size());
     localEndIndex = Math.max(localStartIndex, Math.min(localDictionary.size(), localEndIndex));
+
 
     return new IntIntImmutablePair(localStartIndex, localEndIndex);
   }

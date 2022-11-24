@@ -57,6 +57,8 @@
         "ids": [
           "ingestion/native-batch",
           "ingestion/native-batch-input-sources",
+          "ingestion/migrate-from-firehose",
+          "ingestion/native-batch-firehose",
           "ingestion/hadoop"
         ]
       },

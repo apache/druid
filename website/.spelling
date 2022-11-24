@@ -68,6 +68,9 @@ Double.NEGATIVE_INFINITY
 Double.NEGATIVE_INFINITY.
 Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
+downsampled
+downsamples
+downsampling
 Dropwizard
 dropwizard
 DruidInputSource
