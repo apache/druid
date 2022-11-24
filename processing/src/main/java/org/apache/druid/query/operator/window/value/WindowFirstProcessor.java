@@ -12,7 +12,8 @@ public class WindowFirstProcessor extends WindowValueProcessorBase
   public WindowFirstProcessor(
       @JsonProperty("inputColumn") String inputColumn,
       @JsonProperty("outputColumn") String outputColumn
-  ) {
+  )
+  {
     super(inputColumn, outputColumn);
   }
 

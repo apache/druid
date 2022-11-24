@@ -25,7 +25,8 @@ public abstract class WindowRankingProcessorBase implements Processor
   public WindowRankingProcessorBase(
       List<String> groupingCols,
       String outputColumn
-  ) {
+  )
+  {
     this.groupingCols = groupingCols;
     this.outputColumn = outputColumn;
   }

@@ -94,22 +94,24 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
    * code makes it look like you are getting a Sequence of RowsAndColumns, but, by using this, the query will
    * actually ultimately produce a Sequence of Object[].  This works because of type Erasure in Java (it's all Object
    * at the end of the day).
-   *
+   * <p>
    * While it might seem like this will break all sorts of things, the Generic type is actually there more as a type
    * "hint" to make the writing of the ToolChest and Factory and stuff a bit more simple.  Any caller of this cannot
    * truly depend on the type anyway other than to just throw it across the wire, so this should just magically work
    * even though it looks like it shouldn't even compile.
-   *
+   * <p>
    * Not our proudest moment, but we use the tools available to us.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private static class RowsAndColumnsUnravelingQueryRunner implements QueryRunner {
+  private static class RowsAndColumnsUnravelingQueryRunner implements QueryRunner
+  {
 
     private final QueryRunner<RowsAndColumns> baseQueryRunner;
 
     private RowsAndColumnsUnravelingQueryRunner(
         QueryRunner<RowsAndColumns> baseQueryRunner
-    ) {
+    )
+    {
       this.baseQueryRunner = baseQueryRunner;
     }
 

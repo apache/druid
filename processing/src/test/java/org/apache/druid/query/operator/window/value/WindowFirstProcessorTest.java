@@ -50,8 +50,8 @@ public class WindowFirstProcessorTest
           .validate();
 
     helper.forColumn("FirstDoubleCol", ColumnType.DOUBLE)
-        .setExpectation(new double[]{0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728})
-        .validate();
+          .setExpectation(new double[]{0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728})
+          .validate();
 
     helper.forColumn("FirstObjectCol", ColumnType.STRING)
           .setExpectation(new String[]{"a", "a", "a", "a", "a", "a", "a", "a", "a", "a"})

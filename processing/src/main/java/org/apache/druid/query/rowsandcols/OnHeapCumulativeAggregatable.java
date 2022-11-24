@@ -7,10 +7,10 @@ import java.util.List;
 
 /**
  * A semantic interface used to cumulatively aggregate a list of AggregatorFactories across a given set of data
- *
+ * <p>
  * The aggregation specifically happens on-heap and should be used in places where it is known that the data
  * set can be worked with entirely on-heap.
- *
+ * <p>
  * Note, as we implement frame-handling for window aggregations, it is expected that this interface will undergo a
  * transformation.  It might be deleted and replaced with something else, or might just see a change done in place.
  * Either way, there is no assumption of enforced compatibility with this interface at this point in time.

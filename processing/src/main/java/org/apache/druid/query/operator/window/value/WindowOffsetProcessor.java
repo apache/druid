@@ -15,7 +15,8 @@ public class WindowOffsetProcessor extends WindowValueProcessorBase
       @JsonProperty("inputColumn") String inputColumn,
       @JsonProperty("outputColumn") String outputColumn,
       @JsonProperty("offset") int offset
-  ) {
+  )
+  {
     super(inputColumn, outputColumn);
     this.offset = offset;
   }
@@ -27,7 +28,8 @@ public class WindowOffsetProcessor extends WindowValueProcessorBase
   }
 
   @Override
-  public RowsAndColumns process(RowsAndColumns input) {
+  public RowsAndColumns process(RowsAndColumns input)
+  {
     final int numRows = input.numRows();
 
     return processInternal(input, column -> new ColumnAccessorBasedColumn(

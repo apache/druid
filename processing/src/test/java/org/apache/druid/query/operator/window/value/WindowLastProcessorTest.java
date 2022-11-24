@@ -50,8 +50,8 @@ public class WindowLastProcessorTest
           .validate();
 
     helper.forColumn("LastDoubleCol", ColumnType.DOUBLE)
-        .setExpectation(new double[]{9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84})
-        .validate();
+          .setExpectation(new double[]{9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84, 9.84})
+          .validate();
 
     helper.forColumn("LastObjectCol", ColumnType.STRING)
           .setExpectation(new String[]{"j", "j", "j", "j", "j", "j", "j", "j", "j", "j"})

@@ -16,7 +16,8 @@ public class OverlaidRowsAndColumns implements AppendableRowsAndColumns
   public OverlaidRowsAndColumns(
       RowsAndColumns base,
       Map<String, Column> overlay
-  ) {
+  )
+  {
     this.base = base;
     this.overlay = overlay;
   }

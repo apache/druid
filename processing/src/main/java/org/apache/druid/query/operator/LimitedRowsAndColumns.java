@@ -20,7 +20,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
     if (numRows < end) {
       throw new ISE("end[%d] is out of bounds, cannot be greater than numRows[%d]", end, numRows);
     }
-    
+
     this.rac = rac;
     this.start = start;
     this.end = end;

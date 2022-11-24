@@ -5,26 +5,26 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 /**
  * An Operator interface that intends to align closely with the Operators that other databases would also tend
  * to be implemented using.
- *
+ * <p>
  * The lifecycle of an operator is that, after creation, it should be opened, and then iterated using hasNext() and
  * next().  Finally, when the Operator is no longer useful, it should be closed.
- *
+ * <p>
  * Operator's methods mimic the methods of an {@code Iterator}, but it does not implement {@code Iterator}
  * intentionally.  An operator should never be wrapped in an {@code Iterator}.  Any code that does that should be
  * considered a bug and fixed.  This is for two reasons:
- *
- *   1. An Operator should never be passed around as an {@code Iterator}.  An Operator must be closed, if an operator
- *   gets returned as an {@code Iterator}, the code that sees the {@code Iterator} loses the knowledge that it's
- *   dealing with an Operator and might not close it.  Even something like a {@code CloseableIterator} is an
- *   anti-pattern as it's possible to use it in a functional manner with code that loses track of the fact that it
- *   must be closed.
- *   2. To avoid "fluent" style composition of functions on Operators.  It is important that there never be a set of
- *   functional primitives for things like map/filter/reduce to "simplify" the implementation of Operators.  This is
- *   because such fluency produces really hard to decipher stack traces as the stacktrace ends up being just a bunch
- *   of calls from the scaffolding (map/filter/reduce) and not from the actual Operator itself.  By not implementing
- *   {@code Iterator} we are actively increasing the burden of trying to add such functional operations to the point
- *   that hopefully, though code review, we can ensure that we never develop them.  It is infinitely better to preserve
- *   the stacktrace and "duplicate" the map/filter/reduce scaffolding code.
+ * <p>
+ * 1. An Operator should never be passed around as an {@code Iterator}.  An Operator must be closed, if an operator
+ * gets returned as an {@code Iterator}, the code that sees the {@code Iterator} loses the knowledge that it's
+ * dealing with an Operator and might not close it.  Even something like a {@code CloseableIterator} is an
+ * anti-pattern as it's possible to use it in a functional manner with code that loses track of the fact that it
+ * must be closed.
+ * 2. To avoid "fluent" style composition of functions on Operators.  It is important that there never be a set of
+ * functional primitives for things like map/filter/reduce to "simplify" the implementation of Operators.  This is
+ * because such fluency produces really hard to decipher stack traces as the stacktrace ends up being just a bunch
+ * of calls from the scaffolding (map/filter/reduce) and not from the actual Operator itself.  By not implementing
+ * {@code Iterator} we are actively increasing the burden of trying to add such functional operations to the point
+ * that hopefully, though code review, we can ensure that we never develop them.  It is infinitely better to preserve
+ * the stacktrace and "duplicate" the map/filter/reduce scaffolding code.
  */
 public interface Operator
 {
@@ -56,7 +56,7 @@ public interface Operator
    * operations.  In Druid, in the data pipeline where this was introduced, we are guaranteed to always have close
    * called regardless of errors or exceptions during processing, as such, at time of introduction, there is no
    * call that passes false for cascade.
-   *
+   * <p>
    * That said, given that this is a common thing for these interfaces for other databases, we want to preserve the
    * optionality of being able to leverage what they do.  As such, we define the method this way with the belief
    * that it might be used in the future.  Semantically, this means that all implementations of Operators must

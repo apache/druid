@@ -13,12 +13,14 @@ public class WindowLastProcessor extends WindowValueProcessorBase
   public WindowLastProcessor(
       @JsonProperty("inputColumn") String inputColumn,
       @JsonProperty("outputColumn") String outputColumn
-  ) {
+  )
+  {
     super(inputColumn, outputColumn);
   }
 
   @Override
-  public RowsAndColumns process(RowsAndColumns input) {
+  public RowsAndColumns process(RowsAndColumns input)
+  {
     final int lastIndex = input.numRows() - 1;
     if (lastIndex < 0) {
       throw new ISE("Called with an input partition of size 0.  The call site needs to not do that.");

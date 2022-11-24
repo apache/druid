@@ -11,7 +11,8 @@ public interface AppendableRowsAndColumns extends RowsAndColumns
 {
   /**
    * Mutates the RowsAndColumns by appending the requested Column.
-   * @param name the name of the new column
+   *
+   * @param name   the name of the new column
    * @param column the Column object representing the new column
    */
   void addColumn(String name, Column column);

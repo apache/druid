@@ -15,12 +15,12 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 /**
  * A Processor is a bit of logic that processes a single RowsAndColumns object to produce a new RowsAndColumns
  * object.  Generally speaking, it is used to add or alter columns in a batch-oriented fashion.
- *
+ * <p>
  * This interface was created to support windowing functions, where the windowing function can be implemented
  * assuming that each RowsAndColumns object represents one partition.  Thus, the window function implementation
  * can only need to worry about how to process a single partition at a time and something external to the window
  * function worries about providing data with the correct partitioning.
- *
+ * <p>
  * Over time, it's possible that this interface is used for other purposes as well, but the fundamental idea of
  * usages of the interface should always be doing a one-to-one transformation of RowsAndColumns objects.  That is,
  * it's a RowsAndColumns in and a RowsAndColumns out.
@@ -40,25 +40,25 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 })
 public interface Processor
 {
-   /**
-    * Applies the logic of the processor to a RowsAndColumns object
-    *
-    * @param incomingPartition the incoming RowsAndColumns object
-    * @return the transformed RowsAndColumns object
-    */
-   RowsAndColumns process(RowsAndColumns incomingPartition);
+  /**
+   * Applies the logic of the processor to a RowsAndColumns object
+   *
+   * @param incomingPartition the incoming RowsAndColumns object
+   * @return the transformed RowsAndColumns object
+   */
+  RowsAndColumns process(RowsAndColumns incomingPartition);
 
-   /**
-    * Validates the equivalence of the Processors.  This is similar to @{code .equals} but is its own method
-    * so that it can ignore certain fields that would be important for a true equality check.  Namely, two Processors
-    * defined the same way but with different output names can be considered equivalent even though they are not equal.
-    *
-    * This primarily exists to simplify tests, where this equivalence can be used to validate that the Processors
-    * created by the SQL planner are actually equivalent to what we expect without needing to be overly dependent on
-    * how the planner names the output columns
-    *
-    * @param otherProcessor the processor to test equivalence of
-    * @return boolean identifying if these processors should be considered equivalent to each other.
-    */
-   boolean validateEquivalent(Processor otherProcessor);
+  /**
+   * Validates the equivalence of the Processors.  This is similar to @{code .equals} but is its own method
+   * so that it can ignore certain fields that would be important for a true equality check.  Namely, two Processors
+   * defined the same way but with different output names can be considered equivalent even though they are not equal.
+   * <p>
+   * This primarily exists to simplify tests, where this equivalence can be used to validate that the Processors
+   * created by the SQL planner are actually equivalent to what we expect without needing to be overly dependent on
+   * how the planner names the output columns
+   *
+   * @param otherProcessor the processor to test equivalence of
+   * @return boolean identifying if these processors should be considered equivalent to each other.
+   */
+  boolean validateEquivalent(Processor otherProcessor);
 }

@@ -34,7 +34,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     super(dataSource, querySegmentSpec, false, context);
     this.rowSignature = rowSignature;
     this.operators = operators;
-    if (! (dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
+    if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
   }

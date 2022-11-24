@@ -24,7 +24,8 @@ public class NaivePartitioningOperator implements Operator
   public NaivePartitioningOperator(
       List<String> partitionColumns,
       Operator child
-  ) {
+  )
+  {
     this.partitionColumns = partitionColumns;
     this.child = child;
   }

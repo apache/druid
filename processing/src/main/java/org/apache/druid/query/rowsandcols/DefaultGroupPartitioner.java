@@ -12,7 +12,8 @@ public class DefaultGroupPartitioner implements GroupPartitioner
 
   public DefaultGroupPartitioner(
       RowsAndColumns rac
-  ) {
+  )
+  {
     this.rac = rac;
   }
 
@@ -34,12 +35,12 @@ public class DefaultGroupPartitioner implements GroupPartitioner
       int prevGroupVal = 0;
       for (int i = 1; i < retVal.length; ++i) {
         if (retVal[i] == prevGroupVal) {
-          int comparison = accessor.compareCells(i-1, i);
+          int comparison = accessor.compareCells(i - 1, i);
           if (comparison == 0) {
             retVal[i] = currGroup;
             continue;
           } else if (comparison > 0) { // "greater than"
-            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", i-1, i);
+            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", i - 1, i);
           } // the 3rd condition ("less than") means create a new group, so let it fall through
         }
 

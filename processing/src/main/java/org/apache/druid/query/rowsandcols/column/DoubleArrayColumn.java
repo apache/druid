@@ -8,7 +8,8 @@ public class DoubleArrayColumn implements Column
 
   public DoubleArrayColumn(
       double[] vals
-  ) {
+  )
+  {
     this.vals = vals;
   }
 

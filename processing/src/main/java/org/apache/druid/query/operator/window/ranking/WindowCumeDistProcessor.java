@@ -19,7 +19,8 @@ public class WindowCumeDistProcessor extends WindowRankingProcessorBase
   public WindowCumeDistProcessor(
       @JsonProperty("group") List<String> groupingCols,
       @JsonProperty("outputColumn") String outputColumn
-  ) {
+  )
+  {
     super(groupingCols, outputColumn);
   }
 

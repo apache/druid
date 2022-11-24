@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * A semantic interface used to partition a data set based on a given set of dimensions.
- *
+ * <p>
  * This specifically assumes that it is working with sorted data and, as such, the groups returned
  * should be contiguous and unique (that is, all rows for a given combination of values exist in only one grouping)
  */

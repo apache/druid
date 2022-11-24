@@ -51,7 +51,8 @@ public class RowsAndColumnsHelper
     this.rac = rac;
   }
 
-  public ColumnHelper forColumn(String column, ColumnType expectedType) {
+  public ColumnHelper forColumn(String column, ColumnType expectedType)
+  {
     return new ColumnHelper(rac.findColumn(column), expectedType);
   }
 
@@ -70,47 +71,54 @@ public class RowsAndColumnsHelper
       this.expectedNulls = new boolean[expectedVals.length];
     }
 
-    public ColumnHelper setExpectation(int[] expectedVals) {
+    public ColumnHelper setExpectation(int[] expectedVals)
+    {
       for (int i = 0; i < expectedVals.length; i++) {
         this.expectedVals[i] = expectedVals[i];
       }
       return this;
     }
 
-    public ColumnHelper setExpectation(long[] expectedVals) {
+    public ColumnHelper setExpectation(long[] expectedVals)
+    {
       for (int i = 0; i < expectedVals.length; i++) {
         this.expectedVals[i] = expectedVals[i];
       }
       return this;
     }
 
-    public ColumnHelper setExpectation(double[] expectedVals) {
+    public ColumnHelper setExpectation(double[] expectedVals)
+    {
       for (int i = 0; i < expectedVals.length; i++) {
         this.expectedVals[i] = expectedVals[i];
       }
       return this;
     }
 
-    public ColumnHelper setExpectation(float[] expectedVals) {
+    public ColumnHelper setExpectation(float[] expectedVals)
+    {
       for (int i = 0; i < expectedVals.length; i++) {
         this.expectedVals[i] = expectedVals[i];
       }
       return this;
     }
 
-    public ColumnHelper setExpectation(Object[] expectedVals) {
+    public ColumnHelper setExpectation(Object[] expectedVals)
+    {
       System.arraycopy(expectedVals, 0, this.expectedVals, 0, expectedVals.length);
       return this;
     }
 
-    public ColumnHelper setNulls(int[] nullIndexes) {
+    public ColumnHelper setNulls(int[] nullIndexes)
+    {
       for (int nullIndex : nullIndexes) {
         this.expectedNulls[nullIndex] = true;
       }
       return this;
     }
 
-    public void validate() {
+    public void validate()
+    {
       final ColumnAccessor accessor = col.toAccessor();
       Assert.assertEquals(expectedType, accessor.getType());
 
@@ -121,7 +129,8 @@ public class RowsAndColumnsHelper
           Assert.assertTrue(msg, expectedNulls[i]);
           Assert.assertTrue(msg, accessor.isNull(i));
           Assert.assertNull(msg, accessor.getObject(i));
-        } if (expectedVal instanceof Float) {
+        }
+        if (expectedVal instanceof Float) {
           if (expectedNulls[i]) {
             Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertEquals(msg, 0.0f, accessor.getFloat(i), 0.0);

@@ -7,7 +7,8 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
 {
   private final ColumnAccessor accessor;
 
-  public ShiftedColumnAccessorBase(ColumnAccessor accessor) {
+  public ShiftedColumnAccessorBase(ColumnAccessor accessor)
+  {
     this.accessor = accessor;
   }
 

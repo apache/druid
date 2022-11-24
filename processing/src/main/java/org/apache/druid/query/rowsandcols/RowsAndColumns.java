@@ -9,14 +9,14 @@ import javax.annotation.Nullable;
 /**
  * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
  * with columns.
- *
+ * <p>
  * This interface has very little prescriptively defined about what *must* be implemented.  This is intentional
  * as there are lots of different possible representations of batch of rows each with their own unique positives
  * and negatives when it comes to processing.  So, any explicit definition of what a RowsAndColumns is will actually,
  * by definition, end up as optimal for one specific configuration and sub-optimal for others.  Instead of trying to
  * explicitly expand the interface to cover all of the different possible ways that someone could want to interace
  * with a Rows and columns, we rely on semantic interfaces using the {@link RowsAndColumns#as} method instead.
- *
+ * <p>
  * That is, the expectation is that anything that works with a RowsAndColumns will tend to first ask the RowsAndColumns
  * object to become some other interface, for example, an {@link OnHeapAggregatable}.  If a RowsAndColumns knows how
  * to do a good job as the requested interface, it can return its own concrete implementation of the interface and
@@ -24,11 +24,11 @@ import javax.annotation.Nullable;
  * the semantic interface, it is expected that a default implementation of the interface can be instantiated on top of
  * the default column access mechanisms that the RowsAndColumns provides.  Such default implementations should be
  * functionally correct, but are not believed to be optimal.
- *
+ * <p>
  * The "default column access mechanisms" here amount to using {@link #findColumn} to load a Column
  * and then using {@link Column#toAccessor} to access the individual cells of the column.  There is also a
  * {@link Column#as} method which a default implementation might attempt to use to create a more optimal runtime.
- *
+ * <p>
  * It is intended that this interface can be used by Frames, Segments and even normal on-heap JVM data structures to
  * participate in query operations.
  */
@@ -76,7 +76,7 @@ public interface RowsAndColumns
    * of trying to come up with its own default implementation.
    *
    * @param clazz A class object representing the interface that the calling code wants a concrete implementation of
-   * @param <T> The interface that the calling code wants a concrete implementation of
+   * @param <T>   The interface that the calling code wants a concrete implementation of
    * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
    * through a local implementation of the interface.
    */

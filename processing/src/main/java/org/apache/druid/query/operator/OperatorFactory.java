@@ -28,7 +28,7 @@ public interface OperatorFactory
    * Validates the equivalence of Operators.  This is similar to @{code .equals} but is its own method
    * so that it can ignore certain fields that would be important for a true equality check.  Namely, two Operators
    * defined the same way but with different output names can be considered equivalent even though they are not equal.
-   *
+   * <p>
    * This primarily exists to simplify tests, where this equivalence can be used to validate that the Operators
    * created by the SQL planner are actually equivalent to what we expect without needing to be overly dependent on
    * how the planner names output columns
