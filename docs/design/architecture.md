@@ -134,7 +134,7 @@ For details on modeling your data in Druid, see [schema design](../ingestion/sch
 ### Indexing and handoff
 
 _Indexing_ is the mechanism by which new segments are created, and _handoff_ is the mechanism by which they are published
-and begin being served by Historical processes. On the indexing side:
+and begin served by Historical processes. On the indexing side:
 
 1. An _indexing task_ starts running and building a new segment. It must determine the identifier of the segment before
 it starts building it. For a task that is appending (like a Kafka task, or an index task in append mode) this is
