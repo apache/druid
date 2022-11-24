@@ -50,19 +50,19 @@ export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolea
   );
 }
 
-export function formatCompactionConfigAndStatus(
-  compactionConfig: CompactionConfig | undefined,
-  compactionStatus: CompactionStatus | undefined,
-) {
-  if (compactionConfig) {
-    if (compactionStatus) {
-      if (
-        compactionStatus.bytesAwaitingCompaction === 0 &&
-        !zeroCompactionStatus(compactionStatus)
-      ) {
+export interface CompactionInfo {
+  config?: CompactionConfig;
+  status?: CompactionStatus;
+}
+
+export function formatCompactionInfo(compaction: CompactionInfo) {
+  const { config, status } = compaction;
+  if (config) {
+    if (status) {
+      if (status.bytesAwaitingCompaction === 0 && !zeroCompactionStatus(status)) {
         return 'Fully compacted';
       } else {
-        return capitalizeFirst(compactionStatus.scheduleStatus);
+        return capitalizeFirst(status.scheduleStatus);
       }
     } else {
       return 'Awaiting first run';
