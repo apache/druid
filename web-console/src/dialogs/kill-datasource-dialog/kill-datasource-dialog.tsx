@@ -16,24 +16,28 @@
  * limitations under the License.
  */
 
-import { Code, FormGroup, Intent } from '@blueprintjs/core';
+import { Code, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
+import { FormGroupWithInfo, PopoverText } from '../../components';
 import { SuggestibleInput } from '../../components/suggestible-input/suggestible-input';
 import { Api } from '../../singletons';
 import { uniq } from '../../utils';
 import { AsyncActionDialog } from '../async-action-dialog/async-action-dialog';
 
-function getStartOfDay(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+function getSuggestions(): string[] {
+  // Default to a data 24h ago so as not to cause a conflict between streaming ingestion and kill tasks
+  const end = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const startOfDay = end.slice(0, 10);
+  const startOfMonth = end.slice(0, 7) + '-01';
+  const startOfYear = end.slice(0, 4) + '-01-01';
 
-function getStartOfMonth(): string {
-  return new Date().toISOString().slice(0, 7) + '-01';
-}
-
-function getStartOfYear(): string {
-  return new Date().toISOString().slice(0, 4) + '-01-01';
+  return uniq([
+    `1000-01-01/${startOfDay}`,
+    `1000-01-01/${startOfMonth}`,
+    `1000-01-01/${startOfYear}`,
+    '1000-01-01/3000-01-01',
+  ]);
 }
 
 export interface KillDatasourceDialogProps {
@@ -46,7 +50,8 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
   props: KillDatasourceDialogProps,
 ) {
   const { datasource, onClose, onSuccess } = props;
-  const [interval, setInterval] = useState<string>(`1000-01-01/${getStartOfDay()}`);
+  const suggestions = getSuggestions();
+  const [interval, setInterval] = useState<string>(suggestions[0]);
 
   return (
     <AsyncActionDialog
@@ -78,18 +83,28 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
         Are you sure you want to permanently delete unused segments in <Code>{datasource}</Code>?
       </p>
       <p>This action is not reversible and the data deleted will be lost.</p>
-      <FormGroup label="Interval to delete">
+      <FormGroupWithInfo
+        label="Interval to delete"
+        info={
+          <PopoverText>
+            <p>
+              The range of time over which to delete unused segments specified in ISO8601 interval
+              format.
+            </p>
+            <p>
+              If you have streaming ingestion running make sure that your interval range doe not
+              overlap with intervals where streaming data is being added - otherwise the kill task
+              will not start.
+            </p>
+          </PopoverText>
+        }
+      >
         <SuggestibleInput
           value={interval}
           onValueChange={s => setInterval(s || '')}
-          suggestions={uniq([
-            '1000-01-01/3000-01-01',
-            `1000-01-01/${getStartOfDay()}`,
-            `1000-01-01/${getStartOfMonth()}`,
-            `1000-01-01/${getStartOfYear()}`,
-          ])}
+          suggestions={suggestions}
         />
-      </FormGroup>
+      </FormGroupWithInfo>
     </AsyncActionDialog>
   );
 };

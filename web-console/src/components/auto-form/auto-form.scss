@@ -19,13 +19,4 @@
 @import '../../variables';
 
 .auto-form {
-  // Popover in info label
-  label.#{$bp-ns}-label {
-    position: relative;
-
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-    }
-  }
 }

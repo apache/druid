@@ -19,6 +19,20 @@
 @import '../../variables';
 
 .form-group-with-info {
+  label.#{$bp-ns}-label {
+    position: relative;
+
+    .#{$bp-ns}-text-muted {
+      position: absolute;
+      right: 0;
+
+      // This is only needed because BP4 alerts are too agro in setting CSS on icons
+      .#{$bp-ns}-icon {
+        margin-right: 0;
+      }
+    }
+  }
+
   .#{$bp-ns}-text-muted .#{$bp-ns}-popover2-target {
     margin-top: 0;
   }
