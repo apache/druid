@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
@@ -37,7 +38,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.junit.Test;
 
 import javax.inject.Inject;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -90,9 +90,9 @@ public class DruidInjectorBuilderTest
     }
 
     @Override
-    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+    public List<? extends Module> getJacksonModules()
     {
-      return ImmutableList.<com.fasterxml.jackson.databind.Module>of(
+      return ImmutableList.<Module>of(
           new SimpleModule("MockModule").registerSubtypes(MockObjectExtension.class)
       );
     }
@@ -240,7 +240,7 @@ public class DruidInjectorBuilderTest
    * JSON object will fail to deserialize.
    */
   @Test
-  public void testExclude() throws IOException
+  public void testExclude()
   {
     Properties props = new Properties();
     props.put(ModulesConfig.PROPERTY_BASE + ".excludeList", "[\"" + MockDruidModule.class.getName() + "\"]");
@@ -274,7 +274,7 @@ public class DruidInjectorBuilderTest
   }
 
   @Test
-  public void testNotMatchingNodeRole() throws IOException
+  public void testNotMatchingNodeRole()
   {
     Injector injector = new CoreInjectorBuilder(
         new StartupInjectorBuilder()

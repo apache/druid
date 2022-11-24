@@ -109,10 +109,9 @@ public class SqlSchema
 
   public static SqlSchema of(RelDataType rowType)
   {
-    Builder builder = new Builder();
+    final Builder builder = new Builder();
     List<RelDataTypeField> fields = rowType.getFieldList();
-    for (int i = 0; i < fields.size(); i++) {
-      RelDataTypeField field = fields.get(i);
+    for (RelDataTypeField field : fields) {
       builder.column(field.getName(), field.getType().getFullTypeString());
     }
     return builder.build();
@@ -122,7 +121,8 @@ public class SqlSchema
   public String toString()
   {
     return "(" +
-        columns.stream().map(c -> c.toString()).collect(Collectors.joining(", ")) +
+        columns.stream().map(
+            c -> c.toString()).collect(Collectors.joining(", ")) +
         ")";
   }
 
@@ -132,7 +132,7 @@ public class SqlSchema
     if (o == null || o.getClass() != getClass()) {
       return false;
     }
-    SqlSchema other = (SqlSchema) o;
+    final SqlSchema other = (SqlSchema) o;
     return Objects.equals(columns, other.columns);
   }
 

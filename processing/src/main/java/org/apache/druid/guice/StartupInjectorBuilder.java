@@ -92,8 +92,8 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
   public StartupInjectorBuilder forTests()
   {
     add(binder -> {
-      binder.bind(ExtensionsLoader.class).toProvider(Providers.<ExtensionsLoader>of(null));
-      binder.bind(RuntimeInfo.class).toProvider(Providers.<RuntimeInfo>of(null));
+      binder.bind(ExtensionsLoader.class).toProvider(Providers.of(null));
+      binder.bind(RuntimeInfo.class).toProvider(Providers.of(null));
     });
     return this;
   }
