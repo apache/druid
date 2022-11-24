@@ -30,7 +30,7 @@ public class WindowRowNumberProcessor implements Processor
   public RowsAndColumns process(RowsAndColumns incomingPartition)
   {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(incomingPartition);
-    return retVal.addColumn(
+    retVal.addColumn(
         outputColumn,
         new ColumnAccessorBasedColumn(
             new ColumnAccessor()
@@ -92,6 +92,7 @@ public class WindowRowNumberProcessor implements Processor
             }
         )
     );
+    return retVal;
   }
 
   @Override

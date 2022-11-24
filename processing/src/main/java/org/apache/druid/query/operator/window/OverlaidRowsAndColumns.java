@@ -45,12 +45,11 @@ public class OverlaidRowsAndColumns implements AppendableRowsAndColumns
   }
 
   @Override
-  public AppendableRowsAndColumns addColumn(String name, Column column)
+  public void addColumn(String name, Column column)
   {
     final Column prevValue = overlay.put(name, column);
     if (prevValue != null) {
       throw new ISE("Tried to override column[%s]!?  Was[%s], now[%s]", name, prevValue, column);
     }
-    return this;
   }
 }

@@ -63,7 +63,8 @@ public class WindowPercentileProcessor implements Processor
       index = nextIndex;
     }
 
-    return retVal.addColumn(outputColumn, new IntArrayColumn(bucketVals));
+    retVal.addColumn(outputColumn, new IntArrayColumn(bucketVals));
+    return retVal;
   }
 
   @Override

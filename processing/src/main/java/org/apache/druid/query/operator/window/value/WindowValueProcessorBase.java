@@ -51,7 +51,8 @@ public abstract class WindowValueProcessorBase implements Processor
       throw new ISE("column[%s] doesn't exist, but window function FIRST wants it to", inputColumn);
     }
 
-    return retVal.addColumn(outputColumn, fn.apply(column));
+    retVal.addColumn(outputColumn, fn.apply(column));
+    return retVal;
   }
 
   @Override
