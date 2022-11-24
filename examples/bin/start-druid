@@ -191,7 +191,6 @@ def parse_arguments(args):
         config = pathlib.Path(os.path.join(os.getcwd(), args.config)).resolve()
         if os.path.exists(config) is False:
             raise ValueError(f'config {config} not found')
-        validate_common_directory(config)
     if args.memory is not None:
         total_memory = args.memory
     if args.services is not None:
@@ -337,9 +336,13 @@ def convert_total_memory_string(memory):
         raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
 
-def check_memory_constraint(total_memory, service_list):
+def check_memory_constraint(total_memory, services):
     # 80% of total memory >= sum of lower bound service memory should be
     lower_bound_memory = 0
+
+    service_list = services.copy()
+    if MIDDLE_MANAGER in services:
+        service_list.append(TASKS)
 
     for service in service_list:
         lower_bound_memory += MINIMUM_MEMORY_MB.get(service)
@@ -508,6 +511,8 @@ def main():
 
     if config == "":
         config = pathlib.Path(f'{os.getcwd()}/../{QUICKSTART_ROOT_CONFIG_PATH}').resolve()
+
+    validate_common_directory(config)
 
     print_startup_config(service_list, config, zk)
 
