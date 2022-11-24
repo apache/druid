@@ -156,7 +156,10 @@ public class QueryableIndexOrderbyRunner
     final ImmutableBitmap filterBitmap = filterAnalysis.getPreFilterBitmap();
     final Filter postFilter = filterAnalysis.getPostFilter();
     Offset baseOffset;
-    boolean descending = false;
+    boolean descending = query.getOrderBys()
+                              .stream()
+                              .anyMatch(o -> ColumnHolder.TIME_COLUMN_NAME.equals(o.getColumnName())
+                                             && ScanQuery.Order.DESCENDING.name().equals(o.getOrder().name()));
     if (filterBitmap == null) {
       baseOffset = descending
                    ? new SimpleDescendingOffset(index.getNumRows())
