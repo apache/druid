@@ -49,7 +49,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/druid:24.0.1
+    image: apache/druid:24.0.2
     container_name: coordinator
     volumes:
       - druid_shared:/opt/shared
