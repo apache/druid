@@ -59,9 +59,11 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
         null
     );
 
+    LOG.info("Running sample query.");
     try {
       //noinspection unchecked
       queryClient.query(getQueryURL(broker), query);
+      LOG.info("Sample query successful.");
       return true;
     }
     catch (Exception e) {

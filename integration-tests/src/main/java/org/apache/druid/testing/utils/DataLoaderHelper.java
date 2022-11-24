@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.utils;
 
+import static org.apache.druid.testing.utils.AbstractTestQueryHelper.LOG;
+
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -33,6 +35,7 @@ public final class DataLoaderHelper
 
   public void waitUntilDatasourceIsReady(String datasource)
   {
+    LOG.info("Waiting for Segments to load");
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(datasource),
         StringUtils.format(
@@ -40,10 +43,13 @@ public final class DataLoaderHelper
             datasource
         )
     );
+    LOG.info("Segments loaded");
 
+    LOG.info("Waiting for Datasource to be ready for SQL queries");
     ITRetryUtil.retryUntilTrue(
         () -> sqlTestQueryHelper.isDatasourceLoadedInSQL(datasource),
         StringUtils.format("Waiting for [%s] to be ready for SQL queries", datasource)
     );
+    LOG.info("Datasource ready for SQL queries");
   }
 }
