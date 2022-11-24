@@ -9,7 +9,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
     className="error-message-text"
   >
     <Memo(ExternalLink)
-      href="https://druid.apache.org/docs/24.0.1/multi-stage-query/concepts.html#error-codes"
+      href="https://druid.apache.org/docs/24.0.2/multi-stage-query/concepts.html#error-codes"
     >
       TooManyWarnings
     </Memo(ExternalLink)>
