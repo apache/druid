@@ -19,14 +19,14 @@
 
 package org.apache.druid.testing.utils;
 
-import static org.apache.druid.testing.utils.AbstractTestQueryHelper.LOG;
-
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 
 public final class DataLoaderHelper
 {
+  private static final Logger LOG = new Logger(SqlTestQueryHelper.class);
   @Inject
   private SqlTestQueryHelper sqlTestQueryHelper;
 

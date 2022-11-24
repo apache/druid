@@ -20,9 +20,8 @@
 package org.apache.druid.testsEx.msq;
 
 import com.google.inject.Inject;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
@@ -32,8 +31,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import junitparams.Parameters;
-import junitparams.naming.TestCaseName;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)

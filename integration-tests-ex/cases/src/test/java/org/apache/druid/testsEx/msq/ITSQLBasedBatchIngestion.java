@@ -21,7 +21,6 @@ package org.apache.druid.testsEx.msq;
 
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testsEx.categories.MultiStageQuery;

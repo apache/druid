@@ -53,19 +53,23 @@ public class AbstractITSQLBasedIngestion
   private DataLoaderHelper dataLoaderHelper;
 
   @Rule
-  public TestWatcher watchman = new TestWatcher() {
+  public TestWatcher watchman = new TestWatcher()
+  {
     @Override
-    public void starting(Description d) {
+    public void starting(Description d)
+    {
       System.out.printf("\n\nRunning %s\n", d.getDisplayName());
     }
 
     @Override
-    public void failed(Throwable e, Description d) {
+    public void failed(Throwable e, Description d)
+    {
       System.out.printf("%s FAILED\n", d.getDisplayName());
     }
 
     @Override
-    public void finished(Description d) {
+    public void finished(Description d)
+    {
       System.out.printf("%s finished\n", d.getDisplayName());
     }
   };
@@ -164,7 +168,7 @@ public class AbstractITSQLBasedIngestion
   {
     LOG.info("Starting Reindex MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
 
-    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);;
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
     sqlTask = StringUtils.replace(
         sqlTask,
         REINDEX_DATASOURCE_STRING_IN_TASK,
