@@ -25,7 +25,8 @@ public class ObjectArrayColumn implements Column
   @Override
   public ColumnAccessor toAccessor()
   {
-    return new ObjectColumnAccessorBase(){
+    return new ObjectColumnAccessorBase()
+    {
       @Override
       protected Object getVal(int cell)
       {

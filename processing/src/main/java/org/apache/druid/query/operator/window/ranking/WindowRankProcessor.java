@@ -24,7 +24,8 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
       @JsonProperty("group") List<String> groupingCols,
       @JsonProperty("outputColumn") String outputColumn,
       @JsonProperty("asPercent") boolean asPercent
-  ) {
+  )
+  {
     super(groupingCols, outputColumn);
     this.asPercent = asPercent;
   }

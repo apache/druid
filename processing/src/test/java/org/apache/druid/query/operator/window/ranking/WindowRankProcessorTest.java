@@ -38,7 +38,7 @@ public class WindowRankProcessorTest
           .validate();
 
     helper.forColumn("rankAsPercent", ColumnType.DOUBLE)
-          .setExpectation(new double[]{0.0, 1/9d, 1/9d, 3/9d, 4/9d, 5/9d, 6/9d, 6/9d, 8/9d, 8/9d})
+          .setExpectation(new double[]{0.0, 1 / 9d, 1 / 9d, 3 / 9d, 4 / 9d, 5 / 9d, 6 / 9d, 6 / 9d, 8 / 9d, 8 / 9d})
           .validate();
   }
 }

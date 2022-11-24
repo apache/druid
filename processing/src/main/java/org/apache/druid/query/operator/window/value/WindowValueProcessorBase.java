@@ -17,7 +17,8 @@ public abstract class WindowValueProcessorBase implements Processor
   public WindowValueProcessorBase(
       String inputColumn,
       String outputColumn
-  ) {
+  )
+  {
     this.inputColumn = inputColumn;
     this.outputColumn = outputColumn;
   }
@@ -40,10 +41,11 @@ public abstract class WindowValueProcessorBase implements Processor
    * JVM can inline it and specialize the lambda
    *
    * @param input incoming RowsAndColumns, as in Processor.process
-   * @param fn function that converts the input column into the output column
+   * @param fn    function that converts the input column into the output column
    * @return RowsAndColumns, as in Processor.process
    */
-  public RowsAndColumns processInternal(RowsAndColumns input, Function<Column, Column> fn) {
+  public RowsAndColumns processInternal(RowsAndColumns input, Function<Column, Column> fn)
+  {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(input);
 
     final Column column = input.findColumn(inputColumn);

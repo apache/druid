@@ -14,7 +14,8 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
 
   public DefaultSortedGroupPartitioner(
       RowsAndColumns rac
-  ) {
+  )
+  {
     this.rac = rac;
   }
 
@@ -39,12 +40,12 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
         final StartAndEnd currGroup = retVal.get(i);
         int currStart = currGroup.getStart();
         for (int j = currGroup.getStart() + 1; j < currGroup.getEnd(); ++j) {
-          int comparison = accessor.compareCells(j-1, j);
+          int comparison = accessor.compareCells(j - 1, j);
           if (comparison < 0) {
             newRetVal.add(new StartAndEnd(currStart, j));
             currStart = j;
           } else if (comparison > 0) {
-            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", i-1, i);
+            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", i - 1, i);
           }
         }
         newRetVal.add(new StartAndEnd(currStart, currGroup.getEnd()));

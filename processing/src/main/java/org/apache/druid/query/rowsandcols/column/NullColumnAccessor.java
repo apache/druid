@@ -9,11 +9,13 @@ public class NullColumnAccessor implements ColumnAccessor
   private final ColumnType type;
   private final int size;
 
-  public NullColumnAccessor(int size) {
+  public NullColumnAccessor(int size)
+  {
     this(ColumnType.UNKNOWN_COMPLEX, size);
   }
 
-  public NullColumnAccessor(ColumnType type, int size) {
+  public NullColumnAccessor(ColumnType type, int size)
+  {
     this.type = type;
     this.size = size;
   }

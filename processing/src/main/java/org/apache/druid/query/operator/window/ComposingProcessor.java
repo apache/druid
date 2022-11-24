@@ -13,7 +13,8 @@ public class ComposingProcessor implements Processor
   @JsonCreator
   public ComposingProcessor(
       @JsonProperty("processors") Processor... processors
-  ) {
+  )
+  {
     this.processors = processors;
   }
 
@@ -39,7 +40,7 @@ public class ComposingProcessor implements Processor
     if (otherProcessor instanceof ComposingProcessor) {
       ComposingProcessor other = (ComposingProcessor) otherProcessor;
       for (int i = 0; i < processors.length; ++i) {
-        if (! processors[i].validateEquivalent(other.processors[i])) {
+        if (!processors[i].validateEquivalent(other.processors[i])) {
           return false;
         }
       }

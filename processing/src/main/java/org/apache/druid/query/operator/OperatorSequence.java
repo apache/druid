@@ -95,7 +95,8 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
       } else {
         return Yielders.done(initValue, () -> op.close(true));
       }
-    } catch(RuntimeException e) {
+    }
+    catch (RuntimeException e) {
       op.close(true);
       throw e;
     }

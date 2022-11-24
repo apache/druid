@@ -138,7 +138,8 @@ public class DefaultOnHeapAggregatable implements OnHeapAggregatable, OnHeapCumu
         if (columnAccessor == null) {
           return DimensionSelector.constant(null);
         } else {
-          return new ColumnValueSelector(){
+          return new ColumnValueSelector()
+          {
             private final AtomicReference<Class> myClazz = new AtomicReference<>(null);
 
             @Nullable
@@ -163,7 +164,7 @@ public class DefaultOnHeapAggregatable implements OnHeapAggregatable, OnHeapCumu
             private Class findClazz()
             {
               final ColumnType type = columnAccessor.getType();
-              switch(type.getType()) {
+              switch (type.getType()) {
                 case LONG:
                   return long.class;
                 case DOUBLE:

@@ -19,7 +19,8 @@ public class WindowDenseRankProcessor extends WindowRankingProcessorBase
   public WindowDenseRankProcessor(
       @JsonProperty("group") List<String> groupingCols,
       @JsonProperty("outputColumn") String outputColumn
-  ) {
+  )
+  {
     super(groupingCols, outputColumn);
   }
 

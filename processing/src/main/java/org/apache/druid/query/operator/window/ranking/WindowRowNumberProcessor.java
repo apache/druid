@@ -16,7 +16,8 @@ public class WindowRowNumberProcessor implements Processor
   @JsonCreator
   public WindowRowNumberProcessor(
       @JsonProperty("outputColumn") String outputColumn
-  ) {
+  )
+  {
     this.outputColumn = outputColumn;
   }
 
@@ -98,7 +99,7 @@ public class WindowRowNumberProcessor implements Processor
   @Override
   public boolean validateEquivalent(Processor otherProcessor)
   {
-    return otherProcessor instanceof  WindowRowNumberProcessor;
+    return otherProcessor instanceof WindowRowNumberProcessor;
   }
 
   @Override

@@ -11,7 +11,8 @@ public class WindowProcessorOperator implements Operator
   public WindowProcessorOperator(
       Processor windowProcessor,
       Operator child
-  ) {
+  )
+  {
     this.windowProcessor = windowProcessor;
     this.child = child;
   }

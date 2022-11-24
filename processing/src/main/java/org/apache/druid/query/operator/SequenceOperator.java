@@ -18,7 +18,8 @@ public class SequenceOperator implements Operator
 
   public SequenceOperator(
       Sequence<RowsAndColumns> child
-  ) {
+  )
+  {
     this.child = child;
   }
 
@@ -59,7 +60,8 @@ public class SequenceOperator implements Operator
     }
     catch (IOException e) {
       throw new RE(e, "Exception when closing yielder from Sequence");
-    } finally {
+    }
+    finally {
       closed = true;
     }
   }

@@ -8,7 +8,8 @@ public class ConstantObjectColumn implements Column
   private final int numCells;
   private final ColumnType type;
 
-  public ConstantObjectColumn(Object obj, int numCells, ColumnType type) {
+  public ConstantObjectColumn(Object obj, int numCells, ColumnType type)
+  {
     this.obj = obj;
     this.numCells = numCells;
     this.type = type;

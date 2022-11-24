@@ -8,7 +8,8 @@ public class IntArrayColumn implements Column
 
   public IntArrayColumn(
       int[] vals
-  ) {
+  )
+  {
     this.vals = vals;
   }
 

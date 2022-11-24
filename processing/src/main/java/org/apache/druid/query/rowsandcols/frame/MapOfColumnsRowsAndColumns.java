@@ -9,7 +9,8 @@ import java.util.Map;
 
 public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 {
-  public static MapOfColumnsRowsAndColumns fromMap(Map<String, Column> map) {
+  public static MapOfColumnsRowsAndColumns fromMap(Map<String, Column> map)
+  {
     if (map == null || map.isEmpty()) {
       throw new ISE("map[%s] cannot be null or empty", map);
     }
@@ -23,7 +24,8 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
   public MapOfColumnsRowsAndColumns(
       Map<String, Column> mapOfColumns,
       int numRows
-  ) {
+  )
+  {
     this.mapOfColumns = mapOfColumns;
     this.numRows = numRows;
   }
@@ -47,7 +49,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
     if (AppendableRowsAndColumns.class.equals(clazz)) {
       return (T) new AppendableMapOfColumns(this);
     }
-     return null;
+    return null;
   }
 
 }

@@ -31,8 +31,9 @@ public class WindowAggregateProcessorTest
     map.put("intCol", new IntArrayColumn(new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
     map.put("doubleCol", new DoubleArrayColumn(new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
     map.put("objectCol", new ObjectArrayColumn(
-        new String[]{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"},
-        ColumnType.STRING)
+                new String[]{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"},
+                ColumnType.STRING
+            )
     );
 
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);

@@ -11,7 +11,8 @@ public class SegmentToRowsAndColumnsOperator implements Operator
 
   public SegmentToRowsAndColumnsOperator(
       Segment segment
-  ) {
+  )
+  {
     this.segment = segment;
   }
 

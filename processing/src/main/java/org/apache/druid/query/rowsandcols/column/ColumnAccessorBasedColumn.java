@@ -6,7 +6,8 @@ public class ColumnAccessorBasedColumn implements Column
 
   public ColumnAccessorBasedColumn(
       ColumnAccessor base
-  ) {
+  )
+  {
     this.base = base;
   }
 
