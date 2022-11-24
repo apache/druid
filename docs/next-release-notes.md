@@ -26,9 +26,15 @@ Changed the way the MSQ task engine determines whether or not to downsample data
 
 https://github.com/apache/druid/pull/12998
 
+### MSQ heap footprint
+
+When determining partition boundaries, the heap footprint of the sketches that MSQ uses is capped at 10% of available memory or 300 MB, whichever is lower. Previously, the cap was strictly 300 MB.
+
+https://github.com/apache/druid/pull/13274
+
 ### MSQ Docker improvement
 
-Enabled MSQ query engine for Docker by default.
+Enabled MSQ task query engine for Docker by default.
 
 https://github.com/apache/druid/pull/13069
 
@@ -40,7 +46,7 @@ https://github.com/apache/druid/pull/13198
 
 ### Added support for indexSpec
 
-The MSQ task engine now supports the `indexSpec` context parameter.
+The MSQ task engine now supports the `indexSpec` context parameter. This context parameter can also be configured through the web console.
 
 https://github.com/apache/druid/pull/13275
 
@@ -64,6 +70,12 @@ Changed the way WorkerClient communicates between the worker tasks, to abstract 
 Once the WorkerClient writes it's outputs to the durable storage, it adds a file with `__success` in the `workerNumber` output directory for that stage and with its `taskId`. This allows you to determine the worker, which has successfully written its outputs to the durable storage, and differentiate from the partial outputs by orphan or failed worker tasks.
 
 https://github.com/apache/druid/pull/13062
+
+### Sketch merging mode
+
+When a query requires key statistics to generate partition boundaries, key statistics are gathered by the workers while reading rows from the datasource.You can now configure whether the MSQ task engine does this task in parallel or sequentially. Configure the behavior using `clusterStatisticsMergeMode` context parameter. For more information, see [Sketch merging mode](https://druid.apache.org/docs/latest/multi-stage-query/reference.html#sketch-merging-mode).
+
+https://github.com/apache/druid/pull/13205 
 
 ## Querying
 
@@ -98,6 +110,14 @@ Added the following configuration keys that refine the query context security mo
 
 ## Nested columns
 
+### Support for more formats
+
+Druid nested columns and associated JSON transform functions now supports Avro, ORC, and Parquet.
+
+https://github.com/apache/druid/pull/13325 
+
+https://github.com/apache/druid/pull/13375 
+
 ### Refactored a data source before unnest 
 
 When data requires "flattening" during processing, the operator now takes in an array and then flattens the array into N (N=number of elements in the array) rows where each row has one of the values from the array.
@@ -106,6 +126,24 @@ https://github.com/apache/druid/pull/13085
 
 ## Ingestion
 
+### Improved filtering for cloud objects
+
+You can now stop at arbitrary subfolders using glob syntax in the `ioConfig.inputSource.filter` field for native batch ingestion from cloud storage, such as S3. 
+
+https://github.com/apache/druid/pull/13027
+
+### CLUSTERED BY limit
+
+When using the MSQ task engine to ingest data, there is now a 1,500 column limit to the number of columns that can be passed in the CLUSTERED BY clause.
+
+https://github.com/apache/druid/pull/13352
+
+### Async task client for streaming ingestion
+
+You can now use asynchronous communication with indexing tasks by setting `chatAsync` to true in the `tuningConfig`. Enabling asynchronous communication means that the `chatThreads` property is ignored.
+
+https://github.com/apache/druid/pull/13354 
+
 ### Improved control for how Druid reads JSON data for streaming ingestion
 
 You can now better control how Druid reads JSON data for streaming ingestion by setting the following fields in the input format specification:
@@ -113,13 +151,23 @@ You can now better control how Druid reads JSON data for streaming ingestion by 
 * `assumedNewlineDelimited` to parse lines of JSON independently.
 * `useJsonNodeReader` to retain valid JSON events when parsing multi-line JSON events when a parsing exception occurs.
 
+The web console has been updated to include these options.
+
 https://github.com/apache/druid/pull/13089
+
+
 
 ### Kafka Consumer improvement
 
 Allowed Kafka Consumer's custom deserializer to be configured after its instantiation.
 
 https://github.com/apache/druid/pull/13097
+
+### Kafka supervisor logging
+
+Kafka supervisor logs are now less noisy. The supervisors now log events at the DEBUG level instead of INFO. 
+
+https://github.com/apache/druid/pull/13392
 
 ### Fixed Overlord leader election
 
@@ -133,11 +181,19 @@ Added a new `inline` type `protoBytesDecoder` that allows a user to pass inline 
 
 https://github.com/apache/druid/pull/13192
 
+### Duplicate notices
+
+For streaming ingestion, notices that are the same as one already in queue won't be enqueued. This will help reduce notice queue size. 
+
+https://github.com/apache/druid/pull/13334
+
 ### When a Kafka stream becomes inactive, prevent Supervisor from creating new indexing tasks
 
 Added Idle feature to `SeekableStreamSupervisor` for inactive stream.
 
 https://github.com/apache/druid/pull/13144
+
+### 
 
 ### Sampling from stream input now respects the configured timeout
 
@@ -164,6 +220,100 @@ Introduced a `tree` type to `flattenSpec`. In the event that a simple hierarchic
 https://github.com/apache/druid/pull/12177
 
 ## Operations
+
+### Compaction
+
+Compaction behavior has changed to improve the amount of time it takes and disk space it takes:
+
+- When segments need to be fetched, download them one at a time and delete them when Druid is done with them. This still takes time but minimizes the required disk space.
+- Don't fetch segments on the main compact task when they aren't needed. If the user provides a full `granularitySpec`, `dimensionsSpec`, and `metricsSpec`, Druid skips fetching segments.
+
+For more information, see the documentation on [Compaction](https://druid.apache.org/docs/latest/data-management/compaction.html) and [Automatic compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction.html).
+
+https://github.com/apache/druid/pull/13280
+
+### New metric for segments
+
+`segment/handoff/time` captures the total time taken for handoff for a given set of published segments.
+
+https://github.com/apache/druid/pull/13238 
+
+### Idle configs for the Supervisor
+
+You can now configure the following properties:
+
+| Property | Description | Default |
+| - | - | -|
+|`druid.supervisor.idleConfig.enabled`| (Cluster wide) If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
+|`druid.supervisor.idleConfig.inactiveAfterMillis`| (Cluster wide) Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
+| `inactiveAfterMillis` | (Individual Supervisor) Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds. | no (default == `600_000`) |
+
+https://github.com/apache/druid/pull/13311
+
+### cachingCost balancer strategy
+
+The `cachingCost` balancer strategy now behaves more similarly to cost strategy. When computing the cost of moving a segment to a server, the following calculations are performed:
+
+- Subtract the self cost of a segment if it is being served by the target server
+- Subtract the cost of segments that are marked to be dropped
+
+https://github.com/apache/druid/pull/13321
+
+### New metrics for streaming ingestion
+
+The following metrics related to streaming ingestion have been added:
+
+- `ingest/kafka/partitionLag`: Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. 
+- `ingest/kinesis/partitionLag/time`: Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis.
+- `ingest/pause/time`: Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
+
+https://github.com/apache/druid/pull/13331
+https://github.com/apache/druid/pull/13313
+
+### Backoff for HttpPostEmitter
+
+The `HttpPostEmitter` option now has a backoff. This means that there should be less noise in the logs and lower CPU usage if you use this option for logging. 
+
+https://github.com/apache/druid/pull/12102
+
+### taskActionType dimension for task/action/run/time metric
+
+The `task/action/run/time` metric for the Indexing service now includes the `taskActionType` dimension.
+
+https://github.com/apache/druid/pull/13333
+
+### DumpSegment tool for nested columns
+
+The DumpSegment tool can now be used on nested columns with the `--dump nested` option. 
+
+For more information, see [dump-segment tool](https://druid.apache.org/docs/latest/operations/dump-segment).
+
+https://github.com/apache/druid/pull/13356
+
+### Segment assignment
+
+You can now use a round-robin segment strategy to speed up initial segment assignments.
+
+Set `useRoundRobinSegmentAssigment` to `true` in the Coordinator dynamic config to enable this feature.
+
+https://github.com/apache/druid/pull/13367
+
+### Segment balancing
+
+Batch sampling is now the default method for sampling segments during balancing as it performs significantly better than the alternative when there is a large number of used segments in the cluster.
+
+As part of this change, the following properties have been deprecated and will be removed in future releases:
+
+- `coordinator dynamic config useBatchedSegmentSampler`
+- `coordinator dynamic config percentOfSegmentsToConsiderPerMove`
+- non-batch method of sampling segments used during coordinator duty `BalanceSegments`
+
+The unused coordinator property `druid.coordinator.loadqueuepeon.repeatDelay` has been removed.
+
+Use only `druid.coordinator.loadqueuepeon.http.repeatDelay` to configure repeat delay for the HTTP-based segment loading queue.
+
+https://github.com/apache/druid/pull/13391
+
 
 ### Segment discovery
 
@@ -340,3 +490,7 @@ https://github.com/apache/druid/pull/13243
 The web console now exposes a textual indication about running and pending tasks when a query is stuck due to lack of task slots.
 
 https://github.com/apache/druid/pull/13291
+
+### Query history
+
+Multi-stage queries no longer show up in the Query history dialog. They are still available in the **Recent query tasks** panel.
