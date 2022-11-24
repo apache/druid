@@ -54,7 +54,8 @@ public abstract class WindowRankingProcessorBase implements Processor
       groupPartitioner = new DefaultSortedGroupPartitioner(incomingPartition);
     }
 
-    return retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeBoundaries(groupingCols)));
+    retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeBoundaries(groupingCols)));
+    return retVal;
   }
 
   @Override

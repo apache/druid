@@ -6,6 +6,32 @@ import org.apache.druid.query.rowsandcols.frame.AppendableMapOfColumns;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
+ * with columns.
+ *
+ * This interface has very little prescriptively defined about what *must* be implemented.  This is intentional
+ * as there are lots of different possible representations of batch of rows each with their own unique positives
+ * and negatives when it comes to processing.  So, any explicit definition of what a RowsAndColumns is will actually,
+ * by definition, end up as optimal for one specific configuration and sub-optimal for others.  Instead of trying to
+ * explicitly expand the interface to cover all of the different possible ways that someone could want to interace
+ * with a Rows and columns, we rely on semantic interfaces using the {@link RowsAndColumns#as} method instead.
+ *
+ * That is, the expectation is that anything that works with a RowsAndColumns will tend to first ask the RowsAndColumns
+ * object to become some other interface, for example, an {@link OnHeapAggregatable}.  If a RowsAndColumns knows how
+ * to do a good job as the requested interface, it can return its own concrete implementation of the interface and
+ * run the necessary logic in its own optimized fashion.  If the RowsAndColumns instance does not know how to implement
+ * the semantic interface, it is expected that a default implementation of the interface can be instantiated on top of
+ * the default column access mechanisms that the RowsAndColumns provides.  Such default implementations should be
+ * functionally correct, but are not believed to be optimal.
+ *
+ * The "default column access mechanisms" here amount to using {@link #findColumn} to load a Column
+ * and then using {@link Column#toAccessor} to access the individual cells of the column.  There is also a
+ * {@link Column#as} method which a default implementation might attempt to use to create a more optimal runtime.
+ *
+ * It is intended that this interface can be used by Frames, Segments and even normal on-heap JVM data structures to
+ * participate in query operations.
+ */
 public interface RowsAndColumns
 {
   @Nonnull
@@ -22,9 +48,38 @@ public interface RowsAndColumns
     return retVal;
   }
 
+  /**
+   * The number of rows in the RowsAndColumns object
+   *
+   * @return the integer number of rows
+   */
   int numRows();
+
+  /**
+   * Finds a column by name.  null is returned if the column is not found.  The RowsAndColumns object should not
+   * attempt to default not-found columns to pretend as if they exist, instead the user of the RowsAndColumns object
+   * should decide the correct semantic interpretation of a column that does not exist.  It is expected that most
+   * locations will choose to believe that the column does exist and is always null, but there are often optimizations
+   * that can effect this same assumption without doing a lot of extra work if the calling code knows that it does not
+   * exist.
+   *
+   * @param name the name of the column to find
+   * @return the Column, if found.  null if not found.
+   */
   Column findColumn(String name);
 
+  /**
+   * Asks the RowsAndColumns to return itself as a concrete implementation of a specific interface.  The interface
+   * asked for will tend to be a semantically-meaningful interface.  This method allows the calling code to interrogate
+   * the RowsAndColumns object about whether it can offer a meaningful optimization of the semantic interface.  If a
+   * RowsAndColumns cannot do anything specifically optimal for the interface requested, it should return null instead
+   * of trying to come up with its own default implementation.
+   *
+   * @param clazz A class object representing the interface that the calling code wants a concrete implementation of
+   * @param <T> The interface that the calling code wants a concrete implementation of
+   * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
+   * through a local implementation of the interface.
+   */
   @Nullable
   <T> T as(Class<T> clazz);
 }
