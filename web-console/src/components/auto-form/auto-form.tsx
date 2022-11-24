@@ -30,8 +30,6 @@ import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 import { Suggestion } from '../suggestion-menu/suggestion-menu';
 
-import './auto-form.scss';
-
 export type Functor<M, R> = R | ((model: Partial<M>) => R);
 
 export interface Field<M> {
