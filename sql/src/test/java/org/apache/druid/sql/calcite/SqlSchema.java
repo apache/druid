@@ -111,8 +111,7 @@ public class SqlSchema
   {
     Builder builder = new Builder();
     List<RelDataTypeField> fields = rowType.getFieldList();
-    String[] actual = new String[fields.size()];
-    for (int i = 0; i < actual.length; i++) {
+    for (int i = 0; i < fields.size(); i++) {
       RelDataTypeField field = fields.get(i);
       builder.column(field.getName(), field.getType().getFullTypeString());
     }
@@ -123,10 +122,7 @@ public class SqlSchema
   public String toString()
   {
     return "(" +
-        String.join(
-            ", ",
-            columns.stream().map(c -> c.toString()).collect(Collectors.toList())
-        ) +
+        columns.stream().map(c -> c.toString()).collect(Collectors.joining(", ")) +
         ")";
   }
 
@@ -140,7 +136,8 @@ public class SqlSchema
     return Objects.equals(columns, other.columns);
   }
 
-  public int hash()
+  @Override
+  public int hashCode()
   {
     return Objects.hash(columns);
   }

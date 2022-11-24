@@ -36,6 +36,7 @@ import org.skife.config.ConfigurationObjectFactory;
 import javax.validation.Validator;
 import java.util.Properties;
 
+@LazySingleton
 public class DruidSecondaryModule implements Module
 {
   private final Properties properties;

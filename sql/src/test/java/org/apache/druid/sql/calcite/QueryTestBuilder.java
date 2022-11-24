@@ -62,7 +62,7 @@ public class QueryTestBuilder
 {
   /**
    * Implement to provide the execution framework that the tests require.
-   * The {@link #analyze(QueryTestBuilder)} method builds up the classes that
+   * The constructor builds up the classes that
    * will run the test, since some verification depends on context, such as that
    * provided by {@link BaseCalciteQueryTest}.
    */

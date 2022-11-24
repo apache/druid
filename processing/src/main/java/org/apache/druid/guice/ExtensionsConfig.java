@@ -28,6 +28,8 @@ import java.util.LinkedHashSet;
  */
 public class ExtensionsConfig
 {
+  public static final String PROPERTY_BASE = "druid.extensions";
+
   @JsonProperty
   @NotNull
   private boolean searchCurrentClassloader = true;

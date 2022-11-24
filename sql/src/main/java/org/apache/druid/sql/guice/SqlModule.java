@@ -26,7 +26,6 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.NativeQuery;
@@ -101,8 +100,6 @@ public class SqlModule implements Module
         Key.get(DruidSchemaManager.class),
         NoopDruidSchemaManager.TYPE
     );
-
-    binder.bind(TableDefnRegistry.class).in(LazySingleton.class);
 
     binder.install(new DruidCalciteSchemaModule());
     binder.install(new CalcitePlannerModule());

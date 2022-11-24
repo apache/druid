@@ -140,7 +140,7 @@ public class DruidInjectorBuilder
     } else if (input instanceof Class) {
       return addClass((Class<?>) input);
     } else {
-      throw new ISE("Unknown module type[%s]", input.getClass());
+      throw new ISE("Unknown module type [%s]", input.getClass());
     }
   }
 
@@ -189,6 +189,9 @@ public class DruidInjectorBuilder
       log.info("Not loading module [%s] because it is present in excludeList", moduleClassName);
       return false;
     }
+
+    // Tests don't have node roles, and so want to load the given modules
+    // regardless of the node roles provided.
     if (ignoreLoadScopes) {
       return true;
     }
