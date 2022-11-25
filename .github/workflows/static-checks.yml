@@ -154,7 +154,7 @@ jobs:
       - name: analyze dependencies
         if: ${{ matrix.java == '8' }}
         run: |
-          ./.github/scripts/analyze_dependencies_scipt.sh
+          ./.github/scripts/analyze_dependencies_script.sh
 
       - name: analyze dependencies for hadoop3
         if: ${{ matrix.java == '8' }}
