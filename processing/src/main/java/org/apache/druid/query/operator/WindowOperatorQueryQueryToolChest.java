@@ -76,7 +76,8 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
 
   @Override
   public Function<RowsAndColumns, RowsAndColumns> makePreComputeManipulatorFn(
-      WindowOperatorQuery query, MetricManipulationFn fn
+      WindowOperatorQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -99,7 +100,8 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
-      WindowOperatorQuery query, Sequence<RowsAndColumns> resultSequence
+      WindowOperatorQuery query,
+      Sequence<RowsAndColumns> resultSequence
   )
   {
     // Dark magic; see RowsAndColumnsUnravelingQueryRunner.
@@ -136,7 +138,8 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
 
     @Override
     public Sequence run(
-        QueryPlus queryPlus, ResponseContext responseContext
+        QueryPlus queryPlus,
+        ResponseContext responseContext
     )
     {
       // We only want to do this operation once at the very, very top of the execution tree.  So we check and set

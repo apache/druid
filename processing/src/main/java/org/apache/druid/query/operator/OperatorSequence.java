@@ -41,7 +41,8 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
 
   @Override
   public <OutType> OutType accumulate(
-      OutType initValue, Accumulator<OutType, RowsAndColumns> accumulator
+      OutType initValue,
+      Accumulator<OutType, RowsAndColumns> accumulator
   )
   {
     Operator op = null;
@@ -62,7 +63,8 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
 
   @Override
   public <OutType> Yielder<OutType> toYielder(
-      OutType initValue, YieldingAccumulator<OutType, RowsAndColumns> accumulator
+      OutType initValue,
+      YieldingAccumulator<OutType, RowsAndColumns> accumulator
   )
   {
     final Operator op = opSupplier.get();

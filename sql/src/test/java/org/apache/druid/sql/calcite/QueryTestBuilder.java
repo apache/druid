@@ -68,9 +68,13 @@ public class QueryTestBuilder
   public interface QueryTestConfig
   {
     QueryTestRunner analyze(QueryTestBuilder builder);
+
     QueryLogHook queryLogHook();
+
     ExpectedException expectedException();
+
     ObjectMapper jsonMapper();
+
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
   }
 
@@ -86,7 +90,8 @@ public class QueryTestBuilder
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  protected @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
+  @Nullable
+  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
@@ -151,14 +156,16 @@ public class QueryTestBuilder
 
   public QueryTestBuilder addCustomVerification(
       QueryTestRunner.QueryVerifyStepFactory factory
-  ) {
+  )
+  {
     this.customVerifications.add(factory);
     return this;
   }
 
   public QueryTestBuilder setCustomVerifications(
       List<QueryTestRunner.QueryVerifyStepFactory> factories
-  ) {
+  )
+  {
     this.customVerifications = new ArrayList<>();
     this.customVerifications.addAll(factories);
     return this;

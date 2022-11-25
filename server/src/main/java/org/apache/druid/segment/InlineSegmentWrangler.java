@@ -25,6 +25,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Collections;
 
 /**
@@ -37,6 +38,7 @@ public class InlineSegmentWrangler implements SegmentWrangler
   private static final String SEGMENT_ID = "inline";
 
   @Override
+  @SuppressWarnings("unchecked")
   public Iterable<Segment> getSegmentsForIntervals(final DataSource dataSource, final Iterable<Interval> intervals)
   {
     final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
@@ -45,7 +47,7 @@ public class InlineSegmentWrangler implements SegmentWrangler
       return Collections.singletonList(
           new ArrayListSegment<>(
               SegmentId.dummy(SEGMENT_ID),
-              inlineDataSource.getRowsAsList(),
+              (ArrayList<Object[]>) inlineDataSource.getRowsAsList(),
               inlineDataSource.rowAdapter(),
               inlineDataSource.getRowSignature()
           )

@@ -50,18 +50,18 @@ public class ArrayListSegment<RowType> implements Segment
 
   /**
    * Create a list-based segment.
-   *
+   * <p>
    * The provided List must be in time-order according to the provided {@link RowAdapter#timestampFunction()}.
    * The cursor returned by {@link RowBasedStorageAdapter#makeCursors} makes no attempt to verify this, and callers
    * will expect it.
-   *
+   * <p>
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
    * {@link #asStorageAdapter()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
    * storage adapter will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
    * field, even if it doesn't appear in "rowSignature".
    *
    * @param segmentId    segment identifier; will be returned by {@link #getId()}
-   * @param rows  objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
+   * @param rows         objects that comprise this segment. Must be re-iterable if support for {@link Cursor#reset()}
    *                     is required. Otherwise, does not need to be re-iterable.
    * @param rowAdapter   adapter used for reading these objects
    * @param rowSignature signature of the columns in these objects
@@ -124,7 +124,8 @@ public class ArrayListSegment<RowType> implements Segment
     // Do nothing.
   }
 
-  private RowsAndColumns asRowsAndColumns() {
+  private RowsAndColumns asRowsAndColumns()
+  {
     return new RowsAndColumns()
     {
       @Override
