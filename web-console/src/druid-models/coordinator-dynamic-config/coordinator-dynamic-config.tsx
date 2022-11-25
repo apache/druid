@@ -71,6 +71,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   },
   {
     name: 'killAllDataSources',
+    label: 'Kill all datasources',
     type: 'boolean',
     defaultValue: false,
     info: (
@@ -83,6 +84,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   },
   {
     name: 'killDataSourceWhitelist',
+    label: 'Kill datasource whitelist',
     type: 'string-array',
     emptyValue: [],
     info: (
