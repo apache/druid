@@ -40,7 +40,8 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
 
   @Override
   public QueryRunner<RowsAndColumns> mergeRunners(
-      QueryProcessingPool queryProcessingPool, Iterable<QueryRunner<RowsAndColumns>> queryRunners
+      QueryProcessingPool queryProcessingPool,
+      Iterable<QueryRunner<RowsAndColumns>> queryRunners
   )
   {
     return Iterables.getOnlyElement(queryRunners);

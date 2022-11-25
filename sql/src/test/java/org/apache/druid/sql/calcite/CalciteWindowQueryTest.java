@@ -54,7 +54,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     NullHandling.initializeForTests();
   }
 
-  private static final ObjectMapper yamlJackson = new DefaultObjectMapper(new YAMLFactory(), "tests");
+  private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   public Object parametersForWindowQueryTest() throws Exception
   {
@@ -79,7 +79,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   {
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
-    final Object objectFromYaml = yamlJackson.readValue(systemResource.openStream(), Object.class);
+    final Object objectFromYaml = YAML_JACKSON.readValue(systemResource.openStream(), Object.class);
 
     final ObjectMapper queryJackson = queryFramework().queryJsonMapper();
     final WindowQueryTestInputClass input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);
@@ -161,7 +161,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  public static class WindowQueryTestInputClass {
+  public static class WindowQueryTestInputClass
+  {
     @JsonProperty
     public String type;
 

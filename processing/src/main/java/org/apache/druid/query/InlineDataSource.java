@@ -187,9 +187,9 @@ public class InlineDataSource implements DataSource
    * as-is, without copying it. Otherwise, this method will walk the iterable and copy it into a List before returning.
    */
   @JsonProperty("rows")
-  public ArrayList<Object[]> getRowsAsList()
+  public List<Object[]> getRowsAsList()
   {
-    return rows instanceof ArrayList ? ((ArrayList<Object[]>) rows) : Lists.newArrayList(rows);
+    return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
   }
 
   /**

@@ -65,17 +65,17 @@ import java.util.List;
  */
 public class Windowing
 {
-  private static final ImmutableMap<String, ProcessorMaker> knownWindowFns = ImmutableMap
+  private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) -> new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1)))
-      .put("LEAD",(agg) -> new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1)))
+      .put("LEAD", (agg) -> new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1)))
       .put("FIRST_VALUE", (agg) -> new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
       .put("LAST_VALUE", (agg) -> new WindowLastProcessor(agg.getColumn(0), agg.getOutputName()))
       .put("CUME_DIST", (agg) -> new WindowCumeDistProcessor(agg.getOrderingColumns(), agg.getOutputName()))
       .put("DENSE_RANK", (agg) -> new WindowDenseRankProcessor(agg.getOrderingColumns(), agg.getOutputName()))
       .put("NTILE", (agg) -> new WindowPercentileProcessor(agg.getOutputName(), agg.getConstantInt(0)))
       .put("PERCENT_RANK", (agg) -> new WindowRankProcessor(agg.getOrderingColumns(), agg.getOutputName(), true))
-      .put("RANK",(agg) -> new WindowRankProcessor(agg.getOrderingColumns(), agg.getOutputName(), false))
+      .put("RANK", (agg) -> new WindowRankProcessor(agg.getOrderingColumns(), agg.getOutputName(), false))
       .put("ROW_NUMBER", (agg) -> new WindowRowNumberProcessor(agg.getOutputName()))
       .build();
   private final List<OperatorFactory> ops;
@@ -138,7 +138,7 @@ public class Windowing
 
       final AggregateCall aggCall = aggregateCalls.get(i);
 
-      ProcessorMaker maker = knownWindowFns.get(aggCall.getAggregation().getName());
+      ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggCall.getAggregation().getName());
       if (maker == null) {
         final Aggregation aggregation = GroupByRules.translateAggregateCall(
             plannerContext,
