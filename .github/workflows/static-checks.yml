@@ -161,7 +161,7 @@ jobs:
         env:
           HADOOP_PROFILE: -Phadoop3
         run: |
-          ./.github/scripts/analyze_dependencies_scipt.sh
+          ./.github/scripts/analyze_dependencies_script.sh
 
       - name: packaging check
         run: |
