@@ -35,48 +35,60 @@ env:
   MAVEN_OPTS: -Xmx3000m
 
 jobs:
-  build:
+  static-checks:
+    strategy:
+      matrix:
+        java: [ '8', '11', '17' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: setup java 8
+      - name: setup java ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: ${{ matrix.java }}
           cache: 'maven'
 
       - name: maven install
+        if: $ {{ matrix.java == '8' }}
         run: |
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: animal sniffer checks
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
 
       - name: checkstyle
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} enforcer:enforce --fail-at-end
 
       - name: forbidden api checks
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
       - name: pmd checks
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
 
       - name: spotbugs checks
+        if: $ {{ matrix.java == '8' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
       - name: script checks
         # who watches the watchers?
+        if: $ {{ matrix.java == '8' }}
         run: ./check_test_suite_test.py
 
       - name: intellij inspections
+        if: $ {{ matrix.java == '8' }}
         run: |
           docker run --rm \
           -v $(pwd):/project \
@@ -88,11 +100,13 @@ jobs:
           --scope JavaInspectionsScope
 
       - name: setup node
+        if: $ {{ matrix.java == '8' }}
         uses: actions/setup-node@v3
         with:
           node-version: 16.17.0
 
       - name: docs
+        if: $ {{ matrix.java == '8' }}
         run: |
           (cd website && npm install)
           cd website
@@ -100,12 +114,14 @@ jobs:
           npm run spellcheck
 
       - name: web console
+        if: $ {{ matrix.java == '8' }}
         run: |
           ${MVN} test -pl 'web-console'
           cd web-console
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
+        if: $ {{ matrix.java == '8' }}
         run: |
           ./.github/scripts/setup_generate_license.sh
           sudo apt-get update && sudo apt-get install python3 -y
@@ -117,72 +133,38 @@ jobs:
           (cd web-console && npm run test-e2e)
           web-console/script/druid stop
 
-      - name: setup java 11
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-          cache: 'maven'
-
       - name: (openjdk11) strict compilation
+        if: $ {{ matrix.java == '11' }}
         # errorprone requires JDK 11
         # Strict compilation requires more than 2 GB
         run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
-  license_checks:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        HADOOP_PROFILE: [ '', '-Phadoop3' ]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: |
-          ./.github/scripts/setup_generate_license.sh
-          ${MVN} apache-rat:check -Prat --fail-at-end \
-          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-          -Drat.consoleOutput=true
-          # Generate dependency reports and checks they are valid.
-          mkdir -p target
-          distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-          distribution/bin/check-licenses.py licenses.yaml target/license-reports
+      - name: license checks
+        if: $ {{ matrix.java == '8' }}
+        run: |
+          ./.github/scripts/license_checks_script.sh
 
-  analyze_dependencies:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        HADOOP_PROFILE: [ '', '-Phadoop3' ]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java 8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-          cache: 'maven'
-      - run: |
-          ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true ${{ matrix.HADOOP_PROFILE }} ||
-          ./.github/scripts/display_dependency_analysis_error_message.sh
+      - name: license checks for hadoop3
+        if: $ {{ matrix.java == '8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop3
+        run: |
+          ./.github/scripts/license_checks_script.sh
 
-  packaging_check:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '8', '11', '17' ]
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup java ${{ matrix.java }}
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.java }}
-          cache: 'maven'
-      - run: |
+      - name: analyze dependencies
+        if: $ {{ matrix.java == '8' }}
+        run: |
+          ./.github/scripts/analyze_dependencies_scipt.sh
+
+      - name: analyze dependencies for hadoop3
+        if: $ {{ matrix.java == '8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop3
+        run: |
+          ./.github/scripts/analyze_dependencies_scipt.sh
+
+      - name: packaging check
+        run: |
           ./.github/scripts/setup_generate_license.sh
           sudo apt-get update && sudo apt-get install python3 -y
           curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
