@@ -28,7 +28,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
@@ -37,6 +36,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -59,7 +59,6 @@ import org.mockito.Mockito;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.util.Properties;
-import java.util.Set;
 
 public class MetricsModuleTest
 {
@@ -125,7 +124,8 @@ public class MetricsModuleTest
   @Test
   public void testGetBasicMonitorSchedulerByDefault()
   {
-    final MonitorScheduler monitorScheduler = createInjector(new Properties()).getInstance(MonitorScheduler.class);
+    final MonitorScheduler monitorScheduler =
+        createInjector(new Properties(), ImmutableSet.of()).getInstance(MonitorScheduler.class);
     Assert.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
   }
 
@@ -137,7 +137,8 @@ public class MetricsModuleTest
         StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
         ClockDriftSafeMonitorScheduler.class.getName()
     );
-    final MonitorScheduler monitorScheduler = createInjector(properties).getInstance(MonitorScheduler.class);
+    final MonitorScheduler monitorScheduler =
+        createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
     Assert.assertSame(ClockDriftSafeMonitorScheduler.class, monitorScheduler.getClass());
   }
 
@@ -149,7 +150,8 @@ public class MetricsModuleTest
         StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
         BasicMonitorScheduler.class.getName()
     );
-    final MonitorScheduler monitorScheduler = createInjector(properties).getInstance(MonitorScheduler.class);
+    final MonitorScheduler monitorScheduler =
+        createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
     Assert.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
   }
 
@@ -164,7 +166,7 @@ public class MetricsModuleTest
     expectedException.expect(CreationException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage("Unknown monitor scheduler[UnknownScheduler]");
-    createInjector(properties).getInstance(MonitorScheduler.class);
+    createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
   }
 
   @Test
@@ -173,24 +175,8 @@ public class MetricsModuleTest
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
     Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
-    final NodeRole nodeRole = NodeRole.PEON;
-    final Injector injector = Guice.createInjector(
-        new JacksonModule(),
-        new LifecycleModule(),
-        binder -> {
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-        },
-        binder -> {
-          binder.bind(
-              new TypeLiteral<Set<NodeRole>>()
-              {
-              }).annotatedWith(Self.class).toInstance(ImmutableSet.of(nodeRole));
-        }
-    );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    final MetricsModule metricsModule = new MetricsModule();
-    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    final Injector injector = createInjector(new Properties(), ImmutableSet.of(NodeRole.PEON));
+    final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
@@ -204,11 +190,8 @@ public class MetricsModuleTest
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
     Assume.assumeFalse("aarch64".equals(CPU_ARCH));
 
-    final Injector injector = createInjector(new Properties());
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    final MetricsModule metricsModule = new MetricsModule();
-    final SysMonitor sysMonitor = metricsModule.getSysMonitor(dimensionIdHolder, injector);
+    Injector injector = createInjector(new Properties(), ImmutableSet.of());
+    final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
@@ -216,7 +199,7 @@ public class MetricsModuleTest
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
-  private static Injector createInjector(Properties properties)
+  private static Injector createInjector(Properties properties, ImmutableSet<NodeRole> nodeRoles)
   {
     return Guice.createInjector(
         new JacksonModule(),
@@ -227,6 +210,7 @@ public class MetricsModuleTest
           binder.bind(ServiceEmitter.class).toInstance(new NoopServiceEmitter());
           binder.bind(Properties.class).toInstance(properties);
         },
+        ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
         new MetricsModule()
     );
   }

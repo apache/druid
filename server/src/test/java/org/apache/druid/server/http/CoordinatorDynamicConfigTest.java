@@ -78,6 +78,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -100,6 +101,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -122,6 +124,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -144,6 +147,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -158,7 +162,10 @@ public class CoordinatorDynamicConfigTest
         Integer.MAX_VALUE
     );
 
-    actual = CoordinatorDynamicConfig.builder().withPercentOfSegmentsToConsiderPerMove(10).build(actual);
+    actual = CoordinatorDynamicConfig.builder()
+                                     .withPercentOfSegmentsToConsiderPerMove(10)
+                                     .withUseBatchedSegmentSampler(false)
+                                     .build(actual);
     assertConfig(
         actual,
         1,
@@ -166,6 +173,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -188,6 +196,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -210,6 +219,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -315,7 +325,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
-        1,
+        true, 1,
         1,
         2,
         true,
@@ -337,6 +347,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -359,6 +370,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -407,6 +419,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -525,6 +538,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -574,6 +588,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -638,6 +653,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -665,6 +681,7 @@ public class CoordinatorDynamicConfigTest
         100,
         5,
         100,
+        true,
         15,
         10,
         1,
@@ -695,6 +712,7 @@ public class CoordinatorDynamicConfigTest
         100,
         5,
         100,
+        true,
         15,
         10,
         1,
@@ -785,6 +803,7 @@ public class CoordinatorDynamicConfigTest
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
       int expectedPercentOfSegmentsToConsiderPerMove,
+      boolean expectedUseBatchedSegmentSampler,
       int expectedReplicantLifetime,
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
@@ -807,6 +826,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
     Assert.assertEquals(expectedPercentOfSegmentsToConsiderPerMove, config.getPercentOfSegmentsToConsiderPerMove(), 0);
+    Assert.assertEquals(expectedUseBatchedSegmentSampler, config.useBatchedSegmentSampler());
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());

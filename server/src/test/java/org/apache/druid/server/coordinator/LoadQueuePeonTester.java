@@ -40,7 +40,6 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
         new TestDruidCoordinatorConfig.Builder()
             .withLoadTimeoutDelay(new Duration(1))
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );

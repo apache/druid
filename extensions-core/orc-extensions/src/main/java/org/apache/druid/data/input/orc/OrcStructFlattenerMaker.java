@@ -25,6 +25,7 @@ import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.mapred.OrcList;
 import org.apache.orc.mapred.OrcMap;
@@ -71,7 +72,7 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   @Override
   public Object getRootField(OrcStruct obj, String key)
   {
-    return finalizeConversion(converter.convertRootField(obj, key));
+    return toPlainJavaType(converter.convertRootField(obj, key));
   }
 
   @Override
@@ -107,11 +108,19 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
     return orcJsonProvider;
   }
 
+  @Override
+  public Object finalizeConversionForMap(Object o)
+  {
+    return finalizeConversion(o);
+  }
+
   private Object finalizeConversion(Object o)
   {
-    // replace any remaining complex types with null
+    // recursively convert any complex types
     if (o instanceof OrcStruct || o instanceof OrcMap || o instanceof OrcList) {
-      return null;
+      return toPlainJavaType(o);
+    } else if (o instanceof WritableComparable) {
+      return converter.tryConvertPrimitive((WritableComparable) o);
     }
     return o;
   }

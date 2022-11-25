@@ -116,10 +116,10 @@ public class ServiceClientImpl implements ServiceClient
           final long nextAttemptNumber = attemptNumber + 1;
 
           if (serviceLocation == null) {
-            // Null location means the service is not currently available. Trigger a retry.
-            final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
+            // Null location means the service is not currently available. Trigger a retry, if retryable.
+            if (retryPolicy.retryNotAvailable() && shouldTry(nextAttemptNumber)) {
+              final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
-            if (shouldTry(nextAttemptNumber)) {
               log.info(
                   "Service [%s] not available on attempt #%d; retrying in %,d ms.",
                   serviceName,
