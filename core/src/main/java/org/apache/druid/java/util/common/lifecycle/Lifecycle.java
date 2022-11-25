@@ -343,10 +343,6 @@ public class Lifecycle
       }
       log.info("Successfully started lifecycle [%s]", name);
     }
-    catch (Exception e) {
-      stop();
-      throw e;
-    }
     finally {
       startStopLock.unlock();
     }
