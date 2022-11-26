@@ -28,6 +28,7 @@ import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -70,7 +71,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
         if (object == null) {
           return null;
         }
-        return deserializeSketch(object);
+        return deserializeSketchSafe(object);
       }
     };
   }
@@ -92,6 +93,18 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
       return HllSketch.wrap(Memory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
     } else if (object instanceof byte[]) {
       return HllSketch.wrap(Memory.wrap((byte[]) object));
+    } else if (object instanceof HllSketch) {
+      return (HllSketch) object;
+    }
+    throw new IAE("Object is not of a type that can be deserialized to an HllSketch:" + object.getClass().getName());
+  }
+
+  static HllSketch deserializeSketchSafe(final Object object)
+  {
+    if (object instanceof String) {
+      return HllSketch.wrap(SafeWritableMemory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
+    } else if (object instanceof byte[]) {
+      return HllSketch.wrap(SafeWritableMemory.wrap((byte[]) object));
     } else if (object instanceof HllSketch) {
       return (HllSketch) object;
     }
