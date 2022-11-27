@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.frame.channel;
+package org.apache.druid.frame.util;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;

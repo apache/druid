@@ -24,7 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import org.apache.druid.frame.channel.DurableStorageUtils;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;

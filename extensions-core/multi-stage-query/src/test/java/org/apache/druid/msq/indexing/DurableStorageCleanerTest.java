@@ -21,7 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.frame.channel.DurableStorageUtils;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;

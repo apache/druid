@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.frame.channel;
+package org.apache.druid.frame.processor;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -26,11 +26,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.DurableStoragePartitionedReadableFrameChannel;
+import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFileFooter;
 import org.apache.druid.frame.file.FrameFileWriter;
-import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
-import org.apache.druid.frame.processor.PartitionedOutputChannel;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
