@@ -119,8 +119,8 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
     channels.add(new ExplodingReadableFrameChannel());
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1)));
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2, null)));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(null);
@@ -212,7 +212,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     sideStageChannelNumberMap.put(0, 0);
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null)));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);

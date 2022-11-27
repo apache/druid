@@ -637,7 +637,7 @@ public class WorkerImpl implements Worker
       final File fileChannelDirectory =
           new File(context.tempDir(), StringUtils.format("output_stage_%06d", stageNumber));
 
-      return new FileOutputChannelFactory(fileChannelDirectory, frameSize);
+      return new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
     }
   }
 
@@ -662,7 +662,7 @@ public class WorkerImpl implements Worker
     } else {
       final File fileChannelDirectory =
           new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
-      return new FileOutputChannelFactory(fileChannelDirectory, frameSize);
+      return new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
     }
   }
 

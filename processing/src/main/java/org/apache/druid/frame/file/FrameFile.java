@@ -21,6 +21,7 @@ package org.apache.druid.frame.file;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -139,13 +140,17 @@ public class FrameFile implements Closeable
 
   /**
    * Open a frame file with certain optional flags.
-   *
-   * @param file  ƒrame file
+   *  @param file  ƒrame file
+   * @param byteTracker
    * @param flags optional flags
    */
-  public static FrameFile open(final File file, final Flag... flags) throws IOException
+  public static FrameFile open(
+      final File file,
+      @Nullable final ByteTracker byteTracker,
+      final Flag... flags
+  ) throws IOException
   {
-    return open(file, Integer.MAX_VALUE, flags);
+    return open(file, Integer.MAX_VALUE, byteTracker, flags);
   }
 
   /**
@@ -153,12 +158,17 @@ public class FrameFile implements Closeable
    *
    * Package-private because this method is intended for use in tests. In production, {@code maxMmapSize} is
    * set to {@link Integer#MAX_VALUE}.
-   *
-   * @param file        ƒrame file
+   *  @param file        ƒrame file
    * @param maxMmapSize largest buffer to mmap at once
+   * @param byteTracker
    * @param flags       optional flags
    */
-  static FrameFile open(final File file, final int maxMmapSize, final Flag... flags) throws IOException
+  static FrameFile open(
+      final File file,
+      final int maxMmapSize,
+      @Nullable final ByteTracker byteTracker,
+      final Flag... flags
+  ) throws IOException
   {
     final EnumSet<Flag> flagSet = flags.length == 0 ? EnumSet.noneOf(Flag.class) : EnumSet.copyOf(Arrays.asList(flags));
 
@@ -234,6 +244,9 @@ public class FrameFile implements Closeable
         fileCloser.register(() -> {
           if (!file.delete()) {
             log.warn("Could not delete frame file [%s]", file);
+          }
+          if (byteTracker != null) {
+            byteTracker.release(fileLength);
           }
         });
       }

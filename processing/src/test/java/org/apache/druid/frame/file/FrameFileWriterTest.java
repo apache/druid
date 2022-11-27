@@ -70,7 +70,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     fileWriter.abort();
 
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, () -> FrameFile.open(file));
+    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, () -> FrameFile.open(file, null));
 
     MatcherAssert.assertThat(
         e,

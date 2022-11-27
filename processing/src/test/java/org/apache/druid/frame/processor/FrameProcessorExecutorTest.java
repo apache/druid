@@ -150,7 +150,7 @@ public class FrameProcessorExecutorTest
       Assert.assertEquals(
           adapter.getNumRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
-              new ReadableFileFrameChannel(FrameFile.open(outFile)),
+              new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
               FrameReader.create(adapter.getRowSignature())
           ).toList().size()
       );
@@ -482,7 +482,7 @@ public class FrameProcessorExecutorTest
   private static ReadableFrameChannel openFileChannel(final File file)
   {
     try {
-      return new ReadableFileFrameChannel(FrameFile.open(file));
+      return new ReadableFileFrameChannel(FrameFile.open(file, null));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

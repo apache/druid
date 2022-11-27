@@ -22,9 +22,12 @@ package org.apache.druid.frame.processor;
 import com.google.common.base.Suppliers;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.BoundedWritableFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
+import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
@@ -47,11 +50,17 @@ public class FileOutputChannelFactory implements OutputChannelFactory
 {
   private final File fileChannelsDirectory;
   private final int frameSize;
+  private final ByteTracker byteTracker;
 
-  public FileOutputChannelFactory(final File fileChannelsDirectory, final int frameSize)
+  public FileOutputChannelFactory(
+      final File fileChannelsDirectory,
+      final int frameSize,
+      final ByteTracker byteTracker
+  )
   {
     this.fileChannelsDirectory = fileChannelsDirectory;
     this.frameSize = frameSize;
+    this.byteTracker = byteTracker == null ? new ByteTracker(Long.MAX_VALUE) : byteTracker;
   }
 
   @Override
@@ -62,22 +71,25 @@ public class FileOutputChannelFactory implements OutputChannelFactory
     final String fileName = StringUtils.format("part_%06d_%s", partitionNumber, UUID.randomUUID().toString());
     final File file = new File(fileChannelsDirectory, fileName);
 
-    final WritableFrameFileChannel writableChannel =
-        new WritableFrameFileChannel(
-            FrameFileWriter.open(
-                Files.newByteChannel(
-                    file.toPath(),
-                    StandardOpenOption.CREATE_NEW,
-                    StandardOpenOption.WRITE
-                ),
-                ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
-            )
+    final WritableFrameChannel writableChannel =
+        new BoundedWritableFrameChannel(
+            new WritableFrameFileChannel(
+              FrameFileWriter.open(
+                  Files.newByteChannel(
+                      file.toPath(),
+                      StandardOpenOption.CREATE_NEW,
+                      StandardOpenOption.WRITE
+                  ),
+                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+              )
+            ),
+            byteTracker
         );
 
     final Supplier<ReadableFrameChannel> readableChannelSupplier = Suppliers.memoize(
         () -> {
           try {
-            final FrameFile frameFile = FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE);
+            final FrameFile frameFile = FrameFile.open(file, byteTracker, FrameFile.Flag.DELETE_ON_CLOSE);
             return new ReadableFileFrameChannel(frameFile);
           }
           catch (IOException e) {
@@ -99,21 +111,25 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   {
     FileUtils.mkdirp(fileChannelsDirectory);
     final File file = new File(fileChannelsDirectory, name);
-    WritableFrameFileChannel writableFrameFileChannel = new WritableFrameFileChannel(
-        FrameFileWriter.open(
-            Files.newByteChannel(
-                file.toPath(),
-                StandardOpenOption.CREATE_NEW,
-                StandardOpenOption.WRITE
-            ),
-            ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
-        )
-    );
+    WritableFrameChannel writableFrameFileChannel =
+        new BoundedWritableFrameChannel(
+          new WritableFrameFileChannel(
+              FrameFileWriter.open(
+                  Files.newByteChannel(
+                      file.toPath(),
+                      StandardOpenOption.CREATE_NEW,
+                      StandardOpenOption.WRITE
+                  ),
+                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+              )
+          ),
+          byteTracker
+        );
     Supplier<FrameFile> frameFileSupplier = Suppliers.memoize(
         () -> {
           try {
-            return deleteAfterRead ? FrameFile.open(file, FrameFile.Flag.DELETE_ON_CLOSE)
-                                   : FrameFile.open(file);
+            return deleteAfterRead ? FrameFile.open(file, byteTracker, FrameFile.Flag.DELETE_ON_CLOSE)
+                                   : FrameFile.open(file, byteTracker);
           }
           catch (IOException e) {
             throw new UncheckedIOException(e);
