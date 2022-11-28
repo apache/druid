@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import org.apache.curator.shaded.com.google.common.io.Closeables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -661,8 +660,13 @@ public class TestDataBuilder
                       return (InputRow) new MapBasedInputRow(new DateTime(map.get("time")), dimensionNames, map);
                     }
                     catch (JsonProcessingException e) {
-                      Closeables.closeQuietly(is);
-                      throw new RE(e, "Problem reading line setting up wikipedia dataset for tests.");
+                      final RE toThrow = new RE(e, "Problem reading line setting up wikipedia dataset for tests.");
+                      try {
+                        is.close();
+                      } catch (IOException logged) {
+                        toThrow.addSuppressed(logged);
+                      }
+                      throw toThrow;
                     }
                   })
                   .iterator();
