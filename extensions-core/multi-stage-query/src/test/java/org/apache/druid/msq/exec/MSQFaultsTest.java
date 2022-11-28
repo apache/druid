@@ -114,7 +114,7 @@ public class MSQFaultsTest extends MSQTestBase
     Mockito.doReturn(ImmutableSet.of(existingDataSegment)).when(testTaskActionClient).submit(isA(RetrieveUsedSegmentsAction.class));
 
     testIngestQuery().setSql(
-                         "replace into foo1 overwrite where __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00' select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "replace into foo1 overwrite where __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00' select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotReplaceExistingSegmentFault(existingDataSegment.getId()))
