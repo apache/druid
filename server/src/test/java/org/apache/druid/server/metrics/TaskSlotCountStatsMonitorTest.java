@@ -75,15 +75,10 @@ public class TaskSlotCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getEvents().size());
-    Assert.assertEquals("taskSlot/total/count", emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(0).toMap().get("value"));
-    Assert.assertEquals("taskSlot/idle/count", emitter.getEvents().get(1).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(1).toMap().get("value"));
-    Assert.assertEquals("taskSlot/used/count", emitter.getEvents().get(2).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(2).toMap().get("value"));
-    Assert.assertEquals("taskSlot/lazy/count", emitter.getEvents().get(3).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(3).toMap().get("value"));
-    Assert.assertEquals("taskSlot/blacklisted/count", emitter.getEvents().get(4).toMap().get("metric"));
-    Assert.assertEquals(1L, emitter.getEvents().get(4).toMap().get("value"));
+    emitter.verifyValue("taskSlot/total/count", 1L);
+    emitter.verifyValue("taskSlot/idle/count", 1L);
+    emitter.verifyValue("taskSlot/used/count", 1L);
+    emitter.verifyValue("taskSlot/lazy/count", 1L);
+    emitter.verifyValue("taskSlot/blacklisted/count", 1L);
   }
 }
