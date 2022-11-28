@@ -21,7 +21,9 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
@@ -50,6 +52,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+
+  /**
+   * Preserved filter for backward compatibility, should be removed on next major release;
+   * use objectGlob instead.
+   */
+  @Deprecated
+  private final String filter;
   private final String objectGlob;
 
   public CloudObjectInputSource(
@@ -63,6 +72,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    this.filter = null;
     this.objectGlob = null;
 
     illegalArgsChecker();
@@ -73,6 +83,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects,
+      @Deprecated @Nullable String filter,
       @Nullable String objectGlob
   )
   {
@@ -80,8 +91,12 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     this.uris = uris;
     this.prefixes = prefixes;
     this.objects = objects;
+    this.filter = filter;
     this.objectGlob = objectGlob;
-
+    Preconditions.checkArgument(
+        filter == null || objectGlob == null,
+        "Cannot use filter and objectGlob together. Try using objectGlob instead of filter."
+    );
     illegalArgsChecker();
   }
 
@@ -105,6 +120,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   public List<CloudObjectLocation> getObjects()
   {
     return objects;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getFilter()
+  {
+    return filter;
   }
 
   @Nullable
@@ -144,6 +167,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       if (StringUtils.isNotBlank(objectGlob)) {
         PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
         objectStream = objectStream.filter(object -> m.matches(Paths.get(object.getPath())));
+      } else if (StringUtils.isNotBlank(filter)) {
+        objectStream = objectStream.filter(object -> FilenameUtils.wildcardMatch(object.getPath(), getFilter()));
       }
 
       return objectStream.map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -155,6 +180,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       if (StringUtils.isNotBlank(objectGlob)) {
         PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
         uriStream = uriStream.filter(uri -> m.matches(Paths.get(uri.toString())));
+      } else if (StringUtils.isNotBlank(filter)) {
+        uriStream = uriStream.filter(uri -> FilenameUtils.wildcardMatch(uri.toString(), filter));
       }
 
       return uriStream.map(CloudObjectLocation::new).map(object -> new InputSplit<>(Collections.singletonList(object)));
@@ -212,13 +239,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
            Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
            Objects.equals(objects, that.objects) &&
+           Objects.equals(filter, that.filter) &&
            Objects.equals(objectGlob, that.objectGlob);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scheme, uris, prefixes, objects, objectGlob);
+    return Objects.hash(scheme, uris, prefixes, objects, filter, objectGlob);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException
