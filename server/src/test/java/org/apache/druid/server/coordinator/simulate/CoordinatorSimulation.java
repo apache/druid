@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 
@@ -81,9 +81,10 @@ public interface CoordinatorSimulation
     DruidServer getInventoryView(String serverName);
 
     /**
-     * Returns the metric events emitted in the previous coordinator run.
+     * Returns a MetricsVerifier which can be used to extract and verify the
+     * metric values emitted in the previous coordinator run.
      */
-    List<ServiceMetricEvent> getMetricEvents();
+    MetricsVerifier getMetricsVerifier();
 
     /**
      * Gets the load percentage of the specified datasource as seen by the coordinator.

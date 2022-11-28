@@ -148,7 +148,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
     int totalAssignedInRun1
         = getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2)).intValue()
           + getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3)).intValue();
@@ -158,7 +158,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     loadQueuedSegments();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
     int totalLoadedAfterRun2
         = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
           + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
