@@ -50,6 +50,11 @@ import java.util.function.Function;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
+
+  public static final boolean DUMP_EXPECTED_RESULTS = Boolean.parseBoolean(
+      System.getProperty("druid.tests.sql.dumpExpectedResults")
+  );
+
   static {
     NullHandling.initializeForTests();
   }
@@ -130,9 +135,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
               Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
             }
 
-            for (Object[] result : results.results) {
-              System.out.println("  - " + jacksonToString.apply(result));
-            }
+            maybeDumpExpectedResults(jacksonToString, results.results);
             for (Object[] result : input.expectedResults) {
               for (int i = 0; i < types.length; i++) {
                 // Jackson deserializes numbers as the minimum size required to store the value.  This means that
@@ -158,6 +161,17 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             assertResultsEquals(filename, input.expectedResults, results.results);
           }))
           .run();
+    }
+  }
+
+  private void maybeDumpExpectedResults(
+      Function<Object, String> toStrFn, List<Object[]> results
+  )
+  {
+    if (DUMP_EXPECTED_RESULTS) {
+      for (Object[] result : results) {
+        System.out.println("  - " + toStrFn.apply(result));
+      }
     }
   }
 

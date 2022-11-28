@@ -39,6 +39,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -68,7 +69,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.BufferedReader;
@@ -657,7 +657,8 @@ public class TestDataBuilder
                   .map(line -> {
                     try {
                       Map map = mapper.readValue(line, Map.class);
-                      return (InputRow) new MapBasedInputRow(new DateTime(map.get("time")), dimensionNames, map);
+                      final String time = String.valueOf(map.get("time"));
+                      return (InputRow) new MapBasedInputRow(DateTimes.of(time), dimensionNames, map);
                     }
                     catch (JsonProcessingException e) {
                       final RE toThrow = new RE(e, "Problem reading line setting up wikipedia dataset for tests.");
@@ -910,7 +911,7 @@ public class TestDataBuilder
     ).add(
         DataSegment.builder()
                    .dataSource("wikipedia")
-                   .interval(new Interval("2015-09-12/2015-09-13"))
+                   .interval(Intervals.of("2015-09-12/2015-09-13"))
                    .version("1")
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
