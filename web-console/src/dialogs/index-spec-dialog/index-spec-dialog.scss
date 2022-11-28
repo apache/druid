@@ -18,18 +18,19 @@
 
 @import '../../variables';
 
-.auto-form {
-  // Popover in info label
-  label.#{$bp-ns}-label {
-    position: relative;
-
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-    }
+.index-spec-dialog {
+  &.#{$bp-ns}-dialog {
+    height: 70vh;
   }
 
-  .custom-input input {
-    cursor: pointer;
+  .form-json-selector {
+    margin: 15px;
+  }
+
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 0 5px 0 15px;
+    flex: 1;
+    overflow: auto;
   }
 }
