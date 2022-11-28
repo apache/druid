@@ -664,7 +664,8 @@ public class TestDataBuilder
                       final RE toThrow = new RE(e, "Problem reading line setting up wikipedia dataset for tests.");
                       try {
                         is.close();
-                      } catch (IOException logged) {
+                      }
+                      catch (IOException logged) {
                         toThrow.addSuppressed(logged);
                       }
                       throw toThrow;
