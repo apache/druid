@@ -28,6 +28,7 @@ import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -142,18 +143,22 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                 // Longs can become Integer objects and then they fail equality checks.  We read the expected
                 // results using Jackson, so, we coerce the expected results to the type expected.
                 if (result[i] != null) {
-                  switch (types[i].getType()) {
-                    case LONG:
-                      result[i] = ((Number) result[i]).longValue();
-                      break;
-                    case DOUBLE:
-                      result[i] = ((Number) result[i]).doubleValue();
-                      break;
-                    case FLOAT:
-                      result[i] = ((Number) result[i]).floatValue();
-                      break;
-                    default:
-                      // Do nothing.
+                  if (result[i] instanceof Number) {
+                    switch (types[i].getType()) {
+                      case LONG:
+                        result[i] = ((Number) result[i]).longValue();
+                        break;
+                      case DOUBLE:
+                        result[i] = ((Number) result[i]).doubleValue();
+                        break;
+                      case FLOAT:
+                        result[i] = ((Number) result[i]).floatValue();
+                        break;
+                      default:
+                        throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
+                    }
+                  } else if (result[i] instanceof String) {
+                    result[i] = NullHandling.emptyToNullIfNeeded((String) result[i]);
                   }
                 }
               }
