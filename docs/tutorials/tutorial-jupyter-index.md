@@ -24,13 +24,13 @@ title: "Jupyter Notebook tutorials"
 
 <!-- tutorial-jupyter-index.md and examples/quickstart/juptyer-notebooks/README.md share a lot of the same content. If you make a change in one place, update the other too. -->
 
-You can try out the Druid APIs using the Jupyter Notebook-based tutorials. These tutorials provide snippets of Python code that you can use to run calls against the Druid API.
+You can try out the Druid APIs using the Jupyter Notebook-based tutorials. These tutorials provide snippets of Python code that you can use to run calls against the Druid API to complete the tutorial.
 
-## Before you start
+## Prerequisites 
 
 Make sure you meet the following requirements before starting the Jupyter-based tutorials:
 
-- Python3 
+- Python 3 
 
 - The `requests` package for Python. For example, you can install it with the following command: 
    
@@ -38,11 +38,23 @@ Make sure you meet the following requirements before starting the Jupyter-based 
    pip3 install requests
    ````
 
-- Jupyter Lab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid and Jupyter both try to use port `8888,` so start Jupyter on a different port. For example, use the following command to start Jupyter Lab on port `3001`:
-   
-   ```bash
-   jupyter lab --port 3001
-   ```
+- JupyterLab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid and Jupyter both try to use port `8888,` so start Jupyter on a different port.
+
+  - Install JupyterLab or Notebook:
+  
+     ```bash
+    # Install JupyterLab
+    pip3 install jupyterlab  
+    # Install Jupyter Notebook
+    pip3 install notebook
+     ```
+  -  Start JupyterLab 
+     ```bash
+     # Start JupyterLab on port 3001
+      jupyter lab --port 3001
+      # Start Jupyter notebook on port 3001
+      jupyter notebook --port 3001
+      ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](./index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 
