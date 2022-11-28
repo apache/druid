@@ -55,24 +55,23 @@ public class WindowLagProcessorTest
         new WindowLagProcessor("objectCol", "laggardObjectCol", 1)
     );
 
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+
+    expectations.columnHelper("laggardIntCol", 10, ColumnType.LONG)
+                .setExpectation(new int[]{0, 0, 0, 1, 2, 3, 4, 5, 6, 7})
+                .setNulls(new int[]{0, 1});
+
+    expectations.columnHelper("laggardDoubleCol", 10, ColumnType.DOUBLE)
+                .setExpectation(new double[]{0, 0, 0, 0, 0, 1, 2, 3, 4, 5})
+                .setNulls(new int[]{0, 1, 2, 3});
+
+    expectations.columnHelper("laggardObjectCol", 10, ColumnType.STRING)
+                .setExpectation(new String[]{null, "a", "b", "c", "d", "e", "f", "g", "h", "i"})
+                .setNulls(new int[]{0});
+
     final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("laggardIntCol", ColumnType.LONG)
-          .setExpectation(new int[]{0, 0, 0, 1, 2, 3, 4, 5, 6, 7})
-          .setNulls(new int[]{0, 1})
-          .validate();
-
-    helper.forColumn("laggardDoubleCol", ColumnType.DOUBLE)
-          .setExpectation(new double[]{0, 0, 0, 0, 0, 1, 2, 3, 4, 5})
-          .setNulls(new int[]{0, 1, 2, 3})
-          .validate();
-
-    helper.forColumn("laggardObjectCol", ColumnType.STRING)
-          .setExpectation(new String[]{null, "a", "b", "c", "d", "e", "f", "g", "h", "i"})
-          .setNulls(new int[]{0})
-          .validate();
+    expectations.validate(results);
   }
 }

@@ -17,37 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator.window.ranking;
+package org.apache.druid.query.operator;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
+import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-public class WindowCumeDistProcessorTest
+public class WindowProcessorOperatorTest
 {
   @Test
-  public void testCumeDistProcessing()
+  public void testJustRunsTheProcessor()
   {
-    Map<String, Column> map = new LinkedHashMap<>();
-    map.put("vals", new IntArrayColumn(new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290}));
+    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "colA", new IntArrayColumn(new int[]{1, 2, 3}),
+            "colB", new IntArrayColumn(new int[]{3, 2, 1})
+        )
+    );
 
-    MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
+    WindowProcessorOperator op = new WindowProcessorOperator(
+        new Processor()
+        {
+          @Override
+          public RowsAndColumns process(RowsAndColumns incomingPartition)
+          {
+            return incomingPartition;
+          }
 
-    Processor processor = new WindowCumeDistProcessor(Collections.singletonList("vals"), "CumeDist");
+          @Override
+          public boolean validateEquivalent(Processor otherProcessor)
+          {
+            return true;
+          }
+        },
+        InlineScanOperator.make(rac)
+    );
 
-    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
-        .expectColumn("vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290})
-        .expectColumn("CumeDist", new double[]{0.1, 0.3, 0.3, 0.4, 0.5, 0.6, 0.8, 0.8, 1.0, 1.0});
-
-    final RowsAndColumns results = processor.process(rac);
-    expectations.validate(results);
+    op.open();
+    Assert.assertTrue(op.hasNext());
+    Assert.assertSame(rac, op.next());
+    Assert.assertFalse(op.hasNext());
+    op.close(true);
   }
 }

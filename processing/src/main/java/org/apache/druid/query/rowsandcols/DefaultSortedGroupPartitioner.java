@@ -64,7 +64,7 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
             newRetVal.add(new StartAndEnd(currStart, j));
             currStart = j;
           } else if (comparison > 0) {
-            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", i - 1, i);
+            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", j - 1, j);
           }
         }
         newRetVal.add(new StartAndEnd(currStart, currGroup.getEnd()));

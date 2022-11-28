@@ -19,12 +19,16 @@
 
 package org.apache.druid.query.operator.window;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class RowsAndColumnsHelper
 {
@@ -61,32 +65,67 @@ public class RowsAndColumnsHelper
     }
   }
 
-  private final RowsAndColumns rac;
+  private final Map<String, ColumnHelper> helpers = new LinkedHashMap<>();
 
-  public RowsAndColumnsHelper(
-      RowsAndColumns rac
-  )
+  public RowsAndColumnsHelper()
   {
-    this.rac = rac;
   }
 
-  public ColumnHelper forColumn(String column, ColumnType expectedType)
+  public RowsAndColumnsHelper expectColumn(String col, int[] expectedVals)
   {
-    return new ColumnHelper(rac.findColumn(column), expectedType);
+    final ColumnHelper helper = columnHelper(col, expectedVals.length, ColumnType.LONG);
+    helper.setExpectation(expectedVals);
+    return this;
+  }
+
+  public RowsAndColumnsHelper expectColumn(String col, long[] expectedVals)
+  {
+    final ColumnHelper helper = columnHelper(col, expectedVals.length, ColumnType.LONG);
+    helper.setExpectation(expectedVals);
+    return this;
+  }
+
+  public RowsAndColumnsHelper expectColumn(String col, double[] expectedVals)
+  {
+    final ColumnHelper helper = columnHelper(col, expectedVals.length, ColumnType.DOUBLE);
+    helper.setExpectation(expectedVals);
+    return this;
+  }
+
+  public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)
+  {
+    ColumnHelper retVal = helpers.get(column);
+    if (retVal == null) {
+      retVal = new ColumnHelper(expectedSize, expectedType);
+      helpers.put(column, retVal);
+      return retVal;
+    } else {
+      throw new ISE(
+          "column[%s] expectations already defined, size[%s], type[%s]",
+          column,
+          retVal.expectedVals.length,
+          retVal.expectedType
+      );
+    }
+  }
+
+  public void validate(RowsAndColumns rac)
+  {
+    for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
+      entry.getValue().validate(entry.getKey(), rac.findColumn(entry.getKey()));
+    }
   }
 
   public static class ColumnHelper
   {
-    private final Column col;
     private final ColumnType expectedType;
     private final Object[] expectedVals;
     private final boolean[] expectedNulls;
 
-    public ColumnHelper(Column col, ColumnType expectedType)
+    public ColumnHelper(int expectedSize, ColumnType expectedType)
     {
-      this.col = col;
       this.expectedType = expectedType;
-      this.expectedVals = new Object[col.toAccessor().numCells()];
+      this.expectedVals = new Object[expectedSize];
       this.expectedNulls = new boolean[expectedVals.length];
     }
 
@@ -136,13 +175,14 @@ public class RowsAndColumnsHelper
       return this;
     }
 
-    public void validate()
+    public void validate(String columnName, Column col)
     {
       final ColumnAccessor accessor = col.toAccessor();
-      Assert.assertEquals(expectedType, accessor.getType());
 
+      Assert.assertEquals(columnName, expectedType, accessor.getType());
+      Assert.assertEquals(columnName, expectedVals.length, accessor.numCells());
       for (int i = 0; i < accessor.numCells(); ++i) {
-        final String msg = String.valueOf(i);
+        final String msg = StringUtils.format("%s[%s]", columnName, i);
         Object expectedVal = expectedVals[i];
         if (expectedVal == null) {
           Assert.assertTrue(msg, expectedNulls[i]);
@@ -185,8 +225,9 @@ public class RowsAndColumnsHelper
           if (expectedNulls[i]) {
             Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertNull(msg, accessor.getObject(i));
-            // This is just for consistency in the tests.  It's likely more a validation of the test setup than the
-            // actual logic, but let's keep it for the consistency.
+            // asserting null on the expected value is here for consistency in the tests.  If it fails, it's most
+            // likely indicative of something wrong with the test setup than the actual logic, we keep it for
+            // sanity's sake to things consistent.
             Assert.assertNull(msg, expectedVals[i]);
           } else {
             final Object obj = accessor.getObject(i);

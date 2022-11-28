@@ -70,16 +70,18 @@ public class WindowAggregateProcessorTest
         )
     );
 
-    final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+    RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("sumFromLong", new long[]{45, 45, 45, 45, 45, 45, 45, 45, 45, 45})
+        .expectColumn("sumFromDouble", new long[]{45, 45, 45, 45, 45, 45, 45, 45, 45, 45})
+        .expectColumn("maxFromInt", new double[]{9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+        .expectColumn("maxFromDouble", new double[]{9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
+        .expectColumn("cummMax", new long[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("cummSum", new double[]{0, 1, 3, 6, 10, 15, 21, 28, 36, 45});
 
-    RowsAndColumnsHelper.assertEquals(results, "sumFromLong", new long[]{45, 45, 45, 45, 45, 45, 45, 45, 45, 45});
-    RowsAndColumnsHelper.assertEquals(results, "sumFromDouble", new long[]{45, 45, 45, 45, 45, 45, 45, 45, 45, 45});
-    RowsAndColumnsHelper.assertEquals(results, "maxFromInt", new double[]{9, 9, 9, 9, 9, 9, 9, 9, 9, 9});
-    RowsAndColumnsHelper.assertEquals(results, "maxFromDouble", new double[]{9, 9, 9, 9, 9, 9, 9, 9, 9, 9});
-    RowsAndColumnsHelper.assertEquals(results, "cummMax", new long[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "cummSum", new double[]{0, 1, 3, 6, 10, 15, 21, 28, 36, 45});
+    final RowsAndColumns results = processor.process(rac);
+    expectations.validate(results);
   }
 
 }
