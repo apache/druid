@@ -21,6 +21,7 @@ import { range } from 'd3-array';
 import React from 'react';
 
 import { AutoForm, ExternalLink, Field } from '../../components';
+import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
   allowKeys,
@@ -44,6 +45,7 @@ import {
   getDimensionSpecs,
   getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
+import { IndexSpec, summarizeIndexSpec } from '../index-spec/index-spec';
 import { InputFormat, issueWithInputFormat } from '../input-format/input-format';
 import {
   FILTER_SUGGESTIONS,
@@ -1379,6 +1381,7 @@ export interface TuningConfig {
   partitionsSpec?: PartitionsSpec;
   maxPendingPersists?: number;
   indexSpec?: IndexSpec;
+  indexSpecForIntermediatePersists?: IndexSpec;
   forceExtendableShardSpecs?: boolean;
   forceGuaranteedRollup?: boolean;
   reportParseExceptions?: boolean;
@@ -1869,103 +1872,38 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   },
 
   {
-    name: 'spec.tuningConfig.indexSpec.bitmap.type',
-    label: 'Index bitmap type',
-    type: 'string',
-    defaultValue: 'roaring',
-    suggestions: ['concise', 'roaring'],
+    name: 'spec.tuningConfig.indexSpec',
+    type: 'custom',
     hideInMore: true,
-    info: <>Compression format for bitmap indexes.</>,
+    info: <>Defines segment storage format options to use at indexing time.</>,
+    placeholder: 'Default index spec',
+    customSummary: summarizeIndexSpec,
+    customDialog: ({ value, onValueChange, onClose }) => (
+      <IndexSpecDialog onClose={onClose} onSave={onValueChange} indexSpec={value} />
+    ),
   },
   {
-    name: 'spec.tuningConfig.indexSpec.bitmap.compressRunOnSerialization',
-    type: 'boolean',
-    defaultValue: true,
-    defined: spec => deepGet(spec, 'spec.tuningConfig.indexSpec.bitmap.type') === 'roaring',
+    name: 'spec.tuningConfig.indexSpecForIntermediatePersists',
+    type: 'custom',
+    hideInMore: true,
     info: (
       <>
-        Controls whether or not run-length encoding will be used when it is determined to be more
-        space-efficient.
+        Defines segment storage format options to use at indexing time for intermediate persisted
+        temporary segments.
       </>
+    ),
+    placeholder: 'Default index spec',
+    customSummary: summarizeIndexSpec,
+    customDialog: ({ value, onValueChange, onClose }) => (
+      <IndexSpecDialog
+        title="Index spec for intermediate persists"
+        onClose={onClose}
+        onSave={onValueChange}
+        indexSpec={value}
+      />
     ),
   },
 
-  {
-    name: 'spec.tuningConfig.indexSpec.dimensionCompression',
-    label: 'Index dimension compression',
-    type: 'string',
-    defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
-    hideInMore: true,
-    info: <>Compression format for dimension columns.</>,
-  },
-
-  {
-    name: 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.type',
-    label: 'Index string dictionary encoding',
-    type: 'string',
-    defaultValue: 'utf8',
-    suggestions: ['utf8', 'frontCoded'],
-    hideInMore: true,
-    info: (
-      <>
-        Encoding format for STRING value dictionaries used by STRING and COMPLEX&lt;json&gt;
-        columns.
-      </>
-    ),
-  },
-  {
-    name: 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.bucketSize',
-    label: 'Index string dictionary encoding bucket size',
-    type: 'number',
-    defaultValue: 4,
-    min: 1,
-    max: 128,
-    defined: spec =>
-      deepGet(spec, 'spec.tuningConfig.indexSpec.stringDictionaryEncoding.type') === 'frontCoded',
-    hideInMore: true,
-    info: (
-      <>
-        The number of values to place in a bucket to perform delta encoding. Must be a power of 2,
-        maximum is 128.
-      </>
-    ),
-  },
-
-  {
-    name: 'spec.tuningConfig.indexSpec.metricCompression',
-    label: 'Index metric compression',
-    type: 'string',
-    defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
-    hideInMore: true,
-    info: <>Compression format for primitive type metric columns.</>,
-  },
-  {
-    name: 'spec.tuningConfig.indexSpec.longEncoding',
-    label: 'Index long encoding',
-    type: 'string',
-    defaultValue: 'longs',
-    suggestions: ['longs', 'auto'],
-    hideInMore: true,
-    info: (
-      <>
-        Encoding format for long-typed columns. Applies regardless of whether they are dimensions or
-        metrics. <Code>auto</Code> encodes the values using offset or lookup table depending on
-        column cardinality, and store them with variable size. <Code>longs</Code> stores the value
-        as-is with 8 bytes each.
-      </>
-    ),
-  },
-  {
-    name: 'spec.tuningConfig.indexSpec.jsonCompression',
-    label: 'Index JSON compression',
-    type: 'string',
-    defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'zstd', 'uncompressed'],
-    hideInMore: true,
-    info: <>Compression format to use for nested column raw data. </>,
-  },
   {
     name: 'spec.tuningConfig.splitHintSpec.maxSplitSize',
     type: 'number',
@@ -2170,18 +2108,6 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
 
 export function getTuningFormFields() {
   return TUNING_FORM_FIELDS;
-}
-
-export interface IndexSpec {
-  bitmap?: Bitmap;
-  dimensionCompression?: string;
-  metricCompression?: string;
-  longEncoding?: string;
-}
-
-export interface Bitmap {
-  type: string;
-  compressRunOnSerialization?: boolean;
 }
 
 // --------------

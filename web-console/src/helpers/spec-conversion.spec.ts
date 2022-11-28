@@ -106,6 +106,9 @@ describe('spec conversion', () => {
             partitionDimension: 'isRobot',
             targetRowsPerSegment: 150000,
           },
+          indexSpec: {
+            dimensionCompression: 'lzf',
+          },
           forceGuaranteedRollup: true,
           maxNumConcurrentSubTasks: 4,
           maxParseExceptions: 3,
@@ -159,6 +162,9 @@ describe('spec conversion', () => {
       maxParseExceptions: 3,
       finalizeAggregations: false,
       maxNumTasks: 5,
+      indexSpec: {
+        dimensionCompression: 'lzf',
+      },
     });
   });
 
