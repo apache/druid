@@ -44,8 +44,6 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithTooManySegments() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled-30k.json");
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
                                               .put("rowsPerSegment", 1)
@@ -54,16 +52,18 @@ public class MSQFaultsTest extends MSQTestBase
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
-                                            .add("cnt", ColumnType.LONG)
                                             .build();
+
+    File file = generateTemporaryNdJsonFile(30000, 1);
+    String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
                              + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
-                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                             + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
                              + "  )\n"
                              + ") PARTITIONED by day")
                      .setExpectedDataSource("foo1")
@@ -187,7 +187,7 @@ public class MSQFaultsTest extends MSQTestBase
 
     final int numFiles = 20000;
 
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled-30k.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
