@@ -41,7 +41,7 @@ TASK_COUNT = "task-count"
 TASK_MEM_TYPE_LOW = "low"
 TASK_MEM_TYPE_HIGH = "high"
 TASK_MEM_MAP = {
-    TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256g"],
+    TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256m"],
     TASK_MEM_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
 }
 
