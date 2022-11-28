@@ -52,6 +52,12 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
+
+  /**
+   * Preserved filter for backward compatibility, should be removed on next major release;
+   * use objectGlob instead.
+   */
+  @Deprecated
   private final String filter;
   private final String objectGlob;
 
@@ -77,7 +83,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects,
-      @Nullable String filter,
+      @Deprecated @Nullable String filter,
       @Nullable String objectGlob
   )
   {
