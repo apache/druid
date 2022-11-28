@@ -23,6 +23,7 @@ import org.apache.datasketches.kll.KllDoublesSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -46,6 +47,16 @@ public class KllDoublesSketchOperations
     );
   }
 
+  public static KllDoublesSketch deserializeSafe(final Object serializedSketch)
+  {
+    if (serializedSketch instanceof String) {
+      return deserializeFromBase64EncodedStringSafe((String) serializedSketch);
+    } else if (serializedSketch instanceof byte[]) {
+      return deserializeFromByteArraySafe((byte[]) serializedSketch);
+    }
+    return deserialize(serializedSketch);
+  }
+
   public static KllDoublesSketch deserializeFromBase64EncodedString(final String str)
   {
     return deserializeFromByteArray(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
@@ -54,6 +65,16 @@ public class KllDoublesSketchOperations
   public static KllDoublesSketch deserializeFromByteArray(final byte[] data)
   {
     return KllDoublesSketch.wrap(Memory.wrap(data));
+  }
+
+  public static KllDoublesSketch deserializeFromBase64EncodedStringSafe(final String str)
+  {
+    return deserializeFromByteArraySafe(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  public static KllDoublesSketch deserializeFromByteArraySafe(final byte[] data)
+  {
+    return KllDoublesSketch.wrap(SafeWritableMemory.wrap(data));
   }
 
 }

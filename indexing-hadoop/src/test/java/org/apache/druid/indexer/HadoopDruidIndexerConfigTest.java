@@ -23,11 +23,16 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -47,14 +52,32 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class HadoopDruidIndexerConfigTest
 {
   private static final ObjectMapper JSON_MAPPER;
+  // testing member to verify that DruidModule gets node-roles set supplied through the static initialization of
+  // HadoopDruidIndexerConfig class.
+  private static final DruidModule MY_MODULE;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     JSON_MAPPER.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, JSON_MAPPER));
+    MY_MODULE = new DruidModule()
+    {
+      @Inject
+      public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
+      {
+        Assert.assertTrue(nodeRoles.isEmpty());
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+
+      }
+    };
   }
 
   @Test

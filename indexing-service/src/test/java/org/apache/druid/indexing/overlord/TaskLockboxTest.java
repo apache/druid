@@ -169,24 +169,81 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySharedLock()
+  public void testTrySharedLock() throws EntryExistsException
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
     final List<Task> tasks = new ArrayList<>();
-    final Set<TaskLock> actualLocks = new HashSet<>();
+    final Set<TaskLock> activeLocks = new HashSet<>();
 
-    // test creating new locks
-    for (int i = 0; i < 5; i++) {
-      final Task task = NoopTask.create(Math.min(0, (i - 1) * 10)); // the first two tasks have the same priority
+    // Add an exclusive lock entry of the highest priority
+    Task exclusiveHigherPriorityRevokedLockTask = NoopTask.create(100);
+    tasks.add(exclusiveHigherPriorityRevokedLockTask);
+    taskStorage.insert(
+        exclusiveHigherPriorityRevokedLockTask,
+        TaskStatus.running(exclusiveHigherPriorityRevokedLockTask.getId())
+    );
+    lockbox.add(exclusiveHigherPriorityRevokedLockTask);
+    final TaskLock exclusiveRevokedLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveHigherPriorityRevokedLockTask,
+        interval
+    ).getTaskLock();
+
+    // Any equal or lower priority shared lock must fail
+    final Task sharedLockTask = NoopTask.create(100);
+    lockbox.add(sharedLockTask);
+    Assert.assertFalse(tryTimeChunkLock(TaskLockType.SHARED, sharedLockTask, interval).isOk());
+
+    // Revoke existing active exclusive lock
+    lockbox.revokeLock(exclusiveHigherPriorityRevokedLockTask.getId(), exclusiveRevokedLock);
+    Assert.assertEquals(1, getAllLocks(tasks).size());
+    Assert.assertEquals(0, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+
+    // test creating new shared locks
+    for (int i = 0; i < 3; i++) {
+      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
       tasks.add(task);
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
       final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
       Assert.assertNotNull(lock);
-      actualLocks.add(lock);
+      activeLocks.add(lock);
     }
+    Assert.assertEquals(4, getAllLocks(tasks).size());
+    Assert.assertEquals(3, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
 
+    // Adding an exclusive task lock of priority 15 should revoke all existing active locks
+    Task exclusiveLowerPriorityLockTask = NoopTask.create(15);
+    tasks.add(exclusiveLowerPriorityLockTask);
+    taskStorage.insert(exclusiveLowerPriorityLockTask, TaskStatus.running(exclusiveLowerPriorityLockTask.getId()));
+    lockbox.add(exclusiveLowerPriorityLockTask);
+    final TaskLock lowerPriorityExclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveLowerPriorityLockTask,
+        interval
+    ).getTaskLock();
+    activeLocks.clear();
+    activeLocks.add(lowerPriorityExclusiveLock);
     Assert.assertEquals(5, getAllLocks(tasks).size());
-    Assert.assertEquals(getAllLocks(tasks), actualLocks);
+    Assert.assertEquals(1, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+
+    // Add new shared locks which revoke the active exclusive task lock
+    activeLocks.clear();
+    for (int i = 3; i < 5; i++) {
+      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
+      tasks.add(task);
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      lockbox.add(task);
+      final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
+      Assert.assertNotNull(lock);
+      activeLocks.add(lock);
+    }
+    Assert.assertEquals(7, getAllLocks(tasks).size());
+    Assert.assertEquals(2, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
   }
 
   @Test
@@ -1300,6 +1357,14 @@ public class TaskLockboxTest
                         result.getTasksToFail());
   }
 
+  private Set<TaskLock> getAllActiveLocks(List<Task> tasks)
+  {
+    return tasks.stream()
+                .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                .filter(taskLock -> !taskLock.isRevoked())
+                .collect(Collectors.toSet());
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
@@ -1420,7 +1485,7 @@ public class TaskLockboxTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
     }

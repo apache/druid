@@ -75,6 +75,9 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
       Assert.assertEquals(LONGS[i], fixedIndexed.get(i));
       Assert.assertEquals(i, fixedIndexed.indexOf(LONGS[i]));
     }
+
+    Assert.assertThrows(IllegalArgumentException.class, () -> fixedIndexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> fixedIndexed.get(LONGS.length));
   }
 
   @Test

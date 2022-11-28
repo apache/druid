@@ -48,7 +48,6 @@ import java.util.Optional;
 
 public class JoinDataSourceTest
 {
-
   public static final JoinableFactoryWrapper NOOP_JOINABLE_FACTORY_WRAPPER = new JoinableFactoryWrapper(
       NoopJoinableFactory.INSTANCE
   );
@@ -147,8 +146,7 @@ public class JoinDataSourceTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Expected [2] children, got [0]");
-
-    final DataSource ignored = joinTableToTable.withChildren(Collections.emptyList());
+    joinTableToTable.withChildren(Collections.emptyList());
   }
 
   @Test
@@ -197,7 +195,7 @@ public class JoinDataSourceTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("left filter is only supported if left data source is direct table access");
-    JoinDataSource ignored = JoinDataSource.create(
+    JoinDataSource.create(
         new QueryDataSource(Mockito.mock(Query.class)),
         new TableDataSource("table"),
         "j.",
@@ -293,7 +291,6 @@ public class JoinDataSourceTest
     Assert.assertNotEquals(cacheKey1.length, 0);
     Assert.assertNotEquals(cacheKey2.length, 0);
     Assert.assertTrue(Arrays.equals(cacheKey1, cacheKey2));
-
   }
 
   @Test
@@ -492,7 +489,6 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     Assert.assertEquals(cacheKey1.length, 0);
   }
-
 
   private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory
   {

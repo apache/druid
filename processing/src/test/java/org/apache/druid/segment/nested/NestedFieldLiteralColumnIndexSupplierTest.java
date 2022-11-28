@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -35,6 +36,7 @@ import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.NumericRangeIndex;
+import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -87,6 +89,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     stringWriter.write("fo");
     stringWriter.write("foo");
     stringWriter.write("fooo");
+    stringWriter.write("g");
+    stringWriter.write("gg");
+    stringWriter.write("ggg");
     stringWriter.write("z");
     writeToBuffer(stringBuffer, stringWriter);
 
@@ -125,7 +130,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     doubleWriter.write(9.9);
     writeToBuffer(doubleBuffer, doubleWriter);
 
-    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
     globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
@@ -138,6 +143,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
+
+    // sanity check to make sure we don't return indexes we don't support
+    Assert.assertNull(indexSupplier.as(SpatialIndex.class));
 
     // 10 rows
     // local: [b, foo, fooo, z]
@@ -192,13 +200,44 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertNotNull(rangeIndex);
 
     // 10 rows
+    // global: [null, a, b, fo, foo, fooo, g, gg, ggg, z]
     // local: [b, foo, fooo, z]
     // column: [foo, b, fooo, b, z, fooo, z, b, b, foo]
 
-    BitmapColumnIndex forRange = rangeIndex.forRange("f", true, "g", true);
+    BitmapColumnIndex forRange = rangeIndex.forRange(null, false, "a", false);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(null, false, "b", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(10), 0.0);
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 3, 7, 8);
+
+    forRange = rangeIndex.forRange("b", false, "fon", false);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.4, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 3, 7, 8);
+
+    forRange = rangeIndex.forRange("bb", false, "fon", false);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange("b", true, "foo", false);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.2, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 0, 9);
+
+    forRange = rangeIndex.forRange("f", true, "g", true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.4, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 0, 2, 5, 9);
 
     forRange = rangeIndex.forRange(null, false, "g", true);
@@ -252,6 +291,36 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(1.0, forRange.estimateSelectivity(10), 0.0);
     bitmap = forRange.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+    forRange = rangeIndex.forRange(null, true, "foa", false);
+    Assert.assertEquals(0.4, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 3, 7, 8);
+
+    forRange = rangeIndex.forRange(null, true, "foooa", false);
+    Assert.assertEquals(0.8, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 0, 1, 2, 3, 5, 7, 8, 9);
+
+    forRange = rangeIndex.forRange("foooa", true, "ggg", false);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange("g", true, "gg", false);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange("z", true, "zz", false);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange("z", false, "zz", false);
+    Assert.assertEquals(0.2, forRange.estimateSelectivity(10), 0.0);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 4, 6);
   }
 
   @Test
@@ -500,6 +569,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
 
+    // sanity check to make sure we don't return indexes we don't support
+    Assert.assertNull(indexSupplier.as(SpatialIndex.class));
+
     // 10 rows
     // local: [1, 3, 100, 300]
     // column: [100, 1, 300, 1, 3, 3, 100, 300, 300, 1]
@@ -614,6 +686,25 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(10), 0.0);
     bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 1, 3, 4, 7, 9);
+
+    // set index with null
+    TreeSet<String> treeSet = new TreeSet<>(Comparators.naturalNullsFirst());
+    treeSet.add(null);
+    treeSet.add("1");
+    treeSet.add("3");
+    treeSet.add("300");
+    columnIndex = valueSetIndex.forSortedValues(treeSet);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.8, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 2, 3, 4, 5, 7, 8, 9);
+
+    // null value should really use NullValueIndex, but this works for classic reasons
+    columnIndex = valueSetIndex.forValue(null);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 2, 5, 8);
   }
 
   @Test
@@ -677,6 +768,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
 
+    // sanity check to make sure we don't return indexes we don't support
+    Assert.assertNull(indexSupplier.as(SpatialIndex.class));
+
     // 10 rows
     // local: [1.1, 1.2, 3.3, 6.6]
     // column: [1.1, 1.1, 1.2, 3.3, 1.2, 6.6, 3.3, 1.2, 1.1, 3.3]
@@ -723,10 +817,10 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     forRange = rangeIndex.forRange(1.1, true, 3.3, true);
     Assert.assertNotNull(forRange);
-    Assert.assertEquals(0.6, forRange.estimateSelectivity(10), 0.0);
+    Assert.assertEquals(0.3, forRange.estimateSelectivity(10), 0.0);
 
     bitmap = forRange.computeBitmapResult(bitmapResultFactory);
-    checkBitmap(bitmap, 2, 3, 4, 6, 7, 9);
+    checkBitmap(bitmap, 2, 4, 7);
 
     forRange = rangeIndex.forRange(null, true, null, true);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(10), 0.0);
@@ -737,6 +831,55 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(1.0, forRange.estimateSelectivity(10), 0.0);
     bitmap = forRange.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+    forRange = rangeIndex.forRange(1.111, true, 1.19, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(1.01, true, 1.09, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(0.05, true, 0.98, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(0.05, true, 1.1, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(8.99, true, 10.10, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(8.99, true, 10.10, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+
+    forRange = rangeIndex.forRange(10.00, true, 10.10, true);
+    Assert.assertNotNull(forRange);
+    Assert.assertEquals(0.0, forRange.estimateSelectivity(10), 0.0);
+
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
   }
 
   @Test
@@ -805,6 +948,25 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(10), 0.0);
     bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 2, 4, 7, 9);
+
+    // set index with null
+    TreeSet<String> treeSet = new TreeSet<>(Comparators.naturalNullsFirst());
+    treeSet.add(null);
+    treeSet.add("1.2");
+    treeSet.add("3.3");
+    treeSet.add("7.7");
+    columnIndex = valueSetIndex.forSortedValues(treeSet);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.7, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 2, 3, 4, 6, 7, 9);
+
+    // null value should really use NullValueIndex, but this works for classic reasons
+    columnIndex = valueSetIndex.forValue(null);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.3, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 3, 6);
   }
 
   @Test
@@ -868,6 +1030,9 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     NullValueIndex nullIndex = indexSupplier.as(NullValueIndex.class);
     Assert.assertNotNull(nullIndex);
 
+    // sanity check to make sure we don't return indexes we don't support
+    Assert.assertNull(indexSupplier.as(SpatialIndex.class));
+
     // 10 rows
     // local: [null, b, z, 1, 300, 1.1, 9.9]
     // column: [1, b, null, 9.9, 300, 1, z, null, 1.1, b]
@@ -915,6 +1080,26 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(10), 0.0);
     bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
     checkBitmap(bitmap, 1, 3, 4, 9);
+
+    // set index with null
+    TreeSet<String> treeSet = new TreeSet<>(Comparators.naturalNullsFirst());
+    treeSet.add(null);
+    treeSet.add("b");
+    treeSet.add("300");
+    treeSet.add("9.9");
+    treeSet.add("1.6");
+    columnIndex = valueSetIndex.forSortedValues(treeSet);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.6, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 1, 2, 3, 4, 7, 9);
+
+    // null value should really use NullValueIndex, but this works for classic reasons
+    columnIndex = valueSetIndex.forValue(null);
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.2, columnIndex.estimateSelectivity(10), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 2, 7);
   }
 
   @Test
@@ -972,6 +1157,11 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     Assert.assertEquals("300", lowLevelIndex.getValue(4));
     Assert.assertEquals("1.1", lowLevelIndex.getValue(5));
     Assert.assertEquals("9.9", lowLevelIndex.getValue(6));
+
+    Assert.assertEquals(7, lowLevelIndex.getCardinality());
+    checkBitmap(lowLevelIndex.getBitmap(0), 2, 7);
+    checkBitmap(lowLevelIndex.getBitmap(1), 1, 9);
+    checkBitmap(lowLevelIndex.getBitmap(-1));
   }
 
   private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException
@@ -997,7 +1187,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
 
     // 10 rows
     // globals: [
-    //    [null, a, b, fo, foo, fooo, z],
+    //    [null, a, b, fo, foo, fooo, g, gg, ggg, z],
     //    [1, 2, 3, 5, 100, 300, 9000],
     //    [1.0, 1.1, 1.2, 2.0, 2.5, 3.3, 6.6, 9.9]
     // ]
@@ -1017,7 +1207,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.write(fillBitmap(2, 5));
 
     // z
-    localDictionaryWriter.write(6);
+    localDictionaryWriter.write(9);
     bitmapWriter.write(fillBitmap(4, 6));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1067,7 +1257,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.open();
     // 10 rows
     // globals: [
-    //    [null, a, b, fo, foo, fooo, z],
+    //    [null, a, b, fo, foo, fooo, g, gg, ggg, z],
     //    [1, 2, 3, 5, 100, 300, 9000],
     //    [1.0, 1.1, 1.2, 2.0, 2.5, 3.3, 6.6, 9.9]
     // ]
@@ -1091,7 +1281,7 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.write(fillBitmap(2, 5));
 
     // z
-    localDictionaryWriter.write(6);
+    localDictionaryWriter.write(9);
     bitmapWriter.write(fillBitmap(4, 6));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1150,19 +1340,19 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     // column: [100, 1, 300, 1, 3, 3, 100, 300, 300, 1]
 
     // 1
-    localDictionaryWriter.write(7);
+    localDictionaryWriter.write(10);
     bitmapWriter.write(fillBitmap(1, 3, 9));
 
     // 3
-    localDictionaryWriter.write(9);
+    localDictionaryWriter.write(12);
     bitmapWriter.write(fillBitmap(4, 5));
 
     // 100
-    localDictionaryWriter.write(11);
+    localDictionaryWriter.write(14);
     bitmapWriter.write(fillBitmap(0, 6));
 
     // 300
-    localDictionaryWriter.write(12);
+    localDictionaryWriter.write(15);
     bitmapWriter.write(fillBitmap(2, 7, 8));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1225,19 +1415,19 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.write(fillBitmap(2, 5, 8));
 
     // 1
-    localDictionaryWriter.write(7);
+    localDictionaryWriter.write(10);
     bitmapWriter.write(fillBitmap(1, 3, 9));
 
     // 3
-    localDictionaryWriter.write(9);
+    localDictionaryWriter.write(12);
     bitmapWriter.write(fillBitmap(4));
 
     // 100
-    localDictionaryWriter.write(11);
+    localDictionaryWriter.write(14);
     bitmapWriter.write(fillBitmap(0, 6));
 
     // 300
-    localDictionaryWriter.write(12);
+    localDictionaryWriter.write(15);
     bitmapWriter.write(fillBitmap(7));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1296,19 +1486,19 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     // column: [1.1, 1.1, 1.2, 3.3, 1.2, 6.6, 3.3, 1.2, 1.1, 3.3]
 
     // 1.1
-    localDictionaryWriter.write(15);
+    localDictionaryWriter.write(18);
     bitmapWriter.write(fillBitmap(0, 1, 8));
 
     // 1.2
-    localDictionaryWriter.write(16);
+    localDictionaryWriter.write(19);
     bitmapWriter.write(fillBitmap(2, 4, 7));
 
     // 3.3
-    localDictionaryWriter.write(19);
+    localDictionaryWriter.write(22);
     bitmapWriter.write(fillBitmap(3, 6, 9));
 
     // 6.6
-    localDictionaryWriter.write(20);
+    localDictionaryWriter.write(23);
     bitmapWriter.write(fillBitmap(5));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1371,19 +1561,19 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.write(fillBitmap(1, 3, 6));
 
     // 1.1
-    localDictionaryWriter.write(15);
+    localDictionaryWriter.write(18);
     bitmapWriter.write(fillBitmap(0, 8));
 
     // 1.2
-    localDictionaryWriter.write(16);
+    localDictionaryWriter.write(19);
     bitmapWriter.write(fillBitmap(2, 4, 7));
 
     // 3.3
-    localDictionaryWriter.write(19);
+    localDictionaryWriter.write(22);
     bitmapWriter.write(fillBitmap(9));
 
     // 6.6
-    localDictionaryWriter.write(20);
+    localDictionaryWriter.write(23);
     bitmapWriter.write(fillBitmap(5));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
@@ -1450,23 +1640,23 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     bitmapWriter.write(fillBitmap(1, 9));
 
     // z
-    localDictionaryWriter.write(6);
+    localDictionaryWriter.write(9);
     bitmapWriter.write(fillBitmap(6));
 
     // 1
-    localDictionaryWriter.write(7);
+    localDictionaryWriter.write(10);
     bitmapWriter.write(fillBitmap(0, 5));
 
     // 300
-    localDictionaryWriter.write(12);
+    localDictionaryWriter.write(15);
     bitmapWriter.write(fillBitmap(4));
 
     // 1.1
-    localDictionaryWriter.write(15);
+    localDictionaryWriter.write(18);
     bitmapWriter.write(fillBitmap(8));
 
     // 9.9
-    localDictionaryWriter.write(21);
+    localDictionaryWriter.write(24);
     bitmapWriter.write(fillBitmap(3));
 
     writeToBuffer(localDictionaryBuffer, localDictionaryWriter);

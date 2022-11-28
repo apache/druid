@@ -191,6 +191,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
   {
     int globalStartIndex, globalEndIndex;
     int localStartIndex, localEndIndex;
+    // start with standard range finding in global value dictionary
     if (startValue == null) {
       globalStartIndex = adjust == 0 ? 1 : adjust; // global index 0 is always the null value
     } else {
@@ -200,16 +201,6 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       } else {
         globalStartIndex = adjust + (-(found + 1));
       }
-    }
-
-    // with starting global index settled, now lets find starting local index
-    int localFound = localDictionary.indexOf(globalStartIndex);
-    if (localFound < 0) {
-      // the first valid global index is not within the local dictionary, so the insertion point is where we begin
-      localStartIndex = -(localFound + 1);
-    } else {
-      // valid global index in local dictionary, start here
-      localStartIndex = localFound;
     }
 
     if (endValue == null) {
@@ -223,16 +214,33 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
       }
     }
     globalEndIndex = Math.max(globalStartIndex, globalEndIndex);
-    // end index is not inclusive, so we find the last value in the local dictionary that falls within the range
-    int localEndFound = localDictionary.indexOf(globalEndIndex - 1);
-    if (localEndFound < 0) {
-      localEndIndex = -localEndFound;
-    } else {
-      // add 1 because the last valid global end value is in the local dictionary, and end index is exclusive
-      localEndIndex = localEndFound + 1;
+
+    if (globalStartIndex == globalEndIndex) {
+      return new IntIntImmutablePair(0, 0);
     }
 
-    return new IntIntImmutablePair(localStartIndex, Math.min(localDictionary.size(), localEndIndex));
+    // with global dictionary id range settled, now lets map that onto a local dictionary id range
+    int localFound = localDictionary.indexOf(globalStartIndex);
+    if (localFound < 0) {
+      // the first valid global index is not within the local dictionary, so the insertion point is where we begin
+      localStartIndex = -(localFound + 1);
+    } else {
+      // valid global index in local dictionary, start here
+      localStartIndex = localFound;
+    }
+
+    int localEndFound = localDictionary.indexOf(globalEndIndex);
+    if (localEndFound < 0) {
+      localEndIndex = -(localEndFound + 1);
+    } else {
+      localEndIndex = localEndFound;
+    }
+
+    localStartIndex = Math.min(localStartIndex, localDictionary.size());
+    localEndIndex = Math.max(localStartIndex, Math.min(localDictionary.size(), localEndIndex));
+
+
+    return new IntIntImmutablePair(localStartIndex, localEndIndex);
   }
 
 

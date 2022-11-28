@@ -23,11 +23,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -76,7 +78,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
     final byte version = orderedBuffer.get();
     Preconditions.checkArgument(version == 0, "only V0 exists, encountered " + version);
-    final int bucketSize = orderedBuffer.get();
+    final int bucketSize = Byte.toUnsignedInt(orderedBuffer.get());
     final boolean hasNull = NullHandling.IS_NULL_BYTE == orderedBuffer.get();
     final int numValues = VByte.readInt(orderedBuffer);
     // size of offsets + values
@@ -146,6 +148,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     if (hasNull && index == 0) {
       return null;
     }
+    Indexed.checkIndex(index, adjustedNumValues);
 
     // due to vbyte encoding, the null value is not actually stored in the bucket (no negative values), so we adjust
     // the index
@@ -266,6 +269,9 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   @Override
   public Iterator<ByteBuffer> iterator()
   {
+    if (hasNull && adjustedNumValues == 1) {
+      return Collections.<ByteBuffer>singletonList(null).iterator();
+    }
     ByteBuffer copy = buffer.asReadOnlyBuffer().order(buffer.order());
     copy.position(bucketsPosition);
     final ByteBuffer[] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);
@@ -335,10 +341,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
 
   /**
-   * Performs an unsigned byte comparison of the first value in a bucket with the specified value. Note that this method
+   * Performs byte-by-byte comparison of the first value in a bucket with the specified value. Note that this method
    * MUST be prepared before calling, as it expects the length of the first value to have already been read externally,
    * and the buffer position to be at the start of the first bucket value. The final buffer position will be the
-   * 'shared prefix length' of the first value in the bucket and the value to compare
+   * 'shared prefix length' of the first value in the bucket and the value to compare.
+   *
+   * Bytes are compared using {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte, byte)}. Therefore, when the
+   * values are UTF-8 encoded strings, the ordering is compatible with {@link String#compareTo(String)}.
    */
   private static int compareBucketFirstValue(ByteBuffer bucketBuffer, int length, ByteBuffer value)
   {
@@ -350,7 +359,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     int sharedPrefix;
     int comparison = 0;
     for (sharedPrefix = 0; sharedPrefix < commonLength; sharedPrefix++) {
-      comparison = unsignedByteCompare(bucketBuffer.get(), value.get(sharedPrefix));
+      comparison = StringUtils.compareUtf8UsingJavaStringOrdering(bucketBuffer.get(), value.get(sharedPrefix));
       if (comparison != 0) {
         bucketBuffer.position(startOffset + sharedPrefix);
         break;
@@ -398,7 +407,10 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
         final int common = Math.min(fragmentLength, value.remaining() - prefixLength);
         int fragmentComparison = 0;
         for (int i = 0; i < common; i++) {
-          fragmentComparison = unsignedByteCompare(buffer.get(buffer.position() + i), value.get(prefixLength + i));
+          fragmentComparison = StringUtils.compareUtf8UsingJavaStringOrdering(
+              buffer.get(buffer.position() + i),
+              value.get(prefixLength + i)
+          );
           if (fragmentComparison != 0) {
             break;
           }
@@ -496,10 +508,5 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       bucketBuffers[pos++] = value;
     }
     return bucketBuffers;
-  }
-
-  public static int unsignedByteCompare(byte b1, byte b2)
-  {
-    return (b1 & 0xFF) - (b2 & 0xFF);
   }
 }

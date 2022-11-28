@@ -115,6 +115,14 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
+Compaction tasks fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+_unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance
+and minimize disk usage of the `compact` tasks launched by auto-compaction:
+
+- [`granularitySpec`](compaction.md#compaction-granularity-spec). All three values must be set to non-null values: `segmentGranularity`, `queryGranularity`, and `rollup`.
+- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- `metricsSpec`
+
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
 
 ### Avoid conflicts with ingestion
@@ -165,6 +173,8 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
+
+> Auto-compaction skips datasources containing ALL granularity segments when the target granularity is different.
 
 ### Update partitioning scheme
 

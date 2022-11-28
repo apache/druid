@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
@@ -45,6 +46,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.guice.annotations.Self;
@@ -53,6 +55,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -101,6 +104,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -115,6 +119,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -140,7 +145,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -218,6 +223,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
+  protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
   private ObjectMapper objectMapper;
   private MSQTestOverlordServiceClient indexingServiceClient;
@@ -230,12 +236,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private TestGroupByBuffers groupByBuffers;
-  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(WorkerMemoryParameters.compute(
-      WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-      2,
-      10,
-      2
-  ));
+  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
+      WorkerMemoryParameters.createInstance(
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+          2,
+          10,
+          2
+      )
+  );
 
   @After
   public void tearDown2()
@@ -272,7 +281,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
 
-    Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(
+    List<Module> modules = ImmutableList.of(
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
@@ -327,8 +336,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 MultiStageQuery.class
             );
             localFileStorageDir = tmpFolder.newFolder("fault");
+            localFileStorageConnector = Mockito.spy(
+                new LocalFileStorageConnector(localFileStorageDir)
+            );
             binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-                  .toProvider(new LocalFileStorageConnectorProvider(localFileStorageDir));
+                  .toProvider(() -> localFileStorageConnector);
           }
           catch (IOException e) {
             throw new ISE(e, "Unable to create setup storage connector");
@@ -336,6 +348,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+        },
+        binder -> {
+          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
+          final LookupReferencesManager lookupReferencesManager =
+              EasyMock.createStrictMock(LookupReferencesManager.class);
+          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
+          EasyMock.replay(lookupReferencesManager);
+          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
+          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
         },
         binder -> {
           // Requirements of JoinableFactoryModule
@@ -359,7 +380,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
             }
         ),
         new MSQExternalDataSourceModule()
-    ));
+    );
+    // adding node role injection to the modules, since CliPeon would also do that through run method
+    Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
+        .addAll(modules)
+        .build();
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(sqlModule.getJacksonModules());
@@ -410,7 +435,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     try {
       return ImmutableMap.<String, Object>builder()
                          .putAll(DEFAULT_MSQ_CONTEXT)
-                         .put(DruidQuery.CTX_SCAN_SIGNATURE, queryFramework().queryJsonMapper().writeValueAsString(signature))
+                         .put(
+                             DruidQuery.CTX_SCAN_SIGNATURE,
+                             queryFramework().queryJsonMapper().writeValueAsString(signature)
+                         )
                          .build();
     }
     catch (JsonProcessingException e) {

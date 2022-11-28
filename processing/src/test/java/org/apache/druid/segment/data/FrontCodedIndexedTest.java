@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -34,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -161,7 +163,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       for (int i = 0; i < sizeBase + sizeAdjust; i++) {
         values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
       }
-      fillBuffer(buffer, values, 4);
+      fillBuffer(buffer, values, bucketSize);
 
       FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
           buffer,
@@ -239,7 +241,9 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   public void testFrontCodedIndexedUnicodes() throws IOException
   {
     ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
-    List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr");
+
+    // "\uD83D\uDCA9" and "（請參見已被刪除版本）" are a regression test for https://github.com/apache/druid/pull/13364
+    List<String> theList = ImmutableList.of("Győ-Moson-Sopron", "Győr", "\uD83D\uDCA9", "（請參見已被刪除版本）");
     fillBuffer(buffer, theList, 4);
 
     buffer.position(0);
@@ -261,6 +265,114 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       ctr++;
     }
     Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+  }
+
+  @Test
+  public void testFrontCodedOnlyNull() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 12).order(order);
+    List<String> theList = Collections.singletonList(null);
+    fillBuffer(buffer, theList, 4);
+
+    buffer.position(0);
+    FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+        buffer,
+        buffer.order()
+    ).get();
+
+    Assert.assertNull(codedUtf8Indexed.get(0));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+
+    Assert.assertEquals(0, codedUtf8Indexed.indexOf(null));
+    Assert.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+
+    Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
+    Assert.assertTrue(utf8Iterator.hasNext());
+    Assert.assertNull(utf8Iterator.next());
+    Assert.assertFalse(utf8Iterator.hasNext());
+  }
+
+  @Test
+  public void testBucketSizes() throws IOException
+  {
+    final int numValues = 10000;
+    final ByteBuffer buffer = ByteBuffer.allocate(1 << 24).order(order);
+    final int[] bucketSizes = new int[] {
+        1,
+        1 << 1,
+        1 << 2,
+        1 << 3,
+        1 << 4,
+        1 << 5,
+        1 << 6,
+        1 << 7
+    };
+
+    TreeSet<String> values = new TreeSet<>(GenericIndexed.STRING_STRATEGY);
+    values.add(null);
+    for (int i = 0; i < numValues; i++) {
+      values.add(IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId() + IdUtils.getRandomId());
+    }
+    for (int bucketSize : bucketSizes) {
+      fillBuffer(buffer, values, bucketSize);
+      FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+          buffer,
+          buffer.order()
+      ).get();
+
+      Iterator<String> newListIterator = values.iterator();
+      Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
+      int ctr = 0;
+      while (utf8Iterator.hasNext() && newListIterator.hasNext()) {
+        final String next = newListIterator.next();
+        final ByteBuffer nextUtf8 = utf8Iterator.next();
+        if (next == null) {
+          Assert.assertNull(nextUtf8);
+        } else {
+          Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+          nextUtf8.position(0);
+          Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+        }
+        Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+        ctr++;
+      }
+      Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+      Assert.assertEquals(ctr, numValues + 1);
+    }
+  }
+
+  @Test
+  public void testBadBucketSize()
+  {
+    OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> new FrontCodedIndexedWriter(
+            medium,
+            ByteOrder.nativeOrder(),
+            0
+        )
+    );
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> new FrontCodedIndexedWriter(
+            medium,
+            ByteOrder.nativeOrder(),
+            15
+        )
+    );
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> new FrontCodedIndexedWriter(
+            medium,
+            ByteOrder.nativeOrder(),
+            256
+        )
+    );
   }
 
   private static long fillBuffer(ByteBuffer buffer, Iterable<String> sortedIterable, int bucketSize) throws IOException

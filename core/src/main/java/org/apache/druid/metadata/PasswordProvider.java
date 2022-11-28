@@ -36,9 +36,8 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultPasswordProvider.class),
-    @JsonSubTypes.Type(name = "environment", value = EnvironmentVariablePasswordProvider.class),
-
+    @JsonSubTypes.Type(name = DefaultPasswordProvider.TYPE_KEY, value = DefaultPasswordProvider.class),
+    @JsonSubTypes.Type(name = EnvironmentVariablePasswordProvider.TYPE_KEY, value = EnvironmentVariablePasswordProvider.class),
 })
 public interface PasswordProvider
 {
