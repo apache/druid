@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
@@ -280,6 +281,12 @@ public class MSQWorkerTaskLauncher
   public boolean isTaskCanceledByController(String taskId)
   {
     return canceledWorkerTasks.contains(taskId);
+  }
+
+
+  public boolean isTaskRetried(String taskId)
+  {
+    return tasksToCleanup.contains(taskId) || workersToRelaunch.contains(MSQTasks.workerFromTaskId(taskId));
   }
 
   private void mainLoop()
@@ -537,13 +544,17 @@ public class MSQWorkerTaskLauncher
         taskTrackers.remove(latestTaskId);
         currentRelaunchCount += 1;
         taskTrackers.put(relaunchedTask.getId(), new TaskTracker(relaunchedTask.getWorkerNumber(), relaunchedTask));
+        synchronized (taskIds) {
+          fullyStartedTasks.remove(relaunchedTask.getWorkerNumber());
+          taskIds.notifyAll();
+        }
+
         context.workerManager().run(relaunchedTask.getId(), relaunchedTask);
         taskHistory.add(relaunchedTask.getId());
 
         synchronized (taskIds) {
           // replace taskId with the retry taskID for the same worker number
           taskIds.set(toRelaunch.getWorkerNumber(), relaunchedTask.getId());
-          fullyStartedTasks.remove(relaunchedTask.getWorkerNumber());
           taskIds.notifyAll();
         }
         return taskHistory;

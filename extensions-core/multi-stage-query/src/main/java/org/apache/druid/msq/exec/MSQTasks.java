@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -45,6 +46,8 @@ import org.apache.druid.storage.StorageConnector;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MSQTasks
 {
@@ -54,6 +57,8 @@ public class MSQTasks
   static final String GENERIC_QUERY_FAILED_MESSAGE = "Query failed";
 
   private static final String TASK_ID_PREFIX = "query-";
+
+  private static final Pattern WORKER_PATTERN = Pattern.compile(".*-worker([0-9]+)_[0-9]+");
 
   /**
    * Returns a controller task ID given a SQL query id.
@@ -69,6 +74,23 @@ public class MSQTasks
   public static String workerTaskId(final String controllerTaskId, final int workerNumber, final int retryCount)
   {
     return StringUtils.format("%s-worker%d_%d", controllerTaskId, workerNumber, retryCount);
+  }
+
+  /**
+   * Extract worker from taskId or throw exception if unable to parse out the worker.
+   */
+  public static int workerFromTaskId(final String taskId)
+  {
+    final Matcher matcher = WORKER_PATTERN.matcher(taskId);
+    if (matcher.matches()) {
+      return Integer.parseInt(matcher.group(1));
+    } else {
+      throw new ISE(
+          "Desired pattern %s to extract worker from task id %s did not match ",
+          WORKER_PATTERN.pattern(),
+          taskId
+      );
+    }
   }
 
   /**

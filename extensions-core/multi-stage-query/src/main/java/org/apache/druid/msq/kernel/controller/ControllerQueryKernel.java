@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.QueryValidator;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -74,6 +75,7 @@ import java.util.stream.Collectors;
  */
 public class ControllerQueryKernel
 {
+  private static final Logger log = new Logger(ControllerQueryKernel.class);
   private final QueryDefinition queryDef;
   private final int partitionStatisticsMaxRetainedBytes;
 
@@ -635,6 +637,8 @@ public class ControllerQueryKernel
     } else {
       errorCode = msqFault.getErrorCode();
     }
+
+    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
 
     if (retriableErrorCodes.contains(errorCode)) {
       return getWorkInCaseWorkerElgibileForRetryElseThrow(workerNumber);

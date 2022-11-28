@@ -653,7 +653,10 @@ public class ControllerImpl implements Controller
   public void workerError(MSQErrorReport errorReport)
   {
     // move inside kernel
-    if (!workerTaskLauncher.isTaskCanceledByController(errorReport.getTaskId())) {
+    if (workerTaskLauncher.isTaskCanceledByController(errorReport.getTaskId()) ||
+        workerTaskLauncher.isTaskRetried(errorReport.getTaskId())) {
+      log.info("Ignoring task %s", errorReport.getTaskId());
+    } else {
       workerErrorRef.compareAndSet(null, errorReport);
     }
   }

@@ -44,7 +44,7 @@ public class MSQFaultUtils
    */
   public static String getErrorCodeFromMessage(String message)
   {
-    if (message == null || message.isEmpty()) {
+    if (message == null || message.isEmpty() || !message.contains(ERROR_CODE_DELIMITER)) {
       return UnknownFault.CODE;
     }
     return message.split(ERROR_CODE_DELIMITER, 2)[0];
