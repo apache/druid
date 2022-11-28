@@ -58,19 +58,19 @@ public class AbstractITSQLBasedIngestion
     @Override
     public void starting(Description d)
     {
-      System.out.printf("\n\nRunning %s\n", d.getDisplayName());
+      LOG.info("\n\n\nRunning %s", d.getDisplayName());
     }
 
     @Override
     public void failed(Throwable e, Description d)
     {
-      System.out.printf("%s FAILED\n", d.getDisplayName());
+      LOG.error("%s FAILED\n", d.getDisplayName());
     }
 
     @Override
     public void finished(Description d)
     {
-      System.out.printf("%s finished\n", d.getDisplayName());
+      LOG.info("%s finished\n", d.getDisplayName());
     }
   };
 

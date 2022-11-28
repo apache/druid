@@ -59,11 +59,10 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
         null
     );
 
-    LOG.info("Running sample query.");
+    LOG.info("Verifying datasource [%s] availability for SQL queries", datasource);
     try {
       //noinspection unchecked
       queryClient.query(getQueryURL(broker), query);
-      LOG.info("Sample query successful.");
       return true;
     }
     catch (Exception e) {
