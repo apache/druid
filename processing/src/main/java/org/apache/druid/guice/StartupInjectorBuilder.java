@@ -19,8 +19,10 @@
 
 package org.apache.druid.guice;
 
+import com.google.inject.util.Providers;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.Arrays;
 import java.util.Properties;
@@ -78,6 +80,21 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
         new RuntimeInfoModule()
     );
+    return this;
+  }
+
+  /**
+   * Configure the injector to not load server-only classes by binding those
+   * classes to providers of null values. Avoids accidental dependencies of
+   * test code on classes not intended for classes by preventing Guice from
+   * helpfully providing implicit instances.
+   */
+  public StartupInjectorBuilder forTests()
+  {
+    add(binder -> {
+      binder.bind(ExtensionsLoader.class).toProvider(Providers.of(null));
+      binder.bind(RuntimeInfo.class).toProvider(Providers.of(null));
+    });
     return this;
   }
 }

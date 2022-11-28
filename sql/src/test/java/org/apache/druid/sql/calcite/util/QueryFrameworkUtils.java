@@ -127,6 +127,7 @@ public class QueryFrameworkUtils
     );
     return new SqlStatementFactory(toolbox);
   }
+
   public static DruidSchemaCatalog createMockRootSchema(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,

@@ -32,6 +32,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.PlannerHook;
 
 import java.io.Closeable;
 import java.util.HashMap;
@@ -71,6 +72,7 @@ public abstract class AbstractStatement implements Closeable
   protected final Map<String, Object> queryContext;
   protected PlannerContext plannerContext;
   protected DruidPlanner.AuthResult authResult;
+  protected PlannerHook hook;
 
   public AbstractStatement(
       final SqlToolbox sqlToolbox,
@@ -107,6 +109,15 @@ public abstract class AbstractStatement implements Closeable
   public Map<String, Object> context()
   {
     return queryContext;
+  }
+
+  /**
+   * Set the hook which can capture planner artifacts during planning. Primarily used
+   * for testing. Defaults to a "no op" hook that does nothing.
+   */
+  public void setHook(PlannerHook hook)
+  {
+    this.hook = hook;
   }
 
   /**
