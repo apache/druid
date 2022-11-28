@@ -24,7 +24,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.key.SortColumn;
-import org.apache.druid.frame.write.FrameRowTooLargeException;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
