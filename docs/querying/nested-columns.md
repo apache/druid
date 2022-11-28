@@ -326,7 +326,7 @@ PARTITIONED BY ALL
 
 ## Ingest a JSON string as COMPLEX<json\>
 
-If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
+If your source data contains serialized JSON strings, you can ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
 - During SQL-based ingestion, use the PARSE_JSON keyword within your SELECT statement to transform the string values to JSON.
 - If you are concerned that your data may not contain valid JSON, you can use `try_parse_json` for native batch or `TRY_PARSE_JSON` for SQL-based ingestion. For cases where the column does not contain valid JSON, Druid inserts a null value.
