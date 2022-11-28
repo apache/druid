@@ -24,6 +24,7 @@ import java.util.List;
 /**
  * A semantic interface used to partition a data set based on a given set of dimensions.
  */
+@SuppressWarnings("unused")
 public interface GroupPartitioner
 {
   /**

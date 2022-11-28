@@ -56,23 +56,21 @@ public class WindowLeadProcessorTest
     );
 
     final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("LeadingIntCol", ColumnType.LONG)
-          .setExpectation(new int[]{2, 3, 4, 5, 6, 7, 8, 9, 0, 0})
-          .setNulls(new int[]{8, 9})
-          .validate();
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 
-    helper.forColumn("LeadingDoubleCol", ColumnType.DOUBLE)
-          .setExpectation(new double[]{4, 5, 6, 7, 8, 9, 0, 0, 0, 0})
-          .setNulls(new int[]{6, 7, 8, 9})
-          .validate();
+    expectations.columnHelper("LeadingIntCol", 10, ColumnType.LONG)
+                .setExpectation(new int[]{2, 3, 4, 5, 6, 7, 8, 9, 0, 0})
+                .setNulls(new int[]{8, 9});
 
-    helper.forColumn("LeadingObjectCol", ColumnType.STRING)
-          .setExpectation(new String[]{"b", "c", "d", "e", "f", "g", "h", "i", "j", null})
-          .setNulls(new int[]{9})
-          .validate();
+    expectations.columnHelper("LeadingDoubleCol", 10, ColumnType.DOUBLE)
+                .setExpectation(new double[]{4, 5, 6, 7, 8, 9, 0, 0, 0, 0})
+                .setNulls(new int[]{6, 7, 8, 9});
+
+    expectations.columnHelper("LeadingObjectCol", 10, ColumnType.STRING)
+                .setExpectation(new String[]{"b", "c", "d", "e", "f", "g", "h", "i", "j", null})
+                .setNulls(new int[]{9});
   }
 }

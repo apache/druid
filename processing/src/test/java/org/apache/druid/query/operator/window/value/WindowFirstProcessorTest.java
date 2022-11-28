@@ -59,25 +59,22 @@ public class WindowFirstProcessorTest
         new WindowFirstProcessor("nullFirstCol", "NullFirstCol")
     );
 
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("FirstIntCol", new int[]{88, 88, 88, 88, 88, 88, 88, 88, 88, 88})
+        .expectColumn(
+            "FirstDoubleCol",
+            new double[]{0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728}
+        );
+
+    expectations.columnHelper("FirstObjectCol", 10, ColumnType.STRING)
+                .setExpectation(new String[]{"a", "a", "a", "a", "a", "a", "a", "a", "a", "a"});
+
+    expectations.columnHelper("NullFirstCol", 10, ColumnType.STRING)
+                .setNulls(new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+
     final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("FirstIntCol", ColumnType.LONG)
-          .setExpectation(new int[]{88, 88, 88, 88, 88, 88, 88, 88, 88, 88})
-          .validate();
-
-    helper.forColumn("FirstDoubleCol", ColumnType.DOUBLE)
-          .setExpectation(new double[]{0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728, 0.4728})
-          .validate();
-
-    helper.forColumn("FirstObjectCol", ColumnType.STRING)
-          .setExpectation(new String[]{"a", "a", "a", "a", "a", "a", "a", "a", "a", "a"})
-          .validate();
-
-    helper.forColumn("NullFirstCol", ColumnType.STRING)
-          .setNulls(new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
-          .validate();
+    expectations.validate(results);
   }
 }

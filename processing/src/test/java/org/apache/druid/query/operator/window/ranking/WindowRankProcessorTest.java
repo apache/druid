@@ -26,7 +26,6 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
-import org.apache.druid.segment.column.ColumnType;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -48,17 +47,17 @@ public class WindowRankProcessorTest
         new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
     );
 
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290})
+        .expectColumn("rank", new int[]{1, 2, 2, 4, 5, 6, 7, 7, 9, 9})
+        .expectColumn(
+            "rankAsPercent",
+            new double[]{0.0, 1 / 9d, 1 / 9d, 3 / 9d, 4 / 9d, 5 / 9d, 6 / 9d, 6 / 9d, 8 / 9d, 8 / 9d}
+        );
+
     final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290});
+    expectations.validate(results);
 
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("rank", ColumnType.LONG)
-          .setExpectation(new int[]{1, 2, 2, 4, 5, 6, 7, 7, 9, 9})
-          .validate();
-
-    helper.forColumn("rankAsPercent", ColumnType.DOUBLE)
-          .setExpectation(new double[]{0.0, 1 / 9d, 1 / 9d, 3 / 9d, 4 / 9d, 5 / 9d, 6 / 9d, 6 / 9d, 8 / 9d, 8 / 9d})
-          .validate();
   }
 
   @Test
@@ -74,16 +73,12 @@ public class WindowRankProcessorTest
         new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
     );
 
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("vals", new int[]{7})
+        .expectColumn("rank", new int[]{1})
+        .expectColumn("rankAsPercent", new double[]{0.0});
+
     final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "vals", new int[]{7});
-
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("rank", ColumnType.LONG)
-          .setExpectation(new int[]{1})
-          .validate();
-
-    helper.forColumn("rankAsPercent", ColumnType.DOUBLE)
-          .setExpectation(new double[]{0.0})
-          .validate();
+    expectations.validate(results);
   }
 }

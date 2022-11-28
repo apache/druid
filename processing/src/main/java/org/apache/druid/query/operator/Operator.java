@@ -50,6 +50,11 @@ public interface Operator
   /**
    * Called to initiate the lifecycle of the Operator.  If an operator needs to checkout resources or anything to do
    * its work, this is probably the place to do it.
+   *
+   * Work should *never* be done in this method, this method only exists to acquire resources that are known to be
+   * needed before doing any work.  As a litmus test, if there is ever a call to `op.next()` inside of this method,
+   * then something has been done wrong as that call to `.next()` is actually doing work.  Such code should be moved
+   * into being lazily evaluated as part of a call to `.next()`.
    */
   void open();
 

@@ -85,7 +85,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   @Override
   public String getType()
   {
-    return "operator";
+    return Query.WINDOW_OPERATOR;
   }
 
   @Override

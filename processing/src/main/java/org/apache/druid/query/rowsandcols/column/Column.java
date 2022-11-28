@@ -58,5 +58,6 @@ public interface Column
    * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
    * through a local implementation of the interface.
    */
+  @SuppressWarnings("unused")
   <T> T as(Class<? extends T> clazz);
 }

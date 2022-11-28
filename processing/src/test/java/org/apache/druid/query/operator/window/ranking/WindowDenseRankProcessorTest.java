@@ -25,7 +25,6 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
-import org.apache.druid.segment.column.ColumnType;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -44,12 +43,12 @@ public class WindowDenseRankProcessorTest
 
     Processor processor = new WindowDenseRankProcessor(Collections.singletonList("vals"), "DenseRank");
 
-    final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290});
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290})
+        .expectColumn("DenseRank", new int[]{1, 2, 2, 3, 4, 5, 6, 6, 7, 7});
 
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("DenseRank", ColumnType.LONG)
-          .setExpectation(new int[]{1, 2, 2, 3, 4, 5, 6, 6, 7, 7})
-          .validate();
+    final RowsAndColumns results = processor.process(rac);
+    expectations.validate(results);
+
   }
 }

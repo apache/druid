@@ -50,13 +50,12 @@ public class WindowRowNumberProcessorTest
 
     Processor processor = new WindowRowNumberProcessor("rowRow");
 
-    final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("rowRow", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
 
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("rowRow", ColumnType.LONG)
-          .setExpectation(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-          .validate();
+    final RowsAndColumns results = processor.process(rac);
+    expectations.validate(results);
   }
 }

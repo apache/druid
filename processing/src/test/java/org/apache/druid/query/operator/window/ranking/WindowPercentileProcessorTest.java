@@ -63,21 +63,22 @@ public class WindowPercentileProcessorTest
         new WindowPercentileProcessor("10292", 10292)
     );
 
-    final RowsAndColumns results = processor.process(rac);
-    RowsAndColumnsHelper.assertEquals(results, "intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    RowsAndColumnsHelper.assertEquals(results, "doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+    final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
+        .expectColumn("intCol", new int[]{88, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("doubleCol", new double[]{0.4728, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("1", new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+        .expectColumn("2", new int[]{1, 1, 1, 1, 1, 2, 2, 2, 2, 2})
+        .expectColumn("3", new int[]{1, 1, 1, 1, 2, 2, 2, 3, 3, 3})
+        .expectColumn("4", new int[]{1, 1, 1, 2, 2, 2, 3, 3, 4, 4})
+        .expectColumn("5", new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5, 5})
+        .expectColumn("6", new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5, 6})
+        .expectColumn("7", new int[]{1, 1, 2, 2, 3, 3, 4, 5, 6, 7})
+        .expectColumn("8", new int[]{1, 1, 2, 2, 3, 4, 5, 6, 7, 8})
+        .expectColumn("9", new int[]{1, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+        .expectColumn("10", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
+        .expectColumn("10292", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
 
-    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper(results);
-    helper.forColumn("1", ColumnType.LONG).setExpectation(new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}).validate();
-    helper.forColumn("2", ColumnType.LONG).setExpectation(new int[]{1, 1, 1, 1, 1, 2, 2, 2, 2, 2}).validate();
-    helper.forColumn("3", ColumnType.LONG).setExpectation(new int[]{1, 1, 1, 1, 2, 2, 2, 3, 3, 3}).validate();
-    helper.forColumn("4", ColumnType.LONG).setExpectation(new int[]{1, 1, 1, 2, 2, 2, 3, 3, 4, 4}).validate();
-    helper.forColumn("5", ColumnType.LONG).setExpectation(new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5, 5}).validate();
-    helper.forColumn("6", ColumnType.LONG).setExpectation(new int[]{1, 1, 2, 2, 3, 3, 4, 4, 5, 6}).validate();
-    helper.forColumn("7", ColumnType.LONG).setExpectation(new int[]{1, 1, 2, 2, 3, 3, 4, 5, 6, 7}).validate();
-    helper.forColumn("8", ColumnType.LONG).setExpectation(new int[]{1, 1, 2, 2, 3, 4, 5, 6, 7, 8}).validate();
-    helper.forColumn("9", ColumnType.LONG).setExpectation(new int[]{1, 1, 2, 3, 4, 5, 6, 7, 8, 9}).validate();
-    helper.forColumn("10", ColumnType.LONG).setExpectation(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}).validate();
-    helper.forColumn("10292", ColumnType.LONG).setExpectation(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}).validate();
+    final RowsAndColumns results = processor.process(rac);
+    expectations.validate(results);
   }
 }

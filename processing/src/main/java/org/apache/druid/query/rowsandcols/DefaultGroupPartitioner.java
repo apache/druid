@@ -25,6 +25,7 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class DefaultGroupPartitioner implements GroupPartitioner
 {
   private final RowsAndColumns rac;
