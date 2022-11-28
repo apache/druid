@@ -314,7 +314,7 @@ public class Announcer
         if (oldBytes == null) {
           created = true;
         } else if (!Arrays.equals(oldBytes, bytes)) {
-          throw new IAE("Cannot reannounce different values under the same path");
+          log.error("Ignoring attempt to announce different values under same path");
         }
       }
     }
