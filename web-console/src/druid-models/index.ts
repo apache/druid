@@ -25,6 +25,7 @@ export * from './execution/execution';
 export * from './external-config/external-config';
 export * from './filter/filter';
 export * from './flatten-spec/flatten-spec';
+export * from './index-spec/index-spec';
 export * from './ingest-query-pattern/ingest-query-pattern';
 export * from './ingestion-spec/ingestion-spec';
 export * from './input-format/input-format';
