@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
@@ -144,24 +143,18 @@ public class WorkerTaskCountStatsMonitorTest
 
     injectorForMiddleManager = Guice.createInjector(
         ImmutableList.of(
-            (Module) binder -> {
-              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(statsProvider);
-            }
+            binder -> binder.bind(WorkerTaskCountStatsProvider.class).toInstance(statsProvider)
         )
     );
 
     injectorForMiddleManagerNullStats = Guice.createInjector(
         ImmutableList.of(
-            (Module) binder -> {
-              binder.bind(WorkerTaskCountStatsProvider.class).toInstance(nullStatsProvider);
-            }
+            binder -> binder.bind(WorkerTaskCountStatsProvider.class).toInstance(nullStatsProvider)
         )
     );
 
     injectorForPeon = Guice.createInjector(
-        ImmutableList.of(
-            (Module) binder -> {}
-        )
+        ImmutableList.of(binder -> {})
     );
   }
 

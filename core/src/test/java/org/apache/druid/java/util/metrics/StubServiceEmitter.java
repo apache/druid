@@ -32,7 +32,7 @@ import java.util.Map;
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
   private final List<Event> events = new ArrayList<>();
-  private final Map<String, List<ServiceMetricEvent>> metricNameToEvents = new HashMap<>();
+  private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
 
   public StubServiceEmitter(String service, String host)
   {
@@ -44,8 +44,8 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   {
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-      metricNameToEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
-                        .add(metricEvent);
+      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
+                  .add(metricEvent);
     }
     events.add(event);
   }
@@ -66,7 +66,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   {
     final List<Number> values = new ArrayList<>();
     final List<ServiceMetricEvent> events =
-        metricNameToEvents.getOrDefault(metricName, Collections.emptyList());
+        metricEvents.getOrDefault(metricName, Collections.emptyList());
     final Map<String, Object> filters =
         dimensionFilters == null ? Collections.emptyMap() : dimensionFilters;
     for (ServiceMetricEvent event : events) {
@@ -92,7 +92,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   public void flush()
   {
     events.clear();
-    metricNameToEvents.clear();
+    metricEvents.clear();
   }
 
   @Override
