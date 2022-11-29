@@ -215,13 +215,18 @@ public class SegmentAllocationQueue
     if (!isLeader.get()) {
       log.info("Not leader anymore. Failing [%d] batches in queue.", processingQueue.size());
 
-      AllocateRequestBatch nextBatch = processingQueue.pollFirst();
-      while (nextBatch != null) {
+      // Keep removing items from the queue as long as not leader
+      AllocateRequestBatch nextBatch = processingQueue.peekFirst();
+      while (nextBatch != null && !isLeader.get()) {
+        processingQueue.pollFirst();
+        keyToBatch.remove(nextBatch.key);
         nextBatch.markCompleted();
-        nextBatch = processingQueue.pollFirst();
+        nextBatch = processingQueue.peekFirst();
       }
+    }
 
-      keyToBatch.clear();
+    // Check once again for leadership
+    if (!isLeader.get()) {
       return;
     }
 
