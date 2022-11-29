@@ -41,7 +41,8 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -65,7 +66,6 @@ import java.util.stream.Collectors;
 public class ControllerQueryKernel
 {
   private final QueryDefinition queryDef;
-  private final int partitionStatisticsMaxRetainedBytes;
 
   /**
    * Stage ID -> tracker for that stage. An extension of the state of this kernel.
@@ -107,10 +107,9 @@ public class ControllerQueryKernel
    */
   private final Set<StageId> effectivelyFinishedStages = new HashSet<>();
 
-  public ControllerQueryKernel(final QueryDefinition queryDef, final int partitionStatisticsMaxRetainedBytes)
+  public ControllerQueryKernel(final QueryDefinition queryDef)
   {
     this.queryDef = queryDef;
-    this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
     this.inflowMap = ImmutableMap.copyOf(computeStageInflowMap(queryDef));
     this.outflowMap = ImmutableMap.copyOf(computeStageOutflowMap(queryDef));
 
@@ -266,8 +265,7 @@ public class ControllerQueryKernel
           stageDef,
           stageWorkerCountMap,
           slicer,
-          assignmentStrategy,
-          partitionStatisticsMaxRetainedBytes
+          assignmentStrategy
       );
       stageTracker.put(nextStage, stageKernel);
     }
@@ -335,6 +333,22 @@ public class ControllerQueryKernel
   }
 
   /**
+   * Delegates call to {@link ControllerStageTracker#getCompleteKeyStatisticsInformation()}
+   */
+  public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation(final StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).getCompleteKeyStatisticsInformation();
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#setClusterByPartitionBoundaries(ClusterByPartitions)} ()}
+   */
+  public void setClusterByPartitionBoundaries(final StageId stageId, ClusterByPartitions clusterByPartitions)
+  {
+    getStageKernelOrThrow(stageId).setClusterByPartitionBoundaries(clusterByPartitions);
+  }
+
+  /**
    * Delegates call to {@link ControllerStageTracker#collectorEncounteredAnyMultiValueField()}
    */
   public boolean hasStageCollectorEncounteredAnyMultiValueField(final StageId stageId)
@@ -390,22 +404,24 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#addResultKeyStatisticsForWorker(int, ClusterByStatisticsSnapshot)}.
+   * Delegates call to {@link ControllerStageTracker#addPartialKeyStatisticsForWorker(int, PartialKeyStatisticsInformation)}.
    * If calling this causes transition for the stage kernel, then this gets registered in this query kernel
    */
-  public void addResultKeyStatisticsForStageAndWorker(
+  public void addPartialKeyStatisticsForStageAndWorker(
       final StageId stageId,
       final int workerNumber,
-      final ClusterByStatisticsSnapshot snapshot
+      final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
-    ControllerStagePhase newPhase = getStageKernelOrThrow(stageId).addResultKeyStatisticsForWorker(
+    ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
+    ControllerStagePhase newPhase = stageKernel.addPartialKeyStatisticsForWorker(
         workerNumber,
-        snapshot
+        partialKeyStatisticsInformation
     );
 
-    // If the phase is POST_READING or FAILED, that implies the kernel has transitioned. We need to account for that
+    // If the kernel phase has transitioned, we need to account for that.
     switch (newPhase) {
+      case MERGING_STATISTICS:
       case POST_READING:
       case FAILED:
         transitionStageKernel(stageId, newPhase);
@@ -434,6 +450,12 @@ public class ControllerQueryKernel
   public MSQFault getFailureReasonForStage(final StageId stageId)
   {
     return getStageKernelOrThrow(stageId).getFailureReason();
+  }
+
+  public void failStageForReason(final StageId stageId, MSQFault fault)
+  {
+    getStageKernelOrThrow(stageId).failForReason(fault);
+    transitionStageKernel(stageId, ControllerStagePhase.FAILED);
   }
 
   /**

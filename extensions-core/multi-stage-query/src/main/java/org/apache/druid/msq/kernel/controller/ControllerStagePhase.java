@@ -48,6 +48,17 @@ public enum ControllerStagePhase
     }
   },
 
+  // Waiting to fetch key statistics in the background from the workers and incrementally generate partitions.
+  // This phase is only transitioned to once all partialKeyInformation are recieved from workers.
+  // Transitioning to this phase should also enqueue the task to fetch key statistics to WorkerSketchFetcher.
+  MERGING_STATISTICS {
+    @Override
+    public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
+    {
+      return priorPhase == READING_INPUT;
+    }
+  },
+
   // Post the inputs have been read and mapped to frames, in the `POST_READING` stage, we pre-shuffle and determing the partition boundaries.
   // This step for a stage spits out the statistics of the data as a whole (and not just the individual records). This
   // phase is not required in non-pre shuffle contexts.
@@ -55,7 +66,7 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return priorPhase == READING_INPUT;
+      return priorPhase == MERGING_STATISTICS;
     }
   },
 

@@ -19,9 +19,18 @@
 
 package org.apache.druid.msq.statistics;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 /**
  * Marker interface for deserialization.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "collectorType")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = DelegateOrMinKeyCollectorSnapshot.TYPE, value = DelegateOrMinKeyCollectorSnapshot.class),
+    @JsonSubTypes.Type(name = QuantilesSketchKeyCollectorSnapshot.TYPE, value = QuantilesSketchKeyCollectorSnapshot.class),
+    @JsonSubTypes.Type(name = DistinctKeySnapshot.TYPE, value = DistinctKeySnapshot.class),
+})
 public interface KeyCollectorSnapshot
 {
 }

@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.RoundRobinServerSelector;
 import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
@@ -61,8 +62,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -73,6 +77,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class LoadRuleTest
 {
   private static final Logger log = new Logger(LoadRuleTest.class);
@@ -95,7 +100,19 @@ public class LoadRuleTest
 
   private CachingCostBalancerStrategy cachingCostBalancerStrategy;
 
+  private final boolean useRoundRobinAssignment;
   private BalancerStrategy mockBalancerStrategy;
+
+  @Parameterized.Parameters(name = "useRoundRobin = {0}")
+  public static List<Boolean> getTestParams()
+  {
+    return Arrays.asList(true, false);
+  }
+
+  public LoadRuleTest(boolean useRoundRobinAssignment)
+  {
+    this.useRoundRobinAssignment = useRoundRobinAssignment;
+  }
 
   @Before
   public void setUp()
@@ -106,7 +123,6 @@ public class LoadRuleTest
 
     exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
-
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
     mockBalancerStrategy = EasyMock.createMock(BalancerStrategy.class);
@@ -138,9 +154,11 @@ public class LoadRuleTest
     throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getId(), "hostNorm");
     EasyMock.expectLastCall().once();
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(3);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(3);
+    }
 
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
@@ -189,6 +207,13 @@ public class LoadRuleTest
         .withDruidCluster(druidCluster)
         .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withReplicationManager(throttler)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig
+                .builder()
+                .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
+                .build()
+        )
+        .withRoundRobinServerSelector(useRoundRobinAssignment ? new RoundRobinServerSelector(druidCluster) : null)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
         .build();
@@ -440,9 +465,11 @@ public class LoadRuleTest
     mockPeon2.loadSegment(EasyMock.anyObject(), EasyMock.isNull());
     EasyMock.expectLastCall().once();
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(2);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(2);
+    }
 
     EasyMock.replay(throttler, mockPeon1, mockPeon2, mockBalancerStrategy);
 
@@ -626,6 +653,7 @@ public class LoadRuleTest
   @Test
   public void testMaxLoadingQueueSize()
   {
+    final int maxSegmentsInLoadQueue = 2;
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .times(2);
@@ -643,7 +671,9 @@ public class LoadRuleTest
             new ServerHolder(
                 new DruidServer("serverHot", "hostHot", null, 1000, ServerType.HISTORICAL, "hot", 0)
                     .toImmutableDruidServer(),
-                peon
+                peon,
+                false,
+                maxSegmentsInLoadQueue
             )
         )
         .build();
@@ -659,8 +689,11 @@ public class LoadRuleTest
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
-        .build();
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig.builder()
+                                    .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInLoadQueue)
+                                    .build()
+        ).build();
 
     CoordinatorStats stats1 = rule.run(null, params, dataSegment1);
     CoordinatorStats stats2 = rule.run(null, params, dataSegment2);
@@ -687,9 +720,11 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment("foo");
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(1);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(1);
+    }
 
     EasyMock.replay(mockPeon1, mockPeon2, mockBalancerStrategy);
 
@@ -732,12 +767,14 @@ public class LoadRuleTest
     ServerHolder holder3 = createServerHolder("tier2", mockPeon3, false);
     ServerHolder holder4 = createServerHolder("tier2", mockPeon4, false);
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder2)))
-            .andReturn(holder2);
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4, holder3)))
-            .andReturn(holder3);
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4)))
-            .andReturn(holder4);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder2)))
+              .andReturn(holder2);
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4, holder3)))
+              .andReturn(holder3);
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(segment, ImmutableList.of(holder4)))
+              .andReturn(holder4);
+    }
 
     EasyMock.replay(throttler, mockPeon1, mockPeon2, mockPeon3, mockPeon4, mockBalancerStrategy);
 

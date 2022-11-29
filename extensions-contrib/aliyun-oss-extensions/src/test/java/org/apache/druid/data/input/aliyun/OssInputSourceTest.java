@@ -143,6 +143,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
@@ -157,6 +158,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null,
         null
@@ -175,6 +177,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null,
         null
     );
@@ -200,6 +203,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
+        null,
         mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
@@ -219,6 +223,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
+        null,
         null,
         CLOUD_CONFIG_PROPERTIES
     );
@@ -240,6 +245,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
     final OssInputSource serdeWithPrefixes =
@@ -257,6 +263,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
+        null,
         null,
         null
     );
@@ -277,6 +284,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
   }
@@ -292,6 +300,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
+        null,
         null,
         null
     );
@@ -309,6 +318,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
+        null,
         null
     );
   }
@@ -320,6 +330,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         OSSCLIENT,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
+        null,
         null,
         null,
         null,
@@ -349,6 +360,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
+        null,
         null
     );
 
@@ -374,6 +386,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null,
         null
@@ -406,6 +419,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
+        null,
         null
     );
 
@@ -433,6 +447,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null,
         null
@@ -464,6 +479,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
+        null,
         null,
         null,
         null
@@ -508,6 +524,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
         null,
         null,
         null

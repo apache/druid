@@ -17,18 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.frame.write;
+package org.apache.druid.msq.exec;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-public class FrameRowTooLargeExceptionTest
+/**
+ * Mode which dictates how {@link WorkerSketchFetcher} gets sketches for the partition boundaries from workers.
+ */
+public enum ClusterStatisticsMergeMode
 {
-  @Test
-  public void testBasic()
-  {
-    final int maxFrameSize = 1000;
-    final FrameRowTooLargeException e = new FrameRowTooLargeException(maxFrameSize);
-    Assert.assertEquals(maxFrameSize, e.getMaxFrameSize());
-  }
+  /**
+   * Fetches sketch in sequential order based on time. Slower due to overhead, but more accurate.
+   */
+  SEQUENTIAL,
+
+  /**
+   * Fetch all sketches from the worker at once. Faster to generate partitions, but less accurate.
+   */
+  PARALLEL,
+
+  /**
+   * Tries to decide between sequential and parallel modes based on the number of workers and size of the input
+   *
+   * If there are more than 100 workers or if the combined sketch size among all workers is more than
+   * 1,000,000,000 bytes, SEQUENTIAL mode is chosen, otherwise, PARALLEL mode is chosen.
+   */
+  AUTO
 }

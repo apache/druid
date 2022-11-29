@@ -179,7 +179,7 @@ public class BoundFilterBenchmark
     final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
                       .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
-        GenericIndexed.BYTE_BUFFER_STRATEGY
+        GenericIndexed.UTF8_STRATEGY
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
