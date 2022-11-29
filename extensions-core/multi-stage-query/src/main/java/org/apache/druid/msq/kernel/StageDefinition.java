@@ -259,6 +259,19 @@ public class StageDefinition
     return id.getStageNumber();
   }
 
+  /**
+   * Returns true, if the shuffling stage requires key statistics from the workers.
+   * <br></br>
+   * Returns false, if the stage does not shuffle.
+   * <br></br>
+   * <br></br>
+   * It's possible we're shuffling using partition boundaries that are known ahead of time
+   * For eg: we know there's exactly one partition in query shapes like `select with limit`.
+   * <br></br>
+   * In such cases, we return a false.
+   *
+   * @return
+   */
   public boolean mustGatherResultKeyStatistics()
   {
     return shuffleSpec != null && shuffleSpec.needsStatistics();

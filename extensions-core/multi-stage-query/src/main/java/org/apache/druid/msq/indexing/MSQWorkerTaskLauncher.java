@@ -41,10 +41,10 @@ import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
-import org.apache.druid.msq.indexing.error.TotalRelaunchLimitExceededFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
-import org.apache.druid.msq.indexing.error.WorkerRelaunchedTooManyTimes;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import javax.annotation.Nullable;
@@ -538,10 +538,18 @@ public class MSQWorkerTaskLauncher
         MSQWorkerTask relaunchedTask = toRelaunch.getRetryTask();
 
         // check relaunch limits
-        checkRelaunchLimits(tracker, toRelaunch);
+        checkRelaunchLimitsOrThrow(tracker, toRelaunch);
         // clean up trackers and tasks
         tasksToCleanup.add(latestTaskId);
         taskTrackers.remove(latestTaskId);
+        log.info(
+            "Relauching worker[%d] with new task id[%s] with worker relaunch count[%d] and job relaunch count[%d]",
+            relaunchedTask.getWorkerNumber(),
+            relaunchedTask.getId(),
+            toRelaunch.getRetryCount(),
+            currentRelaunchCount
+        );
+
         currentRelaunchCount += 1;
         taskTrackers.put(relaunchedTask.getId(), new TaskTracker(relaunchedTask.getWorkerNumber(), relaunchedTask));
         synchronized (taskIds) {
@@ -564,10 +572,10 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  private void checkRelaunchLimits(TaskTracker tracker, MSQWorkerTask relaunchTask)
+  private void checkRelaunchLimitsOrThrow(TaskTracker tracker, MSQWorkerTask relaunchTask)
   {
     if (relaunchTask.getRetryCount() > Limits.PER_WORKER_RELAUNCH_LIMIT) {
-      throw new MSQException(new WorkerRelaunchedTooManyTimes(
+      throw new MSQException(new TooManyAttemptsForWorker(
           Limits.PER_WORKER_RELAUNCH_LIMIT,
           relaunchTask.getId(),
           relaunchTask.getWorkerNumber(),
@@ -575,7 +583,7 @@ public class MSQWorkerTaskLauncher
       ));
     }
     if (currentRelaunchCount > Limits.TOTAL_RELAUNCH_LIMIT) {
-      throw new MSQException(new TotalRelaunchLimitExceededFault(
+      throw new MSQException(new TooManyAttemptsForJob(
           Limits.TOTAL_RELAUNCH_LIMIT,
           currentRelaunchCount,
           relaunchTask.getId(),

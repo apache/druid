@@ -61,7 +61,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -121,15 +120,16 @@ public class ControllerQueryKernel
 
 
   /**
-   * Store the work orders for the stage so that we can retrieve that in case of worker retry
+   * Map<StageId, Map <WorkerNumber, WorkOrder>>
+   * Stores the work order per worker per stage so that we can retrieve that in case of worker retry
    */
   private final Map<StageId, Int2ObjectMap<WorkOrder>> stageWorkOrders;
 
   /**
    * {@link MSQFault#getErrorCode()} which are retried.
    */
-  private final Set<String> retriableErrorCodes = ImmutableSet.of(CanceledFault.CODE, UnknownFault.CODE,
-                                                                  WorkerRpcFailedFault.CODE
+  private static final Set<String> retriableErrorCodes = ImmutableSet.of(CanceledFault.CODE, UnknownFault.CODE,
+                                                                         WorkerRpcFailedFault.CODE
   );
 
   public ControllerQueryKernel(final QueryDefinition queryDef, final int partitionStatisticsMaxRetainedBytes)
@@ -143,7 +143,7 @@ public class ControllerQueryKernel
     this.pendingInflowMap = computeStageInflowMap(queryDef);
     this.pendingOutflowMap = computeStageOutflowMap(queryDef);
 
-    stageWorkOrders = new ConcurrentHashMap<>();
+    stageWorkOrders = new HashMap<>();
 
     initializeReadyToRunStages();
   }
@@ -403,7 +403,7 @@ public class ControllerQueryKernel
 
   /**
    * Checks if the stage can be started, delegates call to {@link ControllerStageTracker#start()} for internal phase
-   * transition and registers the transition in this queryKernel. Work orders need to created via {@link ControllerQueryKernel#createWorkOrders(int, Int2ObjectMap)} before calling this method.
+   * transition and registers the transition in this queryKernel. Work orders need to be created via {@link ControllerQueryKernel#createWorkOrders(int, Int2ObjectMap)} before calling this method.
    */
   public void startStage(final StageId stageId)
   {
@@ -628,7 +628,7 @@ public class ControllerQueryKernel
    * @param msqFault
    * @return List of {@link WorkOrder} that needs to be retried.
    */
-  public List<WorkOrder> getWorkInCaseWorkerElgibileForRetryElseThrow(int workerNumber, MSQFault msqFault)
+  public List<WorkOrder> getWorkInCaseWorkerEligibileForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
 
     final String errorCode;
@@ -641,7 +641,7 @@ public class ControllerQueryKernel
     log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
 
     if (retriableErrorCodes.contains(errorCode)) {
-      return getWorkInCaseWorkerElgibileForRetryElseThrow(workerNumber);
+      return getWorkInCaseWorkerEligibileForRetry(workerNumber);
 
     } else {
       throw new MSQException(msqFault);
@@ -658,12 +658,10 @@ public class ControllerQueryKernel
    * @param worker
    * @return List of {@link WorkOrder} that needs to be retried.
    */
-  private List<WorkOrder> getWorkInCaseWorkerElgibileForRetryElseThrow(int worker)
+  private List<WorkOrder> getWorkInCaseWorkerEligibileForRetry(int worker)
   {
     List<StageId> trackedSet = new ArrayList<>(getActiveStages());
-    // no need to retry effectively finished stages
-    List<StageId> getEffictivelyFinishedStages = getEffectivelyFinishedStageIds();
-    trackedSet.removeAll(getEffictivelyFinishedStages);
+    trackedSet.removeAll(getEffectivelyFinishedStageIds());
 
     List<WorkOrder> workOrders = new ArrayList<>();
 

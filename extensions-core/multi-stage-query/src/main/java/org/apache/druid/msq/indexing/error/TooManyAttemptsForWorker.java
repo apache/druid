@@ -25,60 +25,59 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
-@JsonTypeName(TotalRelaunchLimitExceededFault.CODE)
-public class TotalRelaunchLimitExceededFault extends BaseMSQFault
+@JsonTypeName(TooManyAttemptsForWorker.CODE)
+public class TooManyAttemptsForWorker extends BaseMSQFault
 {
-  static final String CODE = "TotalRelaunchLimitExceededFault";
+  static final String CODE = "TooManyAttemptsForWorker";
 
 
-  private final int maxRelaunchCount;
+  private final int maxPerWorkerRelaunchCount;
 
   private final String taskId;
 
-  private final int currentRelaunchCount;
+  private final int workerNumber;
 
 
   private final String rootErrorMessage;
 
   @JsonCreator
-  public TotalRelaunchLimitExceededFault(
-      @JsonProperty("maxRelaunchCount") int maxRelaunchCount,
-      @JsonProperty("currentRelaunchCount") int currentRelaunchCount,
+  public TooManyAttemptsForWorker(
+      @JsonProperty("maxPerWorkerRelaunchCount") int maxPerWorkerRelaunchCount,
       @JsonProperty("taskId") String taskId,
+      @JsonProperty("workerNumber") int workerNumber,
       @JsonProperty("rootErrorMessage") String rootErrorMessage
   )
   {
     super(
         CODE,
-        "Total relaunch count across all workers %d exceeded max relaunch limit %d . Latest task[%s] failure reason: %s",
-        currentRelaunchCount,
-        maxRelaunchCount,
+        "Worker[%d] exceeded max relaunch count of %d for task[%s]. Latest failure reason: %s.",
+        workerNumber,
+        maxPerWorkerRelaunchCount,
         taskId,
         rootErrorMessage
     );
-    this.maxRelaunchCount = maxRelaunchCount;
-    this.currentRelaunchCount = currentRelaunchCount;
+    this.maxPerWorkerRelaunchCount = maxPerWorkerRelaunchCount;
     this.taskId = taskId;
-
+    this.workerNumber = workerNumber;
     this.rootErrorMessage = rootErrorMessage;
   }
 
   @JsonProperty
-  public int getMaxRelaunchCount()
+  public int getMaxPerWorkerRelaunchCount()
   {
-    return maxRelaunchCount;
+    return maxPerWorkerRelaunchCount;
+  }
+
+  @JsonProperty
+  public int getWorkerNumber()
+  {
+    return workerNumber;
   }
 
   @JsonProperty
   public String getTaskId()
   {
     return taskId;
-  }
-
-  @JsonProperty
-  public int getCurrentRelaunchCount()
-  {
-    return currentRelaunchCount;
   }
 
   @JsonProperty
@@ -99,19 +98,16 @@ public class TotalRelaunchLimitExceededFault extends BaseMSQFault
     if (!super.equals(o)) {
       return false;
     }
-    TotalRelaunchLimitExceededFault that = (TotalRelaunchLimitExceededFault) o;
-    return maxRelaunchCount == that.maxRelaunchCount
-           && currentRelaunchCount == that.currentRelaunchCount
-           && Objects.equals(
-        taskId,
-        that.taskId
-    )
+    TooManyAttemptsForWorker that = (TooManyAttemptsForWorker) o;
+    return maxPerWorkerRelaunchCount == that.maxPerWorkerRelaunchCount
+           && workerNumber == that.workerNumber
+           && Objects.equals(taskId, that.taskId)
            && Objects.equals(rootErrorMessage, that.rootErrorMessage);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), maxRelaunchCount, taskId, currentRelaunchCount, rootErrorMessage);
+    return Objects.hash(super.hashCode(), maxPerWorkerRelaunchCount, taskId, workerNumber, rootErrorMessage);
   }
 }

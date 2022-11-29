@@ -232,7 +232,7 @@ class ControllerStageTracker
       return WorkerStagePhase.READING_INPUT;
     });
     if (phase != ControllerStagePhase.READING_INPUT) {
-      if (workOrdersNeedToBeSent()) {
+      if (allWorkOrdersSent()) {
         // if no more work orders need to be sent, change state to reading input from retrying.
         transitionTo(ControllerStagePhase.READING_INPUT);
       }
@@ -369,7 +369,7 @@ class ControllerStageTracker
       if (WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.canTransitionFrom(currentPhase)) {
         workerToPhase.put(workerNumber, WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
 
-        // if stats already recieved for worker, donot update the sketch.
+        // if stats already received for worker, do not update the sketch.
         if (workersWithResultKeyStatistics.add(workerNumber)) {
           resultKeyStatisticsCollector.addAll(snapshot);
         }
@@ -497,6 +497,8 @@ class ControllerStageTracker
   private void generateResultPartitionsAndBoundaries()
   {
     if (resultPartitions != null) {
+      // In case of retrying workers, we are perfectly fine using the partition boundaries generated before the retry
+      // took place. Hence, ignoring the request to generate result partitions.
       log.debug("Partition boundaries already generated for stage %d", stageDef.getStageNumber());
       return;
     }
@@ -544,10 +546,14 @@ class ControllerStageTracker
   }
 
   /**
-   * True if all partitions stats are present, else false.
+   * True if all partitions stats are present for a shuffling stage which require statistics, else false.
+   * If the stage does not gather result statistics, we return a true.
    */
   private boolean allPartitionStatisticsPresent()
   {
+    if (!stageDef.mustGatherResultKeyStatistics()) {
+      return true;
+    }
     return workerToPhase.values()
                         .stream()
                         .filter(stagePhase -> stagePhase.equals(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES)
@@ -558,9 +564,9 @@ class ControllerStageTracker
   }
 
   /**
-   * True if work orders needs to be sent else false.
+   * True if all work orders are sent else false.
    */
-  private boolean workOrdersNeedToBeSent()
+  private boolean allWorkOrdersSent()
   {
     return workerToPhase.values()
                         .stream()

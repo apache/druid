@@ -35,7 +35,7 @@ public enum ControllerStagePhase
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
     {
-      return true;
+      return false;
     }
   },
 

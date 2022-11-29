@@ -591,7 +591,7 @@ public class ControllerImpl implements Controller
    */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
   {
-    List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerElgibileForRetryElseThrow(worker, fault);
+    List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibileForRetryElseThrow(worker, fault);
     if (retriableWorkOrders.size() != 0) {
       log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
       workerTaskLauncher.submitForRelaunch(worker);

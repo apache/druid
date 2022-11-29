@@ -39,7 +39,7 @@ public class MSQFaultUtils
   }
 
   /**
-   * Gets the error code from the message. If the messay is empty or null, {@link UnknownFault#CODE} is returned. This method
+   * Gets the error code from the message. If the message is empty or null, {@link UnknownFault#CODE} is returned. This method
    * does not gurantee that the error code we get out of the message is a valid error code.
    */
   public static String getErrorCodeFromMessage(String message)

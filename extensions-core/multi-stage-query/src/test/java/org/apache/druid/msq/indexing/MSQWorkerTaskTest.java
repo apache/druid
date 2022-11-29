@@ -103,5 +103,4 @@ public class MSQWorkerTaskTest
     Assert.assertEquals(retryCount, msqWorkerTask.getRetryCount());
   }
 
-
 }

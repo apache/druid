@@ -211,7 +211,7 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
-  public void testRolltestRollUpOnFoo1UpOnFoo1()
+  public void testRollUpOnFoo1UpOnFoo1()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
