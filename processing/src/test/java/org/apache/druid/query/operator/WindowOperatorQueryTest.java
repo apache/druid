@@ -53,7 +53,7 @@ public class WindowOperatorQueryTest
   WindowOperatorQuery query;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     query = new WindowOperatorQuery(
         InlineDataSource.fromIterable(new ArrayList<>(), RowSignature.empty()),
