@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator.window;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -29,6 +30,7 @@ import org.junit.Assert;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class RowsAndColumnsHelper
 {
@@ -66,6 +68,7 @@ public class RowsAndColumnsHelper
   }
 
   private final Map<String, ColumnHelper> helpers = new LinkedHashMap<>();
+  private Set<String> fullColumnSet;
 
   public RowsAndColumnsHelper()
   {
@@ -109,10 +112,27 @@ public class RowsAndColumnsHelper
     }
   }
 
+  public RowsAndColumnsHelper expectFullColumns(Set<String> fullColumnSet)
+  {
+    this.fullColumnSet = fullColumnSet;
+    return this;
+  }
+
+  public RowsAndColumnsHelper allColumnsRegistered()
+  {
+    this.fullColumnSet = ImmutableSet.copyOf(helpers.keySet());
+    return this;
+  }
+
   public void validate(RowsAndColumns rac)
   {
+    validate("", rac);
+  }
+
+  public void validate(String name, RowsAndColumns rac)
+  {
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
-      entry.getValue().validate(entry.getKey(), rac.findColumn(entry.getKey()));
+      entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), rac.findColumn(entry.getKey()));
     }
   }
 
@@ -175,14 +195,14 @@ public class RowsAndColumnsHelper
       return this;
     }
 
-    public void validate(String columnName, Column col)
+    public void validate(String msgBase, Column col)
     {
       final ColumnAccessor accessor = col.toAccessor();
 
-      Assert.assertEquals(columnName, expectedType, accessor.getType());
-      Assert.assertEquals(columnName, expectedVals.length, accessor.numCells());
+      Assert.assertEquals(msgBase, expectedType, accessor.getType());
+      Assert.assertEquals(msgBase, expectedVals.length, accessor.numCells());
       for (int i = 0; i < accessor.numCells(); ++i) {
-        final String msg = StringUtils.format("%s[%s]", columnName, i);
+        final String msg = StringUtils.format("%s[%s]", msgBase, i);
         Object expectedVal = expectedVals[i];
         if (expectedVal == null) {
           Assert.assertTrue(msg, expectedNulls[i]);

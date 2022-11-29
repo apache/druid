@@ -96,7 +96,6 @@ public class IntArrayColumn implements Column
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
-    // TODO
     return null;
   }
 }

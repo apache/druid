@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 
@@ -64,13 +63,10 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
         if (percentages.length > 1) {
           final double denominator = percentages.length - 1;
 
-          for (final StartAndEnd startAndEnd : groupings) {
-            Arrays.fill(
-                percentages,
-                startAndEnd.getStart(),
-                startAndEnd.getEnd(),
-                startAndEnd.getStart() / denominator
-            );
+          for (int i = 1; i < groupings.length; ++i) {
+            final int start = groupings[i - 1];
+            final int end = groupings[i];
+            Arrays.fill(percentages, start, end, start / denominator);
           }
         }
 
@@ -81,8 +77,10 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
     return processInternal(incomingPartition, groupings -> {
       final int[] ranks = new int[incomingPartition.numRows()];
 
-      for (final StartAndEnd startAndEnd : groupings) {
-        Arrays.fill(ranks, startAndEnd.getStart(), startAndEnd.getEnd(), startAndEnd.getStart() + 1);
+      for (int i = 1; i < groupings.length; ++i) {
+        final int start = groupings[i - 1];
+        final int end = groupings[i];
+        Arrays.fill(ranks, start, end, start + 1);
       }
 
       return new IntArrayColumn(ranks);

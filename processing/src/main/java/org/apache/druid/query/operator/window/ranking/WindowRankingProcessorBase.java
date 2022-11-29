@@ -25,10 +25,8 @@ import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.SortedGroupPartitioner;
-import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.Column;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -64,7 +62,7 @@ public abstract class WindowRankingProcessorBase implements Processor
 
   public RowsAndColumns processInternal(
       RowsAndColumns incomingPartition,
-      Function<ArrayList<StartAndEnd>, Column> fn
+      Function<int[], Column> fn
   )
   {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(incomingPartition);

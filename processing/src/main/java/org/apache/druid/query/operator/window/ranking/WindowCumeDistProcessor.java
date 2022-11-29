@@ -22,7 +22,6 @@ package org.apache.druid.query.operator.window.ranking;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.StartAndEnd;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 
 import java.util.Arrays;
@@ -48,9 +47,11 @@ public class WindowCumeDistProcessor extends WindowRankingProcessorBase
   {
     return processInternal(incomingPartition, groupings -> {
       final double[] ranks = new double[incomingPartition.numRows()];
-      for (final StartAndEnd startAndEnd : groupings) {
-        double relativeRank = startAndEnd.getEnd() / (double) ranks.length;
-        Arrays.fill(ranks, startAndEnd.getStart(), startAndEnd.getEnd(), relativeRank);
+      for (int i = 1; i < groupings.length; ++i) {
+        final int start = groupings[i - 1];
+        final int end = groupings[i];
+        double relativeRank = end / (double) ranks.length;
+        Arrays.fill(ranks, start, end, relativeRank);
       }
 
       return new DoubleArrayColumn(ranks);
