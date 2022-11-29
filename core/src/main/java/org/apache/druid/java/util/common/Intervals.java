@@ -26,7 +26,6 @@ import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 
 public final class Intervals
 {
@@ -86,30 +85,12 @@ public final class Intervals
   @Nullable
   public static Interval findOverlappingInterval(Interval searchInterval, Interval[] sortedIntervals)
   {
-    Arrays.sort(sortedIntervals, Comparators.intervalsByStartThenEnd());
-    int index = Arrays.binarySearch(
-        sortedIntervals,
-        searchInterval,
-        Comparators.intervalsByStartThenEnd()
-    );
-    if (index >= 0) {
-      return sortedIntervals[index];
-    }
-
-    // Key was not found, index returned from binarySearch is (-(insertionPoint) - 1)
-    index = -(index + 1);
-
-    // If the interval at (index - 1) doesn't overlap, (index - 2) wouldn't overlap either
-    if (index > 0) {
-      if (sortedIntervals[index - 1].overlaps(searchInterval)) {
-        return sortedIntervals[index - 1];
-      }
-    }
-
-    // If the interval at index doesn't overlap, (index + 1) wouldn't overlap either
-    if (index < sortedIntervals.length) {
-      if (sortedIntervals[index].overlaps(searchInterval)) {
-        return sortedIntervals[index];
+    for (Interval interval : sortedIntervals) {
+      if (interval.overlaps(searchInterval)) {
+        return interval;
+      } else if (interval.getStart().isAfter(searchInterval.getEnd())) {
+        // Intervals after this cannot have an overlap
+        return null;
       }
     }
 

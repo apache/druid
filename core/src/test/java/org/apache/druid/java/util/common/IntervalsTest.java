@@ -19,9 +19,12 @@
 
 package org.apache.druid.java.util.common;
 
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 public class IntervalsTest
 {
@@ -32,9 +35,10 @@ public class IntervalsTest
     final Interval[] sortedIntervals = new Interval[]{
         Intervals.of("2019/2020"),
         Intervals.of("2021/2022"),
-        Intervals.of("2021-01-01/2021-02-01"),
-        Intervals.of("2021/2023")
+        Intervals.of("2021-04-01/2021-05-01"),
+        Intervals.of("2022/2023")
     };
+    Arrays.sort(sortedIntervals, Comparators.intervalsByStartThenEnd());
 
     // Search interval outside the bounds of the sorted intervals
     Assert.assertNull(
@@ -53,14 +57,19 @@ public class IntervalsTest
 
     // Partially overlapping interval
     Assert.assertEquals(
-        Intervals.of("2021/2023"),
+        Intervals.of("2022/2023"),
         Intervals.findOverlappingInterval(Intervals.of("2022-01-01/2022-01-02"), sortedIntervals)
+    );
+
+    Assert.assertEquals(
+        Intervals.of("2021/2022"),
+        Intervals.findOverlappingInterval(Intervals.of("2021-06-01/2021-07-01"), sortedIntervals)
     );
 
     // Overlap with multiple intervals, "smallest" one is returned
     Assert.assertEquals(
-        Intervals.of("2021-01-01/2021-02-01"),
-        Intervals.findOverlappingInterval(Intervals.of("2021-01-01/2021-01-02"), sortedIntervals)
+        Intervals.of("2021/2022"),
+        Intervals.findOverlappingInterval(Intervals.of("2021-03-01/2021-04-01"), sortedIntervals)
     );
 
     // Search interval within bounds, no overlap
