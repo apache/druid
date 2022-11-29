@@ -127,4 +127,12 @@ public class WindowOperatorQueryTest
     }
     Assert.assertTrue(exceptionThrown);
   }
+
+  @Test
+  public void testEquals()
+  {
+    Assert.assertEquals(query, query);
+    Assert.assertEquals(query, query.withDataSource(query.getDataSource()));
+    Assert.assertNotEquals(query, query.toString());
+  }
 }

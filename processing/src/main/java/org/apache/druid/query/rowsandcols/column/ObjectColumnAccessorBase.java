@@ -40,11 +40,12 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   @Override
   public double getDouble(int cell)
   {
-    if (getVal(cell) instanceof Number) {
-      return ((Number) getVal(cell)).doubleValue();
-    } else if (getVal(cell) instanceof String) {
+    final Object val = getVal(cell);
+    if (val instanceof Number) {
+      return ((Number) val).doubleValue();
+    } else if (val instanceof String) {
       try {
-        return Double.parseDouble((String) getVal(cell));
+        return Double.parseDouble((String) val);
       }
       catch (NumberFormatException e) {
         return 0d;
@@ -57,11 +58,12 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   @Override
   public float getFloat(int cell)
   {
-    if (getVal(cell) instanceof Number) {
-      return ((Number) getVal(cell)).floatValue();
-    } else if (getVal(cell) instanceof String) {
+    final Object val = getVal(cell);
+    if (val instanceof Number) {
+      return ((Number) val).floatValue();
+    } else if (val instanceof String) {
       try {
-        return Float.parseFloat((String) getVal(cell));
+        return Float.parseFloat((String) val);
       }
       catch (NumberFormatException e) {
         return 0f;
@@ -74,11 +76,12 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   @Override
   public long getLong(int cell)
   {
-    if (getVal(cell) instanceof Number) {
-      return ((Number) getVal(cell)).longValue();
-    } else if (getVal(cell) instanceof String) {
+    final Object val = getVal(cell);
+    if (val instanceof Number) {
+      return ((Number) val).longValue();
+    } else if (val instanceof String) {
       try {
-        return Long.parseLong((String) getVal(cell));
+        return Long.parseLong((String) val);
       }
       catch (NumberFormatException e) {
         return 0L;
@@ -91,11 +94,12 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   @Override
   public int getInt(int cell)
   {
-    if (getVal(cell) instanceof Number) {
-      return ((Number) getVal(cell)).intValue();
-    } else if (getVal(cell) instanceof String) {
+    final Object val = getVal(cell);
+    if (val instanceof Number) {
+      return ((Number) val).intValue();
+    } else if (val instanceof String) {
       try {
-        return Integer.parseInt((String) getVal(cell));
+        return Integer.parseInt((String) val);
       }
       catch (NumberFormatException e) {
         return 0;

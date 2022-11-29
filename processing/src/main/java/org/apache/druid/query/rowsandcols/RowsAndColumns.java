@@ -34,7 +34,7 @@ import java.util.Collection;
  * as there are lots of different possible representations of batch of rows each with their own unique positives
  * and negatives when it comes to processing.  So, any explicit definition of what a RowsAndColumns is will actually,
  * by definition, end up as optimal for one specific configuration and sub-optimal for others.  Instead of trying to
- * explicitly expand the interface to cover all of the different possible ways that someone could want to interace
+ * explicitly expand the interface to cover all the different possible ways that someone could want to interace
  * with a Rows and columns, we rely on semantic interfaces using the {@link RowsAndColumns#as} method instead.
  * <p>
  * That is, the expectation is that anything that works with a RowsAndColumns will tend to first ask the RowsAndColumns
@@ -73,6 +73,7 @@ public interface RowsAndColumns
    *
    * @return The set of column names available from the RowsAndColumns
    */
+  @SuppressWarnings("unreachable")
   Collection<String> getColumnNames();
 
   /**
