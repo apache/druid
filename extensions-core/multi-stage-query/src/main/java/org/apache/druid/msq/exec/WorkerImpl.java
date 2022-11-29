@@ -107,6 +107,7 @@ import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
@@ -160,6 +161,7 @@ public class WorkerImpl implements Worker
   private final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue = new LinkedBlockingDeque<>();
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -366,10 +368,14 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT && kernel.hasResultKeyStatisticsSnapshot()) {
           if (controllerAlive) {
-            controllerClient.postKeyStatistics(
+            PartialKeyStatisticsInformation partialKeyStatisticsInformation =
+                kernel.getResultKeyStatisticsSnapshot()
+                      .partialKeyStatistics();
+
+            controllerClient.postPartialKeyStatistics(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
-                kernel.getResultKeyStatisticsSnapshot()
+                partialKeyStatisticsInformation
             );
           }
           kernel.startPreshuffleWaitingForResultPartitionBoundaries();
@@ -570,6 +576,19 @@ public class WorkerImpl implements Worker
   public void postFinish()
   {
     kernelManipulationQueue.add(KernelHolder::setDone);
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
+  {
+    return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
+  {
+    ClusterByStatisticsSnapshot snapshot = stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+    return snapshot.getSnapshotForTimeChunk(timeChunk);
   }
 
   @Override
@@ -1283,9 +1302,8 @@ public class WorkerImpl implements Worker
     }
   }
 
-  private static class KernelHolder
+  private class KernelHolder
   {
-    private final Map<StageId, WorkerStageKernel> stageKernelMap = new HashMap<>();
     private boolean done = false;
 
     public Map<StageId, WorkerStageKernel> getStageKernelMap()

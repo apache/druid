@@ -26,6 +26,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -33,26 +34,7 @@ import java.nio.ByteBuffer;
  */
 public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexColumn>
 {
-
   public static final int VERSION = 0x1;
-
-  private final CompressedVSizeColumnarIntsSupplier scaleSupplier;
-  private final V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier;
-
-  /**
-   * Constructor.
-   *
-   * @param scaleSupplier     scale supplier
-   * @param magnitudeSupplier supplied of results
-   */
-  public CompressedBigDecimalColumnPartSupplier(
-      CompressedVSizeColumnarIntsSupplier scaleSupplier,
-      V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier
-  )
-  {
-    this.scaleSupplier = scaleSupplier;
-    this.magnitudeSupplier = magnitudeSupplier;
-  }
 
   /**
    * Compressed.
@@ -67,23 +49,50 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == VERSION) {
+      int positionStart = buffer.position();
 
       CompressedVSizeColumnarIntsSupplier scaleSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
-          IndexIO.BYTE_ORDER);
+          IndexIO.BYTE_ORDER
+      );
 
       V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier =
           V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, IndexIO.BYTE_ORDER);
 
-      return new CompressedBigDecimalColumnPartSupplier(scaleSupplier, magnitudeSupplier);
+      return new CompressedBigDecimalColumnPartSupplier(
+          buffer.position() - positionStart,
+          scaleSupplier,
+          magnitudeSupplier
+      );
     } else {
       throw new IAE("Unknown version[%s]", versionFromBuffer);
     }
   }
 
+  private final int byteSize;
+  private final CompressedVSizeColumnarIntsSupplier scaleSupplier;
+  private final V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier;
+
+  /**
+   * Constructor.
+   *
+   * @param scaleSupplier     scale supplier
+   * @param magnitudeSupplier supplied of results
+   */
+  public CompressedBigDecimalColumnPartSupplier(
+      int byteSize,
+      CompressedVSizeColumnarIntsSupplier scaleSupplier,
+      V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier
+  )
+  {
+    this.byteSize = byteSize;
+    this.scaleSupplier = scaleSupplier;
+    this.magnitudeSupplier = magnitudeSupplier;
+  }
+
   @Override
   public ComplexColumn get()
   {
-    return new CompressedBigDecimalColumn(scaleSupplier.get(), magnitudeSupplier.get());
+    return new CompressedBigDecimalColumn(byteSize, scaleSupplier.get(), magnitudeSupplier.get());
   }
 }

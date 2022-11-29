@@ -30,6 +30,16 @@ public class Limits
   public static final int MAX_FRAME_COLUMNS = 2000;
 
   /**
+   * Maximum number of columns that can appear in the clustered by clause
+   *
+   * There is some arbitrariness in the limit, but it is chosen such that the datasketches sketches do not blow up in
+   * memory while computing the partitions for the clustered by keys.
+   * This limit along sequential merge of the sketches will help prevent OOMs in both the workers and the controller
+   * tasks
+   */
+  public static final int MAX_CLUSTERED_BY_COLUMNS = (int) (MAX_FRAME_COLUMNS * 0.75);
+
+  /**
    * Maximum number of workers that can be used in a stage, regardless of available memory.
    */
   public static final int MAX_WORKERS = 1000;

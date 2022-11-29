@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.junit.Assert;
 import org.junit.Test;
 

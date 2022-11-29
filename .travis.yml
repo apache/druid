@@ -829,4 +829,4 @@ notifications:
       # https://github.com/travis-ci/travis-ci/issues/2711
       - secure: "MupjX/0jLwh3XzHPl74BTk2/Kp5r+8TrEewfRhpQdWKFMBXLKNqu0k2VXf5C/NIg3uvPianq3REk+qeTHI8dL2ShjiWS/eIRkJOHLfObdNNBuos5fo4TxAuBQcXyT4VjAq5jnAkH84Pxf2Nl0rkisWoIhvwSX7+kNrjW1qdu7K0="
     on_success: change
-    on_failure: change
+    on_failure: always

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -177,6 +178,45 @@ public class WorkerChatHandler implements ChatHandler
     } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
+  }
+
+  @POST
+  @Path("/keyStatistics/{queryId}/{stageNumber}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpFetchKeyStatistics(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot clusterByStatisticsSnapshot;
+    StageId stageId = new StageId(queryId, stageNumber);
+    clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
+    return Response.status(Response.Status.ACCEPTED)
+                   .entity(clusterByStatisticsSnapshot)
+                   .build();
+  }
+
+  @POST
+  @Path("/keyStatisticsForTimeChunk/{queryId}/{stageNumber}/{timeChunk}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpSketch(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @PathParam("timeChunk") final long timeChunk,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot snapshotForTimeChunk;
+    StageId stageId = new StageId(queryId, stageNumber);
+    snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
+    return Response.status(Response.Status.ACCEPTED)
+                   .entity(snapshotForTimeChunk)
+                   .build();
   }
 
   /**

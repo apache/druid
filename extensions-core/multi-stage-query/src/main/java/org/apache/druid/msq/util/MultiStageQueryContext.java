@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
+import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -58,6 +59,8 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
+  public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
+  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.AUTO.toString();
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
   public static final String CTX_DESTINATION = "destination";
@@ -90,6 +93,18 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
         DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
+    );
+  }
+
+  public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
+  {
+    return ClusterStatisticsMergeMode.valueOf(
+        String.valueOf(
+            queryContext.getString(
+                CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                DEFAULT_CLUSTER_STATISTICS_MERGE_MODE
+            )
+        )
     );
   }
 

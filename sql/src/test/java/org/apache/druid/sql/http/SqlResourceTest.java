@@ -425,15 +425,9 @@ public class SqlResourceTest extends CalciteTestBase
     );
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
-    Set<String> metricNames = ImmutableSet.of("sqlQuery/time", "sqlQuery/bytes", "sqlQuery/planningTimeMs");
-    Assert.assertEquals(3, stubServiceEmitter.getEvents().size());
-    for (String metricName : metricNames) {
-      Assert.assertTrue(
-          stubServiceEmitter.getEvents()
-                            .stream()
-                            .anyMatch(event -> event.toMap().containsValue(metricName))
-      );
-    }
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    stubServiceEmitter.verifyValue("sqlQuery/bytes", 27L);
+    stubServiceEmitter.verifyEmitted("sqlQuery/planningTimeMs", 1);
   }
 
 
