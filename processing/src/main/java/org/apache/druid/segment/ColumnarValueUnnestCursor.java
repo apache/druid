@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -70,10 +69,7 @@ public class ColumnarValueUnnestCursor implements Cursor
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
-        if (!outputName.equals(dimensionSpec.getDimension())) {
-          return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
-        }
-        return baseColumSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(columnName));
+        throw new UnsupportedOperationException("Dimension selector not applicable for column value selector");
       }
 
       @Override

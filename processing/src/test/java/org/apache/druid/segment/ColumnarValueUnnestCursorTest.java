@@ -556,8 +556,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     );
     ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
                                                                 .makeColumnValueSelector(OUTPUT_NAME);
-    DimensionSelector dimensionSelector = unnestCursor.getColumnSelectorFactory()
-                                                      .makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
+
     int k = 0;
     while (!unnestCursor.isDone()) {
       Object valueSelectorVal = unnestColumnValueSelector.getObject();
@@ -568,7 +567,31 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     Assert.assertEquals(k, 10);
     unnestCursor.reset();
     Assert.assertFalse(unnestCursor.isDoneOrInterrupted());
-    Assert.assertEquals(dimensionSelector.getObject().toString(), Arrays.asList("a", "b", "c").toString());
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void test_list_unnest_cursors_dimSelector()
+  {
+    List<Object> inputList = Arrays.asList(
+        Arrays.asList("a", "b", "c"),
+        Arrays.asList("e", "f", "g", "h", "i"),
+        Collections.singletonList("j")
+    );
+
+    List<String> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", "j");
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
+    unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
   }
 }
 
