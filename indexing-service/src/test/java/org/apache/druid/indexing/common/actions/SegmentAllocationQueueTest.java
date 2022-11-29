@@ -35,6 +35,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
+
 public class SegmentAllocationQueueTest
 {
   @Rule
@@ -93,11 +97,9 @@ public class SegmentAllocationQueueTest
   }
 
   @Test
-  public void testCriteriaForBatching()
+  public void testBatchWithMultipleTimestamps()
   {
-    // Requests with different timestamps and sequence names can batched together
-    // as long as the other params are the same
-    verifyRequestsCanBeBatched(
+    verifyAllocationWithBatching(
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .forTimestamp("2022-01-01T01:00:00")
                          .withSegmentGranularity(Granularities.DAY)
@@ -114,180 +116,197 @@ public class SegmentAllocationQueueTest
                          .build(),
         true
     );
+  }
 
-    // Requests for different lock types can be batched together
-    verifyRequestsCanBeBatched(
+  @Test
+  public void testBatchWithExclusiveLocks()
+  {
+    verifyAllocationWithBatching(
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.EXCLUSIVE).build(),
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withTaskLockType(TaskLockType.EXCLUSIVE).build(),
+        true
+    );
+  }
+
+  @Test
+  public void testBatchWithSharedLocks()
+  {
+    verifyAllocationWithBatching(
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withTaskLockType(TaskLockType.SHARED).build(),
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.SHARED).build(),
         true
     );
   }
 
-  @Test(timeout = 60_000)
-  public void testCriteriaForBatchingNegative()
+  @Test
+  public void testBatchWithMultipleQueryGranularities()
   {
-    // Requests for different datasources are not batched together
-    verifyRequestsCanBeBatched(
+    verifyAllocationWithBatching(
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withQueryGranularity(Granularities.SECOND).build(),
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withQueryGranularity(Granularities.MINUTE).build(),
+        true
+    );
+  }
+
+  @Test
+  public void testMultipleDatasourcesCannotBatch()
+  {
+    verifyAllocationWithBatching(
         allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build(),
         allocateRequest().forTask(createTask(DS_KOALA, "group_1")).build(),
         false
     );
+  }
 
-    // Requests for different groupIds are not batched together
-    verifyRequestsCanBeBatched(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build(),
+  @Test
+  public void testMultipleGroupIdsCannotBatch()
+  {
+    verifyAllocationWithBatching(
         allocateRequest().forTask(createTask(DS_WIKI, "group_2")).build(),
+        allocateRequest().forTask(createTask(DS_WIKI, "group_3")).build(),
         false
     );
+  }
 
-    // Requests for different lock granularities are not batched together
-    verifyRequestsCanBeBatched(
+  @Test
+  public void testMultipleLockGranularitiesCannotBatch()
+  {
+    verifyAllocationWithBatching(
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .withLockGranularity(LockGranularity.TIME_CHUNK).build(),
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .withLockGranularity(LockGranularity.SEGMENT).build(),
         false
     );
+  }
 
-    // Requests for different query granularities are not batched together
-    verifyRequestsCanBeBatched(
-        allocateRequest().forTask(createTask(DS_WIKI, "1"))
-                         .withQueryGranularity(Granularities.SECOND).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "2"))
-                         .withQueryGranularity(Granularities.MINUTE).build(),
-        false
-    );
-
-    // Requests for different segment granularities are not batched together
-    verifyRequestsCanBeBatched(
-        allocateRequest().forTask(createTask(DS_WIKI, "1"))
-                         .withSegmentGranularity(Granularities.HOUR).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "2"))
-                         .withSegmentGranularity(Granularities.THIRTY_MINUTE).build(),
-        false
-    );
-
-    // Requests for different allocate intervals are not batched together
-    verifyRequestsCanBeBatched(
-        allocateRequest().forTask(createTask(DS_WIKI, "1"))
+  @Test
+  public void testMultipleAllocateIntervalsCannotBatch()
+  {
+    verifyAllocationWithBatching(
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .forTimestamp("2022-01-01")
-                         .withSegmentGranularity(Granularities.DAY)
-                         .withSequenceName("seq_1").build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "2"))
+                         .withSegmentGranularity(Granularities.DAY).build(),
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
                          .forTimestamp("2022-01-02")
                          .withSegmentGranularity(Granularities.DAY).build(),
         false
     );
   }
 
-  private void verifyRequestsCanBeBatched(
+  @Test
+  public void testConflictingPendingSegment() throws Exception
+  {
+    SegmentAllocateRequest hourSegmentRequest =
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withSegmentGranularity(Granularities.HOUR)
+                         .build();
+    Future<SegmentIdWithShardSpec> hourSegmentFuture = allocationQueue.add(hourSegmentRequest);
+
+    SegmentAllocateRequest halfHourSegmentRequest =
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+                         .withSegmentGranularity(Granularities.THIRTY_MINUTE)
+                         .build();
+    Future<SegmentIdWithShardSpec> halfHourSegmentFuture = allocationQueue.add(halfHourSegmentRequest);
+
+    executor.finishNextPendingTask();
+
+    Assert.assertNotNull(hourSegmentFuture.get());
+    Assert.assertNull(halfHourSegmentFuture.get());
+  }
+
+  @Test
+  public void testFullAllocationQueue() throws Exception
+  {
+    for (int i = 0; i < 2000; ++i) {
+      SegmentAllocateRequest request =
+          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i)).build();
+      allocationQueue.add(request);
+    }
+
+    SegmentAllocateRequest request =
+        allocateRequest().forTask(createTask(DS_WIKI, "next_group")).build();
+    Future<SegmentIdWithShardSpec> segmentIdFuture = allocationQueue.add(request);
+
+    // Verify that the future is already complete and segment allocation has failed
+    Assert.assertNull(segmentIdFuture.get());
+  }
+
+  @Test
+  public void testMultipleRequestsForSameSegment() throws Exception
+  {
+    final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
+    for (int i = 0; i < 10; ++i) {
+      SegmentAllocateRequest request =
+          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i))
+                           .withSequenceName("sequence_1")
+                           .withPreviousSegmentId("segment_1")
+                           .build();
+      segmentFutures.add(allocationQueue.add(request));
+    }
+
+    executor.finishNextPendingTask();
+
+    SegmentIdWithShardSpec segmentId1 = segmentFutures.get(0).get();
+
+    for (Future<SegmentIdWithShardSpec> segmentFuture : segmentFutures) {
+      Assert.assertEquals(segmentFuture.get(), segmentId1);
+    }
+  }
+
+  @Test
+  public void testMaxWaitTime()
+  {
+    // Verify that the batch is due yet
+  }
+
+  @Test
+  public void testRequestsFailOnLeaderChange() throws Exception
+  {
+    final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
+    for (int i = 0; i < 10; ++i) {
+      SegmentAllocateRequest request =
+          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i)).build();
+      segmentFutures.add(allocationQueue.add(request));
+    }
+
+    allocationQueue.stopBeingLeader();
+    executor.finishNextPendingTask();
+
+    for (Future<SegmentIdWithShardSpec> segmentFuture : segmentFutures) {
+      Assert.assertNull(segmentFuture.get());
+    }
+  }
+
+  private void verifyAllocationWithBatching(
       SegmentAllocateRequest a,
       SegmentAllocateRequest b,
       boolean canBatch
   )
   {
-    // Disable queue and cleanup state
-    allocationQueue.stopBeingLeader();
-    executor.finishAllPendingTasks();
-    emitter.flush();
-
-    // Enable queue again
-    allocationQueue.becomeLeader();
-
     Assert.assertEquals(0, allocationQueue.size());
-    allocationQueue.add(a);
-    allocationQueue.add(b);
+    final Future<SegmentIdWithShardSpec> segmentIdA = allocationQueue.add(a);
+    final Future<SegmentIdWithShardSpec> segmentIdB = allocationQueue.add(b);
 
     final int expectedCount = canBatch ? 1 : 2;
     Assert.assertEquals(expectedCount, allocationQueue.size());
 
     executor.finishNextPendingTask();
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
-  }
 
-  @Test
-  public void testBatchNotDue()
-  {
-
-  }
-
-  @Test
-  public void testAllocationWithBatch()
-  {
-    // try out different combos of these:
-    // lock granularity, lock type, skip lineage,
-  }
-
-  // now we need to test out a bunch of scenarios
-  // possibly with all combos above?
-
-  @Test
-  public void testMultipleRequestsForSameSegment()
-  {
-
-  }
-
-  @Test
-  public void testMultipleInOrderRequests()
-  {
-    // multiple requests which are requesting for segments in the right prev_segment_sequence whatever
-  }
-
-  @Test
-  public void testMultipleOutOfOrderRequests()
-  {
-    // multiple out of order thingies
-  }
-
-  @Test
-  public void testRequestsWithDifferentRowIntervals()
-  {
-
-  }
-
-  @Test
-  public void testPartialSuccess()
-  {
-
-  }
-
-  @Test
-  public void testRetry()
-  {
-
-  }
-
-
-  @Test
-  public void testMaxWaitTime()
-  {
-
-  }
-
-  @Test
-  public void testEnableDisableQueue()
-  {
-
-  }
-
-  @Test
-  public void testLeadershipChanges()
-  {
-
-  }
-
-  @Test
-  public void testDifferentGranualarities()
-  {
-
-  }
-
-  @Test
-  public void testWeekGranularity()
-  {
-    // This test should probably be included in the old SegmentAllocateActionTest as well
+    try {
+      Assert.assertNotNull(segmentIdA.get());
+      Assert.assertNotNull(segmentIdB.get());
+    }
+    catch (Exception e) {
+      throw new RuntimeException("Error while getting segment ids from future", e);
+    }
   }
 
   private SegmentAllocateActionBuilder allocateRequest()
@@ -295,14 +314,10 @@ public class SegmentAllocationQueueTest
     return new SegmentAllocateActionBuilder()
         .forDatasource(DS_WIKI)
         .forTimestamp("2022-01-01")
+        .withLockGranularity(LockGranularity.TIME_CHUNK)
+        .withTaskLockType(TaskLockType.SHARED)
         .withQueryGranularity(Granularities.SECOND)
         .withSegmentGranularity(Granularities.HOUR);
-  }
-
-  private void assertEquals(final SegmentIdWithShardSpec expected, final SegmentIdWithShardSpec actual)
-  {
-    Assert.assertEquals(expected, actual);
-    Assert.assertEquals(expected.getShardSpec(), actual.getShardSpec());
   }
 
   private Task createTask(String datasource, String groupId)
