@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.io.ByteStreams;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -56,7 +55,6 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.initialization.CoreInjectorBuilder;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -167,8 +165,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -444,22 +440,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Helper method that copies a resource to a temporary file, then returns it.
-   */
-  protected File getResourceAsTemporaryFile(final String resource) throws IOException
-  {
-    final File file = temporaryFolder.newFile();
-    final InputStream stream = getClass().getResourceAsStream(resource);
-
-    if (stream == null) {
-      throw new IOE("No such resource [%s]", resource);
-    }
-
-    ByteStreams.copy(stream, Files.newOutputStream(file.toPath()));
-    return file;
   }
 
   @Nonnull
