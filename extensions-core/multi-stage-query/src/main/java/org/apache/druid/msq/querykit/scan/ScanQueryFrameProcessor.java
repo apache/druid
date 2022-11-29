@@ -43,7 +43,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
@@ -229,14 +228,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     createFrameWriterIfNeeded();
 
     while (!cursor.isDone()) {
-      boolean addedSelection;
-      try {
-        addedSelection = frameWriter.addSelection();
-      }
-      catch (UnsupportedOperationException e) {
-        throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
-      }
-      if (!addedSelection) {
+      if (!frameWriter.addSelection()) {
         if (frameWriter.getNumRows() > 0) {
           final long numRowsWritten = flushFrameWriter();
 

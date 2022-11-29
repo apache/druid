@@ -30,6 +30,7 @@ import org.apache.druid.frame.write.FrameSort;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -74,10 +75,15 @@ public class ColumnarFrameWriter implements FrameWriter
     }
 
     int i = 0;
-    for (; i < columnWriters.size(); i++) {
-      if (!columnWriters.get(i).addSelection()) {
-        break;
+    try {
+      for (; i < columnWriters.size(); i++) {
+        if (!columnWriters.get(i).addSelection()) {
+          break;
+        }
       }
+    }
+    catch (Exception e) {
+      throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 
     if (i < columnWriters.size()) {

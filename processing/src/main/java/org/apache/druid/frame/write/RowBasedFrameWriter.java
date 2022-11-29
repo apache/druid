@@ -32,6 +32,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -118,8 +119,13 @@ public class RowBasedFrameWriter implements FrameWriter
       return false;
     }
 
-    if (!writeData()) {
-      return false;
+    try {
+      if (!writeData()) {
+        return false;
+      }
+    }
+    catch (Exception e) {
+      throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 
     final MemoryRange<WritableMemory> rowOffsetCursor = rowOffsetMemory.cursor();
