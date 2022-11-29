@@ -28,6 +28,7 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -132,7 +133,9 @@ public class RowsAndColumnsHelper
   public void validate(String name, RowsAndColumns rac)
   {
     if (fullColumnSet != null) {
-      Assert.assertEquals(name, fullColumnSet, rac.getColumnNames());
+      final Collection<String> columnNames = rac.getColumnNames();
+      Assert.assertEquals(name, fullColumnSet.size(), columnNames.size());
+      Assert.assertTrue(name, fullColumnSet.containsAll(columnNames));
     }
 
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {

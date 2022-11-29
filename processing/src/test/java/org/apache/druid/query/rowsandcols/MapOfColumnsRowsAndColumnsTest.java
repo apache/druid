@@ -70,7 +70,7 @@ public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase<MapOf
       );
     }
     catch (ISE ex) {
-      Assert.assertEquals("Mismatched numCells, expectedNumCells[1], actual[2] from col[2]", ex.getMessage());
+      Assert.assertEquals("Mismatched numCells, expectedNumCells[1], actual[2] from col[2].", ex.getMessage());
       exceptionThrown = true;
     }
     Assert.assertTrue(exceptionThrown);

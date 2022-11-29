@@ -44,7 +44,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
   public static MapOfColumnsRowsAndColumns fromMap(Map<String, Column> map)
   {
     if (map == null || map.isEmpty()) {
-      throw new ISE("map[%s] cannot be null or empty", map);
+      throw new ISE("map[%s] cannot be null or empty.", map);
     }
 
     final Iterator<Map.Entry<String, Column>> iter = map.entrySet().iterator();
@@ -55,7 +55,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
       final int newCells = entry.getValue().toAccessor().numCells();
       if (numCells != newCells) {
         throw new ISE(
-            "Mismatched numCells, expectedNumCells[%s], actual[%s] from col[%s]",
+            "Mismatched numCells, expectedNumCells[%s], actual[%s] from col[%s].",
             numCells,
             newCells,
             entry.getKey()
