@@ -35,6 +35,7 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,7 +47,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 @RunWith(JUnitParamsRunner.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
@@ -62,27 +65,51 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
+  private static final AtomicLong EXPECTED_TESTS = new AtomicLong();
+  private static final AtomicLong TEST_COUNTER = new AtomicLong();
+
   public Object parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
     File windowFolder = new File(windowFolderUrl.toURI());
 
+    final File[] listedFiles = windowFolder.listFiles(
+        pathname -> pathname.getName().toLowerCase(Locale.ROOT).endsWith(".sqltest")
+    );
+    EXPECTED_TESTS.set(listedFiles.length);
+
+    Pattern matcher = Pattern.compile(".*");
+
     return Arrays
-        .stream(
-            Objects.requireNonNull(
-                windowFolder.listFiles(pathname -> pathname.getName().toLowerCase(Locale.ROOT).endsWith(".sqltest"))
-            )
-        )
+        .stream(Objects.requireNonNull(listedFiles))
         .map(File::getName)
+        .filter(matcher.asPredicate())
         .toArray();
+  }
+
+  @AfterClass
+  public static void testRanAllTests()
+  {
+    // This validation exists to catch issues with the filter Pattern accidentally getting checked in.  It validates
+    // that we ran all of the tests from the directory.  If this is failing, most likely, the filter Pattern in
+    // parametersForWindowQueryTest accidentally got checked in as something other than ".*"
+    Assert.assertEquals(EXPECTED_TESTS.get(), TEST_COUNTER.get());
   }
 
   @Test
   @Parameters(method = "parametersForWindowQueryTest")
   @SuppressWarnings("unchecked")
-  @TestCaseName("({0})")
+  @TestCaseName("{0}")
   public void windowQueryTest(String filename) throws IOException
   {
+    final Function<String, String> stringManipulator;
+    if (NullHandling.sqlCompatible()) {
+      stringManipulator = s -> "".equals(s) ? null : s;
+    } else {
+      stringManipulator = Function.identity();
+    }
+
+    TEST_COUNTER.incrementAndGet();
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
     final Object objectFromYaml = YAML_JACKSON.readValue(systemResource.openStream(), Object.class);
@@ -158,7 +185,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                         throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
                     }
                   } else if (result[i] instanceof String) {
-                    result[i] = NullHandling.emptyToNullIfNeeded((String) result[i]);
+                    result[i] = stringManipulator.apply((String) result[i]);
                   }
                 }
               }

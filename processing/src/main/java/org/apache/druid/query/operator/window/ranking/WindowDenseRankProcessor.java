@@ -50,7 +50,7 @@ public class WindowDenseRankProcessor extends WindowRankingProcessorBase
       for (int i = 1; i < groupings.length; ++i) {
         final int start = groupings[i - 1];
         final int end = groupings[i];
-        Arrays.fill(ranks, start, end, i + 1);
+        Arrays.fill(ranks, start, end, i);
       }
 
       return new IntArrayColumn(ranks);
