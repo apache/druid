@@ -97,7 +97,7 @@ def print_if_verbose(message):
 
 def configure_parser():
     parser = argparse.ArgumentParser(
-        prog='Druid quickstart',
+        prog='start-druid',
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=
         """
@@ -300,9 +300,12 @@ def should_compute_memory(config, total_memory, service_list):
     # 5. lastly, if middleManager is to be started, and it is missing task memory properties
     if jvm_config_count > 0 or mm_task_property_present:
         if total_memory != "":
-            raise ValueError("If jvm.config is given for services, memory argument shouldn't be specified")
+            raise ValueError(
+            "If jvm.config for services and/or middleManager configs "
+            "(druid.worker.capacity, druid.indexer.runner.javaOptsArray) is present, "
+            "memory argument shouldn't be specified")
         if jvm_config_count == 0:
-            raise ValueError("druid.indexer.runner.javaOptsArray or druid.worker.capacity is present in "
+            raise ValueError("middleManger configs (druid.indexer.runner.javaOptsArray or druid.worker.capacity) is present in "
                              "middleManager/runtime.properties, \n "
                              "add jvm.config for all other services")
         if jvm_config_count != len(service_list):
@@ -374,12 +377,12 @@ def build_mm_task_java_opts_array(memory_type):
 
 
 def compute_tasks_memory(allocated_memory):
-    if allocated_memory >= 2048:
+    if allocated_memory >= 4096:
         task_count = int(allocated_memory / 2048)
         memory_type = TASK_MEM_TYPE_HIGH
         task_memory_mb = 2048
     else:
-        task_count = int(allocated_memory / 512)
+        task_count = 2
         memory_type = TASK_MEM_TYPE_LOW
         task_memory_mb = 512
     task_count = min(task_count, multiprocessing.cpu_count())
