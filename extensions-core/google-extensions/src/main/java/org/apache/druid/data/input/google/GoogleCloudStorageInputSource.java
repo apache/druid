@@ -65,11 +65,10 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @Deprecated @JsonProperty("filter") @Nullable String filter,
       @JsonProperty("objectGlob") @Nullable String objectGlob
   )
   {
-    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, filter, objectGlob);
+    super(GoogleStorageDruidModule.SCHEME_GS, uris, prefixes, objects, objectGlob);
     this.storage = storage;
     this.inputDataConfig = inputDataConfig;
   }
@@ -118,7 +117,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getFilter(), getObjectGlob());
+    return new GoogleCloudStorageInputSource(storage, inputDataConfig, null, null, split.get(), getObjectGlob());
   }
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
