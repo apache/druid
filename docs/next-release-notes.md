@@ -1,10 +1,25 @@
-# New features
+---
+title: "WIP release notes for 25.0"
+---
 
-## Updated Kafka support
-
-Updated the Apache Kafka core dependency to version 3.3.1.
-
-https://github.com/apache/druid/pull/13176
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 ## Query engine
 
@@ -155,7 +170,11 @@ The web console has been updated to include these options.
 
 https://github.com/apache/druid/pull/13089
 
+## Updated Kafka version
 
+Updated the Apache Kafka core dependency to version 3.3.1.
+
+https://github.com/apache/druid/pull/13176
 
 ### Kafka Consumer improvement
 
@@ -193,7 +212,6 @@ Added Idle feature to `SeekableStreamSupervisor` for inactive stream.
 
 https://github.com/apache/druid/pull/13144
 
-### 
 
 ### Sampling from stream input now respects the configured timeout
 
@@ -250,13 +268,6 @@ You can now configure the following properties:
 
 https://github.com/apache/druid/pull/13311
 
-### cachingCost balancer strategy
-
-The `cachingCost` balancer strategy now behaves more similarly to cost strategy. When computing the cost of moving a segment to a server, the following calculations are performed:
-
-- Subtract the self cost of a segment if it is being served by the target server
-- Subtract the cost of segments that are marked to be dropped
-
 https://github.com/apache/druid/pull/13321
 
 ### New metrics for streaming ingestion
@@ -290,7 +301,16 @@ For more information, see [dump-segment tool](https://druid.apache.org/docs/late
 
 https://github.com/apache/druid/pull/13356
 
-### Segment assignment
+### Segmen loading and balancings
+
+#### cachingCost balancer strategy
+
+The `cachingCost` balancer strategy now behaves more similarly to cost strategy. When computing the cost of moving a segment to a server, the following calculations are performed:
+
+- Subtract the self cost of a segment if it is being served by the target server
+- Subtract the cost of segments that are marked to be dropped
+
+#### Segment assignment
 
 You can now use a round-robin segment strategy to speed up initial segment assignments.
 
@@ -298,7 +318,7 @@ Set `useRoundRobinSegmentAssigment` to `true` in the Coordinator dynamic config 
 
 https://github.com/apache/druid/pull/13367
 
-### Segment balancing
+#### Segment batch balancing
 
 Batch sampling is now the default method for sampling segments during balancing as it performs significantly better than the alternative when there is a large number of used segments in the cluster.
 
@@ -314,12 +334,17 @@ Use only `druid.coordinator.loadqueuepeon.http.repeatDelay` to configure repeat 
 
 https://github.com/apache/druid/pull/13391
 
-
-### Segment discovery
+#### Segment discovery
 
 The default segment discovery method now uses HTTP instead of ZooKeeper.
 
 https://github.com/apache/druid/pull/13092
+
+#### Segment replication
+
+Improved the process of checking server inventory to prevent over-replication of segments during segment balancing.
+
+https://github.com/apache/druid/pull/13114
 
 ### Memory estimates
 
@@ -333,11 +358,7 @@ Updated dependencies for the Druid image for Docker, including JRE 11. Docker Bu
 
 https://github.com/apache/druid/pull/13059
 
-### Segment replication
 
-Improved the process of checking server inventory to prevent over-replication of segments during segment balancing.
-
-https://github.com/apache/druid/pull/13114
 
 ### Kill tasks do not include markAsUnuseddone
 
