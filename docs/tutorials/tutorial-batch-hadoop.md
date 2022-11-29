@@ -28,7 +28,7 @@ This tutorial shows you how to load data files into Apache Druid using a remote 
 
 For this tutorial, we'll assume that you've already completed the previous
 [batch ingestion tutorial](tutorial-batch.md) using Druid's native batch ingestion system and are using the
-`micro-quickstart` single-machine configuration as described in the [quickstart](index.md).
+`micro` single-machine configuration as described in the [quickstart](../operations/single-server.md#micro-4-cpu-16gib-ram).
 
 ## Install Docker
 

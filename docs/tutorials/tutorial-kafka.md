@@ -30,7 +30,7 @@ The tutorial guides you through the steps to load sample nested clickstream data
 
 ## Prerequisites
 
-Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [micro-quickstart](../operations/single-server.md#micro-quickstart-4-cpu-16gib-ram) single-machine configuration and have it running on your local machine. You don't need to have loaded any data.
+Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [micro](../operations/single-server.md#micro-4-cpu-16gib-ram) single-machine configuration and have it running on your local machine. You don't need to have loaded any data.
 
 ## Download and start Kafka
 
