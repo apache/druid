@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -103,9 +104,6 @@ public class TaskActionTestKit extends ExternalResource
         testDerbyConnector
     );
     final ServiceEmitter noopEmitter = new NoopServiceEmitter();
-    final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
-    leaderSelector.becomeLeader();
-
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
@@ -129,8 +127,8 @@ public class TaskActionTestKit extends ExternalResource
             taskLockbox,
             taskLockConfig,
             metadataStorageCoordinator,
-            leaderSelector,
-            noopEmitter
+            noopEmitter,
+            ScheduledExecutors::fixed
         ),
         noopEmitter,
         EasyMock.createMock(SupervisorManager.class),

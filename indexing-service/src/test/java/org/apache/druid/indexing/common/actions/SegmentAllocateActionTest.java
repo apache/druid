@@ -64,6 +64,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -976,7 +977,8 @@ public class SegmentAllocateActionTest
 
     try {
       if (useBatch) {
-        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox()).get();
+        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox())
+                     .get(5, TimeUnit.SECONDS);
       } else {
         return action.perform(task, taskActionTestKit.getTaskActionToolbox());
       }
@@ -989,15 +991,6 @@ public class SegmentAllocateActionTest
   private void assertSameIdentifier(final SegmentIdWithShardSpec expected, final SegmentIdWithShardSpec actual)
   {
     Assert.assertEquals(expected, actual);
-    Assert.assertEquals(expected.getShardSpec().getPartitionNum(), actual.getShardSpec().getPartitionNum());
-    Assert.assertEquals(expected.getShardSpec().getClass(), actual.getShardSpec().getClass());
-
-    if (expected.getShardSpec().getClass() == NumberedShardSpec.class
-        && actual.getShardSpec().getClass() == NumberedShardSpec.class) {
-      Assert.assertEquals(expected.getShardSpec().getNumCorePartitions(), actual.getShardSpec().getNumCorePartitions());
-    } else if (expected.getShardSpec().getClass() == LinearShardSpec.class
-               && actual.getShardSpec().getClass() == LinearShardSpec.class) {
-      // do nothing
-    }
+    Assert.assertEquals(expected.getShardSpec(), actual.getShardSpec());
   }
 }
