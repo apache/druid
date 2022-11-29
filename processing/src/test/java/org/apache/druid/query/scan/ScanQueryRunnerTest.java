@@ -230,8 +230,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         0,
         3
     );
-    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
-    Assert.assertEquals(false, stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null));
+    stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", false), 1);
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 

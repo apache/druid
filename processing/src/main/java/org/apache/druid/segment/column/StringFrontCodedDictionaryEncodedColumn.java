@@ -38,7 +38,6 @@ import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -359,26 +358,11 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-      public int[] getRowVector()
+      public StringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return vector;
-        }
-
-        if (offset.isContiguous()) {
-          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-        }
-
-        id = offset.getId();
-        return vector;
+        super(column, offset);
       }
 
       @Override
@@ -402,81 +386,23 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       }
 
       @Override
-      public boolean supportsLookupNameUtf8()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean nameLookupPossibleInAdvance()
-      {
-        return true;
-      }
-
-      @Nullable
-      @Override
-      public IdLookup idLookup()
-      {
-        return this;
-      }
-
-      @Override
-      public int lookupId(@Nullable final String name)
+      public int lookupId(@Nullable String name)
       {
         return StringFrontCodedDictionaryEncodedColumn.this.lookupId(name);
       }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
-      }
-
-      @Override
-      public int getMaxVectorSize()
-      {
-        return offset.getMaxVectorSize();
-      }
     }
 
-    return new QueryableSingleValueDimensionVectorSelector();
+    return new StringVectorSelector();
   }
 
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(final ReadableVectorOffset offset)
   {
-    class QueryableMultiValueDimensionVectorSelector implements MultiValueDimensionVectorSelector, IdLookup
+    final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.StringMultiValueDimensionVectorSelector
     {
-      private final IndexedInts[] vector = new IndexedInts[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-      public IndexedInts[] getRowVector()
+      public MultiStringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return vector;
-        }
-
-        if (offset.isContiguous()) {
-          final int currentOffset = offset.getStartOffset();
-          final int numRows = offset.getCurrentVectorSize();
-
-          for (int i = 0; i < numRows; i++) {
-            // Must use getUnshared, otherwise all elements in the vector could be the same shared object.
-            vector[i] = multiValueColumn.getUnshared(i + currentOffset);
-          }
-        } else {
-          final int[] offsets = offset.getOffsets();
-          final int numRows = offset.getCurrentVectorSize();
-
-          for (int i = 0; i < numRows; i++) {
-            // Must use getUnshared, otherwise all elements in the vector could be the same shared object.
-            vector[i] = multiValueColumn.getUnshared(offsets[i]);
-          }
-        }
-
-        id = offset.getId();
-        return vector;
+        super(multiValueColumn, offset);
       }
 
       @Override
@@ -499,94 +425,52 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         return utf8Dictionary.get(id);
       }
 
-      @Override
-      public boolean supportsLookupNameUtf8()
-      {
-        return true;
-      }
 
       @Override
-      public boolean nameLookupPossibleInAdvance()
-      {
-        return true;
-      }
-
-      @Nullable
-      @Override
-      public IdLookup idLookup()
-      {
-        return this;
-      }
-
-      @Override
-      public int lookupId(@Nullable final String name)
+      public int lookupId(@Nullable String name)
       {
         return StringFrontCodedDictionaryEncodedColumn.this.lookupId(name);
       }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
-      }
-
-      @Override
-      public int getMaxVectorSize()
-      {
-        return offset.getMaxVectorSize();
-      }
     }
 
-    return new QueryableMultiValueDimensionVectorSelector();
+    return new MultiStringVectorSelector();
   }
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
     if (!hasMultipleValues()) {
-      class DictionaryEncodedStringSingleValueVectorObjectSelector implements VectorObjectSelector
+      final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
       {
-        private final int[] vector = new int[offset.getMaxVectorSize()];
-        private final String[] strings = new String[offset.getMaxVectorSize()];
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-
-        public Object[] getObjectVector()
+        public StringVectorSelector()
         {
-          if (id == offset.getId()) {
-            return strings;
-          }
-
-          if (offset.isContiguous()) {
-            column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-          } else {
-            column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-          }
-          for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-            strings[i] = lookupName(vector[i]);
-          }
-          id = offset.getId();
-
-          return strings;
+          super(column, offset);
         }
 
+        @Nullable
         @Override
-        public int getMaxVectorSize()
+        public String lookupName(int id)
         {
-          return offset.getMaxVectorSize();
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return offset.getCurrentVectorSize();
+          return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
         }
       }
-
-      return new DictionaryEncodedStringSingleValueVectorObjectSelector();
+      return new StringVectorSelector();
     } else {
-      throw new UnsupportedOperationException("Multivalue string object selector not implemented yet");
+      final class MultiStringVectorSelector extends StringDictionaryEncodedColumn.MultiValueStringVectorObjectSelector
+      {
+        public MultiStringVectorSelector()
+        {
+          super(multiValueColumn, offset);
+        }
+
+        @Nullable
+        @Override
+        public String lookupName(int id)
+        {
+          return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+        }
+      }
+      return new MultiStringVectorSelector();
     }
   }
 

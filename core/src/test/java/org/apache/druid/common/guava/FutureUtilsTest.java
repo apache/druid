@@ -19,9 +19,11 @@
 
 package org.apache.druid.common.guava;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -33,11 +35,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -198,6 +204,104 @@ public class FutureUtilsTest
         "xy",
         FutureUtils.transform(Futures.immediateFuture("x"), s -> s + "y").get()
     );
+  }
+
+  @Test
+  public void test_transformAsync() throws Exception
+  {
+    Assert.assertEquals(
+        "xy",
+        FutureUtils.transformAsync(Futures.immediateFuture("x"), s -> Futures.immediateFuture(s + "y")).get()
+    );
+  }
+
+  @Test
+  public void test_coalesce_allOk() throws Exception
+  {
+    final List<ListenableFuture<String>> futures = new ArrayList<>();
+
+    futures.add(Futures.immediateFuture("foo"));
+    futures.add(Futures.immediateFuture("bar"));
+    futures.add(Futures.immediateFuture(null));
+
+    Assert.assertEquals(
+        ImmutableList.of(Either.value("foo"), Either.value("bar"), Either.value(null)),
+        FutureUtils.coalesce(futures).get()
+    );
+  }
+
+  @Test
+  public void test_coalesce_inputError() throws Exception
+  {
+    final List<ListenableFuture<String>> futures = new ArrayList<>();
+
+    final ISE e = new ISE("oops");
+    futures.add(Futures.immediateFuture("foo"));
+    futures.add(Futures.immediateFailedFuture(e));
+    futures.add(Futures.immediateFuture(null));
+
+    Assert.assertEquals(
+        ImmutableList.of(Either.value("foo"), Either.error(e), Either.value(null)),
+        FutureUtils.coalesce(futures).get()
+    );
+  }
+
+  @Test
+  public void test_coalesce_inputCanceled() throws Exception
+  {
+    final List<ListenableFuture<String>> futures = new ArrayList<>();
+
+    futures.add(Futures.immediateFuture("foo"));
+    futures.add(Futures.immediateCancelledFuture());
+    futures.add(Futures.immediateFuture(null));
+
+    final List<Either<Throwable, String>> results = FutureUtils.coalesce(futures).get();
+    Assert.assertEquals(3, results.size());
+    Assert.assertEquals(Either.value("foo"), results.get(0));
+    Assert.assertTrue(results.get(1).isError());
+    Assert.assertEquals(Either.value(null), results.get(2));
+
+    MatcherAssert.assertThat(
+        results.get(1).error(),
+        CoreMatchers.instanceOf(CancellationException.class)
+    );
+  }
+
+  @Test
+  public void test_coalesce_timeout()
+  {
+    final List<ListenableFuture<String>> futures = new ArrayList<>();
+    final SettableFuture<String> unresolvedFuture = SettableFuture.create();
+
+    futures.add(Futures.immediateFuture("foo"));
+    futures.add(unresolvedFuture);
+    futures.add(Futures.immediateFuture(null));
+
+    final ListenableFuture<List<Either<Throwable, String>>> coalesced = FutureUtils.coalesce(futures);
+
+    Assert.assertThrows(
+        TimeoutException.class,
+        () -> coalesced.get(10, TimeUnit.MILLISECONDS)
+    );
+  }
+
+  @Test
+  public void test_coalesce_cancel()
+  {
+    final List<ListenableFuture<String>> futures = new ArrayList<>();
+    final SettableFuture<String> unresolvedFuture = SettableFuture.create();
+
+    futures.add(Futures.immediateFuture("foo"));
+    futures.add(unresolvedFuture);
+    futures.add(Futures.immediateFuture(null));
+
+    final ListenableFuture<List<Either<Throwable, String>>> coalesced = FutureUtils.coalesce(futures);
+    coalesced.cancel(true);
+
+    Assert.assertTrue(coalesced.isCancelled());
+
+    // All input futures are canceled too.
+    Assert.assertTrue(unresolvedFuture.isCancelled());
   }
 
   @Test

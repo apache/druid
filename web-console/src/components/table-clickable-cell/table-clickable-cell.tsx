@@ -27,18 +27,23 @@ export interface TableClickableCellProps {
   onClick: MouseEventHandler<any>;
   hoverIcon?: IconName;
   title?: string;
+  disabled?: boolean;
   children?: ReactNode;
 }
 
 export const TableClickableCell = React.memo(function TableClickableCell(
   props: TableClickableCellProps,
 ) {
-  const { className, onClick, hoverIcon, title, children } = props;
+  const { className, onClick, hoverIcon, title, disabled, children } = props;
 
   return (
-    <div className={classNames('table-clickable-cell', className)} title={title} onClick={onClick}>
+    <div
+      className={classNames('table-clickable-cell', className, { disabled })}
+      title={title}
+      onClick={disabled ? undefined : onClick}
+    >
       {children}
-      {hoverIcon && <Icon className="hover-icon" icon={hoverIcon} />}
+      {hoverIcon && !disabled && <Icon className="hover-icon" icon={hoverIcon} />}
     </div>
   );
 });

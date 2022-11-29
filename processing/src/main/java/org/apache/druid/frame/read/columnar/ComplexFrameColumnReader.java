@@ -175,7 +175,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     @Override
     public int getLength()
     {
-      return frame.numRows();
+      return (int) frame.numBytes();
     }
 
     @Override

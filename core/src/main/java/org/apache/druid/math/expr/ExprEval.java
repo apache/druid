@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -167,14 +166,40 @@ public abstract class ExprEval<T>
           array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.LONG, o).value();
         }
         return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
+      } else if (coercedType == Float.class || coercedType == Double.class) {
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
           array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.DOUBLE, o).value();
         }
         return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
+      } else if (coercedType == Object.class) {
+        // object, fall back to "best effort"
+        ExprEval<?>[] evals = new ExprEval[val.size()];
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        ExpressionType elementType = null;
+        for (Object o : val) {
+          if (o != null) {
+            ExprEval<?> eval = ExprEval.bestEffortOf(o);
+            elementType = ExpressionTypeConversion.coerceArrayTypes(elementType, eval.type());
+            evals[i++] = eval;
+          } else {
+            evals[i++] = null;
+          }
+        }
+        i = 0;
+        for (ExprEval<?> eval : evals) {
+          if (eval != null) {
+            array[i++] = eval.castTo(elementType).value();
+          } else {
+            array[i++] = null;
+          }
+        }
+        ExpressionType arrayType = elementType == null
+                                   ? ExpressionType.STRING_ARRAY
+                                   : ExpressionTypeFactory.getInstance().ofArray(elementType);
+        return new NonnullPair<>(arrayType, array);
       }
       // default to string
       Object[] array = new Object[val.size()];
@@ -192,31 +217,6 @@ public abstract class ExprEval<T>
       }
       return null;
     }
-  }
-
-  @Nullable
-  public static ExpressionType findArrayType(@Nullable Object[] val)
-  {
-    // if value is not null and has at least 1 element, conversion is unambigous regardless of the selector
-    if (val != null && val.length > 0) {
-      Class<?> coercedType = null;
-
-      for (Object elem : val) {
-        if (elem != null) {
-          coercedType = convertType(coercedType, elem.getClass());
-        }
-      }
-
-      if (coercedType == Long.class || coercedType == Integer.class) {
-        return ExpressionType.LONG_ARRAY;
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
-        return ExpressionType.DOUBLE_ARRAY;
-      }
-      // default to string
-      return ExpressionType.STRING_ARRAY;
-    }
-    return null;
   }
 
   /**
@@ -266,7 +266,8 @@ public abstract class ExprEval<T>
       // otherwise double
       return Double.class;
     }
-    throw new UOE("Invalid array expression type: %s", next);
+    // its complicated, call it object
+    return Object.class;
   }
 
   public static ExprEval of(long longValue)

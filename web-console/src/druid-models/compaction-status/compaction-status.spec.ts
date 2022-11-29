@@ -18,11 +18,7 @@
 
 import { CompactionConfig } from '../compaction-config/compaction-config';
 
-import {
-  CompactionStatus,
-  formatCompactionConfigAndStatus,
-  zeroCompactionStatus,
-} from './compaction-status';
+import { CompactionStatus, formatCompactionInfo, zeroCompactionStatus } from './compaction-status';
 
 describe('compaction status', () => {
   const BASIC_CONFIG: CompactionConfig = {};
@@ -61,27 +57,30 @@ describe('compaction status', () => {
   });
 
   it('formatCompactionConfigAndStatus', () => {
-    expect(formatCompactionConfigAndStatus(undefined, undefined)).toEqual('Not enabled');
+    expect(formatCompactionInfo({})).toEqual('Not enabled');
 
-    expect(formatCompactionConfigAndStatus(BASIC_CONFIG, undefined)).toEqual('Awaiting first run');
+    expect(formatCompactionInfo({ config: BASIC_CONFIG })).toEqual('Awaiting first run');
 
-    expect(formatCompactionConfigAndStatus(undefined, ZERO_STATUS)).toEqual('Not enabled');
+    expect(formatCompactionInfo({ status: ZERO_STATUS })).toEqual('Not enabled');
 
-    expect(formatCompactionConfigAndStatus(BASIC_CONFIG, ZERO_STATUS)).toEqual('Running');
+    expect(formatCompactionInfo({ config: BASIC_CONFIG, status: ZERO_STATUS })).toEqual('Running');
 
     expect(
-      formatCompactionConfigAndStatus(BASIC_CONFIG, {
-        dataSource: 'tbl',
-        scheduleStatus: 'RUNNING',
-        bytesAwaitingCompaction: 0,
-        bytesCompacted: 100,
-        bytesSkipped: 0,
-        segmentCountAwaitingCompaction: 0,
-        segmentCountCompacted: 10,
-        segmentCountSkipped: 0,
-        intervalCountAwaitingCompaction: 0,
-        intervalCountCompacted: 10,
-        intervalCountSkipped: 0,
+      formatCompactionInfo({
+        config: BASIC_CONFIG,
+        status: {
+          dataSource: 'tbl',
+          scheduleStatus: 'RUNNING',
+          bytesAwaitingCompaction: 0,
+          bytesCompacted: 100,
+          bytesSkipped: 0,
+          segmentCountAwaitingCompaction: 0,
+          segmentCountCompacted: 10,
+          segmentCountSkipped: 0,
+          intervalCountAwaitingCompaction: 0,
+          intervalCountCompacted: 10,
+          intervalCountSkipped: 0,
+        },
       }),
     ).toEqual('Fully compacted');
   });
