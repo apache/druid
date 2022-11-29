@@ -181,6 +181,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     };
   }
 
+  @Override
+  public boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return toolbox.canBatchSegmentAllocation();
+  }
+
+  @Override
   public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getSegmentAllocationQueue().add(

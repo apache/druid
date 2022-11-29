@@ -38,6 +38,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class SegmentAllocationQueueTest
 {
@@ -201,7 +202,7 @@ public class SegmentAllocationQueueTest
   }
 
   @Test
-  public void testConflictingPendingSegment() throws Exception
+  public void testConflictingPendingSegment()
   {
     SegmentAllocateRequest hourSegmentRequest =
         allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
@@ -217,12 +218,12 @@ public class SegmentAllocationQueueTest
 
     executor.finishNextPendingTask();
 
-    Assert.assertNotNull(hourSegmentFuture.get());
-    Assert.assertNull(halfHourSegmentFuture.get());
+    Assert.assertNotNull(getSegmentId(hourSegmentFuture));
+    Assert.assertNull(getSegmentId(halfHourSegmentFuture));
   }
 
   @Test
-  public void testFullAllocationQueue() throws Exception
+  public void testFullAllocationQueue()
   {
     for (int i = 0; i < 2000; ++i) {
       SegmentAllocateRequest request =
@@ -232,14 +233,14 @@ public class SegmentAllocationQueueTest
 
     SegmentAllocateRequest request =
         allocateRequest().forTask(createTask(DS_WIKI, "next_group")).build();
-    Future<SegmentIdWithShardSpec> segmentIdFuture = allocationQueue.add(request);
+    Future<SegmentIdWithShardSpec> future = allocationQueue.add(request);
 
     // Verify that the future is already complete and segment allocation has failed
-    Assert.assertNull(segmentIdFuture.get());
+    Assert.assertNull(getSegmentId(future));
   }
 
   @Test
-  public void testMultipleRequestsForSameSegment() throws Exception
+  public void testMultipleRequestsForSameSegment()
   {
     final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
     for (int i = 0; i < 10; ++i) {
@@ -253,10 +254,10 @@ public class SegmentAllocationQueueTest
 
     executor.finishNextPendingTask();
 
-    SegmentIdWithShardSpec segmentId1 = segmentFutures.get(0).get();
+    SegmentIdWithShardSpec segmentId1 = getSegmentId(segmentFutures.get(0));
 
-    for (Future<SegmentIdWithShardSpec> segmentFuture : segmentFutures) {
-      Assert.assertEquals(segmentFuture.get(), segmentId1);
+    for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
+      Assert.assertEquals(getSegmentId(future), segmentId1);
     }
   }
 
@@ -267,7 +268,7 @@ public class SegmentAllocationQueueTest
   }
 
   @Test
-  public void testRequestsFailOnLeaderChange() throws Exception
+  public void testRequestsFailOnLeaderChange()
   {
     final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
     for (int i = 0; i < 10; ++i) {
@@ -279,8 +280,8 @@ public class SegmentAllocationQueueTest
     allocationQueue.stopBeingLeader();
     executor.finishNextPendingTask();
 
-    for (Future<SegmentIdWithShardSpec> segmentFuture : segmentFutures) {
-      Assert.assertNull(segmentFuture.get());
+    for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
+      Assert.assertNull(getSegmentId(future));
     }
   }
 
@@ -291,8 +292,8 @@ public class SegmentAllocationQueueTest
   )
   {
     Assert.assertEquals(0, allocationQueue.size());
-    final Future<SegmentIdWithShardSpec> segmentIdA = allocationQueue.add(a);
-    final Future<SegmentIdWithShardSpec> segmentIdB = allocationQueue.add(b);
+    final Future<SegmentIdWithShardSpec> futureA = allocationQueue.add(a);
+    final Future<SegmentIdWithShardSpec> futureB = allocationQueue.add(b);
 
     final int expectedCount = canBatch ? 1 : 2;
     Assert.assertEquals(expectedCount, allocationQueue.size());
@@ -300,12 +301,17 @@ public class SegmentAllocationQueueTest
     executor.finishNextPendingTask();
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
 
+    Assert.assertNotNull(getSegmentId(futureA));
+    Assert.assertNotNull(getSegmentId(futureB));
+  }
+
+  private SegmentIdWithShardSpec getSegmentId(Future<SegmentIdWithShardSpec> future)
+  {
     try {
-      Assert.assertNotNull(segmentIdA.get());
-      Assert.assertNotNull(segmentIdB.get());
+      return future.get(5, TimeUnit.SECONDS);
     }
     catch (Exception e) {
-      throw new RuntimeException("Error while getting segment ids from future", e);
+      throw new RuntimeException(e);
     }
   }
 
