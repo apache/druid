@@ -76,7 +76,7 @@ public abstract class DruidBaseTest
         segmentDir,
         0,
         Granularities.NONE,
-        2,
+        1,
         false
     );
   }

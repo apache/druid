@@ -74,4 +74,5 @@ public class UnsignedIntComplexSerde extends ComplexMetricSerde
   {
     return strategy;
   }
+
 }

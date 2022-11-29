@@ -22,7 +22,6 @@
       "format": "auto"
     },
     "dimensionsSpec": {
-      "dimensions": ["dim"],
       "dimensionExclusions": [
         "timestamp", "foo"
       ],
