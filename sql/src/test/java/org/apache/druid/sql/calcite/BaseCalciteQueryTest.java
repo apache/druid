@@ -687,6 +687,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .run();
   }
 
+  public void testQueryWithMSQ(
+      final String sql,
+      final List<Query<?>> expectedQueries,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
