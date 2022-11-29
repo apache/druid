@@ -1087,7 +1087,7 @@ public class ControllerImpl implements Controller
           if (retryOnFailure) {
             log.info(
                 t,
-                "Detected failure while contacting task[%s]. Iniitiating relaunch of worker[%d] if applicable",
+                "Detected failure while contacting task[%s]. Initiating relaunch of worker[%d] if applicable",
                 taskId,
                 workerNumber
             );
