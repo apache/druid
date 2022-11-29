@@ -93,7 +93,7 @@ public final class CuratorModuleTest
                                    l.getLevel().equals(Level.ERROR)
                                    && l.getMessage()
                                        .getFormattedMessage()
-                                       .equals("Unhandled error in Curator, halting server.")
+                                       .equals("Unhandled error in Curator, stopping server.")
                      )
     );
   }
