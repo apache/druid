@@ -465,7 +465,7 @@ describe('WorkbenchQuery', () => {
     it('works with INSERT (unparsable)', () => {
       const sql = sane`
         -- Some comment
-        INSERT INTO trips2
+        INSERT into trips2
         SELECT
           TIME_PARSE(pickup_datetime) AS __time,
           *
