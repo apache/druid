@@ -39,7 +39,6 @@ public class ColumnAccessorBasedColumn implements Column
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
-    // TODO:
     return null;
   }
 }

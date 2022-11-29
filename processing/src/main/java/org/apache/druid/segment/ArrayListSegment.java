@@ -22,11 +22,8 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.rowsandcols.ArrayListRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
-import org.apache.druid.query.rowsandcols.column.ObjectColumnAccessorBase;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -34,9 +31,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * A {@link Segment} that is based on a stream of objects.
@@ -126,74 +120,7 @@ public class ArrayListSegment<RowType> implements Segment
 
   private RowsAndColumns asRowsAndColumns()
   {
-    return new RowsAndColumns()
-    {
-      @Override
-      public int numRows()
-      {
-        return rows.size();
-      }
-
-      @Override
-      @Nullable
-      public Column findColumn(String name)
-      {
-        if (!rowSignature.contains(name)) {
-          return null;
-        }
-
-        final Function<RowType, Object> adapterForValue = rowAdapter.columnFunction(name);
-        final Optional<ColumnType> maybeColumnType = rowSignature.getColumnType(name);
-        final ColumnType columnType = maybeColumnType.orElse(ColumnType.UNKNOWN_COMPLEX);
-        final Comparator<Object> comparator = Comparator.nullsFirst(columnType.getStrategy());
-
-        return new Column()
-        {
-          @Override
-          public ColumnAccessor toAccessor()
-          {
-            return new ObjectColumnAccessorBase()
-            {
-              @Override
-              protected Object getVal(int cell)
-              {
-                return adapterForValue.apply(rows.get(cell));
-              }
-
-              @Override
-              protected Comparator<Object> getComparator()
-              {
-                return comparator;
-              }
-
-              @Override
-              public ColumnType getType()
-              {
-                return columnType;
-              }
-
-              @Override
-              public int numCells()
-              {
-                return rows.size();
-              }
-            };
-          }
-
-          @Override
-          public <T> T as(Class<? extends T> clazz)
-          {
-            return null;
-          }
-        };
-      }
-
-      @Nullable
-      @Override
-      public <T> T as(Class<T> clazz)
-      {
-        return null;
-      }
-    };
+    return new ArrayListRowsAndColumns(rows, rowAdapter, rowSignature);
   }
+
 }

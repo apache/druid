@@ -24,13 +24,16 @@ import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class AppendableMapOfColumns implements AppendableRowsAndColumns
 {
-
   private final RowsAndColumns base;
   private final LinkedHashMap<String, Column> appendedColumns;
+  private Set<String> colNames = null;
 
   public AppendableMapOfColumns(
       RowsAndColumns base
@@ -47,6 +50,19 @@ public class AppendableMapOfColumns implements AppendableRowsAndColumns
     if (prevValue != null) {
       throw new ISE("Tried to override column[%s]!?  Was[%s], now[%s]", name, prevValue, column);
     }
+    if (colNames != null) {
+      colNames.add(name);
+    }
+  }
+
+  @Override
+  public Collection<String> getColumnNames()
+  {
+    if (colNames == null) {
+      this.colNames = new LinkedHashSet<>(base.getColumnNames());
+      this.colNames.addAll(appendedColumns.keySet());
+    }
+    return colNames;
   }
 
   @Override

@@ -36,10 +36,10 @@ public interface SortedGroupPartitioner
    * sorted data, there should only be a single entry in the return value for a given set of values of the columns.
    *
    * @param columns the columns to partition on
-   * @return a list of start (inclusive) and end (exclusive) rowIds where each chunk of contiguous rows represents
-   * a single grouping
+   * @return an int[] representing the start (inclusive) and stop (exclusive) offsets of boundaries.  Boundaries are
+   * contiguous, so the stop of the previous boundary is the start of the subsequent one.
    */
-  ArrayList<StartAndEnd> computeBoundaries(List<String> columns);
+  int[] computeBoundaries(List<String> columns);
 
   /**
    * Semantically equivalent to computeBoundaries, but returns a list of RowsAndColumns objects instead of just

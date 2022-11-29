@@ -19,24 +19,13 @@
 
 package org.apache.druid.query.rowsandcols;
 
-public class StartAndEnd
+import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
+
+public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase<MapOfColumnsRowsAndColumns>
 {
-  private final int start;
-  private final int end;
-
-  public StartAndEnd(int start, int end)
+  @Override
+  public MapOfColumnsRowsAndColumns makeRowsAndColumns(MapOfColumnsRowsAndColumns input)
   {
-    this.start = start;
-    this.end = end;
-  }
-
-  public int getStart()
-  {
-    return start;
-  }
-
-  public int getEnd()
-  {
-    return end;
+    return input;
   }
 }

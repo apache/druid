@@ -24,7 +24,9 @@ import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 {
@@ -32,6 +34,22 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
   {
     if (map == null || map.isEmpty()) {
       throw new ISE("map[%s] cannot be null or empty", map);
+    }
+
+    final Iterator<Map.Entry<String, Column>> iter = map.entrySet().iterator();
+    Map.Entry<String, Column> entry = iter.next();
+    int numCells = entry.getValue().toAccessor().numCells();
+    if (iter.hasNext()) {
+      entry = iter.next();
+      final int newCells = entry.getValue().toAccessor().numCells();
+      if (numCells != newCells) {
+        throw new ISE(
+            "Mismatched numCells, expectedNumCells[%s], actual[%s] from col[%s]",
+            numCells,
+            newCells,
+            entry.getKey()
+        );
+      }
     }
 
     return new MapOfColumnsRowsAndColumns(map, map.values().iterator().next().toAccessor().numCells());
@@ -47,6 +65,12 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
   {
     this.mapOfColumns = mapOfColumns;
     this.numRows = numRows;
+  }
+
+  @Override
+  public Set<String> getColumnNames()
+  {
+    return mapOfColumns.keySet();
   }
 
   @Override

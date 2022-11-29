@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.LimitedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -39,11 +41,10 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
   }
 
   @Override
-  public ArrayList<StartAndEnd> computeBoundaries(List<String> columns)
+  public int[] computeBoundaries(List<String> columns)
   {
-    ArrayList<StartAndEnd> retVal = new ArrayList<>();
     // Initialize to a grouping of everything
-    retVal.add(new StartAndEnd(0, rac.numRows()));
+    IntList boundaries = new IntArrayList(new int[]{0, rac.numRows()});
 
     for (String column : columns) {
       final Column theCol = rac.findColumn(column);
@@ -54,35 +55,37 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
       }
       final ColumnAccessor accessor = theCol.toAccessor();
 
-      ArrayList<StartAndEnd> newRetVal = new ArrayList<>();
-      for (int i = 0; i < retVal.size(); ++i) {
-        final StartAndEnd currGroup = retVal.get(i);
-        int currStart = currGroup.getStart();
-        for (int j = currGroup.getStart() + 1; j < currGroup.getEnd(); ++j) {
+      IntList newBoundaries = new IntArrayList();
+      newBoundaries.add(0);
+      for (int i = 1; i < boundaries.size(); ++i) {
+        int start = boundaries.getInt(i - 1);
+        int end = boundaries.getInt(i);
+        for (int j = start + 1; j < end; ++j) {
           int comparison = accessor.compareCells(j - 1, j);
           if (comparison < 0) {
-            newRetVal.add(new StartAndEnd(currStart, j));
-            currStart = j;
+            newBoundaries.add(j);
           } else if (comparison > 0) {
             throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", j - 1, j);
           }
         }
-        newRetVal.add(new StartAndEnd(currStart, currGroup.getEnd()));
+        newBoundaries.add(end);
       }
-      retVal = newRetVal;
+      boundaries = newBoundaries;
     }
 
-    return retVal;
+    return boundaries.toIntArray();
   }
 
   @Override
   public ArrayList<RowsAndColumns> partitionOnBoundaries(List<String> partitionColumns)
   {
-    final ArrayList<StartAndEnd> startAndEnds = computeBoundaries(partitionColumns);
-    ArrayList<RowsAndColumns> retVal = new ArrayList<>(startAndEnds.size());
+    final int[] boundaries = computeBoundaries(partitionColumns);
+    ArrayList<RowsAndColumns> retVal = new ArrayList<>(boundaries.length - 1);
 
-    for (StartAndEnd startAndEnd : startAndEnds) {
-      retVal.add(new LimitedRowsAndColumns(rac, startAndEnd.getStart(), startAndEnd.getEnd()));
+    for (int i = 1; i < boundaries.length; ++i) {
+      int start = boundaries[i - 1];
+      int end = boundaries[i];
+      retVal.add(new LimitedRowsAndColumns(rac, start, end));
     }
 
     return retVal;

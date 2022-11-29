@@ -26,6 +26,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 
 public class LimitedRowsAndColumns implements RowsAndColumns
 {
@@ -43,6 +44,12 @@ public class LimitedRowsAndColumns implements RowsAndColumns
     this.rac = rac;
     this.start = start;
     this.end = end;
+  }
+
+  @Override
+  public Collection<String> getColumnNames()
+  {
+    return rac.getColumnNames();
   }
 
   @Override

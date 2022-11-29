@@ -24,6 +24,7 @@ import org.apache.druid.query.rowsandcols.frame.AppendableMapOfColumns;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 
 /**
  * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
@@ -66,6 +67,13 @@ public interface RowsAndColumns
     }
     return retVal;
   }
+
+  /**
+   * The set of column names available from the RowsAndColumns
+   *
+   * @return The set of column names available from the RowsAndColumns
+   */
+  Collection<String> getColumnNames();
 
   /**
    * The number of rows in the RowsAndColumns object
