@@ -270,8 +270,9 @@ public class ControllerImpl implements Controller
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
 
-  // WorkerNumber -> WorkOrders
-  private final ConcurrentHashMap<Integer, Set<WorkOrder>> workOrdersToRetry = new ConcurrentHashMap<>();
+  // WorkerNumber -> WorkOrders which need to be retried and our determined by the controller.
+  // Map is always populated in the main controller thread by addToRetryQueue, and pruned in retryFailedTasks.
+  private final Map<Integer, Set<WorkOrder>> workOrdersToRetry = new HashMap<>();
   private volatile DateTime queryStartTime = null;
 
   private volatile DruidNode selfDruidNode;
@@ -287,9 +288,10 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
-    this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec()
-                                                                                      .getQuery()
-                                                                                      .context());
+    this.isDurableStorageEnabled =
+        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec()
+                                                           .getQuery()
+                                                           .context());
 
   }
 
@@ -586,8 +588,10 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Adds the workorders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
+   * Adds the work orders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
    * are work orders which needs reprocessing.
+   * <br></br>
+   * This method is not thread safe, so it should always be called inside the main controller thread.
    */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
   {
@@ -597,9 +601,7 @@ public class ControllerImpl implements Controller
       workerTaskLauncher.submitForRelaunch(worker);
       workOrdersToRetry.compute(worker, (workerNumber, workOrders) -> {
         if (workOrders == null) {
-          Set<WorkOrder> orders = ConcurrentHashMap.newKeySet();
-          orders.addAll(retriableWorkOrders);
-          return orders;
+          return new HashSet<>(retriableWorkOrders);
         } else {
           workOrders.addAll(retriableWorkOrders);
           return workOrders;
@@ -1045,14 +1047,15 @@ public class ControllerImpl implements Controller
    * @param queryKernel
    * @param contactFn
    * @param workers         set of workers to contact
-   * @param successCallBack on successfull api call, custom callback
-   * @param retryOnFailure  if set to true, adds this worker to retry queue. If false, cancel all the futures and propergate the exception to the caller.
+   * @param successCallBack After contacting all the tasks, a custom callback is invoked in the main thread for each successfully contacted task.
+   * @param retryOnFailure  If true, after contacting all the tasks, adds this worker to retry queue in the main thread.
+   *                        If false, cancel all the futures and propagate the exception to the caller.
    */
   private void contactWorkersForStage(
       final ControllerQueryKernel queryKernel,
       final TaskContactFn contactFn,
       final IntSet workers,
-      final TaskContactSuccesss successCallBack,
+      final TaskContactSuccess successCallBack,
       final boolean retryOnFailure
   )
   {
@@ -1066,7 +1069,8 @@ public class ControllerImpl implements Controller
       throw new RuntimeException(e);
     }
 
-    Set<Pair<Integer, String>> failedCalls = ConcurrentHashMap.newKeySet();
+    Set<String> failedCalls = ConcurrentHashMap.newKeySet();
+    Set<String> successfulCalls = ConcurrentHashMap.newKeySet();
 
     for (int workerNumber : workers) {
       final String taskId = taskIds.get(workerNumber);
@@ -1077,7 +1081,7 @@ public class ControllerImpl implements Controller
         @Override
         public void onSuccess(@Nullable Void result)
         {
-          successCallBack.onSuccess(taskId, workerNumber);
+          successfulCalls.add(taskId);
           settableFuture.set(true);
         }
 
@@ -1089,9 +1093,9 @@ public class ControllerImpl implements Controller
                 t,
                 "Detected failure while contacting task[%s]. Initiating relaunch of worker[%d] if applicable",
                 taskId,
-                workerNumber
+                MSQTasks.workerFromTaskId(taskId)
             );
-            failedCalls.add(new Pair<>(workerNumber, taskId));
+            failedCalls.add(taskId);
             settableFuture.set(false);
           } else {
             settableFuture.setException(t);
@@ -1104,9 +1108,13 @@ public class ControllerImpl implements Controller
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(taskFutures, true), true);
 
+    for (String taskId : successfulCalls) {
+      successCallBack.onSuccess(taskId);
+    }
+
     if (retryOnFailure) {
-      for (Pair<Integer, String> workerIdTask : failedCalls) {
-        addToRetryQueue(queryKernel, workerIdTask.lhs, new WorkerRpcFailedFault(workerIdTask.rhs));
+      for (String taskId : failedCalls) {
+        addToRetryQueue(queryKernel, MSQTasks.workerFromTaskId(taskId), new WorkerRpcFailedFault(taskId));
       }
     }
   }
@@ -1134,7 +1142,7 @@ public class ControllerImpl implements Controller
         queryKernel,
         (netClient, taskId, workerNumber) -> (
             netClient.postWorkOrder(taskId, workOrders.get(workerNumber))), workOrders.keySet(),
-        (taskId, workerNumber) -> queryKernel.workOrdersSentForWorker(stageId, workerNumber),
+        (taskId) -> queryKernel.workOrdersSentForWorker(stageId, MSQTasks.workerFromTaskId(taskId)),
         isDurableStorageEnabled
     );
 
@@ -1158,7 +1166,7 @@ public class ControllerImpl implements Controller
             resultPartitionBoundaries
         ),
         workers,
-        (taskId, workerNumber) -> queryKernel.partitionBoundariesSentForWorker(stageId, workerNumber),
+        (taskId) -> queryKernel.partitionBoundariesSentForWorker(stageId, MSQTasks.workerFromTaskId(taskId)),
         isDurableStorageEnabled
     );
 
@@ -2151,10 +2159,11 @@ public class ControllerImpl implements Controller
                 stageWorkOrders.getValue().get(workerNumber)
             ),
             new IntArraySet(stageWorkOrders.getValue().keySet()),
-            (taskId, workerNumber) -> {
+            (taskId) -> {
+              int workerNumber = MSQTasks.workerFromTaskId(taskId);
               queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), workerNumber);
 
-              // remove sucessfully contacted workOrders from workOrdersToRetry
+              // remove successfully contacted workOrders from workOrdersToRetry
               workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
                 if (workOrderSet == null || workOrderSet.size() == 0 || !workOrderSet.remove(stageWorkOrders.getValue()
                                                                                                             .get(
@@ -2168,7 +2177,6 @@ public class ControllerImpl implements Controller
               });
             },
             isDurableStorageEnabled
-
         );
       }
     }
@@ -2384,7 +2392,7 @@ public class ControllerImpl implements Controller
             queryKernel,
             (netClient, taskId, workerNumber) -> netClient.postCleanupStage(taskId, stageId),
             queryKernel.getWorkerInputsForStage(stageId).workers(),
-            (ignore1, ignore2) -> {},
+            (ignore1) -> {},
             false
         );
         queryKernel.finishStage(stageId, true);
@@ -2420,11 +2428,11 @@ public class ControllerImpl implements Controller
   }
 
   /**
-   * Interface used when {@link TaskContactFn#contactTask(WorkerClient, String, int)} return future is successfull.
+   * Interface used when {@link TaskContactFn#contactTask(WorkerClient, String, int)} returns a successful future.
    */
-  private interface TaskContactSuccesss
+  private interface TaskContactSuccess
   {
-    void onSuccess(String taskId, int workerNumber);
+    void onSuccess(String taskId);
 
   }
 }

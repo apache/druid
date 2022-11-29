@@ -62,7 +62,7 @@ public class Limits
   /**
    * Maximum relaunches across all workers.
    */
-  public static final int TOTAL_RELAUNCH_LIMIT = 30;
+  public static final int TOTAL_RELAUNCH_LIMIT = 100;
 
   /**
    * Maximum relaunches per worker. Initial run is not a relaunch. The worker will be spawned 1 + workerRelaunchLimit times before erroring out.

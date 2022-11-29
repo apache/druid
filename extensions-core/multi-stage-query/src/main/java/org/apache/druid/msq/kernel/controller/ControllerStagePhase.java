@@ -87,7 +87,9 @@ public enum ControllerStagePhase
     }
   },
 
-  // Stage currently under retry. priorPhase did not publish its final results yet.
+  // Stages whose workers are currently under relaunch. We can transition out of Retrying state only when all the work orders
+  // of this stage have been sent.
+  // We can transition into Retrying phase when the prior phase did not publish its final results yet.
   RETRYING {
     @Override
     public boolean canTransitionFrom(final ControllerStagePhase priorPhase)
