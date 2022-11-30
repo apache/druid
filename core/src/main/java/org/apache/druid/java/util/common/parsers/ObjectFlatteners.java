@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -250,15 +251,23 @@ public class ObjectFlatteners
      */
     default Map<String, Object> toMap(T obj)
     {
-      return (Map<String, Object>) toPlainJavaType(obj);
+      final Object mapOrNull = toPlainJavaType(obj);
+      if (mapOrNull == null) {
+        return Collections.emptyMap();
+      }
+      return (Map<String, Object>) mapOrNull;
     }
 
     /**
      * Recursively traverse "json" object using a {@link JsonProvider}, converting to Java {@link Map} and {@link List},
      * potentially transforming via {@link #finalizeConversionForMap} as we go
      */
+    @Nullable
     default Object toPlainJavaType(Object o)
     {
+      if (o == null) {
+        return null;
+      }
       final JsonProvider jsonProvider = getJsonProvider();
       if (jsonProvider.isMap(o)) {
         Map<String, Object> actualMap = new HashMap<>();
@@ -287,7 +296,7 @@ public class ObjectFlatteners
         return finalizeConversionForMap(actualList);
       }
       // unknown, just pass it through
-      return o;
+      return finalizeConversionForMap(o);
     }
 
     /**

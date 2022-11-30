@@ -62,10 +62,10 @@ export class WorkbenchQueryPart {
   static getIngestDatasourceFromQueryFragment(queryFragment: string): string | undefined {
     // Assuming the queryFragment is no parsable find the prefix that look like:
     // REPLACE<space>INTO<space><whatever><space>SELECT<space or EOF>
-    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/)?.index;
+    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/i)?.index;
     if (typeof matchInsertReplaceIndex !== 'number') return;
 
-    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/);
+    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/i);
     const fragmentQuery = SqlQuery.maybeParse(
       queryFragment.substring(matchInsertReplaceIndex, matchEnd?.index) + ' SELECT * FROM t',
     );

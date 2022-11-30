@@ -174,8 +174,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -493,22 +491,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /**
-   * Helper method that copies a resource to a temporary file, then returns it.
-   */
-  protected File getResourceAsTemporaryFile(final String resource) throws IOException
-  {
-    final File file = temporaryFolder.newFile();
-    final InputStream stream = getClass().getResourceAsStream(resource);
-
-    if (stream == null) {
-      throw new IOE("No such resource [%s]", resource);
-    }
-
-    ByteStreams.copy(stream, Files.newOutputStream(file.toPath()));
-    return file;
   }
 
   @Nonnull

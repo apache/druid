@@ -56,8 +56,6 @@ This topic contains configuration reference information for the Apache Kafka sup
 
 ## Task Autoscaler Properties
 
-> Note that Task AutoScaler is currently designated as experimental.
-
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enableTaskAutoScaler` | Enable or disable autoscaling. `false` or blank disables the `autoScaler` even when `autoScalerConfig` is not null| no (default == false) |
