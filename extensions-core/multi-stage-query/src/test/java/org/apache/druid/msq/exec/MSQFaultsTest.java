@@ -29,6 +29,7 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
+import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
@@ -40,6 +41,7 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -152,6 +154,29 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertTimeOutOfBoundsFault(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
                      .verifyResults();
+  }
+
+  @Test
+  public void testInsertNullTimestamp()
+  {
+    final RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("dim1", ColumnType.STRING)
+                    .build();
+
+    testIngestQuery()
+        .setSql(
+            "INSERT INTO foo1\n"
+            + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
+            + "FROM foo\n"
+            + "PARTITIONED BY DAY\n"
+            + "CLUSTERED BY dim1")
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
+        .setExpectedMSQFault(InsertTimeNullFault.instance())
+        .verifyResults();
   }
 
   @Test
