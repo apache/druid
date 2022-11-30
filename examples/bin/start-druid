@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -24,7 +24,7 @@ import pathlib
 import multiprocessing
 import argparse
 
-QUICKSTART_ROOT_CONFIG_PATH = "conf/druid/single-server/quickstart"
+BASE_CONFIG_PATH = "conf/druid/base"
 
 MEM_GB_SUFFIX = "g"
 MEM_MB_SUFFIX = "m"
@@ -161,19 +161,19 @@ sample usage:
 
 
 def validate_common_jvm_args(config):
-    if pathlib.Path(f'{config}/_common/common.jvm.config').is_file() is False:
-        raise ValueError(f'_common/common.jvm.config file is missing in the root config, '
-                         f'check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
+    if pathlib.Path('{0}/_common/common.jvm.config'.format(config)).is_file() is False:
+        raise ValueError('_common/common.jvm.config file is missing in the root config, '
+                         'check {0}/_common directory'.format(BASE_CONFIG_PATH))
 
 
 def validate_common_directory(config):
-    if pathlib.Path(f'{config}/_common').is_dir() is False:
+    if pathlib.Path('{0}/_common'.format(config)).is_dir() is False:
         raise ValueError(
-            f'_common directory is missing in the root config, check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
+            '_common directory is missing in the root config, check {0}/_common directory'.format(BASE_CONFIG_PATH))
 
-    if pathlib.Path(f'{config}/_common/common.runtime.properties').is_file() is False:
-        raise ValueError(f'_common/common.runtime.properties file is missing in the root config, '
-                         f'check {QUICKSTART_ROOT_CONFIG_PATH}/_common directory')
+    if pathlib.Path('{0}/_common/common.runtime.properties'.format(config)).is_file() is False:
+        raise ValueError('_common/common.runtime.properties file is missing in the root config, '
+                         'check {0}/_common directory'.format(BASE_CONFIG_PATH))
 
 
 def parse_arguments(args):
@@ -189,8 +189,8 @@ def parse_arguments(args):
         zk = True
     if args.config is not None:
         config = pathlib.Path(os.path.join(os.getcwd(), args.config)).resolve()
-        if os.path.exists(config) is False:
-            raise ValueError(f'config {config} not found')
+        if config.is_dir() == False:
+            raise ValueError('config {0} not found'.format(config))
     if args.memory is not None:
         total_memory = args.memory
     if args.services is not None:
@@ -198,10 +198,10 @@ def parse_arguments(args):
 
         for service in services:
             if service not in DEFAULT_SERVICES:
-                raise ValueError(f'Invalid service name {service}, should be one of {DEFAULT_SERVICES}')
+                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, DEFAULT_SERVICES))
 
             if service in service_list:
-                raise ValueError(f'{service} is specified multiple times')
+                raise ValueError('{0} is specified multiple times'.format(service))
 
             service_list.append(service)
 
@@ -214,11 +214,11 @@ def parse_arguments(args):
 
 
 def print_startup_config(service_list, config, zk):
-    print_if_verbose(f'Starting {service_list}')
-    print_if_verbose(f'Reading config from {config}')
+    print_if_verbose('Starting {0}'.format(service_list))
+    print_if_verbose('Reading config from {0}'.format(config))
     if zk:
-        zk_config = pathlib.Path(f'{os.getcwd()}/../conf/zk').resolve()
-        print_if_verbose(f'Starting zk, reading default config from {zk_config}')
+        zk_config = pathlib.Path('{0}/../conf/zk'.format(os.getcwd())).resolve()
+        print_if_verbose('Starting zk, reading default config from {0}'.format(zk_config))
     print_if_verbose('\n')
 
 
@@ -226,8 +226,8 @@ def middle_manager_task_memory_params_present(config):
     java_opts_property_present = False
     worker_capacity_property_present = False
 
-    if pathlib.Path(f'{config}/middleManager/runtime.properties').is_file():
-        with open(f'{config}/middleManager/runtime.properties') as file:
+    if pathlib.Path('{0}/middleManager/runtime.properties'.format(config)).is_file():
+        with open('{0}/middleManager/runtime.properties'.format(config)) as file:
             for line in file:
                 if line.startswith(TASK_JAVA_OPTS_PROPERTY):
                     java_opts_property_present = True
@@ -238,7 +238,7 @@ def middle_manager_task_memory_params_present(config):
 
 
 def verify_service_config(service, config):
-    path = f'{config}/{service}/jvm.config'
+    path = '{0}/{1}/jvm.config'.format(config, service)
 
     required_parameters = [XMX_PARAMETER, XMS_PARAMETER]
 
@@ -256,16 +256,16 @@ def verify_service_config(service, config):
 
     if len(required_parameters) > 0:
         params = ",".join(required_parameters)
-        raise ValueError(f'{params} missing in {service}/jvm.config')
+        raise ValueError('{0} missing in {1}/jvm.config'.format(params, service))
 
     if service == MIDDLE_MANAGER:
-        if pathlib.Path(f'{config}/{service}/runtime.properties').is_file() is False:
-            raise ValueError(f'{service}/runtime.properties file is missing in the root config')
+        if pathlib.Path('{0}/{1}/runtime.properties'.format(config, service)).is_file() is False:
+            raise ValueError('{0}/runtime.properties file is missing in the root config'.format(service))
 
         mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
 
         if mm_task_java_opts_property is False:
-            raise ValueError(f'{TASK_JAVA_OPTS_PROPERTY} property missing in {service}/runtime.properties')
+            raise ValueError('{0} property missing in {1}/runtime.properties'.format(TASK_JAVA_OPTS_PROPERTY, service))
 
 
 def should_compute_memory(config, total_memory, service_list):
@@ -282,7 +282,7 @@ def should_compute_memory(config, total_memory, service_list):
 
     jvm_config_count = 0
     for service in service_list:
-        if pathlib.Path(f'{config}/{service}/jvm.config').is_file():
+        if pathlib.Path('{0}/{1}/jvm.config'.format(config, service)).is_file():
             jvm_config_count += 1
 
     mm_task_property_present = False
@@ -305,8 +305,8 @@ def should_compute_memory(config, total_memory, service_list):
             "(druid.worker.capacity, druid.indexer.runner.javaOptsArray) is present, "
             "memory argument shouldn't be specified")
         if jvm_config_count == 0:
-            raise ValueError("middleManger configs (druid.indexer.runner.javaOptsArray or druid.worker.capacity) is present in "
-                             "middleManager/runtime.properties, \n "
+            raise ValueError("middleManger configs (druid.indexer.runner.javaOptsArray or druid.worker.capacity) "
+                             "is present in middleManager/runtime.properties, "
                              "add jvm.config for all other services")
         if jvm_config_count != len(service_list):
             raise ValueError("jvm.config file should be present for all services or none")
@@ -343,7 +343,7 @@ def check_memory_constraint(total_memory, services):
     # 80% of total memory >= sum of lower bound service memory should be
     lower_bound_memory = 0
 
-    service_list = services.copy()
+    service_list = list(services)
     if MIDDLE_MANAGER in services:
         service_list.append(TASKS)
 
@@ -353,7 +353,7 @@ def check_memory_constraint(total_memory, services):
     required_memory = int(lower_bound_memory / 0.8)
 
     if total_memory < required_memory:
-        raise ValueError(f'Minimum memory required for starting services is {required_memory}m')
+        raise ValueError('Minimum memory required for starting services is {0}m'.format(required_memory))
 
     if total_memory >= 2 * lower_bound_memory:
         return int(total_memory / 2)
@@ -362,14 +362,14 @@ def check_memory_constraint(total_memory, services):
 
 
 def build_mm_task_java_opts_array(memory_type):
-    task_memory = f'-D{TASK_JAVA_OPTS_PROPERTY}=['
+    task_memory = '-D{0}=['.format(TASK_JAVA_OPTS_PROPERTY)
 
     mem_array = TASK_MEM_MAP.get(memory_type)
 
     java_opts_list = TASK_JAVA_OPTS_ARRAY + mem_array
 
     for item in java_opts_list:
-        task_memory += f'\"{item}\";'
+        task_memory += '\"{0}\";'.format(item)
 
     task_memory = task_memory[:-1]
     task_memory += ']'
@@ -394,16 +394,16 @@ def build_memory_config(service, allocated_memory):
     if service == TASKS:
         memory_type, task_count, task_memory = compute_tasks_memory(allocated_memory)
         java_opts_array = build_mm_task_java_opts_array(memory_type)
-        return [f'-D{TASK_WORKER_CAPACITY_PROPERTY}={task_count}', java_opts_array], task_memory * task_count
+        return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count), java_opts_array], task_memory * task_count
     else:
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
         heap_memory = int(heap_memory)
 
         if direct_memory == 0:
-            return f'-Xms{heap_memory}m -Xmx{heap_memory}m', allocated_memory
+            return '-Xms{0}m -Xmx{0}m'.format(heap_memory), allocated_memory
 
-        return f'-Xms{heap_memory}m -Xmx{heap_memory}m -XX:MaxDirectMemorySize={direct_memory}m', allocated_memory
+        return '-Xms{0}m -Xmx{0}m -XX:MaxDirectMemorySize={1}m'.format(heap_memory, direct_memory), allocated_memory
 
 
 def distribute_memory(services, total_memory):
@@ -411,7 +411,7 @@ def distribute_memory(services, total_memory):
 
     memory_weight_sum = 0
 
-    service_list = services.copy()
+    service_list = list(services)
     if MIDDLE_MANAGER in services:
         service_list.append(TASKS)
 
@@ -449,9 +449,9 @@ def distribute_memory(services, total_memory):
 
         service_memory_config[service], allocated_memory = build_memory_config(service, allocated_memory)
 
-    print_if_verbose(f'\nMemory distribution for services:')
+    print_if_verbose('\nMemory distribution for services:')
     for key, value in service_memory_config.items():
-        print_if_verbose(f'{key}, {value}')
+        print_if_verbose('{0}, {1}'.format(key, value))
     print_if_verbose('\n')
 
     return service_memory_config
@@ -479,16 +479,17 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
             prefix = '!p90 '
 
         if jvm_args is None:
-            commands.append(f'{prefix}{service} bin/run-druid {service} {config}')
+            commands.append('{0}{1} bin/run-druid {1} {2}'.format(prefix, service, config))
         else:
             if service == MIDDLE_MANAGER:
                 task_config = service_memory_config.get(TASKS)
                 task_count = task_config[0]
                 task_memory = task_config[1]
                 commands.append(
-                    f'{prefix}{service} bin/run-druid {service} {config} \'{jvm_args}\' \'{task_count} {task_memory}\'')
+                    '{0}{1} bin/run-druid {1} {2} \'{3}\' \'{4} {5}\''
+                    .format(prefix, service, config, jvm_args, task_count, task_memory))
             else:
-                commands.append(f'{prefix}{service} bin/run-druid {service} {config} \'{jvm_args}\'')
+                commands.append('{0}{1} bin/run-druid {1} {2} \'{3}\''.format(prefix, service, config, jvm_args))
 
     print_if_verbose('Supervise script args:')
     for item in commands:
@@ -513,7 +514,7 @@ def main():
     os.chdir(os.path.dirname(sys.argv[0]))
 
     if config == "":
-        config = pathlib.Path(f'{os.getcwd()}/../{QUICKSTART_ROOT_CONFIG_PATH}').resolve()
+        config = pathlib.Path('{0}/../{1}'.format(os.getcwd(), BASE_CONFIG_PATH)).resolve()
 
     validate_common_directory(config)
 
@@ -525,9 +526,9 @@ def main():
         # if memory is to be computed, _common directory should contain common.jvm.config
         validate_common_jvm_args(config)
         memory_in_mega_bytes = convert_total_memory_string(total_memory)
-        print_if_verbose(f'Total memory is {memory_in_mega_bytes}m\n')
+        print_if_verbose('Total memory is {0}m\n'.format(memory_in_mega_bytes))
         memory_to_be_used = check_memory_constraint(memory_in_mega_bytes, service_list)
-        print_if_verbose(f'Memory used for services & tasks {memory_to_be_used}m\n')
+        print_if_verbose('Memory used for services & tasks {0}m\n'.format(memory_to_be_used))
         service_memory_config = distribute_memory(service_list, memory_to_be_used)
     else:
         print_if_verbose('Not computing memory distribution, reading memory specification from service jvm.config & '
