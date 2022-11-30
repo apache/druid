@@ -62,9 +62,6 @@ jobs:
           ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
           -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
-      - name: clean local changes
-        run: git checkout .
-
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
         run: |
