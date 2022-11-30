@@ -26,17 +26,13 @@ The following features are marked [experimental](./experimental.md) in the Druid
 
 This document includes each page that mentions an experimental feature. To graduate a feature, remove all mentions of its experimental status on all relevant pages.
 
-Note that this document does not track the status of contrib extensions, some of which are experimental.
+Note that this document does not track the status of contrib extensions, all of which are considered experimental.
 
 ## SQL-based ingestion
 
 - [SQL-based ingestion](../multi-stage-query/index.md)
 - [SQL-based ingestion concepts](../multi-stage-query/concepts.md)
 - [SQL-based ingestion and multi-stage query task API](../multi-stage-query/api.md)
-
-## Nested columns
-
-- [Nested columns](../querying/nested-columns.md)
 
 ## Indexer process
 
@@ -52,10 +48,6 @@ Note that this document does not track the status of contrib extensions, some of
 - [Configuration reference](../configuration/index.md#overlord-operations)
 - [Task reference](../ingestion/tasks.md#locking)
 - [Design](../design/architecture.md#availability-and-consistency)
-
-## Moments sketch
-
-- [Aggregations](../querying/aggregations.md#moments-sketch-experimental)
 
 ## Front coding
 
