@@ -31,6 +31,14 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.List;
 
+
+/**
+ * A Cursor that iterates over a user created list.
+ * This is used to test the base cursor of an UnnestCursor.
+ * Usages can be found in tests of {@link ColumnarValueUnnestCursor} in {@link ColumnarValueUnnestCursorTest}
+ * However this cannot help with {@link DimensionUnnestCursor}.
+ * Tests for {@link DimensionUnnestCursor} are done alongside tests for {@link UnnestStorageAdapterTest}
+ */
 public class ListCursor implements Cursor
 {
   List<Object> baseList;

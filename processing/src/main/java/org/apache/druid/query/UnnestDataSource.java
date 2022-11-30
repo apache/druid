@@ -35,6 +35,15 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+/**
+ * The data source for representing an unnest operation.
+ *
+ * An unnest data source has the following:
+ * a base data source which is to be unnested
+ * the column name of the MVD which will be unnested
+ * the name of the column that will hold the unnested values
+ * and an allowlist serving as a filter of which values in the MVD will be unnested.
+ */
 public class UnnestDataSource implements DataSource
 {
   private final DataSource base;

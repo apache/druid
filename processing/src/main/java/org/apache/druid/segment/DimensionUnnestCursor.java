@@ -33,6 +33,46 @@ import javax.annotation.Nullable;
 import java.util.BitSet;
 import java.util.LinkedHashSet;
 
+/**
+ * The cursor to help unnest MVDs with dictionary encoding.
+ * Consider a segment has 2 rows
+ * ['a', 'b', 'c']
+ * ['d', 'c']
+ *
+ * Considering dictionary encoding, these are represented as
+ *
+ * 'a' -> 0
+ * 'b' -> 1
+ * 'c' -> 2
+ * 'd' -> 3
+ *
+ * The baseCursor points to the row of IndexedInts [0, 1, 2]
+ * while the unnestCursor with each call of advance() moves over individual elements.
+ *
+ * advance() -> 0 -> 'a'
+ * advance() -> 1 -> 'b'
+ * advance() -> 2 -> 'c'
+ * advance() -> 3 -> 'd' (advances base cursor first)
+ * advance() -> 2 -> 'c'
+ *
+ * Total 5 advance calls above
+ *
+ * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
+ * the next available match. The hashSet is converted into a bitset (during initialization) for efficiency.
+ * If allowSet is ['c', 'd'] then the advance moves over to the next available match
+ *
+ * advance() -> 2 -> 'c'
+ * advance() -> 3 -> 'd' (advances base cursor first)
+ * advance() -> 2 -> 'c'
+ *
+ * Total 3 advance calls in this case
+ *
+ * The index reference points to the index of each row that the unnest cursor is accessing
+ * The indexedInts for each row are held in the indexedIntsForCurrentRow object
+ *
+ * The needInitialization flag sets up the initial values of indexedIntsForCurrentRow at the beginning of the segment
+ *
+ */
 public class DimensionUnnestCursor implements Cursor
 {
   private final Cursor baseCursor;
@@ -188,6 +228,9 @@ public class DimensionUnnestCursor implements Cursor
         };
       }
 
+      /*
+      This ideally should not be called. If called delegate using the makeDimensionSelector
+       */
       @Override
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {

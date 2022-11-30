@@ -31,6 +31,10 @@ import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 
+/**
+ * The segment reference for the Unnest Data Source.
+ * The input column name, output name and the allowSet follow from {@link org.apache.druid.query.UnnestDataSource}
+ */
 public class UnnestSegmentReference implements SegmentReference
 {
   private static final Logger log = new Logger(UnnestSegmentReference.class);

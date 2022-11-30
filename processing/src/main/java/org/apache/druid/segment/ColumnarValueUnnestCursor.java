@@ -30,6 +30,31 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+/**
+ * The cursor to help unnest MVDs without dictionary encoding.
+ * Consider a segment has 2 rows
+ * ['a', 'b', 'c']
+ * ['d', 'e']
+ *
+ * The baseCursor points to the row ['a', 'b', 'c']
+ * while the unnestCursor with each call of advance() moves over individual elements.
+ *
+ * unnestCursor.advance() -> 'a'
+ * unnestCursor.advance() -> 'b'
+ * unnestCursor.advance() -> 'c'
+ * unnestCursor.advance() -> 'd' (advances base cursor first)
+ * unnestCursor.advance() -> 'e'
+ *
+ *
+ * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
+ * the next available match.
+ *
+ * The index reference points to the index of each row that the unnest cursor is accessing through currentVal
+ * The index ranges from 0 to the size of the list in each row which is held in the unnestListForCurrentRow
+ *
+ * The needInitialization flag sets up the initial values of unnestListForCurrentRow at the beginning of the segment
+ *
+ */
 public class ColumnarValueUnnestCursor implements Cursor
 {
   private final Cursor baseCursor;
@@ -203,6 +228,11 @@ public class ColumnarValueUnnestCursor implements Cursor
     baseCursor.reset();
   }
 
+  /**
+   * This method populates the objects when the base cursor moves to the next row
+   *
+   * @param firstRun flag to populate one time object references to hold values for unnest cursor
+   */
   private void getNextRow(boolean firstRun)
   {
     currentVal = this.columnValueSelector.getObject();

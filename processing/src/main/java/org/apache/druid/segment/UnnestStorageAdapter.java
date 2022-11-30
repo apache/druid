@@ -38,6 +38,11 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 
+/**
+ * This class serves as the Storage Adapter for the Unnest Segment and is responsible for creating the cursors
+ * If the column is dictionary encoded it creates {@link DimensionUnnestCursor} else {@link ColumnarValueUnnestCursor}
+ * These cursors help navigate the segments for these cases
+ */
 public class UnnestStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
