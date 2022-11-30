@@ -58,8 +58,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
         null,
         null
     );
-
-    LOG.info("Verifying datasource [%s] availability for SQL queries", datasource);
+    
     try {
       //noinspection unchecked
       queryClient.query(getQueryURL(broker), query);
