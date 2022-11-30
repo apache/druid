@@ -149,8 +149,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 
 #### Task Autoscaler Properties
 
-> Note that Task AutoScaler is currently designated as experimental.
-
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
 | `enableTaskAutoScaler` | Enable or disable the auto scaler. When false or absent, Druid disables the `autoScaler` even when `autoScalerConfig` is not null.| no (default == false) |
