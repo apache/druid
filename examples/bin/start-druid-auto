@@ -23,10 +23,10 @@ WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
 if [ -x "$(command -v python3)" ]
 then
-  exec python3 "$WHEREAMI/start-druid" "$@"
+  exec python3 "$WHEREAMI/start-druid-main" "$@"
 elif [ -x "$(command -v python2)" ]
 then
-  exec python2 "$WHEREAMI/start-druid" "$@"
+  exec python2 "$WHEREAMI/start-druid-main" "$@"
 else
-  exec "$WHEREAMI/start-druid" "$@"
+  exec "$WHEREAMI/start-druid-main" "$@"
 fi
