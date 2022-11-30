@@ -29,6 +29,7 @@ import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -65,7 +66,7 @@ public class MSQWarningsTest extends MSQTestBase
   @Before
   public void setUp3() throws IOException
   {
-    toRead = getResourceAsTemporaryFile("/unparseable.gz");
+    toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
     toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     rowSignature = RowSignature.builder()
