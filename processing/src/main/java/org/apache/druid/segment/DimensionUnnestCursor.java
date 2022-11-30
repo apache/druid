@@ -57,7 +57,7 @@ import java.util.LinkedHashSet;
  *
  * Total 5 advance calls above
  *
- * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
+ * The allowSet, if available, helps skip over elements that are not in the allowList by moving the cursor to
  * the next available match. The hashSet is converted into a bitset (during initialization) for efficiency.
  * If allowSet is ['c', 'd'] then the advance moves over to the next available match
  *
