@@ -63,7 +63,7 @@ public class WorkerSketchFetcher implements AutoCloseable
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
-    this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool");
+    this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
     this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
   }
 
