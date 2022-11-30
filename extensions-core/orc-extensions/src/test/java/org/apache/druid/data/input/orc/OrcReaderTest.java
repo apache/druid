@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FileEntity;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -566,6 +567,44 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     }
     finally {
       ExpressionProcessing.initializeForTests(null);
+    }
+  }
+
+  @Test
+  public void testSimpleNullValues() throws IOException
+  {
+    final InputFormat inputFormat = new OrcInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of()
+        ),
+        null,
+        new Configuration()
+    );
+    final InputEntityReader reader = createReader(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("c1"),
+                new StringDimensionSchema("c2")
+            )
+        ),
+        inputFormat,
+        "example/test_simple.orc"
+    );
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      Assert.assertTrue(iterator.hasNext());
+      InputRow row = iterator.next();
+
+      Assert.assertEquals(DateTimes.of("2022-01-01T00:00:00.000Z"), row.getTimestamp());
+      Assert.assertEquals("true", Iterables.getOnlyElement(row.getDimension("c1")));
+      Assert.assertEquals("str1", Iterables.getOnlyElement(row.getDimension("c2")));
+
+      row = iterator.next();
+      Assert.assertEquals(DateTimes.of("2022-01-02T00:00:00.000Z"), row.getTimestamp());
+      Assert.assertEquals(ImmutableList.of(), row.getDimension("c1"));
+      Assert.assertEquals(ImmutableList.of(), row.getDimension("c2"));
+      Assert.assertFalse(iterator.hasNext());
     }
   }
 
