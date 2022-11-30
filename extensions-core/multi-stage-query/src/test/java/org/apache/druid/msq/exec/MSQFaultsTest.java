@@ -19,21 +19,36 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertCannotReplaceExistingSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
+import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
+import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
+import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.isA;
 
@@ -137,5 +152,175 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertTimeOutOfBoundsFault(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
                      .verifyResults();
+  }
+
+  @Test
+  public void testInsertWithTooManySegments() throws IOException
+  {
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("rowsPerSegment", 1)
+                                              .build();
+
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    File file = MSQTestFileUtils.generateTemporaryNdJsonFile(30000, 1);
+    String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
+
+    testIngestQuery().setSql(" insert into foo1 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(new TooManyPartitionsFault(25000))
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertWithUnsupportedColumnType()
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            " insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + " col1\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"},{\"name\": \"col1\", \"type\": \"long_array\"} ]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day"
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQFault(UnknownFault.forMessage(
+            "org.apache.druid.java.util.common.ISE: Cannot create dimension for type [ARRAY<LONG>]"))
+        .verifyResults();
+  }
+
+  @Test
+  public void testInsertWithManyColumns()
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+
+    final int numColumns = 2000;
+
+    String columnNames = IntStream.range(1, numColumns)
+                                  .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
+
+    String externSignature = IntStream.range(1, numColumns)
+                                      .mapToObj(i -> StringUtils.format(
+                                          "{\"name\": \"col%d\", \"type\": \"string\"}",
+                                          i
+                                      ))
+                                      .collect(Collectors.joining(", "));
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            " insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + " %s\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, %s]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day",
+            columnNames,
+            externSignature
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQFault(new TooManyColumnsFault(numColumns + 2, 2000))
+        .verifyResults();
+  }
+
+  @Test
+  public void testInsertWithHugeClusteringKeys()
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+
+    final int numColumns = 1700;
+
+    String columnNames = IntStream.range(1, numColumns)
+                                  .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
+
+    String clusteredByClause = IntStream.range(1, numColumns + 1)
+                                        .mapToObj(String::valueOf)
+                                        .collect(Collectors.joining(", "));
+
+    String externSignature = IntStream.range(1, numColumns)
+                                      .mapToObj(i -> StringUtils.format(
+                                          "{\"name\": \"col%d\", \"type\": \"string\"}",
+                                          i
+                                      ))
+                                      .collect(Collectors.joining(", "));
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            " insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + " %s\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, %s]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day CLUSTERED BY %s",
+            columnNames,
+            externSignature,
+            clusteredByClause
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
+        .verifyResults();
+  }
+
+  @Test
+  public void testTooManyInputFiles() throws IOException
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+
+    final int numFiles = 20000;
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            "insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day",
+            externalFiles
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
+        .verifyResults();
   }
 }
