@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -39,13 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
  */
-public class WorkerSketchFetcher
+public class WorkerSketchFetcher implements AutoCloseable
 {
   private static final Logger log = new Logger(WorkerSketchFetcher.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
@@ -63,7 +63,7 @@ public class WorkerSketchFetcher
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
-    this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool");
     this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
   }
 
@@ -336,5 +336,11 @@ public class WorkerSketchFetcher
     } else {
       return either.valueOrThrow().size();
     }
+  }
+
+  @Override
+  public void close()
+  {
+    executorService.shutdownNow();
   }
 }
