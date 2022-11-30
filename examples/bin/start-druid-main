@@ -24,7 +24,7 @@ import pathlib
 import multiprocessing
 import argparse
 
-BASE_CONFIG_PATH = "conf/druid/base"
+BASE_CONFIG_PATH = "conf/druid/auto"
 
 MEM_GB_SUFFIX = "g"
 MEM_MB_SUFFIX = "m"
@@ -456,20 +456,21 @@ def distribute_memory(services, total_memory):
 
     return service_memory_config
 
+def append_command(commands, command):
+    commands.append('--command')
+    commands.append(command)
 
 def build_supervise_script_arguments(service_list, service_memory_config, config, zk):
-    args = []
     commands = []
-    args.append('supervise')
-    args.append('-a')
+    commands.append('supervise')
 
-    commands.append(":verify bin/verify-java")
-    commands.append(":verify bin/verify-default-ports")
-    commands.append(":notify bin/greet")
-    commands.append(":kill-timeout 10")
+    append_command(commands, ":verify bin/verify-java")
+    append_command(commands, ":verify bin/verify-default-ports")
+    append_command(commands, ":notify bin/greet")
+    append_command(commands, ":kill-timeout 10")
 
     if zk:
-        commands.append("!p10 zk bin/run-zk conf")
+        append_command(commands, "!p10 zk bin/run-zk conf")
 
     for service in service_list:
         jvm_args = service_memory_config.get(service)
@@ -479,17 +480,18 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
             prefix = '!p90 '
 
         if jvm_args is None:
-            commands.append('{0}{1} bin/run-druid {1} {2}'.format(prefix, service, config))
+            append_command(commands, '{0}{1} bin/run-druid {1} {2}'.format(prefix, service, config))
         else:
             if service == MIDDLE_MANAGER:
                 task_config = service_memory_config.get(TASKS)
                 task_count = task_config[0]
                 task_memory = task_config[1]
-                commands.append(
+                append_command(
+                    commands,
                     '{0}{1} bin/run-druid {1} {2} \'{3}\' \'{4} {5}\''
                     .format(prefix, service, config, jvm_args, task_count, task_memory))
             else:
-                commands.append('{0}{1} bin/run-druid {1} {2} \'{3}\''.format(prefix, service, config, jvm_args))
+                append_command(commands, '{0}{1} bin/run-druid {1} {2} \'{3}\''.format(prefix, service, config, jvm_args))
 
     print_if_verbose('Supervise script args:')
     for item in commands:
@@ -497,8 +499,7 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
 
     print_if_verbose('\n')
 
-    args.append(",".join(commands))
-    return args
+    return commands
 
 
 def main():
