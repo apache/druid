@@ -62,6 +62,21 @@ jobs:
           ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
           -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
+      - name: clean local changes
+        run: git checkout .
+
+      - name: license checks
+        if: ${{ matrix.java == 'jdk8' }}
+        run: |
+          ./.github/scripts/license_checks_script.sh
+
+      - name: license checks for hadoop3
+        if: ${{ matrix.java == 'jdk8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop3
+        run: |
+          ./.github/scripts/license_checks_script.sh
+
       - name: maven install
         if: ${{ matrix.java == 'jdk8' }}
         run: |
@@ -149,21 +164,6 @@ jobs:
         # errorprone requires JDK 11
         # Strict compilation requires more than 2 GB
         run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
-
-      - name: clean local changes
-        run: git checkout .
-
-      - name: license checks
-        if: ${{ matrix.java == 'jdk8' }}
-        run: |
-          ./.github/scripts/license_checks_script.sh
-
-      - name: license checks for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
-        run: |
-          ./.github/scripts/license_checks_script.sh
 
       - name: analyze dependencies
         if: ${{ matrix.java == 'jdk8' }}
