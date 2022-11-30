@@ -89,7 +89,7 @@ curl --location --request POST 'https://<username>:<password>@<your-instance>:<p
 import json
 import requests
 
-# Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
+# Make sure you replace `your-instance`, and `port` with the values for your deployment.
 url = "https://<your-instance>:<port>/druid/v2/sql/task/"
 
 payload = json.dumps({
@@ -102,7 +102,7 @@ headers = {
   'Content-Type': 'application/json'
 }
 
-response = requests.post(url, headers=headers, data=payload, auth=(<username>, <password>))
+response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
 
 print(response.text)
 
@@ -152,13 +152,13 @@ curl --location --request GET 'https://<username>:<password>@<your-instance>:<po
 ```python
 import requests
 
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
+# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/status"
 
 payload={}
 headers = {}
 
-response = requests.get(url, headers=headers, data=payload, auth=(<username>, <password>))
+response = requests.get(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
 
 print(response.text)
 ```
@@ -228,11 +228,11 @@ curl --location --request GET 'https://<username>:<password>@<your-instance>:<po
 ```python
 import requests
 
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
+# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/reports"
 
 headers = {}
-response = requests.get(url, headers=headers, auth=(<username>, <password>))
+response = requests.get(url, headers=headers, auth=('USER', 'PASSWORD'))
 print(response.text)
 ```
 
@@ -599,13 +599,13 @@ curl --location --request POST 'https://<username>:<password>@<your-instance>:<p
 ```python
 import requests
 
-# Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
+# Make sure you replace `your-instance`, `port`, and `taskId` with the values for your deployment.
 url = "https://<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown"
 
 payload={}
 headers = {}
 
-response = requests.post(url, headers=headers, data=payload, auth=(<username>, <password>))
+response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
 
 print(response.text)
 ```
