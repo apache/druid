@@ -65,13 +65,21 @@ The links that follow are the raw GitHub URLs, so you can use them to download t
 
 ## Contributing
 
-If you build a Jupyter tutorial, you need to do a few things to add it to the docs in addition to saving the notebook in this directory:
+If you build a Jupyter tutorial, you need to do a few things to add it to the docs in addition to saving the notebook in this directory. The process requires two PRs to the repo.
 
-- Clear the outputs from your notebook before you make the PR. You can use the following command: 
+For the first PR, do the following:
+
+1. Clear the outputs from your notebook before you make the PR. You can use the following command: 
 
    ```bash
    jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace ./path/to/notebook/notebookName.ipynb
    ```
 
-- Update the list of [Tutorials](#tutorials) on this page and in the [ Jupyter tutorial index page](../../../docs/tutorials/tutorial-jupyter-index.md#tutorials) in the `docs/tutorials` directory. When updating `tutorial-jupyter-index.md`, make sure you provide the URL to the raw version of the file. Since you need to specify a branch, the URL will 404 until your PR is merged and the file exists on master.
+2. Create the PR as you normally would. Make sure to note that this PR is the one that contains only the Jupyter notebook and that there will be a subsequent PR that updates related pages.
 
+3. After this first PR is merged, grab the "raw" URL for the file from GitHub. For example, navigate to the file in the GitHub web UI and select **Raw**. Use the URL for this in the second PR as the download link.
+
+For the second PR, do the following:
+
+1. Update the list of [Tutorials](#tutorials) on this page and in the [ Jupyter tutorial index page](../../../docs/tutorials/tutorial-jupyter-index.md#tutorials) in the `docs/tutorials` directory. 
+2. Updating `tutorial-jupyter-index.md` and provide the URL to the raw version of the file that becomes available after the first PR is merged.
