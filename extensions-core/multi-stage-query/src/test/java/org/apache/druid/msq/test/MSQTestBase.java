@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.io.ByteStreams;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -59,7 +58,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -194,8 +192,7 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
- * and populates data for the datasources. The ruimport org.apache.druid.initialization.CoreInjectorBuilder;
-nner does not go via the HTTP layer for communication between the
+ * and populates data for the datasources. The runner does not go via the HTTP layer for communication between the
  * various MSQ processes.
  *
  * Controller -> Coordinator (Coordinator is mocked)
