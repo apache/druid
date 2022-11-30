@@ -157,7 +157,7 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertNullTimestamp()
+  public void testInsertTimeNullFault()
   {
     final RowSignature rowSignature =
         RowSignature.builder()
