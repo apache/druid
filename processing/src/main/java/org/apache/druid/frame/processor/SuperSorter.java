@@ -507,7 +507,7 @@ public class SuperSorter
             final List<PartitionedReadableFrameChannel> partitionedReadableFrameChannels = new ArrayList<>();
             for (long i = currentSetStart; i < currentSetStart + maxChannelsPerProcessor; i++) {
               if (inputsReady.remove(i)) {
-                String levelAndRankKey = StringUtils.format("merged.%d.%d", inLevel, i);
+                String levelAndRankKey = mergerOutputFileName(inLevel, i);
                 PartitionedReadableFrameChannel partitionedReadableFrameChannel =
                     levelAndRankToReadableChannelMap.remove(levelAndRankKey)
                                                     .getReadableChannelSupplier()
@@ -566,7 +566,7 @@ public class SuperSorter
 
     for (long i = 0; i < numInputs; i++) {
       in.add(
-          levelAndRankToReadableChannelMap.get(StringUtils.format("merged.%d.%d", inLevel, i))
+          levelAndRankToReadableChannelMap.get(mergerOutputFileName(inLevel, i))
                                           .getReadableChannelSupplier()
                                           .get()
                                           .getReadableFrameChannel(ultimateMergersRunSoFar)
@@ -588,13 +588,13 @@ public class SuperSorter
       final long rank,
       final List<ReadableFrameChannel> in,
       @Nullable final ClusterByPartitions partitions,
-      List<PartitionedReadableFrameChannel> partitionedReadableChannelsToClose
+      final List<PartitionedReadableFrameChannel> partitionedReadableChannelsToClose
   )
   {
     try {
       final WritableFrameChannel writableChannel;
       final MemoryAllocator frameAllocator;
-      String levelAndRankKey = StringUtils.format("merged.%d.%d", level, rank);
+      String levelAndRankKey = mergerOutputFileName(level, rank);
 
       if (totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
         final int intRank = Ints.checkedCast(rank);
@@ -639,7 +639,10 @@ public class SuperSorter
               partitionedReadableFrameChannel.close();
             }
             catch (IOException e) {
-              log.warn(e, "Could not close channel for level [%d] and rank [%d]", level, rank);
+              throw new UncheckedIOException(
+                  StringUtils.format("Could not close channel for level [%d] and rank [%d]", level, rank),
+                  e
+              );
             }
           }
         }
@@ -821,6 +824,12 @@ public class SuperSorter
 
     inputChannelsToRead.clear();
   }
+
+  private String mergerOutputFileName(final int level, final long rank)
+  {
+    return StringUtils.format("merged.%d.%d", level, rank);
+  }
+
 
   /**
    * Returns a string encapsulating the current state of this object.

@@ -123,7 +123,7 @@ public class S3StorageConnectorTest
   {
     String data = "test";
 
-    // normal reads
+    // non empty reads
     for (int start = 0; start < data.length(); start++) {
       for (int length = 1; length <= data.length() - start; length++) {
         String dataQueried = data.substring(start, start + length);
@@ -148,7 +148,7 @@ public class S3StorageConnectorTest
       }
     }
 
-    // 0 size read
+    // empty read
     EasyMock.reset(S3_CLIENT);
     S3Object s3Object = new S3Object();
     s3Object.setObjectContent(

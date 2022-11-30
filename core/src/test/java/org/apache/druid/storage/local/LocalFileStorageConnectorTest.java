@@ -161,7 +161,7 @@ public class LocalFileStorageConnectorTest
       outputStream.write(data.getBytes(StandardCharsets.UTF_8));
     }
 
-    // normal reads
+    // non empty reads
     for (int start = 0; start < data.length(); start++) {
       for (int length = 1; length <= data.length() - start; length++) {
         InputStream is = storageConnector.readRange(uuid, start, length);
@@ -172,7 +172,7 @@ public class LocalFileStorageConnectorTest
       }
     }
 
-    // 0 size read
+    // empty read
     InputStream is = storageConnector.readRange(uuid, 0, 0);
     byte[] dataBytes = new byte[0];
     Assert.assertEquals(is.read(dataBytes), -1);
