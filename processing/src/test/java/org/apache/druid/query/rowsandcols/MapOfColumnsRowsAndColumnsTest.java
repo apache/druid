@@ -19,7 +19,13 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.Collections;
 
 public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase<MapOfColumnsRowsAndColumns>
 {
@@ -27,5 +33,46 @@ public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase<MapOf
   public MapOfColumnsRowsAndColumns makeRowsAndColumns(MapOfColumnsRowsAndColumns input)
   {
     return input;
+  }
+
+  @Test
+  public void testMakeWithEmptyAndNull()
+  {
+    boolean exceptionThrown = false;
+    try {
+      MapOfColumnsRowsAndColumns.fromMap(null);
+    }
+    catch (ISE ex) {
+      Assert.assertEquals("map[null] cannot be null or empty.", ex.getMessage());
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+
+    exceptionThrown = false;
+    try {
+      MapOfColumnsRowsAndColumns.fromMap(Collections.emptyMap());
+    }
+    catch (ISE ex) {
+      Assert.assertEquals("map[{}] cannot be null or empty.", ex.getMessage());
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+  }
+
+  @Test
+  public void testExceptionOnMismatchedCells()
+  {
+    boolean exceptionThrown = false;
+    try {
+      MapOfColumnsRowsAndColumns.of(
+          "1", new IntArrayColumn(new int[]{0}),
+          "2", new IntArrayColumn(new int[]{0, 1})
+      );
+    }
+    catch (ISE ex) {
+      Assert.assertEquals("Mismatched numCells, expectedNumCells[1], actual[2] from col[2]", ex.getMessage());
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
   }
 }

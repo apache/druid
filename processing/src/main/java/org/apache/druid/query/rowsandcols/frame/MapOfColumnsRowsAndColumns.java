@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.frame;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -30,6 +31,16 @@ import java.util.Set;
 
 public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 {
+  public static MapOfColumnsRowsAndColumns of(String name, Column col)
+  {
+    return fromMap(ImmutableMap.of(name, col));
+  }
+
+  public static MapOfColumnsRowsAndColumns of(String name, Column col, String name2, Column col2)
+  {
+    return fromMap(ImmutableMap.of(name, col, name2, col2));
+  }
+
   public static MapOfColumnsRowsAndColumns fromMap(Map<String, Column> map)
   {
     if (map == null || map.isEmpty()) {

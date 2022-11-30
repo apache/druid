@@ -24,6 +24,7 @@ import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
@@ -31,8 +32,10 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -82,6 +85,31 @@ public class WindowAggregateProcessorTest
 
     final RowsAndColumns results = processor.process(rac);
     expectations.validate(results);
+  }
+
+  @Test
+  public void testValidateEquality()
+  {
+    WindowAggregateProcessor processor = new WindowAggregateProcessor(
+        Arrays.asList(
+            new LongSumAggregatorFactory("sumFromLong", "intCol"),
+            new LongSumAggregatorFactory("sumFromDouble", "doubleCol"),
+            new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
+            new DoubleMaxAggregatorFactory("maxFromDouble", "doubleCol")
+        ),
+        Arrays.asList(
+            new LongMaxAggregatorFactory("cummMax", "intCol"),
+            new DoubleSumAggregatorFactory("cummSum", "doubleCol")
+        )
+    );
+
+    Assert.assertTrue(processor.validateEquivalent(processor));
+    Assert.assertFalse(processor.validateEquivalent(new WindowRowNumberProcessor("bob")));
+    Assert.assertFalse(processor.validateEquivalent(new WindowAggregateProcessor(processor.getAggregations(), null)));
+    Assert.assertFalse(processor.validateEquivalent(
+        new WindowAggregateProcessor(new ArrayList<>(), processor.getCumulativeAggregations())
+    ));
+    Assert.assertFalse(processor.validateEquivalent(new WindowAggregateProcessor(new ArrayList<>(), null)));
   }
 
 }

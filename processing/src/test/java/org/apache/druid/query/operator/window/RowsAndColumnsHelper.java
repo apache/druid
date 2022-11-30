@@ -131,6 +131,10 @@ public class RowsAndColumnsHelper
 
   public void validate(String name, RowsAndColumns rac)
   {
+    if (fullColumnSet != null) {
+      Assert.assertEquals(name, fullColumnSet, rac.getColumnNames());
+    }
+
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
       entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), rac.findColumn(entry.getKey()));
     }
