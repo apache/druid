@@ -8,4 +8,6 @@ github:
 semaphore:
   enable: true
   pipeline_enable: false
-  branches: []
+  branches:
+  - master
+  - /^.*-confluent$/
