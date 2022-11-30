@@ -38,17 +38,22 @@ jobs:
   static-checks:
     strategy:
       matrix:
-        java: [ '8', '11', '17' ]
+        java: [ 'jdk8', 'jdk11', 'jdk17' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: setup java ${{ matrix.java }}
+      - name: set java version
+        run: |
+          export jdk=${{ matrix.java }}
+          echo "java_version=${jdk:3}" >> $GITHUB_ENV
+
+      - name: setup ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
-          java-version: ${{ matrix.java }}
+          java-version: ${{ env.java_version }}
           cache: 'maven'
 
       - name: packaging check
@@ -58,43 +63,43 @@ jobs:
           -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
       - name: maven install
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: animal sniffer checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
 
       - name: checkstyle
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} enforcer:enforce --fail-at-end
 
       - name: forbidden api checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
       - name: pmd checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
 
       - name: spotbugs checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
       - name: script checks
         # who watches the watchers?
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: ./check_test_suite_test.py
 
       - name: intellij inspections
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           docker run --rm \
           -v $(pwd):/project \
@@ -106,13 +111,13 @@ jobs:
           --scope JavaInspectionsScope
 
       - name: setup node
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         uses: actions/setup-node@v3
         with:
-          node-version: 16.17.0
+          node-version: 16.jdk17.0
 
       - name: docs
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           (cd website && npm install)
           cd website
@@ -120,14 +125,14 @@ jobs:
           npm run spellcheck
 
       - name: web console
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ${MVN} test -pl 'web-console'
           cd web-console
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/setup_generate_license.sh
           sudo apt-get update && sudo apt-get install python3 -y
@@ -140,30 +145,33 @@ jobs:
           web-console/script/druid stop
 
       - name: (openjdk11) strict compilation
-        if: ${{ matrix.java == '11' }}
+        if: ${{ matrix.java == 'jdk11' }}
         # errorprone requires JDK 11
         # Strict compilation requires more than 2 GB
         run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+      - name: clean local changes
+        run: git checkout .
+
       - name: license checks
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/license_checks_script.sh
 
       - name: license checks for hadoop3
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         env:
           HADOOP_PROFILE: -Phadoop3
         run: |
           ./.github/scripts/license_checks_script.sh
 
       - name: analyze dependencies
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
       - name: analyze dependencies for hadoop3
-        if: ${{ matrix.java == '8' }}
+        if: ${{ matrix.java == 'jdk8' }}
         env:
           HADOOP_PROFILE: -Phadoop3
         run: |
