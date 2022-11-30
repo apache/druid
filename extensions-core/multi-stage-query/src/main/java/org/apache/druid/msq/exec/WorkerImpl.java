@@ -571,12 +571,24 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
+    }
+    if (!WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(stageKernelMap.get(stageId).getPhase())) {
+      throw new ISE("Requested statistics snapshot in unexpected worker phase %s", stageKernelMap.get(stageId).getPhase());
+    }
     return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
+    }
+    if (!WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(stageKernelMap.get(stageId).getPhase())) {
+      throw new ISE("Requested statistics snapshot in unexpected worker phase %s", stageKernelMap.get(stageId).getPhase());
+    }
     ClusterByStatisticsSnapshot snapshot = stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
     return snapshot.getSnapshotForTimeChunk(timeChunk);
   }

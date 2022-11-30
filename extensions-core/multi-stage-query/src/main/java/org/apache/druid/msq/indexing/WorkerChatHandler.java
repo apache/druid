@@ -24,6 +24,7 @@ import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.druid.frame.file.FrameFileHttpResponseHandler;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
@@ -193,10 +194,17 @@ public class WorkerChatHandler implements ChatHandler
     ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
     ClusterByStatisticsSnapshot clusterByStatisticsSnapshot;
     StageId stageId = new StageId(queryId, stageNumber);
-    clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
-    return Response.status(Response.Status.ACCEPTED)
-                   .entity(clusterByStatisticsSnapshot)
-                   .build();
+    try {
+      clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
+      return Response.status(Response.Status.ACCEPTED)
+                     .entity(clusterByStatisticsSnapshot)
+                     .build();
+    }
+    catch (ISE e) {
+      log.error(e, "Invalid request for key statistics");
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .build();
+    }
   }
 
   @POST
@@ -213,10 +221,17 @@ public class WorkerChatHandler implements ChatHandler
     ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
     ClusterByStatisticsSnapshot snapshotForTimeChunk;
     StageId stageId = new StageId(queryId, stageNumber);
-    snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
-    return Response.status(Response.Status.ACCEPTED)
-                   .entity(snapshotForTimeChunk)
-                   .build();
+    try {
+      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
+      return Response.status(Response.Status.ACCEPTED)
+                     .entity(snapshotForTimeChunk)
+                     .build();
+    }
+    catch (ISE e) {
+      log.error(e, "Invalid request for key statistics for time chunk");
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .build();
+    }
   }
 
   /**
