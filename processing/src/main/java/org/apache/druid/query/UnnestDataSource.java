@@ -148,15 +148,13 @@ public class UnnestDataSource implements DataSource
             return segmentMapFn;
           } else {
             return
-                segmentMapFn.andThen(
-                    baseSegment ->
-                        new UnnestSegmentReference(
-                            baseSegment,
-                            column,
-                            outputName,
-                            allowList
-                        )
-                );
+                baseSegment ->
+                    new UnnestSegmentReference(
+                        segmentMapFn.apply(baseSegment),
+                        column,
+                        outputName,
+                        allowList
+                    );
           }
         }
     );
