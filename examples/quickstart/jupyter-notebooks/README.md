@@ -61,7 +61,8 @@ The notebooks are located in the [apache/druid repo](https://github.com/apache/d
 
 The links that follow are the raw GitHub URLs, so you can use them to download the notebook directly, such as with `wget`, or manually through your web browser. Note that if you save the file from your web browser, make sure to remove the `.txt` extension.
 
-- [Introduction to the Druid API](https://raw.githubusercontent.com/apache/druid/master/api-tutorial-jupyter-nb/examples/quickstart/jupyter-notebooks/api-tutorial.ipynb) walks you through some of the basics related to the Druid API and several endpoints.
+- [Introduction to the Druid API](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/api-tutorial.ipynb) walks you through some of the basics related to the Druid API and several endpoints.
+- [Introduction to Druid SQL](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/sql-tutorial.ipynb) covers the basics of Druid SQL.
 
 ## Contributing
 
