@@ -25,13 +25,15 @@ title: "Single server deployment"
 
 Druid includes a set of reference configurations and launch scripts for single-machine deployments:
 
-- `nano-quickstart`
-- `micro-quickstart`
-- `small`
-- `medium`
-- `large`
-- `xlarge`
-- `start-druid`
+- `auto` (run script: `bin/start-druid-auto`)
+- `nano-quickstart` (run script: `bin/start-nano-quickstart`)
+- `micro-quickstart` (run script: `bin/start-micro-quickstart`)
+- `small` (run script: `bin/start-single-server-small`)
+- `medium` (run script: `bin/start-single-server-medium`)
+- `large` (run script: `bin/start-single-server-large`)
+- `xlarge` (run script: `bin/start-single-server-xlarge`)
+
+The `auto` can be used to spin up Druid cluster on any machine. Read more details about this configuration [below](#Druid-auto-start).
 
 The `micro-quickstart` is sized for small machines like laptops and is intended for quick evaluation use-cases.
 
@@ -43,43 +45,51 @@ The startup scripts for these example configurations run a single ZK instance al
 
 The example configurations run the Druid Coordinator and Overlord together in a single process using the optional configuration `druid.coordinator.asOverlord.enabled=true`, described in the [Coordinator configuration documentation](../configuration/index.md#coordinator-operation).
 
-The `start-druid` is a generic launch script for starting druid services on single server, it accepts optional arguments like services, memory and config.
-All reference configurations can be acheived by passing appropriate arguments to this script.
-Existing launch scripts are deprecated and will be removed in the next release. 
-
-
 While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
+
+## Druid auto start 
+
+Setting up a new Druid cluster can sometimes be complicated as there are several runtime properties required by each service. Each process must also be given the appropriate jvm arguments so that the system can perform optimally.
+
+`start-druid-auto` is a generic launch script capable of starting any set of Druid services on a server.
+It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
+All other reference configurations (e.g. `micro`, `small`, `xlarge`) can be obtained by passing the
+correct memory to this script.
+Druid services will use all processors and upto 80% memory on the system.
+For details about possible arguments, run `bin/start-druid-auto --help`.
+
+The corresponding launch scripts (e.g. `start-micro-quickstart`) are now deprecated.
+
+
 
 ## Single server reference configurations
 
-### Nano: 1 CPU, 4GiB RAM
+### Nano-Quickstart: 1 CPU, 4GiB RAM
 
-- Launch command: `bin/start-druid --memory=4g`
-- Configuration directory: `conf/druid/single-server/quickstart`
+- Launch command: `bin/start-nano-quickstart`
+- Configuration directory: `conf/druid/single-server/nano-quickstart`
 
-### Micro: 4 CPU, 16GiB RAM
+### Micro-Quickstart: 4 CPU, 16GiB RAM
 
-- Launch command: `bin/start-druid --memory=16g`
-- Configuration directory: `conf/druid/single-server/quickstart`
+- Launch command: `bin/start-micro-quickstart`
+- Configuration directory: `conf/druid/single-server/micro-quickstart`
 
 ### Small: 8 CPU, 64GiB RAM (~i3.2xlarge)
 
-- Launch command: `bin/start-druid --memory=64g`
-- Configuration directory: `conf/druid/single-server/quickstart`
+- Launch command: `bin/start-small`
+- Configuration directory: `conf/druid/single-server/small`
 
 ### Medium: 16 CPU, 128GiB RAM (~i3.4xlarge)
 
-- Launch command: `bin/start-druid --memory=128g`
-- Configuration directory: `conf/druid/single-server/quickstart`
+- Launch command: `bin/start-medium`
+- Configuration directory: `conf/druid/single-server/medium`
 
 ### Large: 32 CPU, 256GiB RAM (~i3.8xlarge)
 
-- Launch command: `bin/start-druid --memory=256g`
-- Configuration directory: `conf/druid/single-server/quickstart`
+- Launch command: `bin/start-large`
+- Configuration directory: `conf/druid/single-server/large`
 
 ### X-Large: 64 CPU, 512GiB RAM (~i3.16xlarge)
 
-- Launch command: `bin/start-druid --memory=512g`
-- Configuration directory: `conf/druid/single-server/quickstart`
-
-Memory argument (`--memory`) in the above launch command is optional, if not specified Druid will use upto 80% of system memory.
+- Launch command: `bin/start-xlarge`
+- Configuration directory: `conf/druid/single-server/xlarge`

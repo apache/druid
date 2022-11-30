@@ -22,8 +22,7 @@ title: "Quickstart (local)"
   ~ under the License.
   -->
 
-
-This quickstart gets you started with Apache Druid using the [`micro`](../operations/single-server.md#micro-4-cpu-16gib-ram) configuration, and introduces you to Druid ingestion and query features.
+This quickstart gets you started with Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, we recommend a machine with at least 6 GB of RAM.
 
 In this quickstart, you'll do the following:
 - install Druid
@@ -37,16 +36,16 @@ Druid supports a variety of ingestion options. Once you're done with this tutori
 
 You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
 
-Druid comes equipped with a single launch script that can be used to run several 
-[startup configuration profiles](../operations/single-server.md) for a
-range of machine sizes. These range from `nano` (1 CPU, 4GiB RAM) to `x-large` (64 CPU, 512GiB RAM). For more
-information, see [Single server deployment](../operations/single-server.md). For information on deploying Druid services
-across clustered machines, see [Clustered deployment](./cluster.md).
+Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#Druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
+
+In addition, Druid includes several [bundled non-automatic profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4GiB RAM) to x-large (64 CPU, 512GiB RAM). 
+We won't use those here, but for more information, see [Single server deployment](../operations/single-server.md). For additional information on deploying Druid services across clustered machines, see [Clustered deployment](./cluster.md).
 
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported.)
 * Java 8u92+ or Java 11.
+* [Python2 or Python3](../operations/python.md)
 
 > Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
@@ -73,21 +72,21 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 
 ## Start up Druid services
 
-Start up Druid services using the `micro` single-machine configuration.
+Start up Druid services using the `auto` single-machine configuration.
 This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
 
-You can view that setting and others in the configuration files in the `conf/druid/single-server/quickstart/`. 
+You can view that setting and others in the configuration files in the `conf/druid/auto`. 
 
 From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
 ```bash
-./bin/start-druid --memory=16g
+./bin/start-druid-main-auto 
 ```
 
 This brings up instances of ZooKeeper and the Druid services:
 
 ```bash
-$ ./bin/start-micro-quickstart
+$ ./bin/start-druid-main-auto 
 [Tue Nov 29 16:31:06 2022] Starting Apache Druid.
 [Tue Nov 29 16:31:06 2022] Open http://localhost:8888/ in your browser to access the web console.
 [Tue Nov 29 16:31:06 2022] Or, if you have enabled TLS, use https on port 9088.
@@ -105,7 +104,7 @@ the Druid root directory, apache-druid-{{DRUIDVERSION}}. Each service writes to 
 
 At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
 
-To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-druid` script and terminates all Druid processes.
+To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-druid-auto` script and terminates all Druid processes.
 
 ## Open the web console 
 
@@ -224,4 +223,4 @@ See the following topics for more information:
 * [Tutorial: Load stream data from Apache Kafka](./tutorial-kafka.md) to load streaming data from a Kafka topic.
 * [Extensions](../development/extensions.md) for details on Druid extensions.
 
-Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.
+Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid-auto` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.
