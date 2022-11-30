@@ -97,7 +97,8 @@ public class ColumnarValueUnnestCursor implements Cursor
         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
-        throw new UnsupportedOperationException("Dimension selector not applicable for column value selector");
+        throw new UnsupportedOperationException(
+            "Dimension selector not applicable for column value selector for column " + outputName);
       }
 
       @Override
