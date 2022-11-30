@@ -77,6 +77,7 @@ public class CoordinatorBasicAuthorizerResourceTest
   private static final String AUTHORIZER_NAME = "test";
   private static final String AUTHORIZER_NAME2 = "test2";
   private static final String AUTHORIZER_NAME3 = "test3";
+  private static final String AUTHORIZER_NAME4 = "testAuthorizerWithGroupMappingPatternRegex";
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -111,12 +112,14 @@ public class CoordinatorBasicAuthorizerResourceTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             AUTHORIZER_NAME2,
             new BasicRoleBasedAuthorizer(
                 null,
                 AUTHORIZER_NAME2,
+                null,
                 null,
                 null,
                 null,
@@ -133,7 +136,20 @@ public class CoordinatorBasicAuthorizerResourceTest
                 "adminGroupMapping",
                 null,
                 null,
+                null,
                 null
+            ),
+            AUTHORIZER_NAME4,
+            new BasicRoleBasedAuthorizer(
+                null,
+                AUTHORIZER_NAME4,
+                null,
+                null,
+                "adminGroupMapping",
+                null,
+                null,
+                null,
+                "^CN=.*,OU=.*,OU=.*,DC=corp,DC=druid,DC=com$"
             )
         )
     );
@@ -1028,6 +1044,15 @@ public class CoordinatorBasicAuthorizerResourceTest
         );
       }
     }
+  }
+
+  @Test
+  public void testCreateGroupMappingGroupPatternRegex()
+  {
+    Response response = resource.createGroupMapping(req, AUTHORIZER_NAME4, "invalidGroupMapping", new BasicAuthorizerGroupMapping("invalidGroupMapping", "invalidGroupMapping", new HashSet<>()));
+    Assert.assertEquals(400, response.getStatus());
+    response = resource.createGroupMapping(req, AUTHORIZER_NAME, "validGroupMapping", new BasicAuthorizerGroupMapping("validGroupMapping", "CN=druid,OU=druid,OU=druid,DC=corp,DC=druid,DC=com", new HashSet<>()));
+    Assert.assertEquals(200, response.getStatus());
   }
 
   private Set<String> getRoleNamesAssignedToUser(

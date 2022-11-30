@@ -42,7 +42,6 @@ import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -122,6 +121,29 @@ public class LDAPRoleProvider implements RoleProvider
     return cacheManager.getRoleMap(authorizerPrefix);
   }
 
+  /**
+   * If an LdapName obejct cannot be constructed from the groupPattern, it is invalid
+   * @param groupPattern the string pattern being validated
+   * @return boolean indicating validity of the pattern
+   */
+  @Override
+  public boolean validateGroupPattern(String groupPattern)
+  {
+    try {
+      if (groupPattern.startsWith("*,")) {
+        new LdapName(groupPattern.substring(2));
+      } else if (groupPattern.endsWith(",*")) {
+        new LdapName(groupPattern.substring(0, groupPattern.length() - 2));
+      } else {
+        new LdapName(groupPattern);
+      }
+      return true;
+    }
+    catch (InvalidNameException e) {
+      return false;
+    }
+  }
+
   @VisibleForTesting
   public Set<String> getRoles(Map<String, BasicAuthorizerGroupMapping> groupMappingMap, Set<LdapName> groupNamesFromLdap)
   {
@@ -154,8 +176,7 @@ public class LDAPRoleProvider implements RoleProvider
           }
         }
         catch (InvalidNameException e) {
-          throw new RuntimeException(String.format(Locale.getDefault(),
-                                                   "Configuration problem - Invalid groupMapping '%s'", mask));
+          LOG.warn("Skipping invalid groupMapping [%s] with groupPattern [%s]", groupMapping.getName(), groupMapping.getGroupPattern());
         }
       }
     }

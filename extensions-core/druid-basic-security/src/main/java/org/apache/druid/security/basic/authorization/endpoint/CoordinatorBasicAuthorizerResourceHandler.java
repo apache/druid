@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorizerResourceHandler
 {
@@ -164,6 +165,15 @@ public class CoordinatorBasicAuthorizerResourceHandler implements BasicAuthorize
     final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
     if (authorizer == null) {
       return makeResponseForAuthorizerNotFound(authorizerName);
+    }
+
+    if (!authorizer.validateGroupPattern(groupMapping.getGroupPattern())) {
+      log.warn("Unable to validate groupPattern [%s]. Not creating new mapping.", groupMapping.getGroupPattern());
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+    if (null != authorizer.getGroupMappingGroupPatternRegex() && !Pattern.compile(authorizer.getGroupMappingGroupPatternRegex()).matcher(groupMapping.getGroupPattern()).matches()) {
+      log.warn("Refusing to create groupMapping for pattern [%s] because it doesn't match the regex [%s]", groupMapping.getGroupPattern(), authorizer.getGroupMappingGroupPatternRegex());
+      return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
     try {

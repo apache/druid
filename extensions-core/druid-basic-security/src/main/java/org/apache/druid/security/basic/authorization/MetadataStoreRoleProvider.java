@@ -69,4 +69,15 @@ public class MetadataStoreRoleProvider implements RoleProvider
   {
     return cacheManager.getRoleMap(authorizerPrefix);
   }
+
+  /**
+  * As of now, there are no rules for validating a MetadataStoreRoleProvider groupPattern
+  * @param groupPattern The string pattern being validated
+  * @return Always true, indicating valid pattern
+  */
+  @Override
+  public boolean validateGroupPattern(String groupPattern)
+  {
+    return true;
+  }
 }

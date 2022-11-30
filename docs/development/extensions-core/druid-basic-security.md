@@ -408,6 +408,12 @@ Array of LDAP group filters used to filter out the allowed set of groups returne
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
+**`druid.auth.authorizer.MyBasicLDAPAuthorizer.groupMappingGroupPatternRegex`**
+
+Regex that all group pattern create actions are checked against. If the specified pattern doesn't match the regex, the mapping will not be created.
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
 #### Properties for LDAPS
 
 Use the following properties to configure Druid authentication with LDAP over TLS (LDAPS). See [Configure LDAP authentication](../../operations/auth-ldap.md) for more information.

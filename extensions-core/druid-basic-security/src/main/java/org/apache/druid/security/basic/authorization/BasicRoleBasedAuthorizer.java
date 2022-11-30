@@ -47,6 +47,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   private final String name;
   private final BasicAuthDBConfig dbConfig;
   private final RoleProvider roleProvider;
+  private final String groupMappingGroupPatternRegex;
 
   @JsonCreator
   public BasicRoleBasedAuthorizer(
@@ -57,7 +58,8 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       @JsonProperty("initialAdminGroupMapping") String initialAdminGroupMapping,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
       @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout,
-      @JsonProperty("roleProvider") RoleProvider roleProvider
+      @JsonProperty("roleProvider") RoleProvider roleProvider,
+      @JsonProperty("groupMappingGroupPatternRegex") String groupMappingGroupPatternRegex
   )
   {
     this.name = name;
@@ -76,6 +78,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     } else {
       this.roleProvider = roleProvider;
     }
+    this.groupMappingGroupPatternRegex = groupMappingGroupPatternRegex;
   }
 
   @Override
@@ -130,4 +133,15 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   {
     return dbConfig;
   }
+
+  public String getGroupMappingGroupPatternRegex()
+  {
+    return groupMappingGroupPatternRegex;
+  }
+
+  public boolean validateGroupPattern(String groupPattern)
+  {
+    return roleProvider.validateGroupPattern(groupPattern);
+  }
+
 }

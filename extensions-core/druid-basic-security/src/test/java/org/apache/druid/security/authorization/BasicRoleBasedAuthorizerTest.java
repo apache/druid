@@ -103,7 +103,8 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     null, null,
                     null,
-                    new MetadataStoreRoleProvider(null)
+                    new MetadataStoreRoleProvider(null),
+                    null
                 ),
                 LDAP_AUTHORIZER_NAME,
                 new BasicRoleBasedAuthorizer(
@@ -113,7 +114,8 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     null, null,
                     null,
-                    new LDAPRoleProvider(null, groupFilters)
+                    new LDAPRoleProvider(null, groupFilters),
+                    null
                 )
             )
         ),
@@ -134,7 +136,8 @@ public class BasicRoleBasedAuthorizerTest
         null,
         null, null,
         null,
-        new MetadataStoreRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater))
+        new MetadataStoreRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater)),
+        null
     );
 
     ldapAuthorizer = new BasicRoleBasedAuthorizer(
@@ -144,7 +147,8 @@ public class BasicRoleBasedAuthorizerTest
         null,
         null, null,
         null,
-        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater), groupFilters)
+        new LDAPRoleProvider(new MetadataStoragePollingBasicAuthorizerCacheManager(updater), groupFilters),
+        null
     );
   }
 

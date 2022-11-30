@@ -36,4 +36,5 @@ public interface RoleProvider
 {
   Set<String> getRoles(String authorizerPrefix, AuthenticationResult authenticationResult);
   Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
+  boolean validateGroupPattern(String groupPattern);
 }

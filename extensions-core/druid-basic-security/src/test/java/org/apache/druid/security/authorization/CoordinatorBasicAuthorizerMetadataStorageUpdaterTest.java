@@ -104,6 +104,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 )
             )
