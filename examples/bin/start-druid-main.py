@@ -105,31 +105,31 @@ def print_if_verbose(message):
 
 def configure_parser():
     parser = argparse.ArgumentParser(
-        prog='start-druid-auto',
+        prog='start-druid',
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=
         """
 sample usage:
-    start-druid-auto
+    start-druid
             Start up all the services (including zk).
-    start-druid-auto -m=100g
+    start-druid -m=100g
             Start up all the services (including zk)
             using a total memory of 100GB.
-    start-druid-auto -m=100g --compute
+    start-druid -m=100g --compute
             Compute memory distribution and validate arguments.
-    start-druid-auto -m=100g -s=broker,router
+    start-druid -m=100g -s=broker,router
             Starts a broker and a router, using a total memory of 100GB.
-    start-druid-auto -m=100g --s=broker,router \\
+    start-druid -m=100g --s=broker,router \\
     -c=conf/druid/single-server/custom
             Starts a broker and a router, using a total memory of 100GB.
             Reads configs for each service (jvm.config, runtime.properties)
             from respective folders inside the given root config path.
-    start-druid-auto -s=broker,router \\
+    start-druid -s=broker,router \\
     -c=conf/druid/single-server/custom
             Starts a broker and a router service, reading service configs
             from the given root directory. Calculates memory requirements for
             each service, if required, using upto 80% of the total system memory.
-    start-druid-auto -m=100g \\
+    start-druid -m=100g \\
     -s=broker,router \\
     -c=conf/druid/single-server/custom \\
     --zk
