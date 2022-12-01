@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -98,8 +99,7 @@ public class ColumnarValueUnnestCursor implements Cursor
         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
-        throw new UnsupportedOperationException(
-            "Dimension selector not applicable for column value selector for column " + outputName);
+        throw new UOE("Unsupported dimension selector while using column value selector for column [%s]", outputName);
       }
 
       @Override

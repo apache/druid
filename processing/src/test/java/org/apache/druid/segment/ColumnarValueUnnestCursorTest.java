@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -569,7 +570,7 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     Assert.assertFalse(unnestCursor.isDoneOrInterrupted());
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test(expected = UOE.class)
   public void test_list_unnest_cursors_dimSelector()
   {
     List<Object> inputList = Arrays.asList(
