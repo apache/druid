@@ -369,7 +369,7 @@ def build_mm_task_java_opts_array(memory_type):
     java_opts_list = TASK_JAVA_OPTS_ARRAY + mem_array
 
     for item in java_opts_list:
-        task_memory += '\"{0}\";'.format(item)
+        task_memory += '\"{0}\",'.format(item)
 
     task_memory = task_memory[:-1]
     task_memory += ']'
