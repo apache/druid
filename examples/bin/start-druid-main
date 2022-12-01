@@ -144,7 +144,7 @@ sample usage:
                              'This directory must contain \'_common\' directory with \n'
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
-                             'conf/druid/single-server/quickstart directory is used.\n')
+                             'conf/druid/auto directory is used.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
