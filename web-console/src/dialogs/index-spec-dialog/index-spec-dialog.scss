@@ -18,25 +18,19 @@
 
 @import '../../variables';
 
-.table-clickable-cell {
-  padding: $table-cell-v-padding $table-cell-h-padding;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  &.disabled {
-    cursor: not-allowed;
+.index-spec-dialog {
+  &.#{$bp-ns}-dialog {
+    height: 70vh;
   }
 
-  .hover-icon {
-    position: absolute;
-    top: $table-cell-v-padding;
-    right: $table-cell-h-padding;
-    color: #f5f8fa;
-    display: none;
+  .form-json-selector {
+    margin: 15px;
   }
 
-  &:hover .hover-icon {
-    display: block;
+  .content {
+    margin: 0 15px 10px 0;
+    padding: 0 5px 0 15px;
+    flex: 1;
+    overflow: auto;
   }
 }

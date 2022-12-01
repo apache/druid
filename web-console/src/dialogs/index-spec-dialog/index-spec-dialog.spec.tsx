@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import { shallow } from 'enzyme';
+import React from 'react';
 
-.table-clickable-cell {
-  padding: $table-cell-v-padding $table-cell-h-padding;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
+import { IndexSpecDialog } from './index-spec-dialog';
 
-  &.disabled {
-    cursor: not-allowed;
-  }
+describe('IndexSpecDialog', () => {
+  it('matches snapshot without compactionConfig', () => {
+    const compactionDialog = shallow(
+      <IndexSpecDialog onClose={() => {}} onSave={() => {}} indexSpec={undefined} />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
 
-  .hover-icon {
-    position: absolute;
-    top: $table-cell-v-padding;
-    right: $table-cell-h-padding;
-    color: #f5f8fa;
-    display: none;
-  }
-
-  &:hover .hover-icon {
-    display: block;
-  }
-}
+  it('matches snapshot with indexSpec', () => {
+    const compactionDialog = shallow(
+      <IndexSpecDialog
+        onClose={() => {}}
+        onSave={() => {}}
+        indexSpec={{
+          dimensionCompression: 'lzf',
+        }}
+      />,
+    );
+    expect(compactionDialog).toMatchSnapshot();
+  });
+});
