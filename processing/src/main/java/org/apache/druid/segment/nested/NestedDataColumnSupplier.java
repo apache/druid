@@ -107,7 +107,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
             // this provides backwards compatibility should we switch at some point in the future to always
             // writing dictionaryVersion
-            dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, mapper);
+            dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
             frontCodedDictionarySupplier = null;
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
@@ -117,7 +117,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
           // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
           // GenericIndexed version can be correctly read
           stringDictionaryBuffer.position(dictionaryStartPosition);
-          dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, mapper);
+          dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
           frontCodedDictionarySupplier = null;
         }
         final ByteBuffer longDictionaryBuffer = loadInternalFile(

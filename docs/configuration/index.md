@@ -1375,7 +1375,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
-Configuration options for the experimental [Indexer process](../design/indexer.md) are also provided here.
+Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
 ### MiddleManager and Peons
 
@@ -2188,7 +2188,7 @@ Supported query contexts:
 |Key|Description|Default|
 |---|-----------|-------|
 |`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values will be either a `1` or `0`. See [expression documentation](../misc/math-expr.md#logical-operator-modes)|false|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This is experimental and should be used with caution.|false|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|false|
 ### Router
 
 #### Router Process Configs

@@ -29,7 +29,7 @@ public interface Utf8ValueSetIndex
   /**
    * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
    * contained in the underlying column). The set must be sorted using
-   * {@link org.apache.druid.java.util.common.ByteBufferUtils#unsignedComparator()}.
+   * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
    */
   BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
 }

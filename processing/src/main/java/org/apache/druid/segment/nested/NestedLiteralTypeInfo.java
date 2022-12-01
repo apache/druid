@@ -90,7 +90,7 @@ public class NestedLiteralTypeInfo
     @Override
     public String toString()
     {
-      return convertToActualSet(types).toString();
+      return convertToSet(types).toString();
     }
   }
 
@@ -152,7 +152,7 @@ public class NestedLiteralTypeInfo
     @Override
     public String toString()
     {
-      return convertToActualSet(types).toString();
+      return convertToSet(types).toString();
     }
   }
 
@@ -212,7 +212,7 @@ public class NestedLiteralTypeInfo
     return count == 1 ? singleType : null;
   }
 
-  private static Set<ColumnType> convertToActualSet(byte types)
+  public static Set<ColumnType> convertToSet(byte types)
   {
     final Set<ColumnType> theTypes = Sets.newHashSetWithExpectedSize(4);
     if ((types & STRING_MASK) > 0) {
