@@ -593,5 +593,39 @@ public class ColumnarValueUnnestCursorTest extends InitializedNullHandlingTest
     );
     unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
   }
+
+  @Test
+  public void test_list_unnest_cursors_user_supplied_list_of_integers()
+  {
+    List<Object> inputList = Arrays.asList(
+        Arrays.asList(1, 2, 3),
+        Arrays.asList(4, 5, 6, 7, 8),
+        Collections.singletonList(9)
+    );
+
+    List<Integer> expectedResults = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+    //Create base cursor
+    ListCursor listCursor = new ListCursor(inputList);
+
+    //Create unnest cursor
+    ColumnarValueUnnestCursor unnestCursor = new ColumnarValueUnnestCursor(
+        listCursor,
+        listCursor.getColumnSelectorFactory(),
+        "dummy",
+        OUTPUT_NAME,
+        IGNORE_SET
+    );
+    ColumnValueSelector unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory()
+                                                                .makeColumnValueSelector(OUTPUT_NAME);
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      Assert.assertEquals(valueSelectorVal.toString(), expectedResults.get(k).toString());
+      k++;
+      unnestCursor.advance();
+    }
+    Assert.assertEquals(k, 9);
+  }
 }
 

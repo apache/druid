@@ -27,6 +27,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -248,6 +249,8 @@ public class ColumnarValueUnnestCursor implements Cursor
     } else {
       if (currentVal instanceof List) {
         unnestListForCurrentRow = (List<Object>) currentVal;
+      } else if (currentVal instanceof Object[]) {
+        unnestListForCurrentRow = Arrays.asList((Object[]) currentVal);
       } else if (currentVal.getClass().equals(String.class)) {
         if (!firstRun) {
           unnestListForCurrentRow = new ArrayList<>();
