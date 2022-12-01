@@ -187,7 +187,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     private final GarbageCollectorMXBean gcBean;
 
     private long lastInvocations = 0;
-    private long lastCpuNanos = 0;
+    private long lastCpuMillis = 0;
 
     private static final String GC_YOUNG_GENERATION_NAME = "young";
     private static final String GC_OLD_GENERATION_NAME = "old";
@@ -268,10 +268,10 @@ public class JvmMonitor extends FeedDefiningMonitor
       emitter.emit(builder.build("jvm/gc/count", newInvocations - lastInvocations));
       lastInvocations = newInvocations;
 
-      long newCpuNanos = gcBean.getCollectionTime();
-      emitter.emit(builder.build("jvm/gc/cpu", newCpuNanos - lastCpuNanos));
-      lastCpuNanos = newCpuNanos;
-
+      // getCollectionTime is in milliseconds; we report jvm/gc/cpu in nanoseconds.
+      long newCpuMillis = gcBean.getCollectionTime();
+      emitter.emit(builder.build("jvm/gc/cpu", (newCpuMillis - lastCpuMillis) * 1_000_000L));
+      lastCpuMillis = newCpuMillis;
     }
   }
 

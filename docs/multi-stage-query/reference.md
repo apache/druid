@@ -202,7 +202,29 @@ The following table lists the context parameters for the MSQ task engine:
 | `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid sorts rows in segments using this column list first, followed by the CLUSTERED BY order.<br /><br />You provide the column list as comma-separated values or as a JSON array in string form. If your query includes `__time`, then this list must begin with `__time`. For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
-| `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
+| `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
+| `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `AUTO` |
+
+## Sketch Merging Mode
+This section details the advantages and performance of various Cluster By Statistics Merge Modes.
+
+If a query requires key statistics to generate partition boundaries, key statistics are gathered by the workers while
+reading rows from the datasource. These statistics must be transferred to the controller to be merged together.
+`clusterStatisticsMergeMode` configures the way in which this happens.
+
+`PARALLEL` mode fetches the key statistics for all time chunks from all workers together and the controller then downsamples
+the sketch if it does not fit in memory. This is faster than `SEQUENTIAL` mode as there is less over head in fetching sketches
+for all time chunks together. This is good for small sketches which won't be downsampled even if merged together or if
+accuracy in segment sizing for the ingestion is not very important.
+
+`SEQUENTIAL` mode fetches the sketches in ascending order of time and generates the partition boundaries for one time
+chunk at a time. This gives more working memory to the controller for merging sketches, which results in less
+downsampling and thus, more accuracy. There is, however, a time overhead on fetching sketches in sequential order. This is
+good for cases where accuracy is important.
+
+`AUTO` mode tries to find the best approach based on number of workers and size of input rows. If there are more
+than 100 workers or if the combined sketch size among all workers is more than 1GB, `SEQUENTIAL` is chosen, otherwise,
+`PARALLEL` is chosen.
 
 ## Durable Storage
 This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.

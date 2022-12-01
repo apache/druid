@@ -70,19 +70,8 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'killAllDataSources',
-    type: 'boolean',
-    defaultValue: false,
-    info: (
-      <>
-        Send kill tasks for ALL dataSources if property <Code>druid.coordinator.kill.on</Code> is
-        true. If this is set to true then <Code>killDataSourceWhitelist</Code> must not be specified
-        or be empty list.
-      </>
-    ),
-  },
-  {
     name: 'killDataSourceWhitelist',
+    label: 'Kill datasource whitelist',
     type: 'string-array',
     emptyValue: [],
     info: (
@@ -197,7 +186,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'useBatchedSegmentSampler',
     type: 'boolean',
-    defaultValue: false,
+    defaultValue: true,
     info: (
       <>
         Boolean flag for whether or not we should use the Reservoir Sampling with a reservoir of

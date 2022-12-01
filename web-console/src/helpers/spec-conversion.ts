@@ -70,6 +70,11 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     groupByEnableMultiValueUnnesting: false,
   };
 
+  const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
+  if (indexSpec) {
+    context.indexSpec = indexSpec;
+  }
+
   const lines: string[] = [];
 
   const rollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup') ?? true;

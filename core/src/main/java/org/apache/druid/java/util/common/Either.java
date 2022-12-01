@@ -62,6 +62,11 @@ public class Either<L, R>
     return error != null;
   }
 
+  /**
+   * Returns the error object.
+   *
+   * @throws IllegalStateException if this instance is not an error
+   */
   public L error()
   {
     if (isError()) {
@@ -74,11 +79,10 @@ public class Either<L, R>
   /**
    * If this Either represents a value, returns it. If this Either represents an error, throw an error.
    *
-   * If the error is a {@link RuntimeException} or {@link Error}, it is thrown directly. If it is some other
-   * {@link Throwable}, it is wrapped in a RuntimeException and thrown. If it is not a throwable at all, a generic
-   * error is thrown containing the string representation of the error object.
+   * If the error is a {@link Throwable}, it is wrapped in a RuntimeException and thrown. If it is not a throwable,
+   * a generic error is thrown containing the string representation of the error object.
    *
-   * If you want to be able to retrieve the error as-is, use {@link #isError()} and {@link #error()} instead.
+   * To retrieve the error as-is, use {@link #isError()} and {@link #error()} instead.
    */
   @Nullable
   public R valueOrThrow()

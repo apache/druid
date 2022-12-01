@@ -55,7 +55,7 @@ import { UrlBaser } from '../../../singletons';
 import { filterMap, IntermediateQueryState } from '../../../utils';
 import { postToSampler, SampleSpec } from '../../../utils/sampler';
 
-import { EXAMPLE_INPUT_SOURCES } from './example-inputs';
+import { EXAMPLE_INPUTS } from './example-inputs';
 import { InputSourceInfo } from './input-source-info';
 
 import './input-source-step.scss';
@@ -81,16 +81,15 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
   const [inputSource, setInputSource] = useState<Partial<InputSource> | string | undefined>(
     initInputSource,
   );
-  const exampleInputSource = EXAMPLE_INPUT_SOURCES.find(
-    ({ name }) => name === inputSource,
-  )?.inputSource;
+  const exampleInput = EXAMPLE_INPUTS.find(({ name }) => name === inputSource);
 
   const [guessedInputFormatState, connectQueryManager] = useQueryManager<
-    InputSource,
+    { inputSource: InputSource; suggestedInputFormat?: InputFormat },
     InputFormat,
     Execution
   >({
-    processQuery: async (inputSource: InputSource, cancelToken) => {
+    processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
+      let guessedInputFormat: InputFormat | undefined;
       if (mode === 'sampler') {
         const sampleSpec: SampleSpec = {
           type: 'index_parallel',
@@ -127,7 +126,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (!sampleLines.length) throw new Error('No data returned from sampler');
-        return guessInputFormat(sampleLines);
+        guessedInputFormat = guessInputFormat(sampleLines);
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -151,8 +150,14 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (result instanceof IntermediateQueryState) return result;
-        return resultToInputFormat(result);
+        guessedInputFormat = resultToInputFormat(result);
       }
+
+      if (suggestedInputFormat?.type === guessedInputFormat.type) {
+        return suggestedInputFormat;
+      }
+
+      return guessedInputFormat;
     },
     backgroundStatusCheck: async (execution, query, cancelToken) => {
       const result = await executionBackgroundResultStatusCheck(execution, query, cancelToken);
@@ -164,7 +169,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
   useEffect(() => {
     const guessedInputFormat = guessedInputFormatState.data;
     if (!guessedInputFormat) return;
-    onSet(exampleInputSource || (inputSource as any), guessedInputFormat);
+    onSet(exampleInput?.inputSource || (inputSource as any), guessedInputFormat);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guessedInputFormatState]);
 
@@ -217,7 +222,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
                   selectedValue={inputSource}
                   onChange={e => setInputSource(e.currentTarget.value)}
                 >
-                  {EXAMPLE_INPUT_SOURCES.map((e, i) => (
+                  {EXAMPLE_INPUTS.map((e, i) => (
                     <Radio
                       key={i}
                       labelElement={
@@ -306,10 +311,13 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
               text={guessedInputFormatState.isLoading() ? 'Loading...' : 'Use example'}
               rightIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
-              disabled={!exampleInputSource || guessedInputFormatState.isLoading()}
+              disabled={!exampleInput || guessedInputFormatState.isLoading()}
               onClick={() => {
-                if (!exampleInputSource) return;
-                connectQueryManager.runQuery(exampleInputSource);
+                if (!exampleInput) return;
+                connectQueryManager.runQuery({
+                  inputSource: exampleInput.inputSource,
+                  suggestedInputFormat: exampleInput.inputFormat,
+                });
               }}
             />
           ) : inputSource ? (
@@ -324,7 +332,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
               }
               onClick={() => {
                 if (!AutoForm.isValidModel(inputSource, INPUT_SOURCE_FIELDS)) return;
-                connectQueryManager.runQuery(inputSource);
+                connectQueryManager.runQuery({ inputSource });
               }}
             />
           ) : undefined}

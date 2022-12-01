@@ -652,11 +652,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   onClick={this.openExplainDialog}
                 />
               )}
-              <MenuItem
-                icon={IconNames.HISTORY}
-                text="Query history"
-                onClick={this.openHistoryDialog}
-              />
+              {currentTabEntry.query.getEffectiveEngine() !== 'sql-msq-task' && (
+                <MenuItem
+                  icon={IconNames.HISTORY}
+                  text="Query history"
+                  onClick={this.openHistoryDialog}
+                />
+              )}
               {currentTabEntry.query.canPrettify() && (
                 <MenuItem
                   icon={IconNames.ALIGN_LEFT}
