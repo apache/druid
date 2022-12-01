@@ -44,7 +44,7 @@ Otherwise, install Java 8 or 11 in one of the following locations.
 Other versions of Java versions may work, but are not officially supported.
 
 For more information about selecting a Java runtime visit:
-https://druid.apache.org/docs/latest/operations/java.html#selecting-a-java-runtime
+https://druid.apache.org/docs/latest/operations/java.html
 EOT
   exit 1;
 }
