@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#!/bin/bash
+
+set -e
+
 ./.github/scripts/setup_generate_license.sh
 ${MVN} apache-rat:check -Prat --fail-at-end \
 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
