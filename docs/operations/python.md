@@ -22,7 +22,7 @@ title: "Python Installation"
   ~ under the License.
   -->
 
-Apache Druid startup script requires a python interpreter. This page has steps to install python interpreter and required libraries.
+Apache Druid startup script requires a python interpreter.
 
 ## Python interpreter installation instructions
 
@@ -44,11 +44,3 @@ Refer [Installing Python 3 on Mac OS X](https://docs.python-guide.org/starting/i
 #### RHEL 
     - `sudo yum install -y epel-release`
     - `sudo yum install -y python3-pip`
-
-## Required libraries 
-
-### psutil
-- pip3 install psutil 
-
-### pathlib 
-- pip3 install pathlib 

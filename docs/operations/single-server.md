@@ -27,7 +27,7 @@ Druid includes a set of reference configurations and launch scripts for single-m
 These configuration bundles are located in `conf/druid/single-server/`.
 
 The `auto` configuration sizes runtime parameters based on available processors and memory. Other configurations include hard-coded runtime parameters for various server sizes. Most users should stick with `auto`. Refer below [Druid auto start](#Druid-auto-start)
-- `auto` (run script: `bin/start-druid-auto`)
+- `auto` (run script: `bin/start-druid`)
 - `nano-quickstart` (run script: `bin/start-nano-quickstart`)
 - `micro-quickstart` (run script: `bin/start-micro-quickstart`)
 - `small` (run script: `bin/start-single-server-small`)
@@ -51,12 +51,12 @@ While example configurations are provided for very large single machines, at hig
 
 Setting up a new Druid cluster can sometimes be complicated as there are several runtime properties required by each service. Each process must also be given the appropriate jvm arguments so that the system can perform optimally.
 
-`start-druid-auto` is a generic launch script capable of starting any set of Druid services on a server.
+`start-druid` is a generic launch script capable of starting any set of Druid services on a server.
 It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
 All other reference configurations (e.g. `micro`, `small`, `xlarge`) can be obtained by passing the
 correct memory to this script.
 Druid services will use all processors and upto 80% memory on the system.
-For details about possible arguments, run `bin/start-druid-auto --help`.
+For details about possible arguments, run `bin/start-druid --help`.
 
 The corresponding launch scripts (e.g. `start-micro-quickstart`) are now deprecated.
 
