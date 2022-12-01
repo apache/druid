@@ -223,6 +223,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   private static final Logger log = new Logger(MSQTestBase.class);
   private ObjectMapper objectMapper;
   private MSQTestOverlordServiceClient indexingServiceClient;
+  protected MSQTestTaskActionClient testTaskActionClient;
   private SqlStatementFactory sqlStatementFactory;
   private IndexIO indexIO;
 
@@ -385,10 +386,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
+    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
         injector,
-        new MSQTestTaskActionClient(objectMapper),
+        testTaskActionClient,
         workerMemoryParameters
     );
     final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
