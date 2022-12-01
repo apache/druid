@@ -72,7 +72,6 @@ public class SegmentAllocationQueue
   private static final int MAX_QUEUE_SIZE = 2000;
 
   private final long maxWaitTimeMillis;
-  private final boolean enabled;
 
   private final TaskLockbox taskLockbox;
   private final ScheduledExecutorService executor;
@@ -96,27 +95,57 @@ public class SegmentAllocationQueue
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationMaxWaitTime();
-    this.enabled = taskLockConfig.isBatchSegmentAllocation();
 
-    this.executor = executorFactory.create(1, "SegmentAllocQueue-%s");
+    this.executor = taskLockConfig.isBatchSegmentAllocation()
+                    ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
   }
 
   @LifecycleStart
   public void start()
   {
-    log.info("Initializing segment allocation queue.");
+    if (isEnabled()) {
+      log.info("Initializing segment allocation queue.");
+      scheduleQueuePoll(maxWaitTimeMillis);
+    }
   }
 
   @LifecycleStop
   public void stop()
   {
-    log.info("Tearing down segment allocation queue.");
-    executor.shutdownNow();
+    if (isEnabled()) {
+      log.info("Tearing down segment allocation queue.");
+      executor.shutdownNow();
+    }
+  }
+
+  public void becomeLeader()
+  {
+    if (!isLeader.compareAndSet(false, true)) {
+      log.info("Already the leader. Queue processing has started.");
+    } else if (isEnabled()) {
+      log.info("Elected leader. Starting queue processing.");
+    } else {
+      log.info(
+          "Elected leader but batched segment allocation is disabled. "
+          + "Segment allocation queue will not be used."
+      );
+    }
+  }
+
+  public void stopBeingLeader()
+  {
+    if (!isLeader.compareAndSet(true, false)) {
+      log.info("Already surrendered leadership. Queue processing is stopped.");
+    } else if (isEnabled()) {
+      log.info("Not leader anymore. Stopping queue processing.");
+    } else {
+      log.info("Not leader anymore. Segment allocation queue is already disabled.");
+    }
   }
 
   public boolean isEnabled()
   {
-    return enabled;
+    return executor != null && !executor.isShutdown();
   }
 
   private void scheduleQueuePoll(long delay)
@@ -144,7 +173,7 @@ public class SegmentAllocationQueue
       throw new ISE("Batched segment allocation is disabled.");
     }
 
-    final AllocateRequestKey requestKey = new AllocateRequestKey(request, false);
+    final AllocateRequestKey requestKey = new AllocateRequestKey(request);
     final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
 
     // Possible race condition:
@@ -170,18 +199,23 @@ public class SegmentAllocationQueue
   }
 
   /**
-   * Tries to add the given batch to the processing queue. If the queue is full,
-   * marks the batch as completed failing all the pending requests.
+   * Tries to add the given batch to the processing queue. Fails all the pending
+   * requests in the batch if we are not leader or if the queue is full.
    */
   private boolean addBatchToQueue(AllocateRequestBatch batch)
   {
     batch.resetQueueTime();
-    if (processingQueue.offer(batch)) {
+    if (!isLeader.get()) {
+      batch.failPendingRequests("Cannot allocate segment if not leader");
+      return false;
+    } else if (processingQueue.offer(batch)) {
       log.debug("Added a new batch [%s] to queue.", batch.key);
       return true;
     } else {
-      log.warn("Cannot add batch [%s] as queue is full. Failing [%d] requests.", batch.key, batch.size());
-      batch.markCompleted();
+      batch.failPendingRequests(
+          "Segment allocation queue is full. Check the metric `task/action/batch/runTime` "
+          + "to determine if metadata operations are slow."
+      );
       return false;
     }
   }
@@ -207,27 +241,10 @@ public class SegmentAllocationQueue
 
   private void processBatchesDue()
   {
-    // If not leader, clear the queue and do not schedule any more rounds of processing
-    if (!isLeader.get()) {
-      log.info("Not leader anymore. Failing [%d] batches in queue.", processingQueue.size());
-
-      // Keep removing items from the queue as long as not leader
-      AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-      while (nextBatch != null && !isLeader.get()) {
-        processingQueue.pollFirst();
-        keyToBatch.remove(nextBatch.key);
-        nextBatch.markCompleted();
-        nextBatch = processingQueue.peekFirst();
-      }
-    }
-
-    // Check once again for leadership
-    if (!isLeader.get()) {
-      return;
-    }
+    clearQueueIfNotLeader();
 
     // Process all batches which are due
-    log.debug("Processing all batches which are due for execution. Overall queue size [%d].", processingQueue.size());
+    log.debug("Processing batches which are due. Queue size [%d].", processingQueue.size());
     int numProcessedBatches = 0;
 
     AllocateRequestBatch nextBatch = processingQueue.peekFirst();
@@ -238,13 +255,14 @@ public class SegmentAllocationQueue
         processed = processBatch(nextBatch);
       }
       catch (Throwable t) {
+        nextBatch.failPendingRequests(t);
         processed = true;
         log.error(t, "Error while processing batch [%s]", nextBatch.key);
       }
 
-      ++numProcessedBatches;
+      // Requeue if not fully processed yet
       if (processed) {
-        nextBatch.markCompleted();
+        ++numProcessedBatches;
       } else {
         requeueBatch(nextBatch);
       }
@@ -266,6 +284,26 @@ public class SegmentAllocationQueue
   }
 
   /**
+   * Removes items from the queue as long as we are not leader.
+   */
+  private void clearQueueIfNotLeader()
+  {
+    int failedBatches = 0;
+    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
+    while (nextBatch != null && !isLeader.get()) {
+      processingQueue.pollFirst();
+      keyToBatch.remove(nextBatch.key);
+      nextBatch.failPendingRequests("Cannot allocate segment if not leader");
+      ++failedBatches;
+
+      nextBatch = processingQueue.peekFirst();
+    }
+    if (failedBatches > 0) {
+      log.info("Not leader. Failed [%d] batches, remaining in queue [%d].", failedBatches, processingQueue.size());
+    }
+  }
+
+  /**
    * Processes the given batch. Returns true if the batch was completely processed
    * and should not be requeued.
    */
@@ -274,6 +312,9 @@ public class SegmentAllocationQueue
     final AllocateRequestKey requestKey = requestBatch.key;
     keyToBatch.remove(requestKey);
     if (requestBatch.isEmpty()) {
+      return true;
+    } else if (!isLeader.get()) {
+      requestBatch.failPendingRequests("Cannot allocate segment if not leader");
       return true;
     }
 
@@ -292,7 +333,7 @@ public class SegmentAllocationQueue
     final Set<DataSegment> usedSegments = retrieveUsedSegments(requestKey);
     final int successCount = allocateSegmentsForBatch(requestBatch, usedSegments);
 
-    emitBatchMetric("task/action/batch/retries", 1L, requestKey);
+    emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
     log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
 
@@ -306,10 +347,10 @@ public class SegmentAllocationQueue
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
-      log.error("Used segments have not changed. Not requeueing failed requests.");
+      requestBatch.failPendingRequests("Allocation failed probably due to conflicting segments.");
       return true;
     } else {
-      log.debug("Used segments have changed. Requeuing failed requests");
+      log.debug("Used segments have changed. Requeuing failed requests.");
       return false;
     }
   }
@@ -329,35 +370,40 @@ public class SegmentAllocationQueue
   {
     int successCount = 0;
 
+    // Find requests whose row interval overlaps with an existing used segment
     final Set<SegmentAllocateRequest> allRequests = requestBatch.getRequests();
-    final Set<SegmentAllocateRequest> pendingRequests = new HashSet<>();
+    final Set<SegmentAllocateRequest> requestsWithNoOverlappingSegment = new HashSet<>();
 
     if (usedSegments.isEmpty()) {
-      pendingRequests.addAll(allRequests);
+      requestsWithNoOverlappingSegment.addAll(allRequests);
     } else {
       final Interval[] sortedUsedSegmentIntervals = getSortedIntervals(usedSegments);
-      final Map<Interval, List<SegmentAllocateRequest>> usedIntervalToRequests = new HashMap<>();
+      final Map<Interval, List<SegmentAllocateRequest>> overlapIntervalToRequests = new HashMap<>();
 
       for (SegmentAllocateRequest request : allRequests) {
-        // If there is an overlapping used segment interval, that interval is
-        // the only candidate for allocation
-        Interval overlappingInterval = Intervals.findOverlappingInterval(
+        // If there is an overlapping used segment, the interval of the used segment
+        // is the only candidate for allocation for this request
+        final Interval overlappingInterval = Intervals.findOverlappingInterval(
             request.getRowInterval(),
             sortedUsedSegmentIntervals
         );
 
         if (overlappingInterval == null) {
-          pendingRequests.add(request);
+          requestsWithNoOverlappingSegment.add(request);
         } else if (overlappingInterval.contains(request.getRowInterval())) {
           // Found an enclosing interval, use this for allocation
-          usedIntervalToRequests.computeIfAbsent(overlappingInterval, i -> new ArrayList<>())
-                                .add(request);
+          overlapIntervalToRequests.computeIfAbsent(overlappingInterval, i -> new ArrayList<>())
+                                   .add(request);
+        } else {
+          // There is no valid allocation interval for this request due to a
+          // partially overlapping used segment. Need not do anything right now.
+          // The request will be retried upon requeueing the batch.
         }
       }
 
-      // Try to allocate segments for the identified used segment intervals
-      // Do not retry the failed requests with other intervals unless the batch is requeued
-      for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : usedIntervalToRequests.entrySet()) {
+      // Try to allocate segments for the identified used segment intervals.
+      // Do not retry the failed requests with other intervals unless the batch is requeued.
+      for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : overlapIntervalToRequests.entrySet()) {
         successCount += allocateSegmentsForInterval(
             entry.getKey(),
             entry.getValue(),
@@ -368,6 +414,7 @@ public class SegmentAllocationQueue
 
     // For requests that do not overlap with a used segment, first try to allocate
     // using the preferred granularity, then smaller granularities
+    final Set<SegmentAllocateRequest> pendingRequests = new HashSet<>(requestsWithNoOverlappingSegment);
     for (Granularity granularity :
         Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity)) {
       Map<Interval, List<SegmentAllocateRequest>> requestsByInterval =
@@ -469,34 +516,6 @@ public class SegmentAllocationQueue
     emitter.emit(metricBuilder.build(metric, value));
   }
 
-  public void becomeLeader()
-  {
-    if (!isLeader.compareAndSet(false, true)) {
-      // Already leader
-      log.info("Already the leader. Queue processing is already scheduled.");
-    } else if (isEnabled()) {
-      // Start polling the queue
-      log.info("Elected leader. Starting queue processing.");
-      scheduleQueuePoll(maxWaitTimeMillis);
-    } else {
-      log.info(
-          "Elected leader but batched segment allocation is disabled. "
-          + "Segment allocation queue will not be used."
-      );
-    }
-  }
-
-  public void stopBeingLeader()
-  {
-    if (!isLeader.compareAndSet(true, false)) {
-      log.info("Already surrendered leadership. Queue processing is stopped.");
-    } else if (isEnabled()) {
-      log.info("Not leader anymore. Stopping queue processing.");
-    } else {
-      log.info("Not leader anymore. Segment allocation queue is already disabled.");
-    }
-  }
-
   /**
    * A batch of segment allocation requests.
    */
@@ -538,11 +557,16 @@ public class SegmentAllocationQueue
       return new HashSet<>(requestToFuture.keySet());
     }
 
-    synchronized void markCompleted()
+    synchronized void failPendingRequests(String reason)
+    {
+      failPendingRequests(new ISE(reason));
+    }
+
+    synchronized void failPendingRequests(Throwable cause)
     {
       if (!requestToFuture.isEmpty()) {
-        log.info("Marking [%d] requests in batch [%s] as failed.", size(), key);
-        requestToFuture.values().forEach(future -> future.complete(null));
+        log.warn("Failing [%d] requests in batch due to [%s]. Batch key: %s", size(), cause.getMessage(), key);
+        requestToFuture.values().forEach(future -> future.completeExceptionally(cause));
         requestToFuture.keySet().forEach(
             request -> emitTaskMetric("task/action/failed/count", 1L, request)
         );
@@ -559,20 +583,20 @@ public class SegmentAllocationQueue
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
         log.info(
-            "Action [%s] failed in attempt [%d]. Can still retry. Latest error: %s",
-            request.getAction(),
+            "Allocation failed in attempt [%d] due to error [%s]. Can still retry. Action: %s",
             request.getAttempts(),
-            result.getErrorMessage()
+            result.getErrorMessage(),
+            request.getAction()
         );
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Failing allocate action [%s] after [%d] attempts. Latest error: %s",
-            request.getAction(),
+            "Failing allocate action after [%d] attempts. Latest error [%s]. Action: %s",
             request.getAttempts(),
-            result.getErrorMessage()
+            result.getErrorMessage(),
+            request.getAction()
         );
-        requestToFuture.remove(request).complete(null);
+        requestToFuture.remove(request).completeExceptionally(new ISE(result.getErrorMessage()));
       }
     }
 
@@ -607,8 +631,6 @@ public class SegmentAllocationQueue
    */
   private static class AllocateRequestKey
   {
-    private final boolean unique;
-
     private final String dataSource;
     private final String groupId;
     private final Interval preferredAllocationInterval;
@@ -625,12 +647,11 @@ public class SegmentAllocationQueue
      * Creates a new key for the given request. The batch for a unique key will
      * always contain a single request.
      */
-    AllocateRequestKey(SegmentAllocateRequest request, boolean unique)
+    AllocateRequestKey(SegmentAllocateRequest request)
     {
       final SegmentAllocateAction action = request.getAction();
       final Task task = request.getTask();
 
-      this.unique = unique;
       this.dataSource = action.getDataSource();
       this.groupId = task.getGroupId();
       this.skipSegmentLineageCheck = action.isSkipSegmentLineageCheck();
@@ -641,7 +662,7 @@ public class SegmentAllocationQueue
       this.preferredAllocationInterval = action.getPreferredSegmentGranularity()
                                                .bucket(action.getTimestamp());
 
-      this.hash = unique ? super.hashCode() : Objects.hash(
+      this.hash = Objects.hash(
           skipSegmentLineageCheck,
           useNonRootGenPartitionSpace,
           dataSource,
@@ -654,9 +675,6 @@ public class SegmentAllocationQueue
     @Override
     public boolean equals(Object o)
     {
-      if (unique) {
-        return this == o;
-      }
       if (this == o) {
         return true;
       }
@@ -682,12 +700,11 @@ public class SegmentAllocationQueue
     public String toString()
     {
       return "{" +
-             "unique=" + unique +
-             ", skipLineageCheck=" + skipSegmentLineageCheck +
-             ", ds='" + dataSource + '\'' +
-             ", groupId='" + groupId + '\'' +
-             ", interval=" + preferredAllocationInterval +
+             "ds='" + dataSource + '\'' +
+             ", gr='" + groupId + '\'' +
              ", lock=" + lockGranularity +
+             ", invl=" + preferredAllocationInterval +
+             ", slc=" + skipSegmentLineageCheck +
              '}';
     }
   }

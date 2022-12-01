@@ -24,6 +24,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -37,8 +38,10 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class SegmentAllocationQueueTest
 {
@@ -236,7 +239,8 @@ public class SegmentAllocationQueueTest
     Future<SegmentIdWithShardSpec> future = allocationQueue.add(request);
 
     // Verify that the future is already complete and segment allocation has failed
-    Assert.assertNull(getSegmentId(future));
+    Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
+    Assert.assertEquals("Segment allocation queue is full", t.getMessage());
   }
 
   @Test
@@ -281,7 +285,8 @@ public class SegmentAllocationQueueTest
     executor.finishNextPendingTask();
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
-      Assert.assertNull(getSegmentId(future));
+      Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
+      Assert.assertEquals("Cannot allocate segment if not leader", t.getMessage());
     }
   }
 
@@ -310,7 +315,10 @@ public class SegmentAllocationQueueTest
     try {
       return future.get(5, TimeUnit.SECONDS);
     }
-    catch (Exception e) {
+    catch (ExecutionException e) {
+      throw new ISE(e.getCause().getMessage());
+    }
+    catch (InterruptedException | TimeoutException e) {
       throw new RuntimeException(e);
     }
   }

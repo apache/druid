@@ -190,6 +190,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   @Override
   public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
   {
+    if (!toolbox.canBatchSegmentAllocation()) {
+      throw new ISE("Batched segment allocation is disabled");
+    }
     return toolbox.getSegmentAllocationQueue().add(
         new SegmentAllocateRequest(task, this, MAX_ATTEMPTS)
     );

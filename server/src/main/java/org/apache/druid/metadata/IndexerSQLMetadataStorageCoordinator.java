@@ -1059,9 +1059,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // to avoid clashes when inserting the pending segment created here.
     final Set<SegmentIdWithShardSpec> pendingSegments =
         getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
-    if (committedMaxId != null) {
-      pendingSegments.add(committedMaxId);
-    }
 
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
     final Map<String, SegmentIdWithShardSpec> sequenceHashToSegment = new HashMap<>();
@@ -1111,6 +1108,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final PartialShardSpec partialShardSpec = request.getPartialShardSpec();
     final String existingVersion = request.getVersion();
+
+    // Include the committedMaxId while computing the overallMaxId
+    if (committedMaxId != null) {
+      pendingSegments.add(committedMaxId);
+    }
 
     // If there is an existing chunk, find the max id with the same version as the existing chunk.
     // There may still be a pending segment with a higher version (but no corresponding used segments)
