@@ -104,7 +104,7 @@ the Druid root directory, apache-druid-{{DRUIDVERSION}}. Each service writes to 
 
 At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
 
-To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-druid-auto` script and terminates all Druid processes.
+To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-druid` script and terminates all Druid processes.
 
 ## Open the web console 
 
@@ -223,4 +223,4 @@ See the following topics for more information:
 * [Tutorial: Load stream data from Apache Kafka](./tutorial-kafka.md) to load streaming data from a Kafka topic.
 * [Extensions](../development/extensions.md) for details on Druid extensions.
 
-Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid-auto` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.
+Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.
