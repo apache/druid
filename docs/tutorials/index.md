@@ -44,8 +44,8 @@ across clustered machines, see [Clustered deployment](./cluster.md).
 
 The software requirements for the installation machine are:
 
-* Linux, Mac OS X, or other Unix-like OS. (Windows is not supported.)
-* Java 8u92+ or Java 11.
+* Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
+* Java 8u92+ or Java 11. ([Selecting a Java runtime](../operations/java.md#selecting-a-java-runtime))
 
 > Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
