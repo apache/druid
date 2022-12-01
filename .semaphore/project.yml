@@ -17,6 +17,10 @@ spec:
       pipeline_files:
       - path: .semaphore/semaphore.yml
         level: pipeline
+    whitelist:
+      branches:
+      - master
+      - /^.*-confluent$/
   custom_permissions: true
   debug_permissions:
   - empty
