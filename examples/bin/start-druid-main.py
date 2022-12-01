@@ -59,6 +59,15 @@ DEFAULT_SERVICES = [
     MIDDLE_MANAGER
 ]
 
+SUPPORTED_SERVICES = [
+    BROKER,
+    ROUTER,
+    COORDINATOR,
+    HISTORICAL,
+    MIDDLE_MANAGER,
+    INDEXER
+]
+
 SERVICE_MEMORY_RATIO = {
     MIDDLE_MANAGER: 1,
     ROUTER: 2,
@@ -196,7 +205,7 @@ def parse_arguments(args):
         services = args.services.split(SERVICE_SEPARATOR)
 
         for service in services:
-            if service not in DEFAULT_SERVICES:
+            if service not in SUPPORTED_SERVICES:
                 raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, DEFAULT_SERVICES))
 
             if service in service_list:
