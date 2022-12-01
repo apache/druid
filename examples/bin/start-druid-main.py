@@ -353,7 +353,7 @@ def should_compute_memory(config, total_memory, service_list):
     return jvm_config_count == 0 and mm_task_property_present is False
 
 
-def estimate_memory_linux():
+def get_physical_memory_linux():
     mems = {}
 
     def get_procfs_path():
@@ -371,18 +371,18 @@ def estimate_memory_linux():
     return mems[b'MemTotal:']
 
 
-def estimate_memory_osx():
+def get_physical_memory_osx():
     p1 = subprocess.Popen(['sysctl', '-a'], stdout=subprocess.PIPE)
     p2 = subprocess.check_output(['grep', 'hw.memsize'], stdin=p1.stdout)
     p2 = p2.decode('utf-8')
     fields = p2.split(':')
 
-    mem = int(fields[1]) / (1024 * 1024)
+    mem = int(int(fields[1]) / (1024 * 1024))
 
     return mem
 
 
-def compute_system_memory():
+def get_physical_memory():
     operating_system = platform.system()
     print_if_verbose('operating system is {0}'.format(operating_system))
 
@@ -390,12 +390,11 @@ def compute_system_memory():
 
     try:
         if operating_system == 'Darwin':
-            system_memory = estimate_memory_osx()
+            system_memory = get_physical_memory_osx()
         elif operating_system == 'Linux':
-            system_memory = estimate_memory_linux()
-    except (Exception) as error:
-        print(error)
-        raise ValueError('Please specify memory argument')
+            system_memory = get_physical_memory_linux()
+    except Exception:
+        pass
 
     return system_memory
 
@@ -403,14 +402,20 @@ def compute_system_memory():
 def convert_total_memory_string(memory):
     try:
         if memory == '':
-            computed_memory = compute_system_memory()
-            return computed_memory
+            physical_memory = get_physical_memory()
+
+            if physical_memory == None:
+                raise ValueError('Please specify memory argument')
+
+            return physical_memory
         elif memory.endswith(MEM_MB_SUFFIX):
             return int(memory[:-1])
         elif memory.endswith(MEM_GB_SUFFIX):
             return 1024 * int(memory[:-1])
         else:
             raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
+    except ValueError as e:
+        raise e
     except Exception:
         raise ValueError('Incorrect format for memory argument, expected format is <integer_value><m/g>')
 
