@@ -555,7 +555,7 @@ public class ParserTest extends InitializedNullHandlingTest
     validateParser(
         "map((x) -> concat(x, y), z)",
         "(map ([x] -> (concat [x, y])), [z])",
-        ImmutableList.of("y", "z"),
+        ImmutableList.of("z", "y"),
         ImmutableSet.of("y"),
         ImmutableSet.of("z")
     );
@@ -578,14 +578,14 @@ public class ParserTest extends InitializedNullHandlingTest
     validateParser(
         "array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))",
         "(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])",
-        ImmutableList.of("x", "y", "z"),
+        ImmutableList.of("z", "x", "y"),
         ImmutableSet.of(),
         ImmutableSet.of("x", "z")
     );
     validateParser(
         "map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y)))",
         "(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])])",
-        ImmutableList.of("x", "y", "z"),
+        ImmutableList.of("z", "x", "y"),
         ImmutableSet.of(),
         ImmutableSet.of("x", "z")
     );
@@ -593,7 +593,7 @@ public class ParserTest extends InitializedNullHandlingTest
     validateParser(
         "array_append(map(z -> z + 1, array_append(z, fold((x, acc) -> acc + x, map((x) -> x + 1, x), y))), a)",
         "(array_append [(map ([z] -> (+ z 1)), [(array_append [z, (fold ([x, acc] -> (+ acc x)), [(map ([x] -> (+ x 1)), [x]), y])])]), a])",
-        ImmutableList.of("x", "y", "a", "z"),
+        ImmutableList.of("z", "x", "y", "a"),
         ImmutableSet.of("a"),
         ImmutableSet.of("x", "z")
     );
