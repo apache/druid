@@ -145,7 +145,7 @@ sample usage:
                         help='List of services to be started, subset of \n'
                              '{broker, router, middleManager, historical, coordinator-overlord, indexer}. \n'
                              'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
-                             'and zookeeper is started. e.g. -sl=broker,historical')
+                             'and zookeeper is started. e.g. -s=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
                         help='Relative path to the directory containing common and service \n'
                              'specific properties to be overridden. \n'
