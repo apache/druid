@@ -337,6 +337,7 @@ public class NettyHttpClient extends AbstractHttpClient
           @Override
           public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event)
           {
+            handler.handleDisconnect();
             if (log.isDebugEnabled()) {
               log.debug("[%s] Channel disconnected", requestDesc);
             }

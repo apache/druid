@@ -59,6 +59,15 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
   ClientResponse<IntermediateType> handleResponse(HttpResponse response, TrafficCop trafficCop);
 
   /**
+   * Handles when a channel disconnects
+   */
+  default void handleDisconnect()
+  {
+    // do nothing.
+  }
+
+
+  /**
    * Called for chunked responses, indicating another HttpChunk has arrived.
    *
    * @param clientResponse last response returned by the prior handleResponse() or handleChunk()
