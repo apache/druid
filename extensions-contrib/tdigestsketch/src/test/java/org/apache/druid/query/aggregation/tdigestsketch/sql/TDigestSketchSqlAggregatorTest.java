@@ -64,11 +64,6 @@ import java.util.List;
 
 public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new TDigestSketchQuantileSqlAggregator(), new TDigestGenerateSketchSqlAggregator()),
-      ImmutableSet.of()
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -119,7 +114,11 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return OPERATOR_TABLE;
+    return new DruidOperatorTable(
+        ImmutableSet.of(new TDigestSketchQuantileSqlAggregator(), new TDigestGenerateSketchSqlAggregator()),
+        ImmutableSet.of(),
+        createMacroTable()
+    );
   }
 
   @Test

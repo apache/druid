@@ -169,7 +169,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new ThetaSketchSetIntersectOperatorConversion(),
             new ThetaSketchSetUnionOperatorConversion(),
             new ThetaSketchSetNotOperatorConversion()
-        )
+        ),
+        createMacroTable()
     );
   }
 

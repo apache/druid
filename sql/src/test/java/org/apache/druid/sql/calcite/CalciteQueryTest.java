@@ -114,6 +114,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -14358,6 +14359,105 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{6L}
         )
+    );
+  }
+
+  @Test
+  public void testEval()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT"
+        + " EVAL('m1 + m2', m1, m2),"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, dim2),"
+        + " EVAL('to_json_string(dim1)', dim1)"
+        + " from druid.foo",
+        QUERY_CONTEXT_ALLOW_EVAL,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "m1 + m2",
+                          ColumnType.DOUBLE
+                      ),
+                      expressionVirtualColumn(
+                          "v1",
+                          "concat(dim1, 'hello', dim2)",
+                          ColumnType.STRING
+                      ),
+                      expressionVirtualColumn(
+                          "v2",
+                          "to_json_string(dim1)",
+                          ColumnType.STRING
+                      )
+                  )
+                  .columns("v0", "v1", "v2")
+                  .legacy(false)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        useDefault ? ImmutableList.of(
+            new Object[]{2.0, "helloa", NullHandling.defaultStringValue()},
+            new Object[]{4.0, "10.1hello", "\"10.1\""},
+            new Object[]{6.0, "2hello", "\"2\""},
+            new Object[]{8.0, "1helloa", "\"1\""},
+            new Object[]{10.0, "defhelloabc", "\"def\""},
+            new Object[]{12.0, "abchello", "\"abc\""}
+        ) : ImmutableList.of(
+            new Object[]{2.0, "helloa", "\"\""},
+            new Object[]{4.0, null, "\"10.1\""},
+            new Object[]{6.0, "2hello", "\"2\""},
+            new Object[]{8.0, "1helloa", "\"1\""},
+            new Object[]{10.0, "defhelloabc", "\"def\""},
+            new Object[]{12.0, null, "\"abc\""}
+        )
+    );
+  }
+
+  @Test
+  public void testEvalNotEnabled()
+  {
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('m1 + m2', m1, m2),"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, dim2),"
+        + " EVAL('to_json_string(dim1)', dim1)"
+        + " from druid.foo",
+        expectedException -> {
+          expectedException.expect(UnsupportedSQLQueryException.class);
+          expectedException.expectMessage("Query not supported. Possible error: EVAL function is not enabled, the query context parameter 'sqlAllowEval' must be set to true.");
+        }
+    );
+  }
+
+  @Test
+  public void testEvalMissingInput()
+  {
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1)"
+        + " from druid.foo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("EVAL function must be supplied with all required inputs as arguments, missing [dim2]");
+        }
+    );
+  }
+
+  @Test
+  public void testEvalExprInput()
+  {
+    testQueryThrows(
+        "SELECT"
+        + " EVAL('concat(dim1, ''hello'', dim2)', dim1, NVL(dim2, 'foo'))"
+        + " from druid.foo",
+        exception -> {
+          exception.expect(SqlPlanningException.class);
+          exception.expectMessage("EVAL function arguments must be identifiers, no expressions or literals allowed");
+        }
     );
   }
 }

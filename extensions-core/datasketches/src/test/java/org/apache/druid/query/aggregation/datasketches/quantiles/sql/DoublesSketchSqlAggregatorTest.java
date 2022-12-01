@@ -79,21 +79,6 @@ import java.util.Map;
 
 public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(
-          new DoublesSketchApproxQuantileSqlAggregator(),
-          new DoublesSketchObjectSqlAggregator()
-      ),
-      ImmutableSet.of(
-          new DoublesSketchQuantileOperatorConversion(),
-          new DoublesSketchQuantilesOperatorConversion(),
-          new DoublesSketchToHistogramOperatorConversion(),
-          new DoublesSketchRankOperatorConversion(),
-          new DoublesSketchCDFOperatorConversion(),
-          new DoublesSketchSummaryOperatorConversion()
-      )
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -144,7 +129,21 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return OPERATOR_TABLE;
+    return new DruidOperatorTable(
+        ImmutableSet.of(
+            new DoublesSketchApproxQuantileSqlAggregator(),
+            new DoublesSketchObjectSqlAggregator()
+        ),
+        ImmutableSet.of(
+            new DoublesSketchQuantileOperatorConversion(),
+            new DoublesSketchQuantilesOperatorConversion(),
+            new DoublesSketchToHistogramOperatorConversion(),
+            new DoublesSketchRankOperatorConversion(),
+            new DoublesSketchCDFOperatorConversion(),
+            new DoublesSketchSummaryOperatorConversion()
+        ),
+        createMacroTable()
+    );
   }
 
   @Test

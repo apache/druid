@@ -32,6 +32,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
@@ -75,6 +76,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64Operat
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.EvalOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
@@ -404,7 +406,8 @@ public class DruidOperatorTable implements SqlOperatorTable
   @Inject
   public DruidOperatorTable(
       final Set<SqlAggregator> aggregators,
-      final Set<SqlOperatorConversion> operatorConversions
+      final Set<SqlOperatorConversion> operatorConversions,
+      final ExprMacroTable macroTable
   )
   {
     this.aggregators = new HashMap<>();
@@ -442,6 +445,9 @@ public class DruidOperatorTable implements SqlOperatorTable
 
       this.operatorConversions.putIfAbsent(operatorKey, operatorConversion);
     }
+    SqlOperatorConversion evalConversion = new EvalOperatorConversion(macroTable);
+    final OperatorKey operatorKey = OperatorKey.of(evalConversion.calciteOperator());
+    this.operatorConversions.put(operatorKey, evalConversion);
   }
 
   @Nullable

@@ -76,11 +76,6 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
   private static final String DATA_SOURCE = "numfoo";
 
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new BloomFilterSqlAggregator()),
-      ImmutableSet.of()
-  );
-
   @Override
   public Iterable<? extends Module> getJacksonModules()
   {
@@ -138,7 +133,11 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
   @Override
   public DruidOperatorTable createOperatorTable()
   {
-    return OPERATOR_TABLE;
+    return new DruidOperatorTable(
+        ImmutableSet.of(new BloomFilterSqlAggregator()),
+        ImmutableSet.of(),
+        createMacroTable()
+    );
   }
 
   @Test

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
@@ -530,7 +531,7 @@ public class SqlBenchmark
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
       aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
       aggregators.add(countDistinctSqlAggregator);
-      return new DruidOperatorTable(aggregators, extractionOperators);
+      return new DruidOperatorTable(aggregators, extractionOperators, CalciteTests.INJECTOR.getInstance(ExprMacroTable.class));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

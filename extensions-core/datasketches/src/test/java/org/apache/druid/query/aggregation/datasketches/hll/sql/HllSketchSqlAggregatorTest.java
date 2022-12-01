@@ -152,7 +152,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new HllSketchEstimateOperatorConversion(),
             new HllSketchToStringOperatorConversion(),
             new HllSketchEstimateWithErrorBoundsOperatorConversion()
-        )
+        ),
+        createMacroTable()
     );
   }
 

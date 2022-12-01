@@ -86,6 +86,8 @@ public class QueryContexts
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  public static final String CTX_SQL_ALLOW_EVAL = "sqlAllowEval";
+
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;

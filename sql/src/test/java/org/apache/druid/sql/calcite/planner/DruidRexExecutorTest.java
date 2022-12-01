@@ -38,6 +38,7 @@ import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -83,7 +84,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       "SELECT 1", // The actual query isn't important for this test
       new DruidOperatorTable(
           Collections.emptySet(),
-          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique"))
+          ImmutableSet.of(new DirectOperatorConversion(OPERATOR, "hyper_unique")),
+          TestExprMacroTable.INSTANCE
       ),
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
