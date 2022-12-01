@@ -26,8 +26,7 @@ title: "Single server deployment"
 Druid includes a set of reference configurations and launch scripts for single-machine deployments.
 These configuration bundles are located in `conf/druid/single-server/`.
 
-The `auto` configuration sizes runtime parameters based on available processors and memory. Other configurations include hard-coded runtime parameters for various server sizes. Most users should stick with `auto`.
-
+The `auto` configuration sizes runtime parameters based on available processors and memory. Other configurations include hard-coded runtime parameters for various server sizes. Most users should stick with `auto`. Refer below [Druid auto start](#Druid-auto-start)
 - `auto` (run script: `bin/start-druid-auto`)
 - `nano-quickstart` (run script: `bin/start-nano-quickstart`)
 - `micro-quickstart` (run script: `bin/start-micro-quickstart`)
@@ -48,7 +47,7 @@ The example configurations run the Druid Coordinator and Overlord together in a 
 
 While example configurations are provided for very large single machines, at higher scales we recommend running Druid in a [clustered deployment](../tutorials/cluster.md), for fault-tolerance and reduced resource contention.
 
-## Druid auto start 
+## Druid auto start
 
 Setting up a new Druid cluster can sometimes be complicated as there are several runtime properties required by each service. Each process must also be given the appropriate jvm arguments so that the system can perform optimally.
 
