@@ -196,16 +196,16 @@ usage() unless GetOptions(
   'kill-timeout|t=i',
   'chdir=s',
   'svlogd:s',
-  'command=s@' => \@commands
+  'command=s@'
 );
 
-usage() unless ((@commands || $opt{'conf'}) && $opt{'vardir'});
+usage() unless ((@{$opt{'command'}} || $opt{'conf'}) && $opt{'vardir'});
 
 my @config_lines;
 
 # get commands to execute either from reading the config file or command line
 if (not defined $opt{'conf'}) {
-    @config_lines = @commands
+    @config_lines = @{$opt{'command'}}
 } else {
     @config_lines = read_config_file($opt{'conf'});
 }
