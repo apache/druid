@@ -68,11 +68,11 @@ jobs:
         run: |
           ./.github/scripts/license_checks_script.sh
 
-      - name: packaging check
-        run: |
-          ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
-          -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
+#      - name: packaging check
+#        run: |
+#          ./.github/scripts/setup_generate_license.sh
+#          ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+#          -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
       - name: maven install
         if: ${{ matrix.java == 'jdk8' }}
