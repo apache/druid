@@ -20,23 +20,27 @@
 package org.apache.druid.indexing.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.EnumUtils;
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Configurations for ingestion tasks. These configurations can be applied per middleManager, indexer, or overlord.
@@ -83,9 +87,6 @@ public class TaskConfig
   private final String baseDir;
 
   @JsonProperty
-  private final File baseTaskDir;
-
-  @JsonProperty
   private final String hadoopWorkingPath;
 
   @JsonProperty
@@ -118,13 +119,26 @@ public class TaskConfig
   @JsonProperty
   private final boolean storeEmptyColumns;
 
-  @JsonProperty
   private final boolean encapsulatedTask;
+
+  @JsonProperty
+  private final String baseTaskDir;
+
+  // Use multiple base files for tasks instead of a single one
+  @JsonProperty
+  @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+  private final List<String> baseTaskDirPaths;
+
+  private int taskDirIndex = 0;
+
+  private final List<File> baseTaskDirs = new ArrayList<>();
+
+  private final Map<String, File> taskToTempDirMap = new HashMap<>();
 
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
-      @JsonProperty("baseTaskDir") String baseTaskDir,
+      @Deprecated @JsonProperty("baseTaskDir") String baseTaskDir,
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
       @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
@@ -136,11 +150,11 @@ public class TaskConfig
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
-      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush
+      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
+      @JsonProperty("baseTaskDirPaths") @Nullable List<String> baseTaskDirPaths
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
-    this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
     // This is usually on HDFS or similar, so we can't use java.io.tmpdir
     this.hadoopWorkingPath = hadoopWorkingPath == null ? "/tmp/druid-indexing" : hadoopWorkingPath;
     this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 75000 : defaultRowFlushBoundary;
@@ -182,6 +196,16 @@ public class TaskConfig
     }
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
+
+    this.baseTaskDir = baseTaskDir;
+    if (CollectionUtils.isNullOrEmpty(baseTaskDirPaths)) {
+      String baseTaskFile = defaultDir(baseTaskDir, "persistent/task");
+      baseTaskDirPaths = Collections.singletonList(baseTaskFile);
+    }
+    this.baseTaskDirPaths = ImmutableList.copyOf(baseTaskDirPaths);
+    for (String path : baseTaskDirPaths) {
+      baseTaskDirs.add(new File(path));
+    }
   }
 
   @JsonProperty
@@ -191,14 +215,35 @@ public class TaskConfig
   }
 
   @JsonProperty
-  public File getBaseTaskDir()
+  public String getBaseTaskDir()
   {
     return baseTaskDir;
   }
 
+  @JsonProperty
+  public List<String> getBaseTaskDirPaths()
+  {
+    return baseTaskDirPaths;
+  }
+
+  public List<File> getBaseTaskDirs()
+  {
+    return baseTaskDirs;
+  }
+
+  public synchronized File getTaskBaseDir(String taskId)
+  {
+    if (!taskToTempDirMap.containsKey(taskId)) {
+      taskToTempDirMap.put(taskId, baseTaskDirs.get(taskDirIndex));
+      taskDirIndex = (taskDirIndex + 1) % baseTaskDirPaths.size();
+    }
+
+    return taskToTempDirMap.get(taskId);
+  }
+
   public File getTaskDir(String taskId)
   {
-    return new File(baseTaskDir, IdUtils.validateId("task ID", taskId));
+    return new File(getTaskBaseDir(taskId), taskId);
   }
 
   public File getTaskWorkDir(String taskId)
@@ -209,11 +254,6 @@ public class TaskConfig
   public File getTaskTempDir(String taskId)
   {
     return new File(getTaskDir(taskId), "temp");
-  }
-
-  public File getTaskLockFile(String taskId)
-  {
-    return new File(getTaskDir(taskId), "lock");
   }
 
   @JsonProperty
@@ -290,6 +330,21 @@ public class TaskConfig
   public boolean isEncapsulatedTask()
   {
     return encapsulatedTask;
+  }
+
+  public synchronized void addTask(final String taskId, final File taskDir)
+  {
+    final File existingTaskDir = taskToTempDirMap.get(taskId);
+    if (existingTaskDir != null && !existingTaskDir.equals(taskDir)) {
+      throw new ISE("Task [%s] is already assigned to worker path[%s]", taskId, existingTaskDir.getPath());
+    }
+
+    taskToTempDirMap.put(taskId, taskDir);
+  }
+
+  public synchronized void removeTask(final String taskId)
+  {
+    taskToTempDirMap.remove(taskId);
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)

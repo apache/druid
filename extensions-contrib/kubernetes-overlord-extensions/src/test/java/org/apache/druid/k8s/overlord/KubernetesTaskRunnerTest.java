@@ -122,7 +122,8 @@ class KubernetesTaskRunnerTest
         false,
         null,
         null,
-        false
+        false,
+        null
     );
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerConfig();
     kubernetesTaskRunnerConfig.namespace = "test";

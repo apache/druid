@@ -582,7 +582,8 @@ public class BatchAppenderatorsTest
                   false,
                   mode.name(),
                   null,
-                  false
+                  false,
+                  null
               )
           )
           .joinableFactory(NoopJoinableFactory.INSTANCE)

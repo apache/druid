@@ -618,7 +618,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false
+        false,
+        null
     );
 
     return new TaskToolboxFactory(

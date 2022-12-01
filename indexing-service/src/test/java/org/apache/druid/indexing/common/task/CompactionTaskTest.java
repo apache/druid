@@ -2030,7 +2030,8 @@ public class CompactionTaskTest
                 false,
                 TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
                 null,
-                false
+                false,
+                null
             )
         )
         .taskActionClient(taskActionClient)

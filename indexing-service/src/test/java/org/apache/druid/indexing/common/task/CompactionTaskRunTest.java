@@ -1697,7 +1697,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 false,
                 TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
                 null,
-                false
+                false,
+                null
             )
         )
         .taskActionClient(createActionClient(task))

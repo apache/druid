@@ -217,7 +217,8 @@ public class ForkingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -283,7 +284,8 @@ public class ForkingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -354,7 +356,8 @@ public class ForkingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -413,7 +416,8 @@ public class ForkingTaskRunnerTest
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false
+        false,
+        null
     );
     String taskId = "foo";
     assertEquals(1, ForkingTaskRunner.getNextAttemptID(taskConfig, taskId));
@@ -459,7 +463,8 @@ public class ForkingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new Properties(),
@@ -526,7 +531,8 @@ public class ForkingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new Properties(),

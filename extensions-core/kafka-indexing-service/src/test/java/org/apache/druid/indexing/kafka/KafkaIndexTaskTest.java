@@ -3072,7 +3072,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
-        false
+        false,
+        null
     );
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();

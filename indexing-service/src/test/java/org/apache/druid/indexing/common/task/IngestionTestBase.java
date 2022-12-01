@@ -330,7 +330,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
                     false,
                     TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
                     null,
-                    false
+                    false,
+                    null
                 )
             )
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))

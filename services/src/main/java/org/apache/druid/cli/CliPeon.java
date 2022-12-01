@@ -220,7 +220,9 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
-                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
+                .setLockFile(Paths.get(taskDirPath, "lock").toFile());
+
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");

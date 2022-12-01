@@ -64,7 +64,8 @@ public class ThreadingTaskRunnerTest
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
             null,
-            false
+            false,
+            null
         ),
         new WorkerConfig(),
         new NoopTaskLogs(),
