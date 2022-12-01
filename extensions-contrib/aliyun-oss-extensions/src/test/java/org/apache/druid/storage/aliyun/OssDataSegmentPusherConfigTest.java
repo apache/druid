@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.aliyun;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
@@ -28,7 +29,7 @@ import java.io.IOException;
 
 public class OssDataSegmentPusherConfigTest
 {
-  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper().configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
 
   @Test
   public void testSerialization() throws IOException
