@@ -56,12 +56,6 @@ jobs:
           java-version: ${{ env.java_version }}
           cache: 'maven'
 
-      - name: packaging check
-        run: |
-          ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
-          -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
-
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
         run: |
@@ -73,6 +67,12 @@ jobs:
           HADOOP_PROFILE: -Phadoop3
         run: |
           ./.github/scripts/license_checks_script.sh
+
+      - name: packaging check
+        run: |
+          ./.github/scripts/setup_generate_license.sh
+          ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+          -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
 
       - name: maven install
         if: ${{ matrix.java == 'jdk8' }}
