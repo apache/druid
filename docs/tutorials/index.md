@@ -80,13 +80,13 @@ You can view that setting and others in the configuration files in the `conf/dru
 From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
 ```bash
-./bin/start-druid-main-auto 
+./bin/start-druid-auto
 ```
 
 This brings up instances of ZooKeeper and the Druid services:
 
 ```bash
-$ ./bin/start-druid-main-auto 
+$ ./bin/start-druid-auto
 [Tue Nov 29 16:31:06 2022] Starting Apache Druid.
 [Tue Nov 29 16:31:06 2022] Open http://localhost:8888/ in your browser to access the web console.
 [Tue Nov 29 16:31:06 2022] Or, if you have enabled TLS, use https on port 9088.

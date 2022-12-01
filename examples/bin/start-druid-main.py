@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -51,6 +49,7 @@ COORDINATOR = "coordinator-overlord"
 HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
 TASKS = "tasks"
+INDEXER = "indexer"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -135,8 +134,8 @@ sample usage:
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
     parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
-                             '{broker, router, middleManager, historical, coordinator-overlord}. \n'
-                             'If the argument is not given, all services \n'
+                             '{broker, router, middleManager, historical, coordinator-overlord, indexer}. \n'
+                             'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
                              'and zookeeper is started. e.g. -sl=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
                         help='Relative path to the directory containing common and service \n'
@@ -290,6 +289,21 @@ def should_compute_memory(config, total_memory, service_list):
         mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
         mm_task_property_present = mm_task_java_opts_property or mm_task_worker_capacity_prop
 
+    # if indexer has to be run, all the memory related parameters need to be specified
+    if INDEXER in service_list:
+        if MIDDLE_MANAGER in service_list:
+            raise ValueError("one of indexer or middleManager can run")
+        if total_memory != "":
+            raise ValueError(
+            "If service list includes indexer, jvm.config should be specified for "
+            "each service and memory argument shouldn't be specified")
+        if jvm_config_count != len(service_list):
+            raise ValueError("If service list includes indexer, jvm.config should be specified for each service")
+        for service in service_list:
+            verify_service_config(service, config)
+
+        return False
+
     # possible error states
     # 1. memory argument is specified, also jvm.config or middleManger/runtime.properties having
     # druid.indexer.runner.javaOptsArray or druid.worker.capacity parameters is present
@@ -298,7 +312,7 @@ def should_compute_memory(config, total_memory, service_list):
     # 3. jvm.config present for some but not all services
     # 4. jvm.config file is present for all services, but it doesn't contain required parameters
     # 5. lastly, if middleManager is to be started, and it is missing task memory properties
-    if jvm_config_count > 0 or mm_task_property_present:
+    if INDEXER in service_list or jvm_config_count > 0 or mm_task_property_present:
         if total_memory != "":
             raise ValueError(
             "If jvm.config for services and/or middleManager configs "
