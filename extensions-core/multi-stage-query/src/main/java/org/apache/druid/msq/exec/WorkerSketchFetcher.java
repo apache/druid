@@ -120,25 +120,17 @@ public class WorkerSketchFetcher implements AutoCloseable
     final int workerCount = workerTaskIds.size();
     // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
-    final Set<Future<ClusterByStatisticsSnapshot>> futuresToCancel = ConcurrentHashMap.newKeySet();
-    partitionFuture.whenComplete((result, exception) -> {
-      if (exception != null || (result != null && result.isError())) {
-        for (Future<ClusterByStatisticsSnapshot> snapshotFuture : futuresToCancel) {
-          snapshotFuture.cancel(true);
-        }
-      }
-    });
+    final Set<Future<?>> futuresToCancel = ConcurrentHashMap.newKeySet();
 
     // Submit a task for each worker to fetch statistics
     IntStream.range(0, workerCount).forEach(workerNo -> {
-      executorService.submit(() -> {
+      futuresToCancel.add(executorService.submit(() -> {
         ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
             workerClient.fetchClusterByStatisticsSnapshot(
                 workerTaskIds.get(workerNo),
                 stageDefinition.getId().getQueryId(),
                 stageDefinition.getStageNumber()
             );
-        futuresToCancel.add(snapshotFuture);
         try {
           ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
           if (clusterByStatisticsSnapshot == null) {
@@ -146,7 +138,6 @@ public class WorkerSketchFetcher implements AutoCloseable
           }
           synchronized (mergedStatisticsCollector) {
             mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
-            futuresToCancel.remove(snapshotFuture);
             finishedWorkers.add(workerNo);
 
             if (finishedWorkers.size() == workerCount) {
@@ -161,7 +152,17 @@ public class WorkerSketchFetcher implements AutoCloseable
             mergedStatisticsCollector.clear();
           }
         }
-      });
+      }));
+    });
+
+    partitionFuture.whenComplete((result, exception) -> {
+      if (exception != null || (result != null && result.isError())) {
+        for (Future<?> future : futuresToCancel) {
+          if (!future.isDone()) {
+            future.cancel(true);
+          }
+        }
+      }
     });
     return partitionFuture;
   }
@@ -237,14 +238,7 @@ public class WorkerSketchFetcher implements AutoCloseable
             stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
         // Guarded by synchronized mergedStatisticsCollector
         Set<Integer> finishedWorkers = new HashSet<>();
-        final Set<Future<ClusterByStatisticsSnapshot>> futuresToCancel = ConcurrentHashMap.newKeySet();
-        partitionFuture.whenComplete((result, exception) -> {
-          if (exception != null || (result != null && result.isError())) {
-            for (Future<ClusterByStatisticsSnapshot> snapshotFuture : futuresToCancel) {
-              snapshotFuture.cancel(true);
-            }
-          }
-        });
+        final Set<Future<?>> futuresToCancel = ConcurrentHashMap.newKeySet();
 
         log.debug("Query [%s]. Submitting request for statistics for time chunk %s to %s workers",
                   stageDefinition.getId().getQueryId(),
@@ -253,7 +247,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
         // Submits a task for every worker which has a certain time chunk
         for (int workerNo : workerIdsWithTimeChunk) {
-          executorService.submit(() -> {
+          futuresToCancel.add(executorService.submit(() -> {
             ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
                 workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
                     workerTaskIds.get(workerNo),
@@ -261,7 +255,6 @@ public class WorkerSketchFetcher implements AutoCloseable
                     stageDefinition.getStageNumber(),
                     timeChunk
                 );
-            futuresToCancel.add(snapshotFuture);
 
             try {
               ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
@@ -270,7 +263,6 @@ public class WorkerSketchFetcher implements AutoCloseable
               }
               synchronized (mergedStatisticsCollector) {
                 mergedStatisticsCollector.addAll(snapshotForTimeChunk);
-                futuresToCancel.remove(snapshotFuture);
                 finishedWorkers.add(workerNo);
 
                 if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
@@ -304,8 +296,18 @@ public class WorkerSketchFetcher implements AutoCloseable
                 mergedStatisticsCollector.clear();
               }
             }
-          });
+          }));
         }
+
+        partitionFuture.whenComplete((result, exception) -> {
+          if (exception != null || (result != null && result.isError())) {
+            for (Future<?> future : futuresToCancel) {
+              if (!future.isDone()) {
+                future.cancel(true);
+              }
+            }
+          }
+        });
       }
     }
 
