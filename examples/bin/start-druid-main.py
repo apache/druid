@@ -333,7 +333,7 @@ def should_compute_memory(config, total_memory, service_list):
     # 3. jvm.config present for some but not all services
     # 4. jvm.config file is present for all services, but it doesn't contain required parameters
     # 5. lastly, if middleManager is to be started, and it is missing task memory properties
-    if INDEXER in service_list or jvm_config_count > 0 or mm_task_property_present:
+    if jvm_config_count > 0 or mm_task_property_present:
         if total_memory != "":
             raise ValueError(
                 "If jvm.config for services and/or middleManager configs "
@@ -348,9 +348,11 @@ def should_compute_memory(config, total_memory, service_list):
         for service in service_list:
             verify_service_config(service, config)
 
+        return False
+
     # compute memory only when none of the specified services contains jvm.config,
-    # if middleManager is to be started it doesn't contain task memory properties
-    return jvm_config_count == 0 and mm_task_property_present is False
+    # if middleManager is to be started it shouldn't contain task memory properties
+    return True
 
 
 def get_physical_memory_linux():
