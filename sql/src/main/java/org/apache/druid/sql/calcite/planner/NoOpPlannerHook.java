@@ -17,35 +17,45 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.calcite.interpreter.BindableRel;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlInsert;
+import org.apache.druid.sql.calcite.rel.DruidRel;
 
-import java.util.Collections;
-import java.util.List;
-
-public class ModulesConfig
+public class NoOpPlannerHook implements PlannerHook
 {
-  public static final String PROPERTY_BASE = "druid.modules";
+  public static final NoOpPlannerHook INSTANCE = new NoOpPlannerHook();
 
-  /**
-   * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
-   * ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code
-   * CliPeon}.
-   */
-  @JsonProperty
-  private List<String> excludeList = Collections.emptyList();
-
-  public List<String> getExcludeList()
+  @Override
+  public void captureSql(String sql)
   {
-    return excludeList;
   }
 
   @Override
-  public String toString()
+  public void captureQueryRel(RelRoot rootQueryRel)
   {
-    return "ModulesConfig{" +
-           "excludeList=" + excludeList +
-           '}';
+  }
+
+  @Override
+  public void captureDruidRel(DruidRel<?> druidRel)
+  {
+  }
+
+  @Override
+  public void captureBindableRel(BindableRel bindableRel)
+  {
+  }
+
+  @Override
+  public void captureParameterTypes(RelDataType parameterTypes)
+  {
+  }
+
+  @Override
+  public void captureInsert(SqlInsert insert)
+  {
   }
 }

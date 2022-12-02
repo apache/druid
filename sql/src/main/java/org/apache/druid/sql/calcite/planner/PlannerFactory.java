@@ -104,7 +104,8 @@ public class PlannerFactory
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
-      final Map<String, Object> queryContext
+      final Map<String, Object> queryContext,
+      final PlannerHook hook
   )
   {
     final PlannerContext context = PlannerContext.create(
@@ -119,7 +120,7 @@ public class PlannerFactory
         joinableFactoryWrapper
     );
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
 
   /**
@@ -129,7 +130,7 @@ public class PlannerFactory
   @VisibleForTesting
   public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final Map<String, Object> queryContext)
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext);
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {
