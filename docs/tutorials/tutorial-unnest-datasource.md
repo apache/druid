@@ -152,7 +152,9 @@ The following native Scan query  also unnests the values in the `dim3` column by
       "name": "nested_data"
     },
     "column": "dim3",
-    "outputName": "unnest-dim3"
+    "dedup": false,
+    "outputName": "unnest-dim3",
+    "allowList": []
   },
   "intervals": {
     "type": "intervals",
@@ -180,10 +182,25 @@ The following native Scan query  also unnests the values in the `dim3` column by
   }
 }
 ```
-
+s
 </details>
 
 In the results, you'll notice that there are now more rows than before and an additional column named `unnest-dim3`. The values of `unnest-dim3` are the same as the `dim3` column except the nested values have are no longer nested and are each a separate record. 
+
+With the `dataSource.allowList` parameter, you can unnest a subset of a column. Now, set the value of `allowList` to `["a","b"]` and run the query again. Only a subset of rows are returned based on the values you allowed.
+
+You can also implement filters. For example, you can add the following to the SCAN query to filter it:
+
+```json
+  "filter": {
+    "type": "in",
+    "dimension": "dim2",
+    "values": [
+      "a",
+      "abc",
+      ]
+  },
+```
 
 ### Group by query
 

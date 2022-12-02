@@ -396,27 +396,29 @@ When you use the `unnest` datasource, the unnested column looks like this:
 When unnesting data, keep the following in mind:
 
 - The total number of rows will grow to accommodate the new rows that the unnested data occupy.
-- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows though depending on your dataset.
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows though depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
 
 The `unnest` datasource uses the following syntax:
 
 ```json
-"datasource": {
-  "type": "unnest",
-  "base": {
+  "dataSource": {
     "type": "unnest",
     "base": {
       "type": "table",
       "name": "nested_data"
     },
-    "column": "nested_source_column1",
-    "outputName": "unnest_target_column1",
+    "column": "nested_source_column",
+    "outputName": "unnested_target_column",
     "allowList": []
-  },
-  "column": "nested_source_column2",
-  "outputName": "unnest_target_column2",
-  "allowList": []
   },
 ```
 
-The block for `nested_source_column2` is optional and is used to unnest a second column with nested values in the `nested_data` table.
+* `dataSource.type`: Set this to `unnest`.
+* `dataSource.base`: Defines the datasource you want to unnest.
+  * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
+  * `dataSource.base.name`: The name of the datasource you want to unnest.
+* `dataSource.column`: The name of the source column that contains the nested values.
+* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. 
+* `dataSource.allowList`: Optional. The subset of values you want to unnest.
+
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
