@@ -26,6 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
@@ -245,13 +246,20 @@ public class UnnestDimensionCursor implements Cursor
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        if (!outputName.equals(columnName)) {
+        if (!outputName.equals(column)) {
           return baseColumnSelectorFactory.getColumnCapabilities(column);
         }
         // This currently returns the same type as of the column to be unnested
         // This is fine for STRING types
         // But going forward if the dimension to be unnested is of type ARRAY,
         // this should strip down to the base type of the array
+        final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
+        if(capabilities.isArray()) {
+          return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
+        }
+        if (capabilities.hasMultipleValues().isTrue()) {
+          return ColumnCapabilitiesImpl.copyOf(capabilities).setHasMultipleValues(false);
+        }
         return baseColumnSelectorFactory.getColumnCapabilities(columnName);
       }
     };

@@ -24,6 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -62,7 +63,7 @@ import java.util.List;
 public class UnnestColumnValueSelectorCursor implements Cursor
 {
   private final Cursor baseCursor;
-  private final ColumnSelectorFactory baseColumSelectorFactory;
+  private final ColumnSelectorFactory baseColumnSelectorFactory;
   private final ColumnValueSelector columnValueSelector;
   private final String columnName;
   private final String outputName;
@@ -81,8 +82,8 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   )
   {
     this.baseCursor = cursor;
-    this.baseColumSelectorFactory = baseColumSelectorFactory;
-    this.columnValueSelector = this.baseColumSelectorFactory.makeColumnValueSelector(columnName);
+    this.baseColumnSelectorFactory = baseColumSelectorFactory;
+    this.columnValueSelector = this.baseColumnSelectorFactory.makeColumnValueSelector(columnName);
     this.columnName = columnName;
     this.index = 0;
     this.outputName = outputColumnName;
@@ -99,7 +100,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
         if (!outputName.equals(dimensionSpec.getDimension())) {
-          return baseColumSelectorFactory.makeDimensionSelector(dimensionSpec);
+          return baseColumnSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
         throw new UOE("Unsupported dimension selector while using column value selector for column [%s]", outputName);
       }
@@ -108,7 +109,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {
         if (!outputName.equals(columnName)) {
-          return baseColumSelectorFactory.makeColumnValueSelector(columnName);
+          return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
         }
         return new ColumnValueSelector()
         {
@@ -190,13 +191,16 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       public ColumnCapabilities getColumnCapabilities(String column)
       {
         if (!outputName.equals(column)) {
-          return baseColumSelectorFactory.getColumnCapabilities(column);
+          return baseColumnSelectorFactory.getColumnCapabilities(column);
         }
-        // This currently returns the same type as of the column to be unnested
-        // This is fine for STRING types
-        // But going forward if the dimension to be unnested is of type ARRAY,
-        // this should strip down to the base type of the array
-        return baseColumSelectorFactory.getColumnCapabilities(columnName);
+        final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
+        if(capabilities.isArray()) {
+          return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
+        }
+        if (capabilities.hasMultipleValues().isTrue()) {
+          return ColumnCapabilitiesImpl.copyOf(capabilities).setHasMultipleValues(false);
+        }
+        return baseColumnSelectorFactory.getColumnCapabilities(columnName);
       }
     };
   }
