@@ -20,7 +20,8 @@
 package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.frame.AppendableMapOfColumns;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.OnHeapAggregatable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

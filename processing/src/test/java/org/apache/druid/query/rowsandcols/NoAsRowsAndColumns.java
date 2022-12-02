@@ -17,30 +17,45 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.column;
+package org.apache.druid.query.rowsandcols;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.query.rowsandcols.column.Column;
 
-public class NullColumnAccessorTest
+import javax.annotation.Nullable;
+import java.util.Collection;
+
+public class NoAsRowsAndColumns implements RowsAndColumns
 {
+  private final RowsAndColumns rac;
 
-  @Test
-  public void testSanity()
+  public NoAsRowsAndColumns(RowsAndColumns rac)
   {
-    NullColumnAccessor accessor = new NullColumnAccessor(10);
-    Assert.assertEquals(10, accessor.numRows());
+    this.rac = rac;
+  }
 
-    for (int i = 0; i < 10; ++i) {
-      Assert.assertTrue(accessor.isNull(i));
-      Assert.assertNull(accessor.getObject(i));
-      Assert.assertEquals(0, accessor.getInt(i));
-      Assert.assertEquals(0, accessor.getLong(i));
-      Assert.assertEquals(0.0, accessor.getFloat(i), 0);
-      Assert.assertEquals(0.0, accessor.getDouble(i), 0);
-      for (int j = 0; j < i; ++j) {
-        Assert.assertEquals(0, accessor.compareRows(j, i));
-      }
-    }
+  @Override
+  public Collection<String> getColumnNames()
+  {
+    return rac.getColumnNames();
+  }
+
+  @Override
+  public int numRows()
+  {
+    return rac.numRows();
+  }
+
+  @Override
+  public Column findColumn(String name)
+  {
+    return rac.findColumn(name);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    // Pretend like this doesn't implement any semantic interfaces
+    return null;
   }
 }
