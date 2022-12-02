@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
@@ -130,6 +131,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(input.sql)
+          .queryContext(ImmutableMap.of("windowsAreForClosers", true))
           .addCustomVerification(QueryVerification.ofResults(results -> {
             if (results.exception != null) {
               throw new RE(results.exception, "Failed to execute because of exception.");

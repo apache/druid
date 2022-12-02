@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -273,14 +274,20 @@ public class DruidQuery
     }
 
     if (partialQuery.getWindow() != null) {
-      windowing = Preconditions.checkNotNull(
-          Windowing.fromCalciteStuff(
-              partialQuery,
-              plannerContext,
-              sourceRowSignature, // TODO(gianm): window can only apply to the source data, because SCAN -> WINDOW
-              rexBuilder
-          )
-      );
+      final QueryContext queryContext = plannerContext.queryContext();
+      if (queryContext.getBoolean("windowsAreForClosers", false)) {
+        windowing = Preconditions.checkNotNull(
+            Windowing.fromCalciteStuff(
+                partialQuery,
+                plannerContext,
+                sourceRowSignature, // TODO(gianm): window can only apply to the source data, because SCAN -> WINDOW
+                rexBuilder
+            )
+        );
+      } else {
+        plannerContext.setPlanningError("Windowing Not Currently Supported");
+        throw new CannotBuildQueryException("Windowing Not Currently Supported");
+      }
     } else {
       windowing = null;
     }
