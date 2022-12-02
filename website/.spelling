@@ -421,6 +421,10 @@ programmatically
 proto
 proxied
 proxyConfig
+python2
+python3
+Python2
+Python3
 QPS
 quantile
 quantiles
@@ -2294,15 +2298,13 @@ Czechia
 Zeelund
  - ../docs/tutorials/docker.md
  nano
+- ../docs/operations/python.md
 MacOS
-python2
-python3
-Python2
-Python3
 pip3
 Pip3
 RHEL
 psutil
 pathlib
+- ../docs/operatons/single-server.md
 jvm
 upto
