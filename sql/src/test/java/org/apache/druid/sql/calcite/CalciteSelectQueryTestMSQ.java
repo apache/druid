@@ -63,7 +63,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
   @Test
   public void testOrderThenLimitThenFilter()
   {
-    testQuery(
+    testQueryWithMSQ(
         "SELECT dim1 FROM "
             + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
             + "WHERE dim1 IN ('abc', 'def')",

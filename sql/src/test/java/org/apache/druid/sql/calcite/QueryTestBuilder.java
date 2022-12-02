@@ -241,7 +241,7 @@ public class QueryTestBuilder
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  protected SqlStatementFactory statementFactory()
+  public SqlStatementFactory statementFactory()
   {
     if (plannerFixture != null) {
       return plannerFixture.statementFactory();

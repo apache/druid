@@ -693,7 +693,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final List<Object[]> expectedResults
   )
   {
-    testBuilder()
+    testBuilderMSQ()
         .sql(sql)
         .expectedQueries(expectedQueries)
         .expectedResults(expectedResults)
@@ -842,6 +842,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   protected QueryTestBuilder testBuilder()
+  {
+    return new QueryTestBuilder(new CalciteTestConfig())
+        .cannotVectorize(cannotVectorize)
+        .skipVectorize(skipVectorize);
+  }
+
+  protected QueryTestBuilder testBuilderMSQ()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
