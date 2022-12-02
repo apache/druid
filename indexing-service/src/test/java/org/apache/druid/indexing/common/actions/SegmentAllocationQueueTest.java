@@ -85,6 +85,7 @@ public class SegmentAllocationQueueTest
         (corePoolSize, nameFormat)
             -> new WrappingScheduledExecutorService(nameFormat, executor, false)
     );
+    allocationQueue.start();
     allocationQueue.becomeLeader();
   }
 
@@ -222,7 +223,8 @@ public class SegmentAllocationQueueTest
     executor.finishNextPendingTask();
 
     Assert.assertNotNull(getSegmentId(hourSegmentFuture));
-    Assert.assertNull(getSegmentId(halfHourSegmentFuture));
+    Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(halfHourSegmentFuture));
+    Assert.assertEquals("Storage coordinator could not allocate segment.", t.getMessage());
   }
 
   @Test
@@ -240,7 +242,11 @@ public class SegmentAllocationQueueTest
 
     // Verify that the future is already complete and segment allocation has failed
     Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
-    Assert.assertEquals("Segment allocation queue is full", t.getMessage());
+    Assert.assertEquals(
+        "Segment allocation queue is full. Check the metric `task/action/batch/runTime` "
+        + "to determine if metadata operations are slow.",
+        t.getMessage()
+    );
   }
 
   @Test
