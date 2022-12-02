@@ -152,7 +152,6 @@ The following native Scan query  also unnests the values in the `dim3` column by
       "name": "nested_data"
     },
     "column": "dim3",
-    "dedup": false,
     "outputName": "unnest-dim3",
     "allowList": []
   },
