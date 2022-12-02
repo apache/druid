@@ -80,7 +80,7 @@ public class SegmentAllocationQueue
   private final ServiceEmitter emitter;
 
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
-  private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
+  private final BlockingDeque<AllocateRequestKey> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
   @Inject
   public SegmentAllocationQueue(
@@ -173,8 +173,8 @@ public class SegmentAllocationQueue
       throw new ISE("Batched segment allocation is disabled.");
     }
 
-    final AllocateRequestKey requestKey = new AllocateRequestKey(request);
-    final AtomicReference<Future<SegmentIdWithShardSpec>> requestFuture = new AtomicReference<>();
+    final AllocateRequestKey requestKey = new AllocateRequestKey(request, maxWaitTimeMillis);
+    final AtomicReference<Future<SegmentIdWithShardSpec>> futureReference = new AtomicReference<>();
 
     // Possible race condition:
     // t1 -> new batch is added to queue or batch already exists in queue
@@ -187,15 +187,15 @@ public class SegmentAllocationQueue
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
       if (existingBatch == null) {
         AllocateRequestBatch newBatch = new AllocateRequestBatch(key);
-        requestFuture.set(newBatch.add(request));
+        futureReference.set(newBatch.add(request));
         return addBatchToQueue(newBatch) ? newBatch : null;
       } else {
-        requestFuture.set(existingBatch.add(request));
+        futureReference.set(existingBatch.add(request));
         return existingBatch;
       }
     });
 
-    return requestFuture.get();
+    return futureReference.get();
   }
 
   /**
@@ -204,11 +204,11 @@ public class SegmentAllocationQueue
    */
   private boolean addBatchToQueue(AllocateRequestBatch batch)
   {
-    batch.resetQueueTime();
+    batch.key.resetQueueTime();
     if (!isLeader.get()) {
       batch.failPendingRequests("Cannot allocate segment if not leader");
       return false;
-    } else if (processingQueue.offer(batch)) {
+    } else if (processingQueue.offer(batch.key)) {
       log.debug("Added a new batch [%s] to queue.", batch.key);
       return true;
     } else {
@@ -247,9 +247,11 @@ public class SegmentAllocationQueue
     log.debug("Processing batches which are due. Queue size [%d].", processingQueue.size());
     int numProcessedBatches = 0;
 
-    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-    while (nextBatch != null && nextBatch.isDue()) {
+    AllocateRequestKey nextKey = processingQueue.peekFirst();
+    while (nextKey != null && nextKey.isDue()) {
       processingQueue.pollFirst();
+      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
+
       boolean processed;
       try {
         processed = processBatch(nextBatch);
@@ -257,7 +259,7 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         nextBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch [%s]", nextBatch.key);
+        log.error(t, "Error while processing batch [%s]", nextKey);
       }
 
       // Requeue if not fully processed yet
@@ -267,7 +269,7 @@ public class SegmentAllocationQueue
         requeueBatch(nextBatch);
       }
 
-      nextBatch = processingQueue.peek();
+      nextKey = processingQueue.peek();
     }
 
     // Schedule the next round of processing
@@ -275,8 +277,8 @@ public class SegmentAllocationQueue
     if (processingQueue.isEmpty()) {
       nextScheduleDelay = maxWaitTimeMillis;
     } else {
-      nextBatch = processingQueue.peek();
-      long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
+      nextKey = processingQueue.peek();
+      long timeElapsed = System.currentTimeMillis() - nextKey.getQueueTime();
       nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
     }
     scheduleQueuePoll(nextScheduleDelay);
@@ -289,14 +291,14 @@ public class SegmentAllocationQueue
   private void clearQueueIfNotLeader()
   {
     int failedBatches = 0;
-    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-    while (nextBatch != null && !isLeader.get()) {
+    AllocateRequestKey nextKey = processingQueue.peekFirst();
+    while (nextKey != null && !isLeader.get()) {
       processingQueue.pollFirst();
-      keyToBatch.remove(nextBatch.key);
+      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
       nextBatch.failPendingRequests("Cannot allocate segment if not leader");
       ++failedBatches;
 
-      nextBatch = processingQueue.peekFirst();
+      nextKey = processingQueue.peekFirst();
     }
     if (failedBatches > 0) {
       log.info("Not leader. Failed [%d] batches, remaining in queue [%d].", failedBatches, processingQueue.size());
@@ -310,7 +312,6 @@ public class SegmentAllocationQueue
   private boolean processBatch(AllocateRequestBatch requestBatch)
   {
     final AllocateRequestKey requestKey = requestBatch.key;
-    keyToBatch.remove(requestKey);
     if (requestBatch.isEmpty()) {
       return true;
     } else if (!isLeader.get()) {
@@ -322,13 +323,13 @@ public class SegmentAllocationQueue
         "Processing [%d] requests for batch [%s], queue time [%s].",
         requestBatch.size(),
         requestKey,
-        requestBatch.getQueueTime()
+        requestKey.getQueueTime()
     );
 
     final long startTimeMillis = System.currentTimeMillis();
     final int batchSize = requestBatch.size();
     emitBatchMetric("task/action/batch/size", batchSize, requestKey);
-    emitBatchMetric("task/action/batch/queueTime", (startTimeMillis - requestBatch.getQueueTime()), requestKey);
+    emitBatchMetric("task/action/batch/queueTime", (startTimeMillis - requestKey.getQueueTime()), requestKey);
 
     final Set<DataSegment> usedSegments = retrieveUsedSegments(requestKey);
     final int successCount = allocateSegmentsForBatch(requestBatch, usedSegments);
@@ -521,7 +522,6 @@ public class SegmentAllocationQueue
    */
   private class AllocateRequestBatch
   {
-    private long queueTimeMillis;
     private final AllocateRequestKey key;
 
     /**
@@ -609,21 +609,6 @@ public class SegmentAllocationQueue
     {
       return requestToFuture.size();
     }
-
-    void resetQueueTime()
-    {
-      queueTimeMillis = System.currentTimeMillis();
-    }
-
-    long getQueueTime()
-    {
-      return queueTimeMillis;
-    }
-
-    boolean isDue()
-    {
-      return System.currentTimeMillis() - queueTimeMillis >= maxWaitTimeMillis;
-    }
   }
 
   /**
@@ -631,6 +616,9 @@ public class SegmentAllocationQueue
    */
   private static class AllocateRequestKey
   {
+    private long queueTimeMillis;
+    private final long maxWaitTimeMillis;
+
     private final String dataSource;
     private final String groupId;
     private final Interval preferredAllocationInterval;
@@ -647,7 +635,7 @@ public class SegmentAllocationQueue
      * Creates a new key for the given request. The batch for a unique key will
      * always contain a single request.
      */
-    AllocateRequestKey(SegmentAllocateRequest request)
+    AllocateRequestKey(SegmentAllocateRequest request, long maxWaitTimeMillis)
     {
       final SegmentAllocateAction action = request.getAction();
       final Task task = request.getTask();
@@ -670,6 +658,23 @@ public class SegmentAllocationQueue
           preferredAllocationInterval,
           lockGranularity
       );
+
+      this.maxWaitTimeMillis = maxWaitTimeMillis;
+    }
+
+    void resetQueueTime()
+    {
+      queueTimeMillis = System.currentTimeMillis();
+    }
+
+    long getQueueTime()
+    {
+      return queueTimeMillis;
+    }
+
+    boolean isDue()
+    {
+      return System.currentTimeMillis() - queueTimeMillis >= maxWaitTimeMillis;
     }
 
     @Override
