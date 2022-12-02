@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -144,6 +145,36 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(((UnnestStorageAdapter) adapter).getDimensionToUnnest(), colName);
     }
+  }
+
+  @Test
+  public void test_group_of_unnest_adapters_column_capabilities()
+  {
+    String colName = "multi-string1";
+    List<String> columnsInTable = Arrays.asList(
+        "string1",
+        "long1",
+        "double1",
+        "float1",
+        "multi-string1",
+        OUTPUT_COLUMN_NAME
+    );
+    List<ValueType> valueTypes = Arrays.asList(
+        ValueType.STRING,
+        ValueType.LONG,
+        ValueType.DOUBLE,
+        ValueType.FLOAT,
+        ValueType.STRING,
+        ValueType.STRING
+    );
+    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER;
+
+    for (int i = 0; i < columnsInTable.size(); i++) {
+      ColumnCapabilities capabilities = adapter.getColumnCapabilities(columnsInTable.get(i));
+      Assert.assertEquals(capabilities.getType(), valueTypes.get(i));
+    }
+    Assert.assertEquals(adapter.getDimensionToUnnest(), colName);
+
   }
 
   @Test

@@ -40,7 +40,7 @@ import java.util.Objects;
 
 /**
  * This class serves as the Storage Adapter for the Unnest Segment and is responsible for creating the cursors
- * If the column is dictionary encoded it creates {@link DimensionUnnestCursor} else {@link ColumnarValueUnnestCursor}
+ * If the column is dictionary encoded it creates {@link UnnestDimensionCursor} else {@link UnnestColumnValueSelectorCursor}
  * These cursors help navigate the segments for these cases
  */
 public class UnnestStorageAdapter implements StorageAdapter
@@ -100,11 +100,32 @@ public class UnnestStorageAdapter implements StorageAdapter
           Objects.requireNonNull(cursor);
           Cursor retVal = cursor;
           ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(dimensionToUnnest);
-          if (capabilities.isDictionaryEncoded() == ColumnCapabilities.Capable.TRUE
-              && capabilities.areDictionaryValuesUnique() == ColumnCapabilities.Capable.TRUE) {
-            retVal = new DimensionUnnestCursor(retVal, retVal.getColumnSelectorFactory(), dimensionToUnnest, outputColumnName, allowSet);
+          if (capabilities != null) {
+            if (capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue()) {
+              retVal = new UnnestDimensionCursor(
+                  retVal,
+                  retVal.getColumnSelectorFactory(),
+                  dimensionToUnnest,
+                  outputColumnName,
+                  allowSet
+              );
+            } else {
+              retVal = new UnnestColumnValueSelectorCursor(
+                  retVal,
+                  retVal.getColumnSelectorFactory(),
+                  dimensionToUnnest,
+                  outputColumnName,
+                  allowSet
+              );
+            }
           } else {
-            retVal = new ColumnarValueUnnestCursor(retVal, retVal.getColumnSelectorFactory(), dimensionToUnnest, outputColumnName, allowSet);
+            retVal = new UnnestColumnValueSelectorCursor(
+                retVal,
+                retVal.getColumnSelectorFactory(),
+                dimensionToUnnest,
+                outputColumnName,
+                allowSet
+            );
           }
           return retVal;
         }
@@ -138,7 +159,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String column)
   {
-    if (outputColumnName.equals(dimensionToUnnest)) {
+    if (!outputColumnName.equals(column)) {
       return baseAdapter.getDimensionCardinality(column);
     }
     return baseAdapter.getDimensionCardinality(dimensionToUnnest);
@@ -160,7 +181,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String column)
   {
-    if (outputColumnName.equals(dimensionToUnnest)) {
+    if (!outputColumnName.equals(column)) {
       return baseAdapter.getMinValue(column);
     }
     return baseAdapter.getMinValue(dimensionToUnnest);
@@ -170,7 +191,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMaxValue(String column)
   {
-    if (outputColumnName.equals(dimensionToUnnest)) {
+    if (!outputColumnName.equals(column)) {
       return baseAdapter.getMaxValue(column);
     }
     return baseAdapter.getMaxValue(dimensionToUnnest);
@@ -180,7 +201,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    if (outputColumnName.equals(dimensionToUnnest)) {
+    if (!outputColumnName.equals(column)) {
       return baseAdapter.getColumnCapabilities(column);
     }
     return baseAdapter.getColumnCapabilities(dimensionToUnnest);

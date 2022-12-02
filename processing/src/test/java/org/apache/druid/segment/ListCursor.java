@@ -35,9 +35,9 @@ import java.util.List;
 /**
  * A Cursor that iterates over a user created list.
  * This is used to test the base cursor of an UnnestCursor.
- * Usages can be found in tests of {@link ColumnarValueUnnestCursor} in {@link ColumnarValueUnnestCursorTest}
- * However this cannot help with {@link DimensionUnnestCursor}.
- * Tests for {@link DimensionUnnestCursor} are done alongside tests for {@link UnnestStorageAdapterTest}
+ * Usages can be found in tests of {@link UnnestColumnValueSelectorCursor} in {@link UnnestColumnValueSelectorCursorTest}
+ * However this cannot help with {@link UnnestDimensionCursor}.
+ * Tests for {@link UnnestDimensionCursor} are done alongside tests for {@link UnnestStorageAdapterTest}
  */
 public class ListCursor implements Cursor
 {

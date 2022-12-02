@@ -33,7 +33,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
- * The cursor to help unnest MVDs without dictionary encoding.
+ * The cursor to help unnest MVDs without dictionary encoding and ARRAY type selectors.
+ *
  * Consider a segment has 2 rows
  * ['a', 'b', 'c']
  * ['d', 'e']
@@ -56,8 +57,9 @@ import java.util.List;
  *
  * The needInitialization flag sets up the initial values of unnestListForCurrentRow at the beginning of the segment
  *
+ *
  */
-public class ColumnarValueUnnestCursor implements Cursor
+public class UnnestColumnValueSelectorCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final ColumnSelectorFactory baseColumSelectorFactory;
@@ -70,7 +72,7 @@ public class ColumnarValueUnnestCursor implements Cursor
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
 
-  public ColumnarValueUnnestCursor(
+  public UnnestColumnValueSelectorCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumSelectorFactory,
       String columnName,
@@ -117,7 +119,10 @@ public class ColumnarValueUnnestCursor implements Cursor
             if (value == null) {
               return 0;
             }
-            return Double.valueOf((String) value);
+            if (value instanceof Number) {
+              return ((Number) value).doubleValue();
+            }
+            throw new UOE("Cannot convert object to double");
           }
 
           @Override
@@ -127,7 +132,10 @@ public class ColumnarValueUnnestCursor implements Cursor
             if (value == null) {
               return 0;
             }
-            return Float.valueOf((String) value);
+            if (value instanceof Number) {
+              return ((Number) value).floatValue();
+            }
+            throw new UOE("Cannot convert object to float");
           }
 
           @Override
@@ -137,7 +145,10 @@ public class ColumnarValueUnnestCursor implements Cursor
             if (value == null) {
               return 0;
             }
-            return Long.valueOf((String) value);
+            if (value instanceof Number) {
+              return ((Number) value).longValue();
+            }
+            throw new UOE("Cannot convert object to long");
           }
 
           @Override
@@ -178,9 +189,13 @@ public class ColumnarValueUnnestCursor implements Cursor
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        if (!outputName.equals(columnName)) {
-          baseColumSelectorFactory.getColumnCapabilities(column);
+        if (!outputName.equals(column)) {
+          return baseColumSelectorFactory.getColumnCapabilities(column);
         }
+        // This currently returns the same type as of the column to be unnested
+        // This is fine for STRING types
+        // But going forward if the dimension to be unnested is of type ARRAY,
+        // this should strip down to the base type of the array
         return baseColumSelectorFactory.getColumnCapabilities(columnName);
       }
     };

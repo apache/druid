@@ -123,7 +123,7 @@ public class UnnestDataSource implements DataSource
   @Override
   public boolean isCacheable(boolean isBroker)
   {
-    return base.isCacheable(isBroker);
+    return false;
   }
 
   @Override
@@ -179,6 +179,11 @@ public class UnnestDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
+    // The column being unnested would need to be part of the cache key
+    // as the results are dependent on what column is being unnested.
+    // Currently, it is not cacheable.
+    // Future development should use the table name and column came to
+    // create an appropriate cac
     return null;
   }
 
