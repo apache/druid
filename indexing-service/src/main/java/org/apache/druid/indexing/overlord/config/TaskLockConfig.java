@@ -34,7 +34,7 @@ public class TaskLockConfig
   private boolean batchSegmentAllocation = false;
 
   @JsonProperty
-  private long batchAllocationMaxWaitTime = 1_000L;
+  private long batchAllocationMaxWaitTime = 500L;
 
   public boolean isForceTimeChunkLock()
   {
