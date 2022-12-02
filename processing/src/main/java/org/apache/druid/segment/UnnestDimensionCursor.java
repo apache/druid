@@ -180,6 +180,8 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
+            if( indexedIntsForCurrentRow == null)
+              return null;
             if (allowedBitSet.isEmpty()) {
               if (allowSet == null || allowSet.isEmpty()) {
                 return lookupName(indexedIntsForCurrentRow.get(index));
