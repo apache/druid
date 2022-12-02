@@ -392,7 +392,7 @@ def convert_total_memory_string(memory):
         if memory == '':
             physical_memory = get_physical_memory()
 
-            if physical_memory == None:
+            if physical_memory is None:
                 raise ValueError('Please specify memory argument')
 
             return physical_memory
