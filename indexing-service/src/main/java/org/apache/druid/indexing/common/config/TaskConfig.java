@@ -119,6 +119,7 @@ public class TaskConfig
   @JsonProperty
   private final boolean storeEmptyColumns;
 
+  @JsonProperty
   private final boolean encapsulatedTask;
 
   @JsonProperty

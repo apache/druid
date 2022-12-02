@@ -603,9 +603,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ),
         new TaskAuditLogConfig(true)
     );
-    File tmpDir = temporaryFolder.newFolder();
+    final String taskDirA = temporaryFolder.newFolder().toString();
+    final String taskDirB = temporaryFolder.newFolder().toString();
     taskConfig = new TaskConfig(
-        tmpDir.toString(),
+        null,
         null,
         null,
         50000,
@@ -619,7 +620,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
-        null
+        ImmutableList.of(
+            taskDirA,
+            taskDirB
+        )
     );
 
     return new TaskToolboxFactory(
