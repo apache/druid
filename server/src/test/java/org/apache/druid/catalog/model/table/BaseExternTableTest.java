@@ -17,23 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model;
+package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
-import org.apache.druid.catalog.model.table.ExternalTableSpec;
 
 import java.util.List;
-import java.util.Map;
 
-/**
- * Defines a parameter for a catalog entry. A parameter is an item that can appear
- * in a SQL table function as a named SQL argument. Example, for a local file,
- * the file name list could be a parameter to allow using the same definition for
- * a variety of local files (that is, to name <i>today's</i> update which is
- * different from yesterday's update.)
- */
-public interface ParameterizedDefn
+public class BaseExternTableTest
 {
-  List<PropertyDefn<?>> parameters();
-  ExternalTableSpec applyParameters(ResolvedTable table, Map<String, Object> parameters);
+  protected final ObjectMapper mapper = new ObjectMapper();
+
+  protected PropertyDefn<?> findProperty(List<PropertyDefn<?>> props, String name)
+  {
+    for (PropertyDefn<?> prop : props) {
+      if (prop.name().equals(name)) {
+        return prop;
+      }
+    }
+    return null;
+  }
 }

@@ -32,9 +32,9 @@ sidebar_label: Reference
 This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
 usage, refer to the [Examples](examples.md) page.
 
-### EXTERN
+### `EXTERN`
 
-Use the EXTERN function to read external data.
+Use the `EXTERN` function to read external data.
 
 Function format:
 
@@ -50,7 +50,7 @@ FROM TABLE(
 )
 ```
 
-EXTERN consists of the following parts:
+`EXTERN` consists of the following parts:
 
 1. Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
 2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
@@ -58,12 +58,134 @@ EXTERN consists of the following parts:
 
 For more information, see [Read external data with EXTERN](concepts.md#extern).
 
-### INSERT
+### `HTTP`, `INLINE` and `LOCALFILES`
 
-Use the INSERT statement to insert data.
+While `EXTERN` allows you to specify an external table using JSON, other table functions allow you
+describe the external table using SQL syntax. Each function works for one specific kind of input
+source. You provide properties using SQL named arguments. The row signature is given using the
+Druid SQL `EXTEND` keyword using SQL syntax and types. Function format:
 
-Unlike standard SQL, INSERT loads data into the target table according to column name, not positionally. If necessary,
-use `AS` in your SELECT column list to assign the correct names. Do not rely on their positions within the SELECT
+```sql
+SELECT
+ <column>
+FROM TABLE(
+  http(
+    userName => 'bob',
+    password => 'secret',
+    uris => 'http:foo.com/bar.csv',
+    format => 'csv'
+    )
+  ) EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
+```
+
+Note that the `EXTEND` keyword is optional. The following is equally valid (and perhaps
+more convenient):
+
+```sql
+SELECT
+ <column>
+FROM TABLE(
+  http(
+    userName => 'bob',
+    password => 'secret',
+    uris => 'http:foo.com/bar.csv',
+    format => 'csv'
+    )
+  ) (x VARCHAR, y VARCHAR, z BIGINT)
+```
+
+
+The set of table functions and formats is preliminary in this release.
+
+#### `HTTP`
+
+The `HTTP` table function represents the `HttpInputSource` class in Druid which allows you to
+read from an HTTP server. The function accepts the following arguments:
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `userName` | Basic authentication user name | `httpAuthenticationUsername` | No |
+| `password` | Basic authentication password | `httpAuthenticationPassword` | No |
+| `passwordEnvVar` | Environment variable that contains the basic authentication password| `httpAuthenticationPassword` | No |
+| `uris` | Comma-separated list of URIs to read. | `uris` | Yes |
+
+#### `INLINE`
+
+The `INLINE` table function represents the `InlineInputSource` class in Druid which provides
+data directly in the table function. The function accepts the following arguments:
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `data` | Text lines of inline data. Separate lines with a newline. | `data` | Yes |
+
+#### `LOCALFILES`
+
+The `LOCALFILES` table function represents the `LocalInputSource` class in Druid which reads
+files from the file system of the node running Druid. This is most useful for single-node
+installations. The function accepts the following arguments:
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `baseDir` | Directory to read from. | `baseDir` | No |
+| `filter` | Filter pattern to read. Example: `*.csv`. | `filter` | No |
+| `files` | Comma-separated list of files to read. | `files` | No |
+
+You must either provide the `baseDir` or the list of `files`. You can provide both, in which case
+the files are assumed relative to the `baseDir`. If you provide a `filter`, you must provide the
+`baseDir`.
+
+Note that, due to [Issue #13359](https://github.com/apache/druid/issues/13359), the functionality
+described above is broken. Until that issue is resolved, you must provide one or more absolute
+file paths in the `files` property and the other two properties are unavailable.
+
+#### Table Function Format
+
+Each of the table functions above requires that you specify a format.
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `format` | The input format, using the same names as for `EXTERN`. | `inputFormat.type` | Yes |
+
+#### CSV Format
+
+Use the `csv` format to read from CSV. This choice selects the Druid `CsvInputFormat` class.
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `listDelimiter` | The delimiter to use for fields that represent a list of strings. | `listDelimiter` | No |
+| `skipRows` | The number of rows to skip at the start of the file. Default is 0. | `skipHeaderRows` | No |
+
+MSQ does not have the ability to infer schema from a CSV, file, so the `findColumnsFromHeader` property
+is unavailable. Instead, Columns are given using the `EXTEND` syntax described above.
+
+#### Delimited Text Format
+
+Use the `tsv` format to read from an arbitrary delimited (CSV-like) file such as tab-delimited,
+pipe-delimited, etc. This choice selects the Druid `DelimitedInputFormat` class.
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `delimiter` | The delimiter which separates fields. | `delimiter` | Yes |
+| `listDelimiter` | The delimiter to use for fields that represent a list of strings. | `listDelimiter` | No |
+| `skipRows` | The number of rows to skip at the start of the file. Default is 0. | `skipHeaderRows` | No |
+
+As noted above, MSQ cannot infer schema using headers. Use `EXTEND` instead.
+
+#### JSON Format
+
+Use the `json` format to read from a JSON input source. This choice selects the Druid `JsonInputFormat` class.
+
+| Name | Description | JSON equivalent | Required |
+| ---- | ----------- | --------------- | -------- |
+| `keepNulls` | Whether to keep null values. Defaults to `false`. | `keepNullColumns` | No |
+
+
+### `INSERT`
+
+Use the `INSERT` statement to insert data.
+
+Unlike standard SQL, `INSERT` loads data into the target table according to column name, not positionally. If necessary,
+use `AS` in your `SELECT` column list to assign the correct names. Do not rely on their positions within the SELECT
 clause.
 
 Statement format:
@@ -85,15 +207,15 @@ INSERT consists of the following parts:
 
 For more information, see [Load data with INSERT](concepts.md#insert).
 
-### REPLACE
+### `REPLACE`
 
-You can use the REPLACE function to replace all or some of the data.
+You can use the `REPLACE` function to replace all or some of the data.
 
-Unlike standard SQL, REPLACE loads data into the target table according to column name, not positionally. If necessary,
-use `AS` in your SELECT column list to assign the correct names. Do not rely on their positions within the SELECT
+Unlike standard SQL, `REPLACE` loads data into the target table according to column name, not positionally. If necessary,
+use `AS` in your `SELECT` column list to assign the correct names. Do not rely on their positions within the SELECT
 clause.
 
-#### REPLACE all data
+#### `REPLACE` all data
 
 Function format to replace all data:
 
@@ -105,7 +227,7 @@ PARTITIONED BY <time granularity>
 [ CLUSTERED BY <column list> ]
 ```
 
-#### REPLACE specific time ranges
+#### `REPLACE` specific time ranges
 
 Function format to replace specific time ranges:
 
@@ -117,7 +239,7 @@ PARTITIONED BY <time granularity>
 [ CLUSTERED BY <column list> ]
 ```
 
-REPLACE consists of the following parts:
+`REPLACE` consists of the following parts:
 
 1. Optional [context parameters](./reference.md#context-parameters).
 2. A `REPLACE INTO <dataSource>` clause at the start of your query, such as `REPLACE INTO "your-table".`
@@ -132,7 +254,7 @@ REPLACE consists of the following parts:
 
 For more information, see [Overwrite data with REPLACE](concepts.md#replace).
 
-### PARTITIONED BY
+### `PARTITIONED BY`
 
 The `PARTITIONED BY <time granularity>` clause is required for [INSERT](#insert) and [REPLACE](#replace). See
 [Partitioning](concepts.md#partitioning) for details.
@@ -164,7 +286,7 @@ The following ISO 8601 periods are supported for `TIME_FLOOR`:
 
 For more information about partitioning, see [Partitioning](concepts.md#partitioning).
 
-### CLUSTERED BY
+### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
 column names or expressions.
@@ -227,12 +349,13 @@ than 100 workers or if the combined sketch size among all workers is more than 1
 `PARALLEL` is chosen.
 
 ## Durable Storage
+
 This section enumerates the advantages and performance implications of enabling durable storage while executing MSQ tasks.
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
-the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output 
-for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well. 
+the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
+for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 Following table lists the properties that can be set to control the behavior of the durable storage of the cluster.
 
 |Parameter          |Default                                 | Description          |
