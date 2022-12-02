@@ -354,21 +354,9 @@ def should_compute_memory(config, total_memory, service_list):
 
 
 def get_physical_memory_linux():
-    mems = {}
-
-    def get_procfs_path():
-        return sys.modules['psutil'].PROCFS_PATH
-
-    def open_binary(fname):
-        FILE_READ_BUFFER_SIZE = 32 * 1024
-        return open(fname, "rb", buffering=FILE_READ_BUFFER_SIZE)
-
-    with open_binary('%s/meminfo' % get_procfs_path()) as f:
-        for line in f:
-            fields = line.split()
-            mems[fields[0]] = int(fields[1]) * 1024
-
-    return mems[b'MemTotal:']
+    mem_bytes = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+    mem_mbs = int(mem_bytes / (1024 * 1024))
+    return mem_mbs
 
 
 def get_physical_memory_osx():
@@ -377,9 +365,9 @@ def get_physical_memory_osx():
     p2 = p2.decode('utf-8')
     fields = p2.split(':')
 
-    mem = int(int(fields[1]) / (1024 * 1024))
+    mem_mbs = int(int(fields[1]) / (1024 * 1024))
 
-    return mem
+    return mem_mbs
 
 
 def get_physical_memory():
