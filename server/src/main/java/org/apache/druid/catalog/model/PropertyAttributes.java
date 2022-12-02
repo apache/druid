@@ -28,14 +28,30 @@ import java.util.Map;
 /**
  * Definition and access of attributes of table definition properties. These
  * are meta-attributes: attributes of attributes. These are primarily used to
- * indicate the roll of each table property when used in a SQL table function.
+ * indicate the role of each table property when used in a SQL table function.
  */
 public class PropertyAttributes
 {
+  /**
+   * If set to {@code true}, then the property is also a SQL function parameter.
+   */
   public static final String IS_SQL_FN_PARAM_KEY = "sqlFnArg";
+  /**
+   * If set to {@code true}, then this SQL function parameter is optional. That is,
+   * it can take a SQL {@code NULL} value if parameters are listed in order, or can
+   * be ommited if parameters are provided by name.
+   */
   public static final String IS_SQL_FN_OPTIONAL = "optional";
   public static final String IS_PARAMETER = "param";
+
+  /**
+   * The type name to display in error messages.
+   */
   public static final String TYPE_NAME = "typeName";
+
+  /**
+   * The type to use when creating a SQL function parameter.
+   */
   public static final String SQL_JAVA_TYPE = "sqlJavaType";
 
   public static final Map<String, Object> SQL_FN_PARAM =

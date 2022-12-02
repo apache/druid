@@ -57,7 +57,6 @@ public interface SqlStatementHandler
     SchemaPlus defaultSchema();
     ObjectMapper jsonMapper();
     DateTimeZone timeZone();
-    PlannerHook hook();
   }
 
   abstract class BaseStatementHandler implements SqlStatementHandler

@@ -25,7 +25,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -91,7 +90,6 @@ public class QueryTestBuilder
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
-  protected String expectedLogicalPlan;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -217,29 +215,23 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedLogicalPlan(String expectedLogicalPlan)
-  {
-    this.expectedLogicalPlan = expectedLogicalPlan;
-    return this;
-  }
-
   public QueryTestRunner build()
   {
     return config.analyze(this);
   }
 
   /**
-   * Internal method to return the cached statement factory, or create a new one
+   * Internal method to return the cached planner config, or create a new one
    * based on the configs provided. Note: does not cache the newly created
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  protected SqlStatementFactory statementFactory()
+  protected PlannerFixture plannerFixture()
   {
     if (plannerFixture != null) {
-      return plannerFixture.statementFactory();
+      return plannerFixture;
     } else {
-      return config.plannerFixture(plannerConfig, authConfig).statementFactory();
+      return config.plannerFixture(plannerConfig, authConfig);
     }
   }
 

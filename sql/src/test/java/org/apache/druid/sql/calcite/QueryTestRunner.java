@@ -22,11 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.sql.SqlExplainFormat;
-import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.sql.SqlInsert;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,8 +35,6 @@ import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
-import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.junit.Assert;
@@ -54,7 +48,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
+ * Runs a test build up by {@link QueryTestBuilder}. Running a SQL query test
  * is somewhat complex; with different modes and items to verify. To manage the
  * complexity, test execution is done in two steps:
  * <ol>
@@ -106,15 +100,13 @@ public class QueryTestRunner
     public final List<Query<?>> recordedQueries;
     public final Set<ResourceAction> resourceActions;
     public final RuntimeException exception;
-    public final PlannerCaptureHook capture;
 
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
         final RowSignature signature,
         final List<Object[]> results,
-        final List<Query<?>> recordedQueries,
-        final PlannerCaptureHook capture
+        final List<Query<?>> recordedQueries
     )
     {
       this.queryContext = queryContext;
@@ -124,7 +116,6 @@ public class QueryTestRunner
       this.recordedQueries = recordedQueries;
       this.resourceActions = null;
       this.exception = null;
-      this.capture = capture;
     }
 
     public QueryResults(
@@ -140,14 +131,12 @@ public class QueryTestRunner
       this.recordedQueries = null;
       this.resourceActions = null;
       this.exception = exception;
-      this.capture = null;
     }
 
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
-        final Set<ResourceAction> resourceActions,
-        final PlannerCaptureHook capture
+        final Set<ResourceAction> resourceActions
     )
     {
       this.queryContext = queryContext;
@@ -157,7 +146,6 @@ public class QueryTestRunner
       this.recordedQueries = null;
       this.resourceActions = resourceActions;
       this.exception = null;
-      this.capture = capture;
     }
   }
 
@@ -189,7 +177,7 @@ public class QueryTestRunner
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)
           .build();
-      final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
+      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
       final PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlQuery);
       stmt.prepare();
       resourceActions = stmt.allResources();
@@ -203,12 +191,10 @@ public class QueryTestRunner
   public static class ExecuteQuery extends QueryRunStep
   {
     private final List<QueryResults> results = new ArrayList<>();
-    private final boolean doCapture;
 
     public ExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
     }
 
     public List<QueryResults> results()
@@ -223,7 +209,7 @@ public class QueryTestRunner
 
       BaseCalciteQueryTest.log.info("SQL: %s", builder.sql);
 
-      final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
+      final SqlStatementFactory sqlStatementFactory = builder.plannerFixture().statementFactory();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
           .sqlParameters(builder.parameters)
           .auth(builder.authenticationResult)
@@ -247,41 +233,25 @@ public class QueryTestRunner
           theQueryContext.put(QueryContexts.VECTOR_SIZE_KEY, 2); // Small vector size to ensure we use more than one.
         }
 
-        results.add(runQuery(
-            sqlStatementFactory,
-            sqlQuery.withContext(theQueryContext),
-            vectorize
-        ));
-      }
-    }
-
-    public QueryResults runQuery(
-        final SqlStatementFactory sqlStatementFactory,
-        final SqlQueryPlus query,
-        final String vectorize
-    )
-    {
-      try {
-        final PlannerCaptureHook capture = doCapture ? new PlannerCaptureHook() : null;
-        final DirectStatement stmt = sqlStatementFactory.directStatement(query);
-        stmt.setHook(capture);
-        final Sequence<Object[]> results = stmt.execute().getResults();
-        final RelDataType rowType = stmt.prepareResult().getReturnedRowType();
-        return new QueryResults(
-            query.context(),
-            vectorize,
-            RowSignatures.fromRelDataType(rowType.getFieldNames(), rowType),
-            results.toList(),
-            builder().config.queryLogHook().getRecordedQueries(),
-            capture
-        );
-      }
-      catch (RuntimeException e) {
-        return new QueryResults(
-            query.context(),
-            vectorize,
-            e
-        );
+        try {
+          final Pair<RowSignature, List<Object[]>> plannerResults = getResults(
+              sqlStatementFactory,
+              sqlQuery.withContext(theQueryContext));
+          results.add(new QueryResults(
+              theQueryContext,
+              vectorize,
+              plannerResults.lhs,
+              plannerResults.rhs,
+              queryLogHook.getRecordedQueries()
+          ));
+        }
+        catch (RuntimeException e) {
+          results.add(new QueryResults(
+              theQueryContext,
+              vectorize,
+              e
+          ));
+        }
       }
     }
 
@@ -409,7 +379,7 @@ public class QueryTestRunner
   }
 
   /**
-   * Verify resources for a prepared query against the expected list.
+   * Verify rsources for a prepared query against the expected list.
    */
   public static class VerifyResources implements QueryVerifyStep
   {
@@ -431,57 +401,8 @@ public class QueryTestRunner
     }
   }
 
-  public static class VerifyLogicalPlan extends VerifyExecStep
-  {
-    public VerifyLogicalPlan(ExecuteQuery execStep)
-    {
-      super(execStep);
-    }
-
-    @Override
-    public void verify()
-    {
-      for (QueryResults queryResults : execStep.results()) {
-        verifyLogicalPlan(queryResults);
-      }
-    }
-
-    private void verifyLogicalPlan(QueryResults queryResults)
-    {
-      String expectedPlan = execStep.builder().expectedLogicalPlan;
-      String actualPlan = visualizePlan(queryResults.capture);
-      Assert.assertEquals(expectedPlan, actualPlan);
-    }
-
-    private String visualizePlan(PlannerCaptureHook hook)
-    {
-      // Do-it-ourselves plan since the actual plan omits insert.
-      String queryPlan = RelOptUtil.dumpPlan(
-          "",
-          hook.relRoot().rel,
-          SqlExplainFormat.TEXT,
-          SqlExplainLevel.DIGEST_ATTRIBUTES);
-      String plan;
-      SqlInsert insertNode = hook.insertNode();
-      if (insertNode == null) {
-        plan = queryPlan;
-      } else {
-        DruidSqlIngest druidInsertNode = (DruidSqlIngest) insertNode;
-        // The target is a SQLIdentifier literal, pre-resolution, so does
-        // not include the schema.
-        plan = StringUtils.format(
-            "LogicalInsert(target=[%s], partitionedBy=[%s], clusteredBy=[%s])\n",
-            druidInsertNode.getTargetTable(),
-            druidInsertNode.getPartitionedBy() == null ? "<none>" : druidInsertNode.getPartitionedBy(),
-            druidInsertNode.getClusteredBy() == null ? "<none>" : druidInsertNode.getClusteredBy()
-        ) + "  " + StringUtils.replace(queryPlan, "\n ", "\n   ");
-      }
-      return plan;
-    }
-  }
-
   /**
-   * Verify the exception thrown by a query using a JUnit expected
+   * Verify the exception thrown by a query using a jUnit expected
    * exception. This is actually an awkward way to to the job, but it is
    * what the Calcite queries have long used. There are three modes.
    * In the first, the exception is simply thrown and the expected

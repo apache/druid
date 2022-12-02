@@ -20,11 +20,15 @@
 package org.apache.druid.query.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.SleepModule;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprMacroTable.ExprMacro;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.query.expressions.SleepExprMacro;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -32,15 +36,34 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SleepSqlTest extends BaseCalciteQueryTest
 {
   @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  public DruidOperatorTable createOperatorTable()
   {
-    super.configureGuice(builder);
-    builder.addModule(new SleepModule());
+    return new DruidOperatorTable(
+        ImmutableSet.of(),
+        ImmutableSet.of(new SleepOperatorConversion())
+    );
+  }
+
+  @Override
+  public ExprMacroTable createMacroTable()
+  {
+    final List<ExprMacro> exprMacros = new ArrayList<>();
+    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
+      exprMacros.add(CalciteTests.INJECTOR.getInstance(clazz));
+    }
+    exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
+    exprMacros.add(new SleepExprMacro());
+    return new ExprMacroTable(exprMacros);
   }
 
   @Test
@@ -57,7 +80,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                           "v0",
                           "sleep(\"m1\")",
                           ColumnType.STRING,
-                          queryFramework().macroTable()
+                          createMacroTable()
                       )
                   )
                   .columns("v0")

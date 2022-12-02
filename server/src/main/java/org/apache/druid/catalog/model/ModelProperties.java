@@ -48,9 +48,28 @@ public interface ModelProperties
 {
   interface PropertyDefn<T>
   {
+    /**
+     * Name of the property as visible to catalog users. All properties are top-level within
+     * the {@code properties} object within a catalog spec.
+     */
     String name();
+
+    /**
+     * Metadata about properties, such as how they apply to SQL table functions.
+     *
+     * @see {@link PropertyAttributes} for details.
+     */
     Map<String, Object> attributes();
+
+    /**
+     * The name of the type of this property to be displayed in error messages.
+     */
     String typeName();
+
+    /**
+     * Validates that the object given is valid for this property. Provides the JSON
+     * mapper in case JSON decoding is required.
+     */
     void validate(Object value, ObjectMapper jsonMapper);
 
     /**
@@ -60,7 +79,15 @@ public interface ModelProperties
      * value.
      */
     Object merge(Object existing, Object update);
+
+    /**
+     * Decodes a JSON-encoded value into a corresponding Java value.
+     */
     T decode(Object value, ObjectMapper jsonMapper);
+
+    /**
+     * Decodes a SQL-encoded value into a corresponding Java value.
+     */
     T decodeSqlValue(Object value, ObjectMapper jsonMapper);
   }
 

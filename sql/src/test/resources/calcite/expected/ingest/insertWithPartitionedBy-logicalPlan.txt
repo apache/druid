@@ -1,3 +1,0 @@
-LogicalInsert(target=[druid.dst], partitionedBy=[{type=period, period=PT1H, timeZone=UTC, origin=null}], clusteredBy=[<none>])
-  LogicalProject(__time=[$0], floor_m1=[FLOOR($5)], dim1=[$1])
-    LogicalTableScan(table=[[druid, foo]])

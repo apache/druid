@@ -20,13 +20,9 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
-import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -799,20 +795,6 @@ public class StringUtils
       return s;
     } else {
       return s.substring(0, maxBytes);
-    }
-  }
-
-  public static String getResource(Object ref, String resource)
-  {
-    try {
-      InputStream is = ref.getClass().getResourceAsStream(resource);
-      if (is == null) {
-        throw new ISE("Resource not found: [%s]", resource);
-      }
-      return IOUtils.toString(is, StandardCharsets.UTF_8);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
   }
 }

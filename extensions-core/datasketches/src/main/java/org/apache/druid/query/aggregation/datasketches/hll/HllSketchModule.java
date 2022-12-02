@@ -44,6 +44,7 @@ import java.util.List;
  */
 public class HllSketchModule implements DruidModule
 {
+
   public static final String TYPE_NAME = "HLLSketch"; // common type name to be associated with segment data
   public static final String BUILD_TYPE_NAME = "HLLSketchBuild";
   public static final String MERGE_TYPE_NAME = "HLLSketchMerge";
@@ -51,6 +52,7 @@ public class HllSketchModule implements DruidModule
   public static final String UNION_TYPE_NAME = "HLLSketchUnion";
   public static final String ESTIMATE_WITH_BOUNDS_TYPE_NAME = "HLLSketchEstimateWithBounds";
   public static final String ESTIMATE_TYPE_NAME = "HLLSketchEstimate";
+
 
   @Override
   public void configure(final Binder binder)

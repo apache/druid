@@ -193,9 +193,7 @@ public abstract class UserDefinedTableMacroFunction extends SqlUserDefinedTableM
     @Override
     public void setOperator(SqlOperator operator)
     {
-      if (getOperator() == null) {
-        super.setOperator(operator);
-      }
+      // Do nothing: do not call super.setOperator().
     }
 
     @Override

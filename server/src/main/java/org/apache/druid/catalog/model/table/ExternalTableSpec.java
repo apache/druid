@@ -23,6 +23,8 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
+
 /**
  * Catalog form of an external table specification used to pass along the three
  * components needed for an external table in MSQ ingest. Just like
@@ -31,9 +33,9 @@ import org.apache.druid.segment.column.RowSignature;
  */
 public class ExternalTableSpec
 {
-  public final InputSource inputSource;
-  public final InputFormat inputFormat;
-  public final RowSignature signature;
+  @Nullable public final InputSource inputSource;
+  @Nullable public final InputFormat inputFormat;
+  @Nullable public final RowSignature signature;
 
   public ExternalTableSpec(
       final InputSource inputSource,

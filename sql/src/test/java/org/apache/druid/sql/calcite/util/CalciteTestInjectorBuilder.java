@@ -19,12 +19,25 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.Module;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.timeline.DataSegment;
+
+import java.util.List;
 
 /**
  * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way
@@ -62,6 +75,39 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
       e.printStackTrace();
       System.exit(1);
       throw e;
+    }
+  }
+
+  private static class BasicTestModule implements DruidModule
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      final LookupExtractorFactoryContainerProvider lookupProvider =
+          LookupEnabledTestExprMacroTable.createTestLookupProvider(
+              ImmutableMap.of(
+                  "a", "xa",
+                  "abc", "xabc",
+                  "nosuchkey", "mysteryvalue",
+                  "6", "x6"
+              )
+          );
+
+      binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+      binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
+
+      // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
+      binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
+      SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
+
+      // Add "EXTERN" table macro, for CalciteInsertDmlTest.
+      SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+    }
+
+    @Override
+    public List<? extends Module> getJacksonModules()
+    {
+      return new LookupSerdeModule().getJacksonModules();
     }
   }
 }

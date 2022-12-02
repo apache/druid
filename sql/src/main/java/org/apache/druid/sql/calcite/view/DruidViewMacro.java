@@ -61,10 +61,7 @@ public class DruidViewMacro implements TableMacro
              plannerFactory.createPlanner(
                  ViewSqlEngine.INSTANCE,
                  viewSql,
-                 Collections.emptyMap(),
-                 null
-             )
-    ) {
+                 Collections.emptyMap())) {
       planner.validate();
       rowType = planner.prepare().getValidatedRowType();
     }

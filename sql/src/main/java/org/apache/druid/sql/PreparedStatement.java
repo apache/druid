@@ -66,12 +66,9 @@ public class PreparedStatement extends AbstractStatement
   public PrepareResult prepare()
   {
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
-            sqlToolbox.engine,
-            queryPlus.sql(),
-            queryContext,
-            hook
-        )
-    ) {
+        sqlToolbox.engine,
+        queryPlus.sql(),
+        queryContext)) {
       validate(planner);
       authorize(planner, authorizer());
 

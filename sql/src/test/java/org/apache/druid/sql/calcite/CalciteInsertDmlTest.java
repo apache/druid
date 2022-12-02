@@ -60,7 +60,7 @@ import java.util.Map;
 
 public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 {
-  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
+  protected static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
       "{\"type\":\"all\"}"
   );
@@ -302,7 +302,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
-        .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
 
@@ -330,7 +329,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .context(queryContextWithGranularity(Granularities.HOUR))
                 .build()
         )
-        .expectLogicalPlanFrom("insertWithPartitionedBy")
         .verify();
   }
 
@@ -425,7 +423,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
-        .expectLogicalPlanFrom("insertWithClusteredBy")
         .verify();
   }
 

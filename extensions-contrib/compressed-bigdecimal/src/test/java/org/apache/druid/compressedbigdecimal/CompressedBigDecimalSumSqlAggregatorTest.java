@@ -19,9 +19,18 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+
 public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {
   private static final String FUNCTION_NAME = CompressedBigDecimalSumSqlAggregator.NAME;
+
+  @Override
+  public DruidOperatorTable createOperatorTable()
+  {
+    return new DruidOperatorTable(ImmutableSet.of(new CompressedBigDecimalSumSqlAggregator()), ImmutableSet.of());
+  }
 
   @Override
   public void testCompressedBigDecimalAggWithNumberParse()
@@ -30,6 +39,7 @@ public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecim
         FUNCTION_NAME,
         new Object[]{"21.000000000", "21.000000000", "13.100000000"},
         CompressedBigDecimalSumAggregatorFactory::new
+
     );
   }
 

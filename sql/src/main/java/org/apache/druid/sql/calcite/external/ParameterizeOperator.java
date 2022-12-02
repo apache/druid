@@ -30,6 +30,18 @@ import org.apache.calcite.sql.validate.SqlValidator;
 
 import java.util.List;
 
+/**
+ * Internal operator used to create an on-the-fly table function from a
+ * partial table definition within the catalog. Represents a table reference
+ * of the form: <i>table_name</i>( <i>arguments</i> ). That, is we treat the
+ * table name as a function name, then pass arguments that represent the additional
+ * information needed to convert a partial table into a completed table.
+ * For example, for a local input source, we might pass the list of files to
+ * read.
+ * <p>
+ * Calcite doesn't understand this form. So, early in the process, we rewrite
+ * nodes of this type into a table macro node which Calcite does understand.
+ */
 public class ParameterizeOperator extends SqlInternalOperator
 {
   public static final ParameterizeOperator PARAM = new ParameterizeOperator();

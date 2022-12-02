@@ -74,7 +74,6 @@ public abstract class IngestHandler extends QueryHandler
   {
     super(handlerContext, queryNode, explain);
     this.ingestionGranularity = ingestNode.getPartitionedBy();
-    handlerContext.hook().captureInsert(ingestNode);
   }
 
   protected static SqlNode convertQuery(DruidSqlIngest sqlNode) throws ValidationException

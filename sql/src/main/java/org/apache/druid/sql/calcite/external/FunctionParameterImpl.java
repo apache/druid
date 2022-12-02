@@ -72,6 +72,7 @@ public class FunctionParameterImpl implements FunctionParameter
   {
     return "FunctionParameter{" +
         "name=\"" + name + "\"" +
+        ", ordinal=" + ordinal +
         ", type=" + type +
         ", optional=" + isOptional +
         "}";

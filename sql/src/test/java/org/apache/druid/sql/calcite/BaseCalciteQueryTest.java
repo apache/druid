@@ -20,11 +20,11 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -83,6 +84,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -122,7 +124,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -511,8 +512,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     resetFramework();
     try {
       baseComponentSupplier = new StandardComponentSupplier(
-          temporaryFolder.newFolder()
-      );
+          CalciteTests.INJECTOR,
+          temporaryFolder.newFolder());
     }
     catch (IOException e) {
       throw new RE(e);
@@ -526,11 +527,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
+      final JoinableFactoryWrapper joinableFactory
   ) throws IOException
   {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory);
   }
 
   @Override
@@ -547,18 +547,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @Override
-  public void gatherProperties(Properties properties)
-  {
-    baseComponentSupplier.gatherProperties(properties);
-  }
-
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    baseComponentSupplier.configureGuice(builder);
-  }
-
-  @Override
   public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
   {
     return baseComponentSupplier.createCongolmerate(builder, closer);
@@ -568,6 +556,30 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void configureJsonMapper(ObjectMapper mapper)
   {
     baseComponentSupplier.configureJsonMapper(mapper);
+  }
+
+  @Override
+  public DruidOperatorTable createOperatorTable()
+  {
+    return baseComponentSupplier.createOperatorTable();
+  }
+
+  @Override
+  public ExprMacroTable createMacroTable()
+  {
+    return baseComponentSupplier.createMacroTable();
+  }
+
+  @Override
+  public Map<String, Object> getJacksonInjectables()
+  {
+    return baseComponentSupplier.getJacksonInjectables();
+  }
+
+  @Override
+  public Iterable<? extends Module> getJacksonModules()
+  {
+    return baseComponentSupplier.getJacksonModules();
   }
 
   @Override
@@ -604,6 +616,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void finalizePlanner(PlannerFixture plannerFixture)
   {
     basePlannerComponentSupplier.finalizePlanner(plannerFixture);
+  }
+
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)
@@ -856,11 +873,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         }
         if (builder.expectedResultsVerifier != null) {
           verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
-        }
-
-        // Verify the logical plan, if requested.
-        if (builder.expectedLogicalPlan != null) {
-          verifySteps.add(new QueryTestRunner.VerifyLogicalPlan(execStep));
         }
 
         // The exception is always verified: either there should be no exception
