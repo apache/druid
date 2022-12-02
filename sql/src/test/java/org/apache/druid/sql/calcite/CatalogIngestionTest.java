@@ -20,33 +20,22 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
-import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
-import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
-import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
-import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.guice.SqlBindings;
 import org.junit.Test;
 
 import java.io.File;
@@ -54,7 +43,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * Tests the input-source-specific table functions: http, inline and localfiles.
@@ -68,65 +56,6 @@ import java.util.List;
  */
 public class CatalogIngestionTest extends CalciteIngestionDmlTest
 {
-  // Note: This is a temporary hack until PR #13426 is available.
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-    builder.addModule(new DruidModule() {
-
-      // Clone of MSQExternalDataSourceModule since it is not
-      // visible here.
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        return Collections.singletonList(
-            new SimpleModule(getClass().getSimpleName())
-                .registerSubtypes(ExternalDataSource.class)
-        );
-      }
-
-      @Override
-      public void configure(Binder binder)
-      {
-        // Nothing to do.
-      }
-    });
-
-    builder.addModule(new DruidModule() {
-
-      // Partial clone of MsqSqlModule, since that module is not
-      // visible to this one.
-
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        // We want this module to bring input sources along for the ride.
-        return new InputSourceModule().getJacksonModules();
-      }
-
-      @Override
-      public void configure(Binder binder)
-      {
-        // We want this module to bring InputSourceModule along for the ride.
-        binder.install(new InputSourceModule());
-
-        // Set up the EXTERN macro.
-        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-      }
-    });
-  }
-
-  // Note: This is a temporary hack until PR #13426 is available.
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return null;
-  }
-
   protected static URI toURI(String uri)
   {
     try {
@@ -171,6 +100,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
 
@@ -212,6 +142,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
 
@@ -239,6 +170,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
 
@@ -261,6 +193,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
 
@@ -288,6 +221,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
 
@@ -331,6 +265,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("localExtern")
         .verify();
   }
 
@@ -358,6 +293,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("localExtern")
         .verify();
   }
 
@@ -385,6 +321,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
+        .expectLogicalPlanFrom("localExtern")
         .verify();
   }
 }
