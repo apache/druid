@@ -35,30 +35,28 @@ import java.util.List;
 
 /**
  * The cursor to help unnest MVDs without dictionary encoding and ARRAY type selectors.
- *
+ * <p>
  * Consider a segment has 2 rows
  * ['a', 'b', 'c']
  * ['d', 'e']
- *
+ * <p>
  * The baseCursor points to the row ['a', 'b', 'c']
  * while the unnestCursor with each call of advance() moves over individual elements.
- *
+ * <p>
  * unnestCursor.advance() -> 'a'
  * unnestCursor.advance() -> 'b'
  * unnestCursor.advance() -> 'c'
  * unnestCursor.advance() -> 'd' (advances base cursor first)
  * unnestCursor.advance() -> 'e'
- *
- *
+ * <p>
+ * <p>
  * The allowSet if available helps skip over elements which are not in the allowList by moving the cursor to
  * the next available match.
- *
+ * <p>
  * The index reference points to the index of each row that the unnest cursor is accessing through currentVal
  * The index ranges from 0 to the size of the list in each row which is held in the unnestListForCurrentRow
- *
+ * <p>
  * The needInitialization flag sets up the initial values of unnestListForCurrentRow at the beginning of the segment
- *
- *
  */
 public class UnnestColumnValueSelectorCursor implements Cursor
 {
@@ -194,7 +192,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
           return baseColumnSelectorFactory.getColumnCapabilities(column);
         }
         final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
-        if(capabilities.isArray()) {
+        if (capabilities.isArray()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
         }
         if (capabilities.hasMultipleValues().isTrue()) {

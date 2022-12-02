@@ -181,8 +181,9 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if( indexedIntsForCurrentRow == null)
+            if (indexedIntsForCurrentRow == null) {
               return null;
+            }
             if (allowedBitSet.isEmpty()) {
               if (allowSet == null || allowSet.isEmpty()) {
                 return lookupName(indexedIntsForCurrentRow.get(index));
@@ -254,7 +255,7 @@ public class UnnestDimensionCursor implements Cursor
         // But going forward if the dimension to be unnested is of type ARRAY,
         // this should strip down to the base type of the array
         final ColumnCapabilities capabilities = baseColumnSelectorFactory.getColumnCapabilities(columnName);
-        if(capabilities.isArray()) {
+        if (capabilities.isArray()) {
           return ColumnCapabilitiesImpl.copyOf(capabilities).setType(capabilities.getElementType());
         }
         if (capabilities.hasMultipleValues().isTrue()) {
@@ -353,8 +354,7 @@ public class UnnestDimensionCursor implements Cursor
       if (!baseCursor.isDone()) {
         baseCursor.advanceUninterruptibly();
       }
-    }
-    else {
+    } else {
       if (index >= indexedIntsForCurrentRow.size() - 1) {
         if (!baseCursor.isDone()) {
           baseCursor.advanceUninterruptibly();
