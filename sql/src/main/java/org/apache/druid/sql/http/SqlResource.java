@@ -143,9 +143,12 @@ public class SqlResource
                   Exception e = null;
                   CountingOutputStream os = new CountingOutputStream(output);
                   Yielder<Object[]> yielder = finalYielder;
-
-                  try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                  .createFormatter(os, jsonMapper)) {
+                  // The writer below is not closed by us, since it would also close output that was passed as an
+                  // argument. Instead, we would just call the ResultFormat.Writer#writeResponseEnd to flush
+                  // any buffered data.
+                  final ResultFormat.Writer writer = sqlQuery.getResultFormat()
+                      .createFormatter(os, jsonMapper);
+                  try {
                     writer.writeResponseStart();
 
                     if (sqlQuery.includeHeader()) {

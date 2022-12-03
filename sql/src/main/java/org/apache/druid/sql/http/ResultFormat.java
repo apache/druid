@@ -146,7 +146,10 @@ public enum ResultFormat
     void writeRowEnd() throws IOException;
 
     /**
-     * End of the response. Must allow the user to know that they have read all data successfully.
+     * End of the response. Any data buffered by the writer must be flushed as well in this method. Some implementations
+     * might be writing a trailer at the end for clients to confirm that response is not truncated. However, that is
+     * no longer needed now since http client can rely on standard chunked encoding mechanics to detect a truncated
+     * response.
      */
     void writeResponseEnd() throws IOException;
   }

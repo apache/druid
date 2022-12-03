@@ -230,8 +230,7 @@ public class QueryResource implements QueryCountStatsProvider
                       // json serializer will always close the yielder
                       jsonWriter.writeValue(os, yielder);
 
-                      os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                      os.close();
+                      os.flush();
                     }
                     catch (Exception ex) {
                       e = ex;
