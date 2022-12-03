@@ -135,6 +135,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
       handlerList.addHandler(handler);
     }
 
+    JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
+
     // Add Gzip handler at the very end
     handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
         root,

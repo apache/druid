@@ -108,6 +108,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
             new DefaultHandler()
         }
     );
+    JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
     server.setHandler(handlerList);
   }
 }

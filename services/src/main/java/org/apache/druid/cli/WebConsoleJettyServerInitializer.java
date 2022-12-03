@@ -57,7 +57,7 @@ class WebConsoleJettyServerInitializer
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNAUTHORIZED_PATHS_FOR_UI);
   }
 
-  static Handler createWebConsoleRewriteHandler()
+  static RewriteHandler createWebConsoleRewriteHandler()
   {
     // redirect all legacy web consoles to current unified web console
     RewriteHandler rewrite = new RewriteHandler();
