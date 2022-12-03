@@ -40,6 +40,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,15 +236,28 @@ public class TaskMonitorTest
       this.throwUnknownTypeIdError = throwUnknownTypeIdError;
     }
 
+    @Nullable
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public String setup(TaskToolbox toolbox)
+    {
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    {
+      // do nothing
+    }
+
+    @Override
+    public TaskStatus runTask(TaskToolbox toolbox) throws Exception
     {
       monitor.collectReport(new SimpleSubTaskReport(getId()));
       if (shouldFail) {
         Thread.sleep(getRunTime());
         return TaskStatus.failure(getId(), "Dummy task status failure for testing");
       } else {
-        return super.run(toolbox);
+        return super.runTask(toolbox);
       }
     }
   }

@@ -190,8 +190,24 @@ public class OverlordTest
     taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
 
-    TaskRunnerFactory taskRunnerFactory = (TaskRunnerFactory<MockTaskRunner>) () ->
-        new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<MockTaskRunner>()
+    {
+      private MockTaskRunner runner;
+
+      @Override
+      public MockTaskRunner build()
+      {
+        runner = new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+        return runner;
+      }
+
+      @Override
+      public MockTaskRunner get()
+      {
+        return runner;
+      }
+    };
+
 
     taskRunnerFactory.build().run(badTask);
     taskRunnerFactory.build().run(goodTask);

@@ -581,7 +581,8 @@ public class BatchAppenderatorsTest
                   false,
                   false,
                   mode.name(),
-                  null
+                  null,
+                  false
               )
           )
           .joinableFactory(NoopJoinableFactory.INSTANCE)
@@ -592,7 +593,10 @@ public class BatchAppenderatorsTest
           .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
           .chatHandlerProvider(new NoopChatHandlerProvider())
           .appenderatorsManager(new TestAppenderatorsManager())
+          .taskLogPusher(null)
+          .attemptId("1")
           .build();
+
     }
   }
 }

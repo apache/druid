@@ -373,6 +373,19 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     @Override
+    public String setup(TaskToolbox toolbox)
+    {
+      // do nothing
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    {
+      // do nothing
+    }
+
+    @Override
     public TaskStatus runTask(TaskToolbox toolbox)
     {
       done = true;

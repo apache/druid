@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlExpression, SqlQuery, SqlTableRef, SqlValues, SqlWithQuery } from 'druid-query-toolkit';
+import { SqlExpression, SqlQuery, SqlValues, SqlWithQuery, T } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 
@@ -62,16 +62,16 @@ export class WorkbenchQueryPart {
   static getIngestDatasourceFromQueryFragment(queryFragment: string): string | undefined {
     // Assuming the queryFragment is no parsable find the prefix that look like:
     // REPLACE<space>INTO<space><whatever><space>SELECT<space or EOF>
-    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/)?.index;
+    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/i)?.index;
     if (typeof matchInsertReplaceIndex !== 'number') return;
 
-    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/);
+    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/i);
     const fragmentQuery = SqlQuery.maybeParse(
       queryFragment.substring(matchInsertReplaceIndex, matchEnd?.index) + ' SELECT * FROM t',
     );
     if (!fragmentQuery) return;
 
-    return fragmentQuery.getIngestTable()?.getTable();
+    return fragmentQuery.getIngestTable()?.getName();
   }
 
   public readonly id: string;
@@ -179,7 +179,7 @@ export class WorkbenchQueryPart {
   public getIngestDatasource(): string | undefined {
     const { queryString, parsedQuery } = this;
     if (parsedQuery) {
-      return parsedQuery.getIngestTable()?.getTable();
+      return parsedQuery.getIngestTable()?.getName();
     }
 
     if (this.isJsonLike()) return;
@@ -241,7 +241,7 @@ export class WorkbenchQueryPart {
 
   public toWithPart(): string {
     const { queryName, queryString } = this;
-    return `${SqlTableRef.create(queryName || 'q')} AS (\n${queryString}\n)`;
+    return `${T(queryName || 'q')} AS (\n${queryString}\n)`;
   }
 
   public duplicate(): WorkbenchQueryPart {

@@ -43,12 +43,14 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   private final long maxAttempts;
   private final long minWaitMillis;
   private final long maxWaitMillis;
+  private final boolean retryNotAvailable;
 
-  private StandardRetryPolicy(long maxAttempts, long minWaitMillis, long maxWaitMillis)
+  private StandardRetryPolicy(long maxAttempts, long minWaitMillis, long maxWaitMillis, boolean retryNotAvailable)
   {
     this.maxAttempts = maxAttempts;
     this.minWaitMillis = minWaitMillis;
     this.maxWaitMillis = maxWaitMillis;
+    this.retryNotAvailable = retryNotAvailable;
 
     if (maxAttempts == 0) {
       throw new IAE("maxAttempts must be positive (limited) or negative (unlimited); cannot be zero.");
@@ -109,11 +111,18 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
            || (t.getCause() != null && retryThrowable(t.getCause()));
   }
 
+  @Override
+  public boolean retryNotAvailable()
+  {
+    return retryNotAvailable;
+  }
+
   public static class Builder
   {
     private long maxAttempts = 0; // Zero is an invalid value: so, this parameter must be explicitly specified
     private long minWaitMillis = DEFAULT_MIN_WAIT_MS;
     private long maxWaitMillis = DEFAULT_MAX_WAIT_MS;
+    private boolean retryNotAvailable = true;
 
     public Builder maxAttempts(final long maxAttempts)
     {
@@ -133,9 +142,15 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
       return this;
     }
 
+    public Builder retryNotAvailable(final boolean retryNotAvailable)
+    {
+      this.retryNotAvailable = retryNotAvailable;
+      return this;
+    }
+
     public StandardRetryPolicy build()
     {
-      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis);
+      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis, retryNotAvailable);
     }
   }
 }

@@ -121,13 +121,22 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      aggregatorFactory = new CardinalityAggregatorFactory(
-          aggregatorName,
-          null,
-          ImmutableList.of(dimensionSpec),
-          false,
-          true
-      );
+      if (inputType.is(ValueType.COMPLEX)) {
+        aggregatorFactory = new HyperUniquesAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            false,
+            true
+        );
+      } else {
+        aggregatorFactory = new CardinalityAggregatorFactory(
+            aggregatorName,
+            null,
+            ImmutableList.of(dimensionSpec),
+            false,
+            true
+        );
+      }
     }
 
     return Aggregation.create(

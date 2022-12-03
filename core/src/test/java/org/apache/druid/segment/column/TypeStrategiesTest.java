@@ -681,5 +681,11 @@ public class TypeStrategiesTest
       }
       return written;
     }
+
+    @Override
+    public NullableLongPair fromBytes(byte[] value)
+    {
+      return read(ByteBuffer.wrap(value));
+    }
   }
 }

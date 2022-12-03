@@ -79,34 +79,40 @@ public class JoinableFactoryWrapper
     }
 
     Set<String> rightPrefixes = clauses.stream().map(JoinableClause::getPrefix).collect(Collectors.toSet());
-    // Walk through the list of clauses, picking off any from the start of the list that can be converted to filters.
-    boolean atStart = true;
+    boolean isRightyJoinSeen = false;
     for (JoinableClause clause : clauses) {
-      if (atStart) {
-        // Remove this clause from columnsRequiredByJoinClauses. It's ok if it relies on itself.
-        for (String column : clause.getCondition().getRequiredColumns()) {
-          columnsRequiredByJoinClauses.remove(column, 1);
-        }
-
-        final JoinClauseToFilterConversion joinClauseToFilterConversion =
-            convertJoinToFilter(
-                clause,
-                Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
-                maxNumFilterValues,
-                rightPrefixes
-            );
-
-        // add the converted filter to the filter list
-        if (joinClauseToFilterConversion.getConvertedFilter() != null) {
-          filterList.add(joinClauseToFilterConversion.getConvertedFilter());
-        }
-        // if the converted filter is partial, keep the join clause too
-        if (!joinClauseToFilterConversion.isJoinClauseFullyConverted()) {
-          clausesToUse.add(clause);
-          atStart = false;
-        }
-      } else {
+      // Incase we find a RIGHT/OUTER join, we shouldn't convert join conditions to left column filters for any join
+      // afterwards because the values of left colmun might change to NULL after the RIGHT/OUTER join. We should only
+      // consider cases where the values of the filter columns do not change after the join.
+      isRightyJoinSeen = isRightyJoinSeen || clause.getJoinType().isRighty();
+      if (isRightyJoinSeen) {
         clausesToUse.add(clause);
+        continue;
+      }
+      // Remove this clause from columnsRequiredByJoinClauses. It's ok if it relies on itself.
+      for (String column : clause.getCondition().getRequiredColumns()) {
+        columnsRequiredByJoinClauses.remove(column, 1);
+      }
+
+      final JoinClauseToFilterConversion joinClauseToFilterConversion =
+          convertJoinToFilter(
+              clause,
+              Sets.union(requiredColumns, columnsRequiredByJoinClauses.elementSet()),
+              maxNumFilterValues,
+              rightPrefixes
+          );
+
+      // add the converted filter to the filter list
+      if (joinClauseToFilterConversion.getConvertedFilter() != null) {
+        filterList.add(joinClauseToFilterConversion.getConvertedFilter());
+      }
+      // if the converted filter is partial, keep the join clause too
+      if (!joinClauseToFilterConversion.isJoinClauseFullyConverted()) {
+        clausesToUse.add(clause);
+        // add back the required columns by this join since it wasn't converted fully
+        for (String column : clause.getCondition().getRequiredColumns()) {
+          columnsRequiredByJoinClauses.add(column, 1);
+        }
       }
     }
 

@@ -172,7 +172,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -183,7 +184,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     }
 

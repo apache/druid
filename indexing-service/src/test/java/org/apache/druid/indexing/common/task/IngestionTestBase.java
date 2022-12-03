@@ -206,7 +206,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null
+        null,
+        objectMapper
     );
   }
 
@@ -328,7 +329,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
                     false,
                     false,
                     TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                    null
+                    null,
+                    false
                 )
             )
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -346,7 +348,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .chatHandlerProvider(new NoopChatHandlerProvider())
             .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
             .appenderatorsManager(new TestAppenderatorsManager())
+            .taskLogPusher(null)
+            .attemptId("1")
             .build();
+
 
         if (task.isReady(box.getTaskActionClient())) {
           return Futures.immediateFuture(task.run(box));

@@ -17,18 +17,18 @@
  */
 
 import {
+  C,
   Column,
+  F,
+  L,
   LiteralValue,
   QueryResult,
   RefName,
   SqlAlias,
   SqlColumnList,
   SqlExpression,
-  SqlFunction,
-  SqlLiteral,
   SqlQuery,
   SqlRecord,
-  SqlRef,
   SqlValues,
 } from 'druid-query-toolkit';
 
@@ -50,13 +50,13 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
           SqlRecord.create(
             row.map((r, i) => {
               if (header[i].nativeType === 'COMPLEX<json>') {
-                return SqlLiteral.create(JSON.stringify(r));
+                return L(JSON.stringify(r));
               } else if (Array.isArray(r)) {
                 arrayIndexes[i] = true;
-                return SqlLiteral.create(r.join(SAMPLE_ARRAY_SEPARATOR));
+                return L(r.join(SAMPLE_ARRAY_SEPARATOR));
               } else {
-                // Avoid actually using NULL literals as they create havc in the VALUES type system and throw errors.
-                return SqlLiteral.create(r == null ? nullForColumn(header[i]) : r);
+                // Avoid actually using NULL literals as they create havoc in the VALUES type system and throw errors.
+                return L(r == null ? nullForColumn(header[i]) : r);
               }
             }),
           ),
@@ -67,11 +67,11 @@ export function sampleDataToQuery(sample: QueryResult): SqlQuery {
     }),
   ).changeSelectExpressions(
     header.map((h, i) => {
-      let ex: SqlExpression = SqlRef.column(`c${i}`);
+      let ex: SqlExpression = C(`c${i}`);
       if (h.nativeType === 'COMPLEX<json>') {
-        ex = SqlFunction.simple('PARSE_JSON', [ex]);
+        ex = F('PARSE_JSON', ex);
       } else if (arrayIndexes[i]) {
-        ex = SqlFunction.simple('STRING_TO_MV', [ex, SqlLiteral.create(SAMPLE_ARRAY_SEPARATOR)]);
+        ex = F('STRING_TO_MV', ex, SAMPLE_ARRAY_SEPARATOR);
       } else if (h.sqlType) {
         ex = ex.cast(h.sqlType);
       }

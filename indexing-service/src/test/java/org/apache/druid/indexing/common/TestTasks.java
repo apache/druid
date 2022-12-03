@@ -75,7 +75,7 @@ public class TestTasks
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }
@@ -108,7 +108,7 @@ public class TestTasks
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatus runTask(TaskToolbox toolbox) throws Exception
     {
       while (!Thread.currentThread().isInterrupted()) {
         Thread.sleep(1000);

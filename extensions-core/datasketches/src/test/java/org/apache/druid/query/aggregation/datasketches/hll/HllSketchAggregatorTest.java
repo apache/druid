@@ -254,7 +254,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                         .setGranularity(Granularities.ALL)
                         .setInterval(Intervals.ETERNITY)
                         .setAggregatorSpecs(
-                            new HllSketchMergeAggregatorFactory("sketch", "sketch", null, null, false)
+                            new HllSketchMergeAggregatorFactory("sketch", "sketch", null, null, null, false)
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(

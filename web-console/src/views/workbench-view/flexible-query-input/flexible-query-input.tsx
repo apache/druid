@@ -21,7 +21,7 @@ import { ResizeSensor2 } from '@blueprintjs/popover2';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
-import { SqlRef, SqlTableRef } from 'druid-query-toolkit';
+import { C, T } from 'druid-query-toolkit';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -164,7 +164,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     ) {
       const completions = ([] as any[]).concat(
         uniq(columnMetadata.map(d => d.TABLE_SCHEMA)).map(v => ({
-          value: SqlTableRef.create(v).toString(),
+          value: String(T(v)),
           score: 10,
           meta: 'schema',
         })),
@@ -173,7 +173,7 @@ export class FlexibleQueryInput extends React.PureComponent<
             .filter(d => (currentSchema ? d.TABLE_SCHEMA === currentSchema : true))
             .map(d => d.TABLE_NAME),
         ).map(v => ({
-          value: SqlTableRef.create(v).toString(),
+          value: String(T(v)),
           score: 49,
           meta: 'datasource',
         })),
@@ -186,7 +186,7 @@ export class FlexibleQueryInput extends React.PureComponent<
             )
             .map(d => d.COLUMN_NAME),
         ).map(v => ({
-          value: SqlRef.column(v).toString(),
+          value: String(C(v)),
           score: 50,
           meta: 'column',
         })),

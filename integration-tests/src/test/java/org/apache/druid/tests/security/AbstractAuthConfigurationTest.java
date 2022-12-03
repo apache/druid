@@ -39,6 +39,7 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -307,11 +308,12 @@ public abstract class AbstractAuthConfigurationTest
 
     // as user that can only read auth_test
     LOG.info("Checking sys.segments query as datasourceOnlyUser...");
+    final String expectedMsg = "{\"Access-Check-Result\":\"" + Access.DEFAULT_ERROR_MESSAGE + "\"}";
     verifySystemSchemaQueryFailure(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.servers query as datasourceOnlyUser...");
@@ -319,7 +321,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
@@ -327,7 +329,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
 
     LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
@@ -335,7 +337,7 @@ public abstract class AbstractAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         HttpResponseStatus.FORBIDDEN,
-        "{\"Access-Check-Result\":\"Unauthorized\"}"
+        expectedMsg
     );
   }
 

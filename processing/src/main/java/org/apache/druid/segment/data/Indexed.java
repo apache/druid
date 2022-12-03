@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
@@ -66,5 +67,24 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
   default boolean isSorted()
   {
     return false;
+  }
+
+  /**
+   * Checks  if {@code index} is between 0 and {@code size}. Similar to Preconditions.checkElementIndex() except this
+   * method throws {@link IAE} with custom error message.
+   * <p>
+   * Used here to get existing behavior(same error message and exception) of V1 {@link GenericIndexed}.
+   *
+   * @param index identifying an element of an {@link Indexed}
+   * @param size size of the {@link Indexed}
+   */
+  static void checkIndex(int index, int size)
+  {
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
+    if (index >= size) {
+      throw new IAE("Index[%d] >= size[%d]", index, size);
+    }
   }
 }

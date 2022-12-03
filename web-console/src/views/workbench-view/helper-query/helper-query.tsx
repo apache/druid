@@ -19,8 +19,9 @@
 import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import axios from 'axios';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { Loader, QueryErrorPane } from '../../../components';
 import {
@@ -34,6 +35,7 @@ import {
 } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
+  maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -46,6 +48,7 @@ import {
   WorkbenchRunningPromises,
 } from '../../../singletons/workbench-running-promises';
 import { ColumnMetadata, DruidError, QueryAction, QueryManager, RowColumn } from '../../../utils';
+import { CapacityAlert } from '../capacity-alert/capacity-alert';
 import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
@@ -89,6 +92,11 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     queryEngines,
     goToIngestion,
   } = props;
+  const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
+
+  // Store the cancellation function for natively run queries allowing us to trigger it only when the user explicitly clicks "cancel" (vs changing tab)
+  const nativeQueryCancelFnRef = useRef<() => void>();
+
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     onQueryChange(query.changeQueryString(queryString));
   });
@@ -99,7 +107,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     onQueryChange(query.changeQueryString(parsedQuery.apply(queryAction).toString()));
 
     if (shouldAutoRun()) {
-      setTimeout(() => handleRun(false), 20);
+      setTimeout(() => void handleRun(false), 20);
     }
   });
 
@@ -162,11 +170,16 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
               const resultPromise = queryRunner.runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
+                cancelToken: new axios.CancelToken(cancelFn => {
+                  nativeQueryCancelFnRef.current = cancelFn;
+                }),
               });
               WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, sqlPrefixLines });
 
               result = await resultPromise;
+              nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
+              nativeQueryCancelFnRef.current = undefined;
               throw new DruidError(e, sqlPrefixLines);
             }
 
@@ -230,11 +243,39 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     currentQueryInput.goToPosition(position);
   }
 
-  const handleRun = usePermanentCallback((preview: boolean) => {
+  const handleRun = usePermanentCallback(async (preview: boolean) => {
     if (!query.isValid()) return;
 
-    WorkbenchHistory.addQueryToHistory(query);
-    queryManager.runQuery(preview ? query.makePreview() : query);
+    if (query.getEffectiveEngine() !== 'sql-msq-task') {
+      WorkbenchHistory.addQueryToHistory(query);
+      queryManager.runQuery(query);
+      return;
+    }
+
+    const effectiveQuery = preview ? query.makePreview() : query;
+
+    const capacityInfo = await maybeGetClusterCapacity();
+
+    const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
+    if (
+      capacityInfo &&
+      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
+    ) {
+      setAlertElement(
+        <CapacityAlert
+          maxNumTasks={effectiveMaxNumTasks}
+          capacityInfo={capacityInfo}
+          onRun={() => {
+            queryManager.runQuery(effectiveQuery);
+          }}
+          onClose={() => {
+            setAlertElement(undefined);
+          }}
+        />,
+      );
+    } else {
+      queryManager.runQuery(effectiveQuery);
+    }
   });
 
   const collapsed = query.getCollapsed();
@@ -248,6 +289,11 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
       extraInfo = summarizeExternalConfig(fitExternalConfigPattern(parsedQuery));
     } catch {}
   }
+
+  const onUserCancel = () => {
+    queryManager.cancelCurrent();
+    nativeQueryCancelFnRef.current?.();
+  };
 
   return (
     <div className="helper-query">
@@ -387,22 +433,16 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
                     execution={executionState.intermediate}
                     intermediateError={executionState.intermediateError}
                     goToIngestion={goToIngestion}
-                    onCancel={() => {
-                      queryManager.cancelCurrent();
-                    }}
+                    onCancel={onUserCancel}
                   />
                 ) : (
-                  <Loader
-                    cancelText="Cancel query"
-                    onCancel={() => {
-                      queryManager.cancelCurrent();
-                    }}
-                  />
+                  <Loader cancelText="Cancel query" onCancel={onUserCancel} />
                 ))}
             </div>
           )}
         </>
       )}
+      {alertElement}
     </div>
   );
 });

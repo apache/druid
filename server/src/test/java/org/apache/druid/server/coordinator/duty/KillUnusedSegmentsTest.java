@@ -20,281 +20,221 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
-import org.easymock.EasyMock;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.mockito.Answers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
 /**
+ *
  */
-@RunWith(Enclosed.class)
+@RunWith(MockitoJUnitRunner.class)
 public class KillUnusedSegmentsTest
 {
-  /**
-   * Standing up new tests with mocks was easier than trying to move the existing tests to use mocks for consistency.
-   * In the future, if all tests are moved to use the same structure, this inner static class can be gotten rid of.
-   */
-  @RunWith(MockitoJUnitRunner.class)
-  public static class MockedTest
+  private static final int MAX_SEGMENTS_TO_KILL = 10;
+  private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
+  private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
+  private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
+
+  @Mock
+  private SegmentsMetadataManager segmentsMetadataManager;
+  @Mock
+  private IndexingServiceClient indexingServiceClient;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+  private DruidCoordinatorConfig config;
+
+  @Mock
+  private DruidCoordinatorRuntimeParams params;
+  @Mock
+  private CoordinatorDynamicConfig coordinatorDynamicConfig;
+
+  private DataSegment yearOldSegment;
+  private DataSegment monthOldSegment;
+  private DataSegment dayOldSegment;
+  private DataSegment hourOldSegment;
+  private DataSegment nextDaySegment;
+  private DataSegment nextMonthSegment;
+
+  private KillUnusedSegments target;
+
+  @Before
+  public void setup()
   {
-    private static final Set<String> ALL_DATASOURCES = ImmutableSet.of("DS1", "DS2", "DS3");
-    private static final int MAX_SEGMENTS_TO_KILL = 10;
-    private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
-    private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
-    private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
+    Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
+    Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
+    Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
+    Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
+    Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
 
-    @Mock
-    private SegmentsMetadataManager segmentsMetadataManager;
-    @Mock
-    private IndexingServiceClient indexingServiceClient;
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private DruidCoordinatorConfig config;
+    Mockito.doReturn(Collections.singleton("DS1"))
+           .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
 
-    @Mock
-    private DruidCoordinatorRuntimeParams params;
-    @Mock
-    private CoordinatorDynamicConfig coordinatorDynamicConfig;
-    private KillUnusedSegments target;
+    final DateTime now = DateTimes.nowUtc();
 
-    @Before
-    public void setup()
-    {
-      Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
-      Mockito.doReturn(ALL_DATASOURCES).when(segmentsMetadataManager).retrieveAllDataSourceNames();
-      Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
-      Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
-      Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
-      Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
-      target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
-    }
-    @Test
-    public void testRunWihNoIntervalShouldNotKillAnySegments()
-    {
-      target.run(params);
-      Mockito.verify(indexingServiceClient, Mockito.never())
-             .killUnusedSegments(anyString(), anyString(), any(Interval.class));
-    }
+    yearOldSegment = createSegmentWithEnd(now.minusDays(365));
+    monthOldSegment = createSegmentWithEnd(now.minusDays(30));
+    dayOldSegment = createSegmentWithEnd(now.minusDays(1));
+    hourOldSegment = createSegmentWithEnd(now.minusHours(1));
+    nextDaySegment = createSegmentWithEnd(now.plusDays(1));
+    nextMonthSegment = createSegmentWithEnd(now.plusDays(30));
 
-    @Test
-    public void testRunWihSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
-    {
-      Mockito.when(coordinatorDynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn()).thenReturn(Collections.singleton("DS1"));
-      target.run(params);
-      Mockito.verify(indexingServiceClient, Mockito.never())
-             .killUnusedSegments(anyString(), anyString(), any(Interval.class));
-    }
+    final List<DataSegment> unusedSegments = ImmutableList.of(
+        yearOldSegment,
+        monthOldSegment,
+        dayOldSegment,
+        hourOldSegment,
+        nextDaySegment,
+        nextMonthSegment
+    );
+
+    Mockito.when(
+        segmentsMetadataManager.getUnusedSegmentIntervals(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.anyInt()
+        )
+    ).thenAnswer(invocation -> {
+      DateTime maxEndTime = invocation.getArgument(1);
+      List<Interval> unusedIntervals =
+          unusedSegments.stream()
+                        .map(DataSegment::getInterval)
+                        .filter(i -> i.getEnd().isBefore(maxEndTime))
+                        .collect(Collectors.toList());
+
+      int limit = invocation.getArgument(2);
+      return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
+    });
+
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
   }
 
-  public static class FindIntervalsTest
+  @Test
+  public void testRunWithNoIntervalShouldNotKillAnySegments()
   {
-    @Test
-    public void testFindIntervalForKill()
-    {
-      testFindIntervalForKill(null, null);
-      testFindIntervalForKill(ImmutableList.of(), null);
+    Mockito.doReturn(null).when(segmentsMetadataManager).getUnusedSegmentIntervals(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.anyInt()
+    );
 
-      testFindIntervalForKill(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
+    target.run(params);
+    Mockito.verify(indexingServiceClient, Mockito.never())
+           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+  }
 
-      testFindIntervalForKill(
-          ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
-          Intervals.of("2014/2017")
-      );
+  @Test
+  public void testRunWithSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
+  {
+    Mockito.doReturn(Duration.standardDays(400))
+           .when(config).getCoordinatorKillDurationToRetain();
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
 
-      testFindIntervalForKill(
-          ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
-          Intervals.of("2014/2016")
-      );
+    // No unused segment is older than the retention period
+    target.run(params);
+    Mockito.verify(indexingServiceClient, Mockito.never())
+           .killUnusedSegments(anyString(), anyString(), any(Interval.class));
+  }
 
-      testFindIntervalForKill(
-          ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
-          Intervals.of("2014/2016")
-      );
+  @Test
+  public void testDurationToRetain()
+  {
+    // Only segments more than a day old are killed
+    Interval expectedKillInterval = new Interval(
+        yearOldSegment.getInterval().getStart(),
+        dayOldSegment.getInterval().getEnd()
+    );
+    runAndVerifyKillInterval(expectedKillInterval);
+  }
 
-      testFindIntervalForKill(
-          ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
-          Intervals.of("2014/2017")
-      );
+  @Test
+  public void testNegativeDurationToRetain()
+  {
+    // Duration to retain = -1 day, reinit target for config to take effect
+    Mockito.doReturn(DURATION_TO_RETAIN.negated())
+           .when(config).getCoordinatorKillDurationToRetain();
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
 
-      testFindIntervalForKill(
-          ImmutableList.of(
-              Intervals.of("2015/2019"),
-              Intervals.of("2014/2016"),
-              Intervals.of("2018/2020")
-          ),
-          Intervals.of("2014/2020")
-      );
+    // Segments upto 1 day in the future are killed
+    Interval expectedKillInterval = new Interval(
+        yearOldSegment.getInterval().getStart(),
+        nextDaySegment.getInterval().getEnd()
+    );
+    runAndVerifyKillInterval(expectedKillInterval);
+  }
 
-      testFindIntervalForKill(
-          ImmutableList.of(
-              Intervals.of("2015/2019"),
-              Intervals.of("2014/2016"),
-              Intervals.of("2018/2020"),
-              Intervals.of("2021/2022")
-          ),
-          Intervals.of("2014/2022")
-      );
-    }
+  @Test
+  public void testIgnoreDurationToRetain()
+  {
+    Mockito.doReturn(true)
+           .when(config).getCoordinatorKillIgnoreDurationToRetain();
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
 
-    private void testFindIntervalForKill(List<Interval> segmentIntervals, Interval expected)
-    {
-      SegmentsMetadataManager segmentsMetadataManager = EasyMock.createMock(SegmentsMetadataManager.class);
-      EasyMock.expect(
-          segmentsMetadataManager.getUnusedSegmentIntervals(
-              EasyMock.anyString(),
-              EasyMock.anyObject(DateTime.class),
-              EasyMock.anyInt()
-          )
-      ).andReturn(segmentIntervals);
-      EasyMock.replay(segmentsMetadataManager);
-      IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
+    // All future and past unused segments are killed
+    Interval expectedKillInterval = new Interval(
+        yearOldSegment.getInterval().getStart(),
+        nextMonthSegment.getInterval().getEnd()
+    );
+    runAndVerifyKillInterval(expectedKillInterval);
+  }
 
-      KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
-          segmentsMetadataManager,
-          indexingServiceClient,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(false)
-              .build()
-      );
+  @Test
+  public void testMaxSegmentsToKill()
+  {
+    Mockito.doReturn(1)
+           .when(config).getCoordinatorKillMaxSegments();
+    target = new KillUnusedSegments(segmentsMetadataManager, indexingServiceClient, config);
 
-      Assert.assertEquals(
-          expected,
-          unusedSegmentsKiller.findIntervalForKill("test", 10000)
-      );
-    }
+    // Only 1 unused segment is killed
+    runAndVerifyKillInterval(yearOldSegment.getInterval());
+  }
 
-    /**
-     * Test that retainDuration is properly set based on the value available in the
-     * Coordinator config. Positive and Negative durations should work as well as
-     * null, if and only if ignoreDurationToRetain is true.
-     */
-    @Test
-    public void testRetainDurationValues()
-    {
-      // Positive duration to retain
-      KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
-          null,
-          null,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(false)
-              .build()
-      );
-      Assert.assertEquals((Long) Duration.parse("PT86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
+  private void runAndVerifyKillInterval(Interval expectedKillInterval)
+  {
+    target.run(params);
+    Mockito.verify(indexingServiceClient, Mockito.times(1)).killUnusedSegments(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.eq("DS1"),
+        ArgumentMatchers.eq(expectedKillInterval)
+    );
+  }
 
-      // Negative duration to retain
-      unusedSegmentsKiller = new KillUnusedSegments(
-          null,
-          null,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT-86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(false)
-              .build()
-      );
-      Assert.assertEquals((Long) Duration.parse("PT-86400S").getMillis(), unusedSegmentsKiller.getRetainDuration());
-    }
-
-    /**
-     * Test that the end time upper limit is properly computated for both positive and
-     * negative durations. Also ensure that if durationToRetain is to be ignored, that
-     * the upper limit is {@link DateTime} max time.
-     */
-    @Test
-    public void testGetEndTimeUpperLimit()
-    {
-      // If ignoreDurationToRetain is true, ignore the value configured for durationToRetain and return 9999-12-31T23:59
-      KillUnusedSegments unusedSegmentsKiller = new KillUnusedSegments(
-          null,
-          null,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(true)
-              .build()
-      );
-      Assert.assertEquals(
-          DateTimes.COMPARE_DATE_AS_STRING_MAX,
-          unusedSegmentsKiller.getEndTimeUpperLimit()
-      );
-
-      // Testing a negative durationToRetain period returns proper date in future
-      unusedSegmentsKiller = new KillUnusedSegments(
-          null,
-          null,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT-86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(false)
-              .build()
-      );
-
-      DateTime expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT-86400S").getMillis());
-      Assert.assertEquals(expectedTime, unusedSegmentsKiller.getEndTimeUpperLimit());
-
-      // Testing a positive durationToRetain period returns expected value in the past
-      unusedSegmentsKiller = new KillUnusedSegments(
-          null,
-          null,
-          new TestDruidCoordinatorConfig.Builder()
-              .withCoordinatorIndexingPeriod(Duration.parse("PT76400S"))
-              .withLoadTimeoutDelay(new Duration(1))
-              .withCoordinatorKillPeriod(Duration.parse("PT86400S"))
-              .withCoordinatorKillDurationToRetain(Duration.parse("PT86400S"))
-              .withCoordinatorKillMaxSegments(1000)
-              .withLoadQueuePeonRepeatDelay(Duration.ZERO)
-              .withCoordinatorKillIgnoreDurationToRetain(false)
-              .build()
-      );
-      expectedTime = DateTimes.nowUtc().minus(Duration.parse("PT86400S").getMillis());
-      Assert.assertEquals(expectedTime, unusedSegmentsKiller.getEndTimeUpperLimit());
-    }
+  private DataSegment createSegmentWithEnd(DateTime endTime)
+  {
+    return new DataSegment(
+        "DS1",
+        new Interval(Period.days(1), endTime),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        1,
+        0
+    );
   }
 }

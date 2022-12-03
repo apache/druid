@@ -209,6 +209,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
             response.getStatus(),
             response.getContent()
         );
+
       }
       final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
           response.getContent(),

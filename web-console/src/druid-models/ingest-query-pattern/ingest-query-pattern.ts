@@ -23,8 +23,8 @@ import {
   SqlPartitionedByClause,
   SqlQuery,
   SqlReplaceClause,
-  SqlTableRef,
   SqlWithPart,
+  T,
 } from 'druid-query-toolkit';
 
 import { filterMap, oneOf } from '../../utils';
@@ -150,10 +150,10 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
   let overwriteWhere: SqlExpression | undefined;
   if (query.insertClause) {
     mode = 'insert';
-    destinationTableName = query.insertClause.table.getTable();
+    destinationTableName = query.insertClause.table.getName();
   } else if (query.replaceClause) {
     mode = 'replace';
-    destinationTableName = query.replaceClause.table.getTable();
+    destinationTableName = query.replaceClause.table.getName();
     overwriteWhere = query.replaceClause.whereClause?.expression;
   } else {
     throw new Error(`Must have an INSERT or REPLACE clause`);
@@ -251,7 +251,7 @@ export function ingestQueryPatternToQuery(
     partitionedBy,
     clusteredBy,
   } = ingestQueryPattern;
-  return SqlQuery.from(SqlTableRef.create(mainExternalName))
+  return SqlQuery.from(T(mainExternalName))
     .applyIf(!preview, q =>
       mode === 'insert'
         ? q.changeInsertIntoTable(destinationTableName)

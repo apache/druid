@@ -51,6 +51,22 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
   }
 
   @Test
+  public void testGetAllObjects()
+  {
+    add("2011-01-01/2011-01-10", "1", 1);
+    add("2011-01-02/2011-01-05", "2", 1);
+
+    final Iterable<OvershadowableInteger> allObjects = ImmutableList.copyOf(
+        VersionedIntervalTimeline.getAllObjects(timeline.lookup(Intervals.of("2011-01-02T02/2011-01-04")))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(new OvershadowableInteger("2", 0, 1)),
+        allObjects
+    );
+  }
+
+  @Test
   public void testFindChunkWithOverlap()
   {
     add("2011-01-01/2011-01-10", "1", 1);

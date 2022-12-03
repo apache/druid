@@ -21,7 +21,7 @@ import { IconName, IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { SqlTableRef } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { Loader } from '../../../components';
@@ -182,10 +182,8 @@ LIMIT 100`,
                   w.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER && (
                     <MenuItem
                       icon={IconNames.APPLICATION}
-                      text={`SELECT * FROM ${SqlTableRef.create(w.datasource)}`}
-                      onClick={() =>
-                        onChangeQuery(`SELECT * FROM ${SqlTableRef.create(w.datasource)}`)
-                      }
+                      text={`SELECT * FROM ${T(w.datasource)}`}
+                      onClick={() => onChangeQuery(`SELECT * FROM ${T(w.datasource)}`)}
                     />
                   )}
                 <MenuItem

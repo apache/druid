@@ -598,7 +598,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             taskStorage,
             mdc,
             emitter,
-            EasyMock.createMock(SupervisorManager.class)
+            EasyMock.createMock(SupervisorManager.class),
+            mapper
         ),
         new TaskAuditLogConfig(true)
     );
@@ -616,7 +617,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
 
     return new TaskToolboxFactory(
@@ -700,7 +702,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 
@@ -1035,7 +1039,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final Interval interval = Intervals.of("2012-01-01/P1D");
         final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
@@ -1085,7 +1089,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -1127,7 +1131,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -1157,9 +1161,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     publishCountDown = new CountDownLatch(1);
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
@@ -1237,9 +1241,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
 
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
@@ -1464,7 +1468,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final Interval interval = Intervals.of("2012-01-01/P1D");
         final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(

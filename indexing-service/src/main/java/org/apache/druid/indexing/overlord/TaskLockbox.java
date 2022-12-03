@@ -474,8 +474,12 @@ public class TaskLockbox
         if (reusablePosses.size() == 0) {
           // case 1) this task doesn't have any lock, but others do
 
-          if (request.getType().equals(TaskLockType.SHARED) && isAllSharedLocks(conflictPosses)) {
-            // Any number of shared locks can be acquired for the same dataSource and interval.
+          if (request.getType().equals(TaskLockType.SHARED)
+              && areAllEqualOrHigherPriorityLocksSharedOrRevoked(conflictPosses, request.getPriority())) {
+            // Any number of shared locks can be acquired for the same dataSource and interval
+            // Exclusive locks of equal or greater priority, if present, must already be revoked
+            // Exclusive locks of lower priority can be revoked
+            revokeAllLowerPriorityNonSharedLocks(conflictPosses, request.getPriority());
             return createNewTaskLockPosse(request);
           } else {
             // During a rolling update, tasks of mixed versions can be run at the same time. Old tasks would request
@@ -1070,10 +1074,33 @@ public class TaskLockbox
     return running;
   }
 
-  private static boolean isAllSharedLocks(List<TaskLockPosse> lockPosses)
+  /**
+   * Check if all lockPosses are either shared
+   * OR of lower priority
+   * OR are revoked non-shared locks if their priorities are greater than or equal to the provided priority
+   * @param lockPosses conflicting task lock posses to be checked
+   * @param priority priority of the lock to be acquired
+   * @return true if the condititons are met
+   */
+  private static boolean areAllEqualOrHigherPriorityLocksSharedOrRevoked(List<TaskLockPosse> lockPosses, int priority)
   {
     return lockPosses.stream()
-                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED));
+                     .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() >= priority)
+                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED)
+                                                || taskLockPosse.getTaskLock().isRevoked());
+  }
+
+  /**
+   * Revokes all non-shared locks with priorities lower than the provided priority
+   * @param lockPosses conflicting task lock posses which may be revoked
+   * @param priority priority of the lock to be acquired
+   */
+  private void revokeAllLowerPriorityNonSharedLocks(List<TaskLockPosse> lockPosses, int priority)
+  {
+    lockPosses.stream()
+              .filter(taskLockPosse -> !TaskLockType.SHARED.equals(taskLockPosse.getTaskLock().getType()))
+              .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() < priority)
+              .forEach(this::revokeLock);
   }
 
   private static boolean isAllRevocable(List<TaskLockPosse> lockPosses, int tryLockPriority)

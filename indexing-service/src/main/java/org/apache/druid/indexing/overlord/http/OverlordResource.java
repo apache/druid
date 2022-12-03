@@ -31,6 +31,8 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
+import org.apache.druid.client.indexing.IndexingWorker;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -339,7 +341,9 @@ public class OverlordResource
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
-                taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
+                taskInfo.getStatus().getLocation() == null
+                ? TaskLocation.unknown()
+                : taskInfo.getStatus().getLocation(),
                 taskInfo.getDataSource(),
                 taskInfo.getStatus().getErrorMsg()
             )
@@ -502,9 +506,10 @@ public class OverlordResource
       }
     } else {
       // Auto scale is not using DefaultWorkerBehaviorConfig
-      log.debug("Cannot calculate maximum worker capacity as WorkerBehaviorConfig [%s] of type [%s] does not support getting max capacity",
-                workerBehaviorConfig,
-                workerBehaviorConfig.getClass().getSimpleName()
+      log.debug(
+          "Cannot calculate maximum worker capacity as WorkerBehaviorConfig [%s] of type [%s] does not support getting max capacity",
+          workerBehaviorConfig,
+          workerBehaviorConfig.getClass().getSimpleName()
       );
       maximumCapacity = -1;
     }
@@ -927,6 +932,24 @@ public class OverlordResource
           {
             if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
+            } else if (taskRunner.isK8sTaskRunner()) {
+              // required because kubernetes task runner has no concept of a worker, so returning a dummy worker.
+              return Response.ok(ImmutableList.of(
+                  new IndexingWorkerInfo(
+                      new IndexingWorker(
+                          "http",
+                          "host",
+                          "8100",
+                          taskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
+                          "version"
+                      ),
+                      0,
+                      Collections.emptySet(),
+                      Collections.emptyList(),
+                      DateTimes.EPOCH,
+                      null
+                  )
+              )).build();
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",

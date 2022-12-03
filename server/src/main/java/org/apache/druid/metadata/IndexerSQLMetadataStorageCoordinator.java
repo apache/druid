@@ -50,8 +50,8 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -157,7 +157,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return connector.retryWithHandle(
         handle -> {
           if (visibility == Segments.ONLY_VISIBLE) {
-            final VersionedIntervalTimeline<String, DataSegment> timeline =
+            final SegmentTimeline timeline =
                 getTimelineForIntervalsWithHandle(handle, dataSource, intervals);
             return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
@@ -232,7 +232,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final ResultIterator<byte[]> dbSegments =
         handle.createQuery(
             StringUtils.format(
-                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start <= :end and %2$send%2$s >= :start",
+                // This query might fail if the year has a different number of digits
+                // See https://github.com/apache/druid/pull/11582 for a similar issue
+                // Using long for these timestamps instead of varchar would give correct time comparisons
+                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
@@ -256,7 +259,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return identifiers;
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalsWithHandle(
+  private SegmentTimeline getTimelineForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
@@ -265,7 +268,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try (final CloseableIterator<DataSegment> iterator =
              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
                                      .retrieveUsedSegments(dataSource, intervals)) {
-      return VersionedIntervalTimeline.forSegments(iterator);
+      return SegmentTimeline.forSegments(iterator);
     }
   }
 
@@ -323,7 +326,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Find which segments are used (i.e. not overshadowed).
     final Set<DataSegment> usedSegments = new HashSet<>();
     List<TimelineObjectHolder<String, DataSegment>> segmentHolders =
-        VersionedIntervalTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
+        SegmentTimeline.forSegments(segments).lookupWithIncompletePartitions(Intervals.ETERNITY);
     for (TimelineObjectHolder<String, DataSegment> holder : segmentHolders) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         usedSegments.add(chunk.getObject());
@@ -584,7 +587,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    insertToMetastore(
+    insertPendingSegmentIntoMetastore(
         handle,
         newIdentifier,
         dataSource,
@@ -662,7 +665,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     // always insert empty previous sequence id
-    insertToMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+    insertPendingSegmentIntoMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
 
     log.info("Allocated pending segment [%s] for sequence[%s] in DB", newIdentifier, sequenceName);
 
@@ -742,7 +745,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private void insertToMetastore(
+  private void insertPendingSegmentIntoMetastore(
       Handle handle,
       SegmentIdWithShardSpec newIdentifier,
       String dataSource,
@@ -943,7 +946,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
         return new SegmentIdWithShardSpec(
             dataSource,
-            overallMaxId.getInterval(),
+            interval,
             Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
             partialShardSpec.complete(
                 jsonMapper,
@@ -1468,4 +1471,5 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
   }
+
 }

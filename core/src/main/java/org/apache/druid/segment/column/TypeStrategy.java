@@ -68,7 +68,6 @@ public interface TypeStrategy<T> extends Comparator<T>
    */
   int estimateSizeBytes(T value);
 
-
   /**
    * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
    * the underlying position by the size of the value read.
@@ -149,5 +148,19 @@ public interface TypeStrategy<T> extends Comparator<T>
     finally {
       buffer.position(oldPosition);
     }
+  }
+
+  /**
+   * Translate raw byte array into a value. This is primarily useful for transforming self contained values that are
+   * serialized into byte arrays, such as happens with 'COMPLEX' types which serialize to base64 strings in JSON
+   * responses.
+   *
+   * 'COMPLEX' types should implement this method to participate in the expression systems built-in function
+   * to deserialize base64 encoded values,
+   * {@link org.apache.druid.math.expr.BuiltInExprMacros.ComplexDecodeBase64ExprMacro}.
+   */
+  default T fromBytes(byte[] value)
+  {
+    throw new IllegalStateException("Not supported");
   }
 }

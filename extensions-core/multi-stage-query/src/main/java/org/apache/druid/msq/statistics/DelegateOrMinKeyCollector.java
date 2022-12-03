@@ -133,7 +133,7 @@ public class DelegateOrMinKeyCollector<TDelegate extends KeyCollector<TDelegate>
     if (delegate != null) {
       return delegate.estimatedRetainedBytes();
     } else {
-      return minKey != null ? minKey.getNumberOfBytes() : 0;
+      return minKey != null ? minKey.estimatedObjectSizeBytes() : 0;
     }
   }
 

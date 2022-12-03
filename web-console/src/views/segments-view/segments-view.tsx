@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import { SqlComparison, SqlExpression, SqlLiteral, SqlRef } from 'druid-query-toolkit';
+import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -125,7 +125,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
 };
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
-  return `${SqlRef.column(String(dimension))}=${SqlLiteral.create(String(value))}`;
+  return `${C(String(dimension))}=${L(String(value))}`;
 }
 
 export interface SegmentsViewProps {
@@ -281,20 +281,23 @@ END AS "time_span"`,
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
               const modeAndNeedle = parseFilterModeAndNeedle(f);
               if (!modeAndNeedle) return;
-              const shardSpecRef = SqlRef.column('shard_spec');
+              const shardSpecColumn = C('shard_spec');
               switch (modeAndNeedle.mode) {
                 case '=':
-                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
 
                 case '!=':
-                  return SqlComparison.notLike(shardSpecRef, `%"type":"${modeAndNeedle.needle}"%`);
+                  return SqlComparison.notLike(
+                    shardSpecColumn,
+                    `%"type":"${modeAndNeedle.needle}"%`,
+                  );
 
                 default:
-                  return SqlComparison.like(shardSpecRef, `%"type":"${modeAndNeedle.needle}%`);
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
               }
             } else if (f.id.startsWith('is_')) {
               if (f.value === 'all') return;
-              return SqlRef.column(f.id).equal(f.value === 'true' ? 1 : 0);
+              return C(f.id).equal(f.value === 'true' ? 1 : 0);
             } else {
               return sqlQueryCustomTableFilter(f);
             }
@@ -335,7 +338,7 @@ END AS "time_span"`,
               queryParts.push(
                 'ORDER BY ' +
                   sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }
@@ -352,7 +355,7 @@ END AS "time_span"`,
               queryParts.push(
                 'ORDER BY ' +
                   sorted
-                    .map((sort: any) => `${SqlRef.column(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }

@@ -118,6 +118,7 @@ public class FixedIndexed<T> implements Indexed<T>
   @Override
   public T get(int index)
   {
+    Indexed.checkIndex(index, size);
     if (hasNull) {
       if (index == 0) {
         return null;

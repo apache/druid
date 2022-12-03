@@ -78,7 +78,7 @@ public class VersionedIntervalTimelineBenchmark
 
   private List<Interval> intervals;
   private List<DataSegment> segments;
-  private VersionedIntervalTimeline<String, DataSegment> timeline;
+  private SegmentTimeline timeline;
   private List<DataSegment> newSegments;
 
   @Setup
@@ -143,7 +143,7 @@ public class VersionedIntervalTimelineBenchmark
       nextMinorVersions.put(interval, (short) (numNonRootGenerations + 1));
     }
 
-    timeline = VersionedIntervalTimeline.forSegments(segments);
+    timeline = SegmentTimeline.forSegments(segments);
 
     newSegments = new ArrayList<>(200);
 
@@ -206,7 +206,7 @@ public class VersionedIntervalTimelineBenchmark
   @Benchmark
   public void benchAdd(Blackhole blackhole)
   {
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(segments);
     for (DataSegment newSegment : newSegments) {
       timeline.add(
           newSegment.getInterval(),
@@ -220,7 +220,7 @@ public class VersionedIntervalTimelineBenchmark
   public void benchRemove(Blackhole blackhole)
   {
     final List<DataSegment> segmentsCopy = new ArrayList<>(segments);
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segmentsCopy);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(segmentsCopy);
     final int numTests = (int) (segmentsCopy.size() * 0.1);
     for (int i = 0; i < numTests; i++) {
       final DataSegment segment = segmentsCopy.remove(ThreadLocalRandom.current().nextInt(segmentsCopy.size()));

@@ -157,20 +157,20 @@ A description of the fields:
 The `ingestionStatsAndErrors` report provides information about row counts and errors.
 
 The `ingestionState` shows what step of ingestion the task reached. Possible states include:
-* `NOT_STARTED`: The task has not begun reading any rows
-* `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
-* `BUILD_SEGMENTS`: The task is processing rows to construct segments
-* `COMPLETED`: The task has finished its work.
+- `NOT_STARTED`: The task has not begun reading any rows
+- `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
+- `BUILD_SEGMENTS`: The task is processing rows to construct segments
+- `COMPLETED`: The task has finished its work.
 
 Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as those created by the Kafka Indexing Service do not have a DETERMINE_PARTITIONS phase.
 
 `unparseableEvents` contains lists of exception messages that were caused by unparseable inputs. This can help with identifying problematic input rows. There will be one list each for the DETERMINE_PARTITIONS and BUILD_SEGMENTS phases. Note that the Hadoop batch task does not support saving of unparseable events.
 
 the `rowStats` map contains information about row counts. There is one entry for each ingestion phase. The definitions of the different row counts are shown below:
-* `processed`: Number of rows successfully ingested without parsing errors
-* `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
-* `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
-* `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
+- `processed`: Number of rows successfully ingested without parsing errors
+- `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
+- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
+- `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
 
 The `errorMsg` field shows a message describing the error that caused a task to fail. It will be null if the task was successful.
 
@@ -257,7 +257,7 @@ These overshadowed segments are not considered in query processing to filter out
 Each segment has a _major_ version and a _minor_ version. The major version is
 represented as a timestamp in the format of [`"yyyy-MM-dd'T'hh:mm:ss"`](https://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat)
 while the minor version is an integer number. These major and minor versions
-are used to determine the overshadow relation between segments as seen below. 
+are used to determine the overshadow relation between segments as seen below.
 
 A segment `s1` overshadows another `s2` if
 
@@ -332,7 +332,7 @@ Each task type has a different default lock priority. The below table shows the 
 |task type|default priority|
 |---------|----------------|
 |Realtime index task|75|
-|Batch index task|50|
+|Batch index tasks, including [native batch](native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](hadoop.md)|50|
 |Merge/Append/Compaction task|25|
 |Other tasks|0|
 
@@ -363,7 +363,6 @@ The following parameters apply to all task types.
 |`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
 |`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
 
-
 ## Task logs
 
 Logs are created by ingestion tasks as they run.  You can configure Druid to push these into a repository for long-term storage after they complete.
@@ -388,7 +387,6 @@ You can check the middleManager / indexer logs locally to see if there was a pus
 You can configure retention periods for logs in milliseconds by setting `druid.indexer.logs.kill` properties in [configuration](../configuration/index.md#task-logging).  The Overlord will then automatically manage task logs in log directories along with entries in task-related metadata storage tables.
 
 > Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store.  Large clock skews between Druid processes and the long-term store might result in unintended behavior.
-
 
 ## All task types
 

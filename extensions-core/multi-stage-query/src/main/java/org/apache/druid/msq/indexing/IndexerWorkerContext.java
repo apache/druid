@@ -24,13 +24,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +38,6 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.rpc.CoordinatorServiceClient;
@@ -53,7 +50,6 @@ import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -227,34 +223,11 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
   {
-    final int numWorkersInJvm;
-
-    // Determine the max number of workers in JVM for memory allocations.
-    if (toolbox.getAppenderatorsManager() instanceof UnifiedIndexerAppenderatorsManager) {
-      // CliIndexer
-      numWorkersInJvm = injector.getInstance(WorkerConfig.class).getCapacity();
-    } else {
-      // CliPeon
-      numWorkersInJvm = 1;
-    }
-
-    final IntSet inputStageNumbers =
-        InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
-    final int numInputWorkers =
-        inputStageNumbers.intStream()
-                         .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
-                         .sum();
-
     return new IndexerFrameContext(
         this,
         indexIO,
         dataSegmentProvider,
-        WorkerMemoryParameters.compute(
-            Runtime.getRuntime().maxMemory(),
-            numWorkersInJvm,
-            processorBouncer().getMaxCount(),
-            numInputWorkers
-        )
+        WorkerMemoryParameters.createProductionInstanceForWorker(injector, queryDef, stageNumber)
     );
   }
 
