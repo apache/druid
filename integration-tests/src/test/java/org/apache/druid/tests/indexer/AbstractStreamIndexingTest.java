@@ -316,7 +316,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for supervisor to be healthy"
       );
       // Verify that supervisor can catch up with the stream
-      verifyIngestedData(generatedTestConfig, numWritten);
+      verifyIngestedData(generatedTestConfig, numWritten, 2);
     }
   }
 
@@ -725,6 +725,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
   protected void verifyIngestedData(GeneratedTestConfig generatedTestConfig, long numWritten) throws Exception
   {
+    verifyIngestedData(generatedTestConfig, numWritten, 0);
+  }
+
+  protected void verifyIngestedData(GeneratedTestConfig generatedTestConfig, long numWritten, int numPrevCompletedTasks)
+      throws Exception
+  {
     // Wait for supervisor to consume events
     LOG.info("Waiting for stream indexing tasks to consume events");
 
@@ -754,10 +760,11 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     this.queryHelper.testQueriesFromString(querySpec);
 
     // All data written to stream within 10 secs.
-    // Each task duration is 30 secs. Hence, one task will be able to consume all data from the stream.
+    // Each task duration is 30 secs. Hence, one round of tasks will be able to consume all data from the stream.
+    // numPrevCompletedTasks -> number of tasks completed in previous rounds
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
-        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > 0),
+        () -> (indexer.getCompleteTasksForDataSource(generatedTestConfig.getFullDatasourceName()).size() > numPrevCompletedTasks),
         "Waiting for Task Completion"
     );
 
