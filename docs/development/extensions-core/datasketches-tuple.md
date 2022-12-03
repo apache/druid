@@ -39,8 +39,8 @@ druid.extensions.loadList=["druid-datasketches"]
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "nominalEntries": <number>,
-  "numberOfValues" : <number>,
-  "metricColumns" : <array of strings>
+  "metricColumns" : <array of strings>,
+  "numberOfValues" : <number>
  }
 ```
 
@@ -50,8 +50,41 @@ druid.extensions.loadList=["druid-datasketches"]
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field.|yes|
 |nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
-|numberOfValues|Number of values associated with each distinct key. |no, defaults to 1|
-|metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
+|metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key. If not provided `filedName` is assumed to be an arrayOfDoublesSketch|no, if not provided `filedName` is assumed to be an arrayOfDoublesSketch|
+|numberOfValues|Number of values associated with each distinct key. |no, defaults to the length of `metricColumns` if provided and 1 otherwise|
+
+The `arrayOfDoublesSketch` aggregator has two modes of useage:
+
+- built from raw data - `metricColumns` is set to an array
+- directly on top of an ArrayOfDoubles sketch - `metricColumns` is unset and `fieldName` represents an ArrayOfDoubles sketch (base64 encoded if at ingestion time) with `numberOfValues` doubles.
+
+#### Example on top of raw data
+
+Compute a theta of unique users, for each user store the `added` and `deleted` scoers
+
+```json
+{
+  "type": "arrayOfDoublesSketch",
+  "name": "users_theta",
+  "fieldName": "user",
+  "nominalEntries": 16384,
+  "metricColumns": ["added", "deleted"],
+}
+```
+
+### Example on top of precomputed sketchs
+
+Ingest a sketch column called `user_sketches` that has two doubles in its array.
+
+```json
+{
+  "type": "arrayOfDoublesSketch",
+  "name": "users_theta",
+  "fieldName": "user_sketches",
+  "nominalEntries": 16384,
+  "numberOfValues": 2,
+}
+```
 
 ### Post Aggregators
 
