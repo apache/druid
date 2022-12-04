@@ -32,6 +32,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -157,6 +158,12 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   public Set<String> getDataSourceNames()
   {
     return druidTable.getDataSource().getTableNames();
+  }
+
+  @Override
+  public DataSource getDataSourceFromRel()
+  {
+    return druidTable.getDataSource();
   }
 
   @Override

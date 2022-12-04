@@ -79,6 +79,7 @@ import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.DruidUnnestRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
@@ -253,6 +254,7 @@ public class CalciteRulesManager
         .add(DruidRelToDruidRule.instance())
         .add(new DruidTableScanRule(plannerContext))
         .add(new DruidLogicalValuesRule(plannerContext))
+        .add(new DruidUnnestRule(plannerContext))
         .add(new ExternalTableScanRule(plannerContext))
         .addAll(DruidRules.rules(plannerContext));
 

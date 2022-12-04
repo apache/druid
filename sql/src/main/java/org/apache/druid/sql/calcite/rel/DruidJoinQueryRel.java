@@ -41,6 +41,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -286,6 +287,12 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     retVal.addAll(((DruidRel<?>) left).getDataSourceNames());
     retVal.addAll(((DruidRel<?>) right).getDataSourceNames());
     return retVal;
+  }
+
+  @Override
+  public DataSource getDataSourceFromRel()
+  {
+    throw new UOE("Not supported yet.");
   }
 
   @Override

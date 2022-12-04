@@ -181,7 +181,10 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (indexedIntsForCurrentRow == null) {
+            if (dimSelector.getObject() == null) {
+              return null;
+            }
+            if (indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
             if (allowedBitSet.isEmpty()) {

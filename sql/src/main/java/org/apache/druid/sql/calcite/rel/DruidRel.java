@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -101,4 +102,6 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
    * Get the set of names of table datasources read by this DruidRel
    */
   public abstract Set<String> getDataSourceNames();
+
+  public abstract DataSource getDataSourceFromRel();
 }

@@ -33,8 +33,10 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResponse;
@@ -216,6 +218,12 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     return rels.stream()
                .flatMap(rel -> ((DruidRel<?>) rel).getDataSourceNames().stream())
                .collect(Collectors.toSet());
+  }
+
+  @Override
+  public DataSource getDataSourceFromRel()
+  {
+    throw new UOE("Not supported yet.");
   }
 
   @Override

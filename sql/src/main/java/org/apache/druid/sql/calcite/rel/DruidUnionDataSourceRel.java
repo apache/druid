@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -239,6 +240,12 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     }
 
     return retVal;
+  }
+
+  @Override
+  public DataSource getDataSourceFromRel()
+  {
+    throw new UOE("Not supported yet.");
   }
 
   @Override
