@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
@@ -37,9 +38,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
@@ -61,11 +63,29 @@ public class WorkerSketchFetcher implements AutoCloseable
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode, int statisticsMaxRetainedBytes)
+  public WorkerSketchFetcher(
+      WorkerClient workerClient,
+      ClusterStatisticsMergeMode clusterStatisticsMergeMode,
+      int statisticsMaxRetainedBytes
+  )
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
     this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
+    this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
+  }
+
+  @VisibleForTesting
+  WorkerSketchFetcher(
+      WorkerClient workerClient,
+      ClusterStatisticsMergeMode clusterStatisticsMergeMode,
+      int statisticsMaxRetainedBytes,
+      ExecutorService executorService
+  )
+  {
+    this.workerClient = workerClient;
+    this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
+    this.executorService = executorService;
     this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
   }
 
@@ -120,11 +140,11 @@ public class WorkerSketchFetcher implements AutoCloseable
     final int workerCount = workerTaskIds.size();
     // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
-    final Set<Future<?>> futuresToCancel = ConcurrentHashMap.newKeySet();
+    final Queue<Future<?>> executorFutures = new ConcurrentLinkedQueue<>();
 
     // Submit a task for each worker to fetch statistics
     IntStream.range(0, workerCount).forEach(workerNo -> {
-      futuresToCancel.add(executorService.submit(() -> {
+      executorFutures.add(executorService.submit(() -> {
         ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
             workerClient.fetchClusterByStatisticsSnapshot(
                 workerTaskIds.get(workerNo),
@@ -148,8 +168,10 @@ public class WorkerSketchFetcher implements AutoCloseable
         }
         catch (Exception e) {
           synchronized (mergedStatisticsCollector) {
-            partitionFuture.completeExceptionally(e);
-            mergedStatisticsCollector.clear();
+            if (!partitionFuture.isDone()) {
+              partitionFuture.completeExceptionally(e);
+              mergedStatisticsCollector.clear();
+            }
           }
         }
       }));
@@ -157,7 +179,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
     partitionFuture.whenComplete((result, exception) -> {
       if (exception != null || (result != null && result.isError())) {
-        for (Future<?> future : futuresToCancel) {
+        for (Future<?> future : executorFutures) {
           if (!future.isDone()) {
             future.cancel(true);
           }
@@ -238,7 +260,7 @@ public class WorkerSketchFetcher implements AutoCloseable
             stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
         // Guarded by synchronized mergedStatisticsCollector
         Set<Integer> finishedWorkers = new HashSet<>();
-        final Set<Future<?>> futuresToCancel = ConcurrentHashMap.newKeySet();
+        final Queue<Future<?>> executorFutures = new ConcurrentLinkedQueue<>();
 
         log.debug("Query [%s]. Submitting request for statistics for time chunk %s to %s workers",
                   stageDefinition.getId().getQueryId(),
@@ -247,7 +269,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
         // Submits a task for every worker which has a certain time chunk
         for (int workerNo : workerIdsWithTimeChunk) {
-          futuresToCancel.add(executorService.submit(() -> {
+          executorFutures.add(executorService.submit(() -> {
             ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
                 workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
                     workerTaskIds.get(workerNo),
@@ -292,8 +314,10 @@ public class WorkerSketchFetcher implements AutoCloseable
             }
             catch (Exception e) {
               synchronized (mergedStatisticsCollector) {
-                partitionFuture.completeExceptionally(e);
-                mergedStatisticsCollector.clear();
+                if (!partitionFuture.isDone()) {
+                  partitionFuture.completeExceptionally(e);
+                  mergedStatisticsCollector.clear();
+                }
               }
             }
           }));
@@ -301,7 +325,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
         partitionFuture.whenComplete((result, exception) -> {
           if (exception != null || (result != null && result.isError())) {
-            for (Future<?> future : futuresToCancel) {
+            for (Future<?> future : executorFutures) {
               if (!future.isDone()) {
                 future.cancel(true);
               }

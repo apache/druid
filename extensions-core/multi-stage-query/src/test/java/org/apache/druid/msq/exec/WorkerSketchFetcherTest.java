@@ -23,12 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -51,6 +51,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,6 +82,7 @@ public class WorkerSketchFetcherTest
   private WorkerClient workerClient;
   private ClusterByPartitions expectedPartitions1;
   private ClusterByPartitions expectedPartitions2;
+  private ExecutorService executorService;
   private AutoCloseable mocks;
   private WorkerSketchFetcher target;
 
@@ -101,6 +104,7 @@ public class WorkerSketchFetcherTest
         mergedClusterByStatisticsCollector1,
         mergedClusterByStatisticsCollector2
     ).when(stageDefinition).createResultKeyStatisticsCollector(anyInt());
+    executorService = spy(Execs.multiThreaded(4, "SketchFetcherThreadPool-%d"));
   }
 
   @After
@@ -113,20 +117,30 @@ public class WorkerSketchFetcherTest
   public void test_submitFetcherTask_parallelFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
   {
     // Store futures in a queue
-    final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
+    final Queue<Future<?>> futureQueue = new ConcurrentLinkedQueue<>();
     final List<String> workerIds = ImmutableList.of("0", "1", "2", "3");
     final CountDownLatch latch = new CountDownLatch(workerIds.size());
 
-    target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.PARALLEL, 300_000_000));
+    target = spy(
+        new WorkerSketchFetcher(
+            workerClient,
+            ClusterStatisticsMergeMode.PARALLEL,
+            300_000_000,
+            executorService
+        )
+    );
 
-    // When fetching snapshots, return a mock and add future to queue
+    // When submitting futures from the executor, add it to the list first.
     doAnswer(invocation -> {
-      ListenableFuture<ClusterByStatisticsSnapshot> snapshotListenableFuture =
-          spy(Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class)));
-      futureQueue.add(snapshotListenableFuture);
+      Future<?> future = spy((Future<?>) invocation.callRealMethod());
+      futureQueue.add(future);
+      return future;
+    }).when(executorService).submit(any(Runnable.class));
+
+    doAnswer(invocation -> {
       latch.countDown();
       latch.await();
-      return snapshotListenableFuture;
+      return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
     }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
 
     // Cause a worker to fail instead of returning the result
@@ -151,7 +165,7 @@ public class WorkerSketchFetcherTest
     verify(mergedClusterByStatisticsCollector1, times(1)).clear();
     // Verify that other task futures were requested to be cancelled.
     Assert.assertFalse(futureQueue.isEmpty());
-    for (ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture : futureQueue) {
+    for (Future<?> snapshotFuture : futureQueue) {
       verify(snapshotFuture, times(1)).cancel(eq(true));
     }
   }
@@ -198,21 +212,32 @@ public class WorkerSketchFetcherTest
   public void test_submitFetcherTask_sequentialFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
   {
     // Store futures in a queue
-    final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
+    final Queue<Future<?>> futureQueue = new ConcurrentLinkedQueue<>();
 
     SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(1L, ImmutableSet.of(0, 1, 2), 2L, ImmutableSet.of(0, 1, 4));
     doReturn(timeSegmentVsWorkerMap).when(completeKeyStatisticsInformation).getTimeSegmentVsWorkerMap();
 
     final CyclicBarrier barrier = new CyclicBarrier(3);
-    target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.SEQUENTIAL, 300_000_000));
+    target = spy(
+        new WorkerSketchFetcher(
+            workerClient,
+            ClusterStatisticsMergeMode.SEQUENTIAL,
+            300_000_000,
+            executorService
+        )
+    );
+
+    // When submitting futures from the executor, add it to the list first.
+    doAnswer(invocation -> {
+      Future<?> future = spy((Future<?>) invocation.callRealMethod());
+      futureQueue.add(future);
+      return future;
+    }).when(executorService).submit(any(Runnable.class));
 
     // When fetching snapshots, return a mock and add future to queue
     doAnswer(invocation -> {
-      ListenableFuture<ClusterByStatisticsSnapshot> snapshotListenableFuture =
-          spy(Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class)));
-      futureQueue.add(snapshotListenableFuture);
       barrier.await();
-      return snapshotListenableFuture;
+      return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
     }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(anyString(), anyString(), anyInt(), anyLong());
 
     // Cause a worker in the second time chunk to fail instead of returning the result
@@ -237,7 +262,7 @@ public class WorkerSketchFetcherTest
     verify(mergedClusterByStatisticsCollector2, times(1)).clear();
     // Verify that other task futures were requested to be cancelled.
     Assert.assertFalse(futureQueue.isEmpty());
-    for (ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture : futureQueue) {
+    for (Future<?> snapshotFuture : futureQueue) {
       verify(snapshotFuture, times(1)).cancel(eq(true));
     }
   }
