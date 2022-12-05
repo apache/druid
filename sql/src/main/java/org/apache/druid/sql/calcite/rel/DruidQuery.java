@@ -43,7 +43,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -68,7 +67,6 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
@@ -127,10 +125,11 @@ public class DruidQuery
 
   /**
    * Maximum number of time-granular buckets that we allow for non-Druid tables.
-   *
+   * <p>
    * Used by {@link #canUseQueryGranularity}.
    */
   private static final int MAX_TIME_GRAINS_NON_DRUID_TABLE = 100000;
+  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
 
   private final DataSource dataSource;
   private final PlannerContext plannerContext;
@@ -275,12 +274,12 @@ public class DruidQuery
 
     if (partialQuery.getWindow() != null) {
       final QueryContext queryContext = plannerContext.queryContext();
-      if (queryContext.getBoolean("windowsAreForClosers", false)) {
+      if (queryContext.getBoolean(CTX_ENABLE_WINDOW_FNS, false)) {
         windowing = Preconditions.checkNotNull(
             Windowing.fromCalciteStuff(
                 partialQuery,
                 plannerContext,
-                sourceRowSignature, // TODO(gianm): window can only apply to the source data, because SCAN -> WINDOW
+                sourceRowSignature, // Plans immediately after Scan, so safe to use the row signature from scan
                 rexBuilder
             )
         );
@@ -439,9 +438,7 @@ public class DruidQuery
    * @param plannerContext        planner context
    * @param rowSignature          source row signature
    * @param virtualColumnRegistry re-usable virtual column references
-   *
    * @return dimensions
-   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<DimensionExpression> computeDimensions(
@@ -549,9 +546,7 @@ public class DruidQuery
    * @param finalizeAggregations  true if this query should include explicit finalization for all of its
    *                              aggregators, where required. Useful for subqueries where Druid's native query layer
    *                              does not do this automatically.
-   *
    * @return aggregations
-   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<Aggregation> computeAggregations(
@@ -832,7 +827,7 @@ public class DruidQuery
 
   /**
    * Whether the provided combination of dataSource, filtration, and queryGranularity is safe to use in queries.
-   *
+   * <p>
    * Necessary because some combinations are unsafe, mainly because they would lead to the creation of too many
    * time-granular buckets during query processing.
    */
@@ -911,7 +906,6 @@ public class DruidQuery
    */
   private Query<?> computeQuery()
   {
-    // TODO(gianm): structure
     if (windowing != null) {
       // Windowing can only be handled by window queries.
       return toWindowQuery();
@@ -1373,7 +1367,6 @@ public class DruidQuery
 
     return new WindowOperatorQuery(
         dataSource,
-        new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         windowing.getOperators()

@@ -44,51 +44,51 @@ public class IntArrayColumn implements Column
       }
 
       @Override
-      public int numCells()
+      public int numRows()
       {
         return vals.length;
       }
 
       @Override
-      public boolean isNull(int cell)
+      public boolean isNull(int rowNum)
       {
         return false;
       }
 
       @Override
-      public Object getObject(int cell)
+      public Object getObject(int rowNum)
       {
-        return vals[cell];
+        return vals[rowNum];
       }
 
       @Override
-      public double getDouble(int cell)
+      public double getDouble(int rowNum)
       {
-        return vals[cell];
+        return vals[rowNum];
       }
 
       @Override
-      public float getFloat(int cell)
+      public float getFloat(int rowNum)
       {
-        return vals[cell];
+        return vals[rowNum];
       }
 
       @Override
-      public long getLong(int cell)
+      public long getLong(int rowNum)
       {
-        return vals[cell];
+        return vals[rowNum];
       }
 
       @Override
-      public int getInt(int cell)
+      public int getInt(int rowNum)
       {
-        return vals[cell];
+        return vals[rowNum];
       }
 
       @Override
-      public int compareCells(int lhsCell, int rhsCell)
+      public int compareCells(int lhsRowNum, int rhsRowNum)
       {
-        return Integer.compare(vals[lhsCell], vals[rhsCell]);
+        return Integer.compare(vals[lhsRowNum], vals[rhsRowNum]);
       }
     };
   }

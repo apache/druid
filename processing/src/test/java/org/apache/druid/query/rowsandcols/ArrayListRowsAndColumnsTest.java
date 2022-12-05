@@ -46,7 +46,7 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase<ArrayLis
       final ColumnAccessor column = input.findColumn(col).toAccessor();
       sigBob.add(col, column.getType());
 
-      for (int i = 0; i < column.numCells(); ++i) {
+      for (int i = 0; i < column.numRows(); ++i) {
         rows.get(i)[colIndex] = column.getObject(i);
       }
     }

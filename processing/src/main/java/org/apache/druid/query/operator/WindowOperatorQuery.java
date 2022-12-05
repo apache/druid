@@ -22,6 +22,8 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -29,6 +31,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -36,6 +39,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * A query that can compute window functions on top of a completely in-memory inline datasource or query results.
+ * <p>
+ * It relies on a set of Operators to work on the data that it is given.  As such, it doesn't actually encapsulate
+ * any window-specific logic in-and-of-itself, but rather delegates everything to the operators.  This is because
+ * this is also intended as the initial addition of more explicit Operators to the Druid code base.
+ * <p>
+ * The assumptions on the incoming data are defined by the operators.  At initial time of writing, there is a baked
+ * in assumption that data has been sorted "correctly" before this runs.
+ */
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
   private final RowSignature rowSignature;
@@ -44,13 +57,12 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   @JsonCreator
   public WindowOperatorQuery(
       @JsonProperty("dataSource") DataSource dataSource,
-      @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("outputSignature") RowSignature rowSignature,
       @JsonProperty("operatorDefinition") List<OperatorFactory> operators
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, new LegacySegmentSpec(Intervals.ETERNITY), false, context);
     this.rowSignature = rowSignature;
     this.operators = operators;
     if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
@@ -93,7 +105,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         getDataSource(),
-        getQuerySegmentSpec(),
         computeOverriddenContext(getContext(), contextOverride),
         rowSignature,
         operators
@@ -103,13 +114,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   @Override
   public Query<RowsAndColumns> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new WindowOperatorQuery(
-        getDataSource(),
-        spec,
-        getContext(),
-        rowSignature,
-        operators
-    );
+    throw new UOE("Cannot override querySegmentSpec on window operator query. [%s]", spec);
   }
 
   @Override
@@ -117,7 +122,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         dataSource,
-        getQuerySegmentSpec(),
         getContext(),
         rowSignature,
         operators

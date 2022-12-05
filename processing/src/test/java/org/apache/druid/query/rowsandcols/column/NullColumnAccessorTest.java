@@ -29,7 +29,7 @@ public class NullColumnAccessorTest
   public void testSanity()
   {
     NullColumnAccessor accessor = new NullColumnAccessor(10);
-    Assert.assertEquals(10, accessor.numCells());
+    Assert.assertEquals(10, accessor.numRows());
 
     for (int i = 0; i < 10; ++i) {
       Assert.assertTrue(accessor.isNull(i));

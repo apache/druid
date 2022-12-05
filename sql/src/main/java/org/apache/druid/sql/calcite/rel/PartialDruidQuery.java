@@ -70,7 +70,7 @@ public class PartialDruidQuery
     WHERE_FILTER,
     SELECT_PROJECT,
 
-    // AGGREGATE, HAING_FILTER, AGGREGATE_PROJECT can only be present on non-WINDOW aggregating queries.
+    // AGGREGATE, HAVING_FILTER, AGGREGATE_PROJECT can only be present on non-WINDOW aggregating queries.
     AGGREGATE,
     HAVING_FILTER,
     AGGREGATE_PROJECT,
@@ -388,16 +388,12 @@ public class PartialDruidQuery
     } else if (stage.compareTo(currentStage) <= 0) {
       // Cannot go backwards.
       return false;
-    } else if (stage.compareTo(Stage.AGGREGATE) > 0 && stage.compareTo(Stage.SORT) < 0 && aggregate == null) {
+    } else // Cannot do post-sort stages without a sort.
+      // Looks good.
+      if (stage.compareTo(Stage.AGGREGATE) > 0 && stage.compareTo(Stage.SORT) < 0 && aggregate == null) {
       // Cannot do post-aggregation stages without an aggregation.
       return false;
-    } else if (stage.compareTo(Stage.SORT) > 0 && sort == null) {
-      // Cannot do post-sort stages without a sort.
-      return false;
-    } else {
-      // Looks good.
-      return true;
-    }
+    } else return stage.compareTo(Stage.SORT) <= 0 || sort != null;
   }
 
   /**

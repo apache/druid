@@ -46,49 +46,49 @@ public class ConstantObjectColumn implements Column
       }
 
       @Override
-      public int numCells()
+      public int numRows()
       {
         return numCells;
       }
 
       @Override
-      public boolean isNull(int cell)
+      public boolean isNull(int rowNum)
       {
         return obj == null;
       }
 
       @Override
-      public Object getObject(int cell)
+      public Object getObject(int rowNum)
       {
         return obj;
       }
 
       @Override
-      public double getDouble(int cell)
+      public double getDouble(int rowNum)
       {
         return ((Number) obj).doubleValue();
       }
 
       @Override
-      public float getFloat(int cell)
+      public float getFloat(int rowNum)
       {
         return ((Number) obj).floatValue();
       }
 
       @Override
-      public long getLong(int cell)
+      public long getLong(int rowNum)
       {
         return ((Number) obj).longValue();
       }
 
       @Override
-      public int getInt(int cell)
+      public int getInt(int rowNum)
       {
         return ((Number) obj).intValue();
       }
 
       @Override
-      public int compareCells(int lhsCell, int rhsCell)
+      public int compareCells(int lhsRowNum, int rhsRowNum)
       {
         return 0;
       }

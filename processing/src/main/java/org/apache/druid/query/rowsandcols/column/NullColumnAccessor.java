@@ -46,50 +46,50 @@ public class NullColumnAccessor implements ColumnAccessor
   }
 
   @Override
-  public int numCells()
+  public int numRows()
   {
     return size;
   }
 
   @Override
-  public boolean isNull(int cell)
+  public boolean isNull(int rowNum)
   {
     return true;
   }
 
   @Nullable
   @Override
-  public Object getObject(int cell)
+  public Object getObject(int rowNum)
   {
     return null;
   }
 
   @Override
-  public double getDouble(int cell)
+  public double getDouble(int rowNum)
   {
     return 0;
   }
 
   @Override
-  public float getFloat(int cell)
+  public float getFloat(int rowNum)
   {
     return 0;
   }
 
   @Override
-  public long getLong(int cell)
+  public long getLong(int rowNum)
   {
     return 0;
   }
 
   @Override
-  public int getInt(int cell)
+  public int getInt(int rowNum)
   {
     return 0;
   }
 
   @Override
-  public int compareCells(int lhsCell, int rhsCell)
+  public int compareCells(int lhsRowNum, int rhsRowNum)
   {
     return 0;
   }

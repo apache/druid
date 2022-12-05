@@ -47,7 +47,7 @@ public class WindowLastProcessor extends WindowValueProcessorBase
 
     return processInternal(input, column -> {
       final ColumnAccessor accessor = column.toAccessor();
-      return new ConstantObjectColumn(accessor.getObject(lastIndex), accessor.numCells(), accessor.getType());
+      return new ConstantObjectColumn(accessor.getObject(lastIndex), accessor.numRows(), accessor.getType());
     });
   }
 }

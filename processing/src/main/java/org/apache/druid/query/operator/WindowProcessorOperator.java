@@ -22,6 +22,9 @@ package org.apache.druid.query.operator;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+/**
+ * An Operator that applies a {@link Processor}, see javadoc on that interface for an explanation.
+ */
 public class WindowProcessorOperator implements Operator
 {
   private final Processor windowProcessor;

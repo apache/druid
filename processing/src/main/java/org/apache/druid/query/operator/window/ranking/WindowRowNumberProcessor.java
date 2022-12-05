@@ -62,52 +62,52 @@ public class WindowRowNumberProcessor implements Processor
               }
 
               @Override
-              public int numCells()
+              public int numRows()
               {
                 return incomingPartition.numRows();
               }
 
               @Override
-              public boolean isNull(int cell)
+              public boolean isNull(int rowNum)
               {
                 return false;
               }
 
               @Override
-              public Object getObject(int cell)
+              public Object getObject(int rowNum)
               {
-                return getInt(cell);
+                return getInt(rowNum);
               }
 
               @Override
-              public double getDouble(int cell)
+              public double getDouble(int rowNum)
               {
-                return getInt(cell);
+                return getInt(rowNum);
               }
 
               @Override
-              public float getFloat(int cell)
+              public float getFloat(int rowNum)
               {
-                return getInt(cell);
+                return getInt(rowNum);
               }
 
               @Override
-              public long getLong(int cell)
+              public long getLong(int rowNum)
               {
-                return getInt(cell);
+                return getInt(rowNum);
               }
 
               @Override
-              public int getInt(int cell)
+              public int getInt(int rowNum)
               {
                 // cell is 0-indexed, rowNumbers are 1-indexed, so add 1.
-                return cell + 1;
+                return rowNum + 1;
               }
 
               @Override
-              public int compareCells(int lhsCell, int rhsCell)
+              public int compareCells(int lhsRowNum, int rhsRowNum)
               {
-                return Integer.compare(lhsCell, rhsCell);
+                return Integer.compare(lhsRowNum, rhsRowNum);
               }
             }
         )

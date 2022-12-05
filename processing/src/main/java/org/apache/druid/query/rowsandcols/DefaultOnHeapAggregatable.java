@@ -200,7 +200,7 @@ public class DefaultOnHeapAggregatable implements OnHeapAggregatable, OnHeapCumu
                     return serdeForType.getObjectStrategy().getClazz();
                   }
 
-                  for (int i = 0; i < columnAccessor.numCells(); ++i) {
+                  for (int i = 0; i < columnAccessor.numRows(); ++i) {
                     Object obj = columnAccessor.getObject(i);
                     if (obj != null) {
                       return obj.getClass();

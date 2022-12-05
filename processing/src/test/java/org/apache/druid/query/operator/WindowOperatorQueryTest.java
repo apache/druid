@@ -57,7 +57,6 @@ public class WindowOperatorQueryTest
   {
     query = new WindowOperatorQuery(
         InlineDataSource.fromIterable(new ArrayList<>(), RowSignature.empty()),
-        new LegacySegmentSpec("2022-01-01/2022-01-02"),
         ImmutableMap.of("sally", "sue"),
         RowSignature.empty(),
         new ArrayList<>()

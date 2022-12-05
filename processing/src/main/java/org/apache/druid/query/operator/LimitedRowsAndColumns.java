@@ -75,7 +75,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
         return new ShiftedColumnAccessorBase(columnAccessor)
         {
           @Override
-          public int numCells()
+          public int numRows()
           {
             return end - start;
           }

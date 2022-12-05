@@ -32,6 +32,9 @@ import java.util.List;
  * a superset of the partitions that it needs to provide.  It will never attempt to make a partition larger than a
  * single RowsAndColumns object that it is given from its child Operator.  A different operator should be used
  * if that is an important bit of functionality to have.
+ * <p>
+ * Additionally, this assumes that data has been pre-sorted according to the partitioning columns.  If it is
+ * given data that has not been pre-sorted, an exception is expected to be thrown.
  */
 public class NaivePartitioningOperator implements Operator
 {
@@ -84,11 +87,7 @@ public class NaivePartitioningOperator implements Operator
       return true;
     }
 
-    if (child.hasNext()) {
-      return true;
-    }
-
-    return false;
+    return child.hasNext();
   }
 
   @Override

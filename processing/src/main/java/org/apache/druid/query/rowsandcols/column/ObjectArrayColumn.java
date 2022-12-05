@@ -65,7 +65,7 @@ public class ObjectArrayColumn implements Column
       }
 
       @Override
-      public int numCells()
+      public int numRows()
       {
         return objects.length;
       }

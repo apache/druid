@@ -25,22 +25,22 @@ import java.util.Comparator;
 public abstract class ObjectColumnAccessorBase implements ColumnAccessor
 {
   @Override
-  public boolean isNull(int cell)
+  public boolean isNull(int rowNum)
   {
-    return getVal(cell) == null;
+    return getVal(rowNum) == null;
   }
 
   @Nullable
   @Override
-  public Object getObject(int cell)
+  public Object getObject(int rowNum)
   {
-    return getVal(cell);
+    return getVal(rowNum);
   }
 
   @Override
-  public double getDouble(int cell)
+  public double getDouble(int rowNum)
   {
-    final Object val = getVal(cell);
+    final Object val = getVal(rowNum);
     if (val instanceof Number) {
       return ((Number) val).doubleValue();
     } else if (val instanceof String) {
@@ -56,9 +56,9 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public float getFloat(int cell)
+  public float getFloat(int rowNum)
   {
-    final Object val = getVal(cell);
+    final Object val = getVal(rowNum);
     if (val instanceof Number) {
       return ((Number) val).floatValue();
     } else if (val instanceof String) {
@@ -74,9 +74,9 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public long getLong(int cell)
+  public long getLong(int rowNum)
   {
-    final Object val = getVal(cell);
+    final Object val = getVal(rowNum);
     if (val instanceof Number) {
       return ((Number) val).longValue();
     } else if (val instanceof String) {
@@ -92,9 +92,9 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public int getInt(int cell)
+  public int getInt(int rowNum)
   {
-    final Object val = getVal(cell);
+    final Object val = getVal(rowNum);
     if (val instanceof Number) {
       return ((Number) val).intValue();
     } else if (val instanceof String) {
@@ -110,9 +110,9 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public int compareCells(int lhsCell, int rhsCell)
+  public int compareCells(int lhsRowNum, int rhsRowNum)
   {
-    return getComparator().compare(getVal(lhsCell), getVal(rhsCell));
+    return getComparator().compare(getVal(lhsRowNum), getVal(rhsRowNum));
   }
 
   protected abstract Object getVal(int cell);

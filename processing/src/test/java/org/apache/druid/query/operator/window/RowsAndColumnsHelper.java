@@ -40,7 +40,7 @@ public class RowsAndColumnsHelper
     final Column column = rac.findColumn(name);
     Assert.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numCells());
+    Assert.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
       Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getInt(i));
     }
@@ -51,7 +51,7 @@ public class RowsAndColumnsHelper
     final Column column = rac.findColumn(name);
     Assert.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numCells());
+    Assert.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
       Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getLong(i));
     }
@@ -62,7 +62,7 @@ public class RowsAndColumnsHelper
     final Column column = rac.findColumn(name);
     Assert.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numCells());
+    Assert.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
       Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getDouble(i), 0.0d);
     }
@@ -207,8 +207,8 @@ public class RowsAndColumnsHelper
       final ColumnAccessor accessor = col.toAccessor();
 
       Assert.assertEquals(msgBase, expectedType, accessor.getType());
-      Assert.assertEquals(msgBase, expectedVals.length, accessor.numCells());
-      for (int i = 0; i < accessor.numCells(); ++i) {
+      Assert.assertEquals(msgBase, expectedVals.length, accessor.numRows());
+      for (int i = 0; i < accessor.numRows(); ++i) {
         final String msg = StringUtils.format("%s[%s]", msgBase, i);
         Object expectedVal = expectedVals[i];
         if (expectedVal == null) {

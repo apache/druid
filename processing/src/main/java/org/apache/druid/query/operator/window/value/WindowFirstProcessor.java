@@ -43,7 +43,7 @@ public class WindowFirstProcessor extends WindowValueProcessorBase
         incomingPartition,
         column -> {
           final ColumnAccessor accessor = column.toAccessor();
-          return new ConstantObjectColumn(accessor.getObject(0), accessor.numCells(), accessor.getType());
+          return new ConstantObjectColumn(accessor.getObject(0), accessor.numRows(), accessor.getType());
         }
     );
   }

@@ -49,10 +49,10 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 
     final Iterator<Map.Entry<String, Column>> iter = map.entrySet().iterator();
     Map.Entry<String, Column> entry = iter.next();
-    int numCells = entry.getValue().toAccessor().numCells();
+    int numCells = entry.getValue().toAccessor().numRows();
     if (iter.hasNext()) {
       entry = iter.next();
-      final int newCells = entry.getValue().toAccessor().numCells();
+      final int newCells = entry.getValue().toAccessor().numRows();
       if (numCells != newCells) {
         throw new ISE(
             "Mismatched numCells, expectedNumCells[%s], actual[%s] from col[%s].",
@@ -63,7 +63,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
       }
     }
 
-    return new MapOfColumnsRowsAndColumns(map, map.values().iterator().next().toAccessor().numCells());
+    return new MapOfColumnsRowsAndColumns(map, map.values().iterator().next().toAccessor().numRows());
   }
 
   private final Map<String, Column> mapOfColumns;

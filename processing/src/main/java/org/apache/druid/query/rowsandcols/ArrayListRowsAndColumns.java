@@ -101,7 +101,7 @@ public class ArrayListRowsAndColumns<RowType> implements RowsAndColumns
           }
 
           @Override
-          public int numCells()
+          public int numRows()
           {
             return rows.size();
           }

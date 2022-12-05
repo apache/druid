@@ -30,7 +30,6 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -63,7 +62,6 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Singleton;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
@@ -474,13 +472,15 @@ public class SqlTestFramework
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
       return componentSupplier.createCongolmerate(builder, resourceCloser);
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector)
     {
       return builder.componentSupplier.createJoinableFactoryWrapper(
@@ -506,7 +506,8 @@ public class SqlTestFramework
       }
     }
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
       return QueryFrameworkUtils.createMockQueryLifecycleFactory(
