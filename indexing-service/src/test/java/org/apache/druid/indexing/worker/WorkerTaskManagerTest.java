@@ -78,11 +78,22 @@ public class WorkerTaskManagerTest
 
   private final boolean restoreTasksOnRestart;
 
-  private final boolean enableBaseTaskDirPaths;
+  private final boolean useMultipleBaseTaskDirPaths;
 
   private WorkerTaskManager workerTaskManager;
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, enableBaseTaskDirPaths = {1}")
+  public WorkerTaskManagerTest(boolean restoreTasksOnRestart, boolean useMultipleBaseTaskDirPaths)
+  {
+    testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+    TestTasks.registerSubtypes(jsonMapper);
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
+    indexIO = testUtils.getTestIndexIO();
+    this.restoreTasksOnRestart = restoreTasksOnRestart;
+    this.useMultipleBaseTaskDirPaths = useMultipleBaseTaskDirPaths;
+  }
+
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{
@@ -95,21 +106,10 @@ public class WorkerTaskManagerTest
     return Arrays.asList(parameters);
   }
 
-  public WorkerTaskManagerTest(boolean restoreTasksOnRestart, boolean enableBaseTaskDirPaths)
-  {
-    testUtils = new TestUtils();
-    jsonMapper = testUtils.getTestObjectMapper();
-    TestTasks.registerSubtypes(jsonMapper);
-    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
-    indexIO = testUtils.getTestIndexIO();
-    this.restoreTasksOnRestart = restoreTasksOnRestart;
-    this.enableBaseTaskDirPaths = enableBaseTaskDirPaths;
-  }
-
   private WorkerTaskManager createWorkerTaskManager()
   {
     List<String> baseTaskDirPaths = null;
-    if (enableBaseTaskDirPaths) {
+    if (useMultipleBaseTaskDirPaths) {
       baseTaskDirPaths = ImmutableList.of(
           FileUtils.createTempDir().toString(),
           FileUtils.createTempDir().toString()

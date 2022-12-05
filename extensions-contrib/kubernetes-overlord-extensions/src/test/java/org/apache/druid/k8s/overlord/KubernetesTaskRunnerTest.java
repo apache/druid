@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -46,6 +47,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesPeonClient;
@@ -59,17 +61,21 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.joda.time.Period;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
@@ -81,7 +87,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class KubernetesTaskRunnerTest
+@RunWith(Parameterized.class)
+public class KubernetesTaskRunnerTest
 {
 
   private TaskQueueConfig taskQueueConfig;
@@ -92,7 +99,9 @@ class KubernetesTaskRunnerTest
   private TaskLogPusher taskLogPusher;
   private DruidNode node;
 
-  public KubernetesTaskRunnerTest()
+  private final boolean useMultipleBaseTaskDirPaths;
+
+  public KubernetesTaskRunnerTest(boolean useMultipleBaseTaskDirPaths)
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
@@ -103,11 +112,30 @@ class KubernetesTaskRunnerTest
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
+    this.useMultipleBaseTaskDirPaths = useMultipleBaseTaskDirPaths;
   }
 
-  @BeforeEach
-  void setUp()
+  @Parameterized.Parameters(name = "useMultipleBaseTaskDirPaths = {0}")
+  public static Collection<Object[]> getParameters()
   {
+    Object[][] parameters = new Object[][]{
+        {false},
+        {true}
+    };
+
+    return Arrays.asList(parameters);
+  }
+
+  @Before
+  public void setUp()
+  {
+    List<String> baseTaskDirPaths = null;
+    if (useMultipleBaseTaskDirPaths) {
+      baseTaskDirPaths = ImmutableList.of(
+          FileUtils.createTempDir().toString(),
+          FileUtils.createTempDir().toString()
+      );
+    }
     taskConfig = new TaskConfig(
         "src/test/resources",
         "src/test/resources",
@@ -123,7 +151,7 @@ class KubernetesTaskRunnerTest
         null,
         null,
         false,
-        null
+        baseTaskDirPaths
     );
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerConfig();
     kubernetesTaskRunnerConfig.namespace = "test";
@@ -136,7 +164,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testAlreadyRunningJobInK8s() throws Exception
+  public void testAlreadyRunningJobInK8s() throws Exception
   {
     Task task = makeTask();
     K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
@@ -190,7 +218,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testJobNeedsToLaunchInK8s() throws Exception
+  public void testJobNeedsToLaunchInK8s() throws Exception
   {
     Task task = makeTask();
     K8sTaskId k8sTaskId = new K8sTaskId(task.getId());
@@ -253,7 +281,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testTheK8sRestartState() throws Exception
+  public void testTheK8sRestartState() throws Exception
   {
     // we have a shutdown, now we start-up the overlord, it should catch and deal with all the peon k8s tasks in-flight
     Task task = makeTask();
@@ -316,7 +344,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testTheK8sRestartStateAndHandleJobsThatAlreadyCompletedWhileDown() throws Exception
+  public void testTheK8sRestartStateAndHandleJobsThatAlreadyCompletedWhileDown() throws Exception
   {
     // we have a shutdown, now we start-up the overlord, it should monitor k8s jobs that finished.
     Task task = makeTask();
@@ -389,7 +417,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testMakingCodeCoverageHappy()
+  public void testMakingCodeCoverageHappy()
   {
     // have to test multiple branches of code for code-coverage, avoiding doing a lot of repetetive setup.
     DruidKubernetesPeonClient peonClient = mock(DruidKubernetesPeonClient.class);
@@ -421,7 +449,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testMaxQueueSizeIsEnforced()
+  public void testMaxQueueSizeIsEnforced()
   {
     TaskQueueConfig taskQueueConfig = new TaskQueueConfig(
         Integer.MAX_VALUE,
@@ -442,7 +470,7 @@ class KubernetesTaskRunnerTest
   }
 
   @Test
-  void testWorkItemGetLocation()
+  public void testWorkItemGetLocation()
   {
     KubernetesPeonClient client = mock(KubernetesPeonClient.class);
     Pod pod = mock(Pod.class);

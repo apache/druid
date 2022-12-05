@@ -225,6 +225,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     Files.deleteIfExists(log);
                   }
                   client.cleanUpJob(new K8sTaskId(task.getId()));
+                  taskConfig.removeTask(task.getId());
                   synchronized (tasks) {
                     tasks.remove(task.getId());
                   }
@@ -268,6 +269,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void shutdown(String taskid, String reason)
   {
     client.cleanUpJob(new K8sTaskId(taskid));
+    taskConfig.removeTask(taskid);
   }
 
 
