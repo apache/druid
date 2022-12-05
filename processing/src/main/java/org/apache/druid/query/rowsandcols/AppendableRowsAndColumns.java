@@ -22,7 +22,7 @@ package org.apache.druid.query.rowsandcols;
 import org.apache.druid.query.rowsandcols.column.Column;
 
 /**
- * A RowsAndColumns that supposed appending columns.  This interface is particularly useful because even if there is
+ * A RowsAndColumns that supports appending columns.  This interface is particularly useful because even if there is
  * some composition of code that works with RowsAndColumns, we would like to add the columns to a singular base object
  * instead of build up a complex object graph.
  */

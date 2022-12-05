@@ -21,19 +21,15 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -99,15 +95,6 @@ public class WindowOperatorQueryTest
     Assert.assertEquals("sue", query.context().get("sally"));
     final QueryContext context = query.withOverriddenContext(ImmutableMap.of("sally", "soo")).context();
     Assert.assertEquals("soo", context.get("sally"));
-  }
-
-  @Test
-  public void withQuerySegmentSpec()
-  {
-    final List<Interval> intervals = query.withQuerySegmentSpec(new LegacySegmentSpec("2022-02-01/2022-02-02"))
-                                          .getIntervals();
-    Assert.assertEquals(1, intervals.size());
-    Assert.assertEquals(Intervals.of("2022-02-01/2022-02-02"), intervals.get(0));
   }
 
   @Test
