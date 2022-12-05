@@ -53,10 +53,10 @@ druid.extensions.loadList=["druid-datasketches"]
 |metricColumns|When building sketches from raw data, an array input column that contain numeric values to associate with each distinct key. If not provided, assumes `fieldName` is an `arrayOfDoublesSketch`|no, if not provided `fieldName` is assumed to be an arrayOfDoublesSketch|
 |numberOfValues|Number of values associated with each distinct key. |no, defaults to the length of `metricColumns` if provided and 1 otherwise|
 
-The `arrayOfDoublesSketch` aggregator has two modes of useage:
+You can use the `arrayOfDoublesSketch` aggregator to:
 
-- built from raw data - `metricColumns` is set to an array
-- directly on top of an ArrayOfDoubles sketch - `metricColumns` is unset and `fieldName` represents an ArrayOfDoubles sketch (base64 encoded if at ingestion time) with `numberOfValues` doubles.
+- Build sketches from raw data. In this case, set `metricColumns` to an array.
+- Build a sketch from an existing ArrayOfDoubles sketch . In this case, leave metricColumns` is unset and set the `fieldName` to an `ArrayOfDoubles` sketch with `numberOfValues` doubles. At ingestion time, you must base64 encode `ArrayOfDoubles`  sketches at ingestion time.
 
 #### Example on top of raw data
 
