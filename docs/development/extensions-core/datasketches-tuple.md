@@ -74,7 +74,7 @@ Compute a theta of unique users. For each user store the `added` and `deleted` s
 
 ### Example on top of precomputed sketchs
 
-Ingest a sketch column called `user_sketches` that has two doubles in its array.
+Ingest a sketch column called `user_sketches` that has a base-64 encoded value of two doubles in its array and store it in a column called `users_theta`.
 
 ```json
 {
