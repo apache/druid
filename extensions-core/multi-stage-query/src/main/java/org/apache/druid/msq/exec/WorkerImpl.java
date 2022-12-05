@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -41,6 +43,7 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
 import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.frame.processor.ComposingOutputChannelFactory;
 import org.apache.druid.frame.processor.DurableStorageOutputChannelFactory;
 import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelMuxer;
@@ -161,6 +164,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
+  private final ByteTracker intermediateSuperSorterStorageTracker;
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -185,6 +189,9 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
+    this.intermediateSuperSorterStorageTracker = new ByteTracker(
+        MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
+    );
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableShuffleStorageEnabled(
         QueryContext.of(task.getContext())
     );
@@ -648,8 +655,32 @@ public class WorkerImpl implements Worker
   )
   {
     final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
+    final File fileChannelDirectory =
+        new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
+    final FileOutputChannelFactory fileOutputChannelFactory =
+        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterStorageTracker);
 
-    if (durableStageStorageEnabled) {
+    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))) {
+      if (durableStageStorageEnabled) {
+        return new ComposingOutputChannelFactory(
+            ImmutableList.of(
+                fileOutputChannelFactory,
+                DurableStorageOutputChannelFactory.createStandardImplementation(
+                    task.getControllerTaskId(),
+                    task().getWorkerNumber(),
+                    stageNumber,
+                    task().getId(),
+                    frameSize,
+                    MSQTasks.makeStorageConnector(context.injector()),
+                    tmpDir
+                )
+            ),
+            frameSize
+        );
+      } else {
+        return fileOutputChannelFactory;
+      }
+    } else if (durableStageStorageEnabled) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),
@@ -660,9 +691,7 @@ public class WorkerImpl implements Worker
           tmpDir
       );
     } else {
-      final File fileChannelDirectory =
-          new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
-      return new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+      return fileOutputChannelFactory;
     }
   }
 

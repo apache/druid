@@ -59,9 +59,15 @@ public class MultiStageQueryContext
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
+  public static final String CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE =
+      "composedIntermediateSuperSorterStorageEnabled";
+  public static final String CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES =
+      "intermediateSuperSorterStorageMaxLocalBytes";
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.AUTO.toString();
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
+  private static final boolean DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE = false;
+  private static final long DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES = Long.MAX_VALUE;
 
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
@@ -93,6 +99,22 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
         DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
+    );
+  }
+
+  public static boolean isComposedIntermediateSuperSorterStorageEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
+        DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE
+    );
+  }
+
+  public static long getIntermediateSuperSorterStorageMaxLocalBytes(final QueryContext queryContext)
+  {
+    return queryContext.getLong(
+        CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
+        DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES
     );
   }
 

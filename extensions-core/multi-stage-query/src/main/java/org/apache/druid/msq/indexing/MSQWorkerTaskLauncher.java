@@ -37,13 +37,10 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,10 +80,6 @@ public class MSQWorkerTaskLauncher
   private final ControllerContext context;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
-  private final boolean durableStageStorageEnabled;
-
-  @Nullable
-  private final Long maxParseExceptions;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
@@ -116,23 +109,23 @@ public class MSQWorkerTaskLauncher
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
 
+  private final Map<String, Object> taskContextOverrides;
+
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
       final String dataSource,
       final ControllerContext context,
-      final boolean durableStageStorageEnabled,
-      @Nullable final Long maxParseExceptions,
+      final Map<String, Object> taskContextOverrides,
       final long maxTaskStartDelayMillis
   )
   {
     this.controllerTaskId = controllerTaskId;
     this.dataSource = dataSource;
     this.context = context;
+    this.taskContextOverrides = taskContextOverrides;
     this.exec = Execs.singleThreaded(
         "multi-stage-query-task-launcher[" + StringUtils.encodeForFormat(controllerTaskId) + "]-%s"
     );
-    this.durableStageStorageEnabled = durableStageStorageEnabled;
-    this.maxParseExceptions = maxParseExceptions;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
   }
 
@@ -317,12 +310,11 @@ public class MSQWorkerTaskLauncher
   {
     final Map<String, Object> taskContext = new HashMap<>();
 
-    if (durableStageStorageEnabled) {
-      taskContext.put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true);
-    }
-
-    if (maxParseExceptions != null) {
-      taskContext.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
+    for (Map.Entry<String, Object> taskContextOverride : taskContextOverrides.entrySet()) {
+      if (taskContextOverride.getKey() == null || taskContextOverride.getValue() == null) {
+        continue;
+      }
+      taskContext.put(taskContextOverride.getKey(), taskContextOverride.getValue());
     }
 
     final int firstTask;

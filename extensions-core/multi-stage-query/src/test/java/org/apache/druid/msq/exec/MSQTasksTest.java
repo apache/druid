@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -150,8 +151,7 @@ public class MSQTasksTest
         CONTROLLER_ID,
         "foo",
         controllerContext,
-        false,
-        -1L,
+        ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5)
     );
 
