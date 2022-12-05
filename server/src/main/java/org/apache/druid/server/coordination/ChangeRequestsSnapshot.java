@@ -43,6 +43,11 @@ public final class ChangeRequestsSnapshot<T>
     return new ChangeRequestsSnapshot<>(true, resetCause, null, null);
   }
 
+  public static <T> ChangeRequestsSnapshot<T> shutdown(String resetCause)
+  {
+    return new ChangeRequestsSnapshot<>(false, resetCause, null, null);
+  }
+
   /** if true, that means caller should reset the counter and request again. */
   private final boolean resetCounter;
 
