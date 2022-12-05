@@ -47,7 +47,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |property|description|required?|
 |--------|-----------|---------|
 |type|This String should always be "arrayOfDoublesSketch"|yes|
-|name|A String for the output (result) name of the calculation.|yes|
+|name|String representing the output column to store sketch values.|yes|
 |fieldName|A String for the name of the input field.|yes|
 |nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
 |metricColumns|When building sketches from raw data, an array input column that contain numeric values to associate with each distinct key. If not provided, assumes `fieldName` is an `arrayOfDoublesSketch`|no, if not provided `fieldName` is assumed to be an arrayOfDoublesSketch|
