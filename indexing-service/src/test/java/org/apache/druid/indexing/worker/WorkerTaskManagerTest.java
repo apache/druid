@@ -56,12 +56,18 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class WorkerTaskManagerTest
 {
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
@@ -70,26 +76,52 @@ public class WorkerTaskManagerTest
   private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
+  private final boolean restoreTasksOnRestart;
+
+  private final boolean enableBaseTaskDirPaths;
+
   private WorkerTaskManager workerTaskManager;
 
-  public WorkerTaskManagerTest()
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, enableBaseTaskDirPaths = {1}")
+  public static Collection<Object[]> getParameters()
+  {
+    Object[][] parameters = new Object[][]{
+        {false, false},
+        {true, false},
+        {false, true},
+        {true, true}
+    };
+
+    return Arrays.asList(parameters);
+  }
+
+  public WorkerTaskManagerTest(boolean restoreTasksOnRestart, boolean enableBaseTaskDirPaths)
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
     indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
+    this.restoreTasksOnRestart = restoreTasksOnRestart;
+    this.enableBaseTaskDirPaths = enableBaseTaskDirPaths;
   }
 
   private WorkerTaskManager createWorkerTaskManager()
   {
+    List<String> baseTaskDirPaths = null;
+    if (enableBaseTaskDirPaths) {
+      baseTaskDirPaths = ImmutableList.of(
+          FileUtils.createTempDir().toString(),
+          FileUtils.createTempDir().toString()
+      );
+    }
     TaskConfig taskConfig = new TaskConfig(
         FileUtils.createTempDir().toString(),
         null,
         null,
         0,
         null,
-        false,
+        restoreTasksOnRestart,
         null,
         null,
         null,
@@ -98,10 +130,7 @@ public class WorkerTaskManagerTest
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
         null,
         false,
-        ImmutableList.of(
-            FileUtils.createTempDir("A").toString(),
-            FileUtils.createTempDir("B").toString()
-        )
+        baseTaskDirPaths
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
