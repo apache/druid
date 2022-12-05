@@ -56,11 +56,13 @@ public class CoordinatorDynamicConfig
   private final int maxSegmentsToMove;
   @Deprecated
   private final double percentOfSegmentsToConsiderPerMove;
+  @Deprecated
   private final boolean useBatchedSegmentSampler;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
+  private final boolean useRoundRobinSegmentAssignment;
 
   /**
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
@@ -114,7 +116,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
-      @JsonProperty("useBatchedSegmentSampler") boolean useBatchedSegmentSampler,
+      @Deprecated @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -134,7 +136,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
       @JsonProperty("pauseCoordination") boolean pauseCoordination,
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
-      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
+      @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
+      @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -159,7 +162,12 @@ public class CoordinatorDynamicConfig
     );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
-    this.useBatchedSegmentSampler = useBatchedSegmentSampler;
+    if (useBatchedSegmentSampler == null) {
+      this.useBatchedSegmentSampler = Builder.DEFAULT_USE_BATCHED_SEGMENT_SAMPLER;
+    } else {
+      this.useBatchedSegmentSampler = useBatchedSegmentSampler;
+    }
+
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
@@ -195,6 +203,12 @@ public class CoordinatorDynamicConfig
         "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
     );
     this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
+
+    if (useRoundRobinSegmentAssignment == null) {
+      this.useRoundRobinSegmentAssignment = Builder.DEFAULT_USE_ROUND_ROBIN_ASSIGNMENT;
+    } else {
+      this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+    }
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -268,6 +282,7 @@ public class CoordinatorDynamicConfig
     return percentOfSegmentsToConsiderPerMove;
   }
 
+  @Deprecated
   @JsonProperty
   public boolean useBatchedSegmentSampler()
   {
@@ -314,6 +329,12 @@ public class CoordinatorDynamicConfig
   public int getMaxSegmentsInNodeLoadingQueue()
   {
     return maxSegmentsInNodeLoadingQueue;
+  }
+
+  @JsonProperty
+  public boolean isUseRoundRobinSegmentAssignment()
+  {
+    return useRoundRobinSegmentAssignment;
   }
 
   /**
@@ -503,12 +524,13 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
-    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = false;
+    private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = true;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
     private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;
     private static final int DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
+    private static final boolean DEFAULT_USE_ROUND_ROBIN_ASSIGNMENT = false;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -528,6 +550,7 @@ public class CoordinatorDynamicConfig
     private Boolean pauseCoordination;
     private Boolean replicateAfterLoadTimeout;
     private Integer maxNonPrimaryReplicantsToLoad;
+    private Boolean useRoundRobinSegmentAssignment;
 
     public Builder()
     {
@@ -541,7 +564,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
-        @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
+        @Deprecated @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -554,7 +577,8 @@ public class CoordinatorDynamicConfig
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
         @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination,
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
-        @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad
+        @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
+        @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -576,6 +600,7 @@ public class CoordinatorDynamicConfig
       this.pauseCoordination = pauseCoordination;
       this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
       this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
+      this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -609,6 +634,7 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    @Deprecated
     public Builder withUseBatchedSegmentSampler(boolean useBatchedSegmentSampler)
     {
       this.useBatchedSegmentSampler = useBatchedSegmentSampler;
@@ -681,6 +707,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withUseRoundRobinSegmentAssignment(boolean useRoundRobinSegmentAssignment)
+    {
+      this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -709,7 +741,8 @@ public class CoordinatorDynamicConfig
           pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination,
           replicateAfterLoadTimeout == null ? DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT : replicateAfterLoadTimeout,
           maxNonPrimaryReplicantsToLoad == null ? DEFAULT_MAX_NON_PRIMARY_REPLICANTS_TO_LOAD
-                                                : maxNonPrimaryReplicantsToLoad
+                                                : maxNonPrimaryReplicantsToLoad,
+          useRoundRobinSegmentAssignment == null ? DEFAULT_USE_ROUND_ROBIN_ASSIGNMENT : useRoundRobinSegmentAssignment
       );
     }
 
@@ -747,7 +780,8 @@ public class CoordinatorDynamicConfig
           replicateAfterLoadTimeout == null ? defaults.getReplicateAfterLoadTimeout() : replicateAfterLoadTimeout,
           maxNonPrimaryReplicantsToLoad == null
           ? defaults.getMaxNonPrimaryReplicantsToLoad()
-          : maxNonPrimaryReplicantsToLoad
+          : maxNonPrimaryReplicantsToLoad,
+          useRoundRobinSegmentAssignment == null ? defaults.isUseRoundRobinSegmentAssignment() : useRoundRobinSegmentAssignment
       );
     }
   }

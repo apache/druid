@@ -90,6 +90,6 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Override
   public T fromBytes(byte[] value)
   {
-    return objectStrategy.fromByteBuffer(ByteBuffer.wrap(value), value.length);
+    return objectStrategy.fromByteBufferSafe(ByteBuffer.wrap(value), value.length);
   }
 }

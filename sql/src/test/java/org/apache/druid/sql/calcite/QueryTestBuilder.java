@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -61,14 +62,12 @@ public class QueryTestBuilder
 {
   /**
    * Implement to provide the execution framework that the tests require.
-   * The {@link #analyze(QueryTestBuilder)} method builds up the classes that
+   * The constructor builds up the classes that
    * will run the test, since some verification depends on context, such as that
    * provided by {@link BaseCalciteQueryTest}.
    */
   public interface QueryTestConfig
   {
-    QueryTestRunner analyze(QueryTestBuilder builder);
-
     QueryLogHook queryLogHook();
 
     ExpectedException expectedException();
@@ -76,6 +75,7 @@ public class QueryTestBuilder
     ObjectMapper jsonMapper();
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
+    ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
   }
 
   protected final QueryTestConfig config;
@@ -96,6 +96,8 @@ public class QueryTestBuilder
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
+  protected String expectedLogicalPlan;
+  protected SqlSchema expectedSqlSchema;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -238,23 +240,35 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder expectedLogicalPlan(String expectedLogicalPlan)
+  {
+    this.expectedLogicalPlan = expectedLogicalPlan;
+    return this;
+  }
+
+  public QueryTestBuilder expectedSqlSchema(SqlSchema querySchema)
+  {
+    this.expectedSqlSchema = querySchema;
+    return this;
+  }
+
   public QueryTestRunner build()
   {
-    return config.analyze(this);
+    return new QueryTestRunner(this);
   }
 
   /**
-   * Internal method to return the cached planner config, or create a new one
+   * Internal method to return the cached statement factory, or create a new one
    * based on the configs provided. Note: does not cache the newly created
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  protected PlannerFixture plannerFixture()
+  protected SqlStatementFactory statementFactory()
   {
     if (plannerFixture != null) {
-      return plannerFixture;
+      return plannerFixture.statementFactory();
     } else {
-      return config.plannerFixture(plannerConfig, authConfig);
+      return config.plannerFixture(plannerConfig, authConfig).statementFactory();
     }
   }
 

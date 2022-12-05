@@ -486,7 +486,7 @@ The `indexSpec` object can include the following properties:
 
 Front coding is an experimental feature starting in version 25.0. Front coding is an incremental encoding strategy that Druid can use to store STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. It allows Druid to create smaller UTF-8 encoded segments with very little performance cost.
 
-To enable front coding with SQL-based ingestion, define an `indexSpec` in a query context. See [SQL-based ingestion reference](../multi-stage-query/reference.md#context-parameters) for more information.
+You can enable front coding with all types of ingestion. For information on defining an `indexSpec` in a query context, see [SQL-based ingestion reference](../multi-stage-query/reference.md#context-parameters).
 
 > Front coding is new to Druid 25.0 so the current recommendation is to enable it in a staging environment and fully test your use case before using in production. Segments created with front coding enabled are not compatible with Druid versions older than 25.0.
 

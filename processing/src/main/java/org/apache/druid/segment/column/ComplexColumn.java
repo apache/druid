@@ -58,7 +58,7 @@ public interface ComplexColumn extends BaseColumn
   Object getRowValue(int rowNum);
 
   /**
-   * @return serialized size (in bytes) of this column.
+   * @return serialized size (in bytes) of this column.  -1 for unknown
    */
   int getLength();
 

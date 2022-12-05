@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -75,6 +76,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -538,11 +540,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private class GracefulShutdownNotice extends ShutdownNotice
   {
+    private static final String TYPE = "graceful_shutdown_notice";
+
     @Override
     public void handle() throws InterruptedException, ExecutionException, TimeoutException
     {
       gracefulShutdownInternal();
       super.handle();
+    }
+
+    @Override
+    public String getType()
+    {
+      return TYPE;
     }
   }
 
@@ -750,7 +760,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final TaskStorage taskStorage,
       final TaskMaster taskMaster,
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      final SeekableStreamIndexTaskClientFactory<? extends SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>> taskClientFactory,
+      final SeekableStreamIndexTaskClientFactory<PartitionIdType, SequenceOffsetType> taskClientFactory,
       final ObjectMapper mapper,
       final SeekableStreamSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
@@ -781,7 +791,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     int workerThreads;
-    int chatThreads;
+    int maxNumTasks;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for datasource [%s]", dataSource);
 
@@ -789,17 +799,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               ? this.tuningConfig.getWorkerThreads()
               : Math.min(10, autoScalerConfig.getTaskCountMax()));
 
-      chatThreads = (this.tuningConfig.getChatThreads() != null
-              ? this.tuningConfig.getChatThreads()
-              : Math.min(10, autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas()));
+      maxNumTasks = autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas();
     } else {
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
               ? this.tuningConfig.getWorkerThreads()
               : Math.min(10, this.ioConfig.getTaskCount()));
 
-      chatThreads = (this.tuningConfig.getChatThreads() != null
-              ? this.tuningConfig.getChatThreads()
-              : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+      maxNumTasks = this.ioConfig.getTaskCount() * this.ioConfig.getReplicas();
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -863,22 +869,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
-    this.taskClient = taskClientFactory.build(
-        taskInfoProvider,
-        dataSource,
-        chatThreads,
-        this.tuningConfig.getHttpTimeout(),
-        this.tuningConfig.getChatRetries()
-    );
-    log.info(
-        "Created taskClient with dataSource[%s] chatThreads[%d] httpTimeout[%s] chatRetries[%d]",
-        dataSource,
-        chatThreads,
-        this.tuningConfig.getHttpTimeout(),
-        this.tuningConfig.getChatRetries()
-    );
+    this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, maxNumTasks, this.tuningConfig);
   }
-
 
   @Override
   public int getActiveTaskGroupsCount()
@@ -1044,7 +1036,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     Instant handleNoticeEndTime = Instant.now();
                     Duration timeElapsed = Duration.between(handleNoticeStartTime, handleNoticeEndTime);
                     String noticeType = notice.getType();
-                    log.debug("Handled notice [%s] from notices queue in [%d] ms, current notices queue size [%d] for datasource [%s]", noticeType, timeElapsed.toMillis(), getNoticesQueueSize(), dataSource);
+                    log.debug(
+                        "Handled notice [%s] from notices queue in [%d] ms, "
+                        + "current notices queue size [%d] for datasource [%s]",
+                        noticeType,
+                        timeElapsed.toMillis(),
+                        getNoticesQueueSize(),
+                        dataSource
+                    );
                     emitNoticeProcessTime(noticeType, timeElapsed.toMillis());
                   }
                   catch (Throwable e) {
@@ -1295,16 +1294,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    List<StatsFromTaskResult> results = Futures.successfulAsList(futures)
-                                               .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<Either<Throwable, StatsFromTaskResult>> results = coalesceAndAwait(futures);
     for (int i = 0; i < results.size(); i++) {
-      StatsFromTaskResult result = results.get(i);
-      if (result != null) {
-        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
-        groupMap.put(result.getTaskId(), result.getStats());
+      if (results.get(i).isValue()) {
+        StatsFromTaskResult result = results.get(i).valueOrThrow();
+
+        if (result != null) {
+          Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
+          groupMap.put(result.getTaskId(), result.getStats());
+        }
       } else {
         Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
-        log.error("Failed to get stats for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+        log.noStackTrace().warn(
+            results.get(i).error(),
+            "Failed to get stats for group[%d]-task[%s]",
+            groupAndTaskId.lhs,
+            groupAndTaskId.rhs
+        );
       }
     }
 
@@ -1366,15 +1372,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     TreeSet<ParseExceptionReport> parseErrorsTreeSet = new TreeSet<>(PARSE_EXCEPTION_REPORT_COMPARATOR);
     parseErrorsTreeSet.addAll(lastKnownParseErrors);
 
-    List<ErrorsFromTaskResult> results = Futures.successfulAsList(futures)
-                                               .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<Either<Throwable, ErrorsFromTaskResult>> results = coalesceAndAwait(futures);
     for (int i = 0; i < results.size(); i++) {
-      ErrorsFromTaskResult result = results.get(i);
-      if (result != null) {
-        parseErrorsTreeSet.addAll(result.getErrors());
+      if (results.get(i).isValue()) {
+        ErrorsFromTaskResult result = results.get(i).valueOrThrow();
+
+        if (result != null) {
+          parseErrorsTreeSet.addAll(result.getErrors());
+        }
       } else {
         Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
-        log.error("Failed to get errors for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+        log.noStackTrace().warn(
+            results.get(i).error(),
+            "Failed to get errors for group[%d]-task[%s]",
+            groupAndTaskId.lhs,
+            groupAndTaskId.rhs
+        );
       }
     }
 
@@ -1508,9 +1521,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void generateAndLogReport()
   {
     if (log.isDebugEnabled()) {
-      log.debug(generateReport(true).toString());
-    } else {
-      log.info(generateReport(false).toString());
+      log.debug("%s", generateReport(true));
     }
   }
 
@@ -1797,12 +1808,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futureTaskIds.add(taskId);
           futures.add(
               Futures.transform(
-                  taskClient.getStatusAsync(taskId),
-                  new Function<SeekableStreamIndexTaskRunner.Status, Boolean>()
+                  getStatusAndPossiblyEndOffsets(taskId),
+                  new Function<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>, Boolean>()
                   {
                     @Override
-                    public Boolean apply(SeekableStreamIndexTaskRunner.Status status)
+                    public Boolean apply(Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>> pair)
                     {
+                      final SeekableStreamIndexTaskRunner.Status status = pair.lhs;
+                      final Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = pair.rhs;
+
                       try {
                         log.debug("Task [%s], status [%s]", taskId, status);
                         if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
@@ -1821,10 +1835,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                      ));
 
                           // update partitionGroups with the publishing task's sequences (if they are greater than what is
-                          // existing) so that the next tasks will start reading from where this task left off
-                          Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
-                              taskId);
-
+                          // existing) so that the next tasks will start reading from where this task left off.
                           // If we received invalid endOffset values, we clear the known offset to refetch the last committed offset
                           // from metadata. If any endOffset values are invalid, we treat the entire set as invalid as a safety measure.
                           boolean endOffsetsAreInvalid = false;
@@ -1870,14 +1881,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   "Stopping task [%s] which does not match the expected partition allocation",
                                   taskId
                               );
-                              try {
-                                stopTask(taskId, false)
-                                    .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-                              }
-                              catch (InterruptedException | ExecutionException | TimeoutException e) {
-                                stateManager.recordThrowableEvent(e);
-                                log.warn(e, "Exception while stopping task");
-                              }
+
+                              // Returning false triggers a call to stopTask.
                               return false;
                             }
                           }
@@ -1888,14 +1893,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                 "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
                             );
-                            try {
-                              stopTask(taskId, false)
-                                  .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-                            }
-                            catch (InterruptedException | ExecutionException | TimeoutException e) {
-                              stateManager.recordThrowableEvent(e);
-                              log.warn(e, "Exception while stopping task");
-                            }
+
+                            // Returning false triggers a call to stopTask.
                             return false;
                           } else {
                             final TaskGroup taskGroup = activelyReadingTaskGroups.computeIfAbsent(
@@ -1948,22 +1947,59 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<Either<Throwable, Boolean>> results = coalesceAndAwait(futures);
+
+    final List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     for (int i = 0; i < results.size(); i++) {
-      if (results.get(i) == null) {
-        String taskId = futureTaskIds.get(i);
+      String taskId = futureTaskIds.get(i);
+      if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
         killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
+      } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
+        // "return false" above means that we want to stop the task.
+        stopFutures.add(stopTask(taskId, false));
       }
     }
     log.debug("Found [%d] seekablestream indexing tasks for dataSource [%s]", taskCount, dataSource);
 
-    // make sure the checkpoints are consistent with each other and with the metadata store
+    if (!stopFutures.isEmpty()) {
+      coalesceAndAwait(stopFutures);
+    }
 
+    // make sure the checkpoints are consistent with each other and with the metadata store
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
 
     // A pause from the previous Overlord's supervisor, immediately before leader change,
     // can lead to tasks being in a state where they are active but do not read.
     resumeAllActivelyReadingTasks();
+  }
+
+  /**
+   * Returns a Pair of information about a task:
+   *
+   * Left-hand side: Status of the task from {@link SeekableStreamIndexTaskClient#getStatusAsync}.
+   *
+   * Right-hand side: If status is {@link SeekableStreamIndexTaskRunner.Status#PUBLISHING}, end offsets from
+   * {@link SeekableStreamIndexTaskClient#getEndOffsetsAsync}. Otherwise, null.
+   *
+   * Used by {@link #discoverTasks()}.
+   */
+  private ListenableFuture<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>> getStatusAndPossiblyEndOffsets(
+      final String taskId
+  )
+  {
+    return FutureUtils.transformAsync(
+        taskClient.getStatusAsync(taskId),
+        status -> {
+          if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
+            return FutureUtils.transform(
+                taskClient.getEndOffsetsAsync(taskId),
+                endOffsets -> Pair.of(status, endOffsets)
+            );
+          } else {
+            return Futures.immediateFuture(Pair.of(status, null));
+          }
+        }
+    );
   }
 
   /**
@@ -1978,9 +2014,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     Map<String, ListenableFuture<Boolean>> tasksToResume = new HashMap<>();
+    if (activelyReadingTaskGroups.isEmpty()) {
+      return;
+    }
+    // Resume only running tasks and not pending / waiting ones.
+    if (!taskMaster.getTaskRunner().isPresent()) {
+      return;
+    }
+    Set<String> runningTaskIds = taskMaster.getTaskRunner()
+                                           .get()
+                                           .getRunningTasks()
+                                           .stream()
+                                           .map(TaskRunnerWorkItem::getTaskId)
+                                           .collect(Collectors.toSet());
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.tasks.keySet()) {
-        tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+        if (runningTaskIds.contains(taskId)) {
+          tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+        }
       }
     }
 
@@ -2016,12 +2067,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void verifyAndMergeCheckpoints(final Collection<TaskGroup> taskGroupsToVerify)
   {
-    final List<ListenableFuture<?>> futures = new ArrayList<>();
+    final List<ListenableFuture<Object>> futures = new ArrayList<>();
     for (TaskGroup taskGroup : taskGroupsToVerify) {
-      futures.add(workerExec.submit(() -> verifyAndMergeCheckpoints(taskGroup)));
+      //noinspection unchecked
+      futures.add((ListenableFuture<Object>) workerExec.submit(() -> verifyAndMergeCheckpoints(taskGroup)));
     }
+
     try {
-      Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      // Ignore return value; just await.
+      coalesceAndAwait(futures);
     }
     catch (InterruptedException | ExecutionException | TimeoutException e) {
       throw new RuntimeException(e);
@@ -2053,26 +2107,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     try {
-      List<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> futuresResult =
-          Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      List<Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> futuresResult =
+          coalesceAndAwait(futures);
+
       for (int i = 0; i < futuresResult.size(); i++) {
-        final TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> checkpoints = futuresResult.get(i);
+        final Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> futureResult =
+            futuresResult.get(i);
         final String taskId = taskIds.get(i);
-        if (checkpoints == null) {
-          try {
-            // catch the exception in failed futures
-            futures.get(i).get();
-          }
-          catch (Exception e) {
-            stateManager.recordThrowableEvent(e);
-            log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
-            killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
-            taskGroup.tasks.remove(taskId);
-          }
-        } else if (checkpoints.isEmpty()) {
+        if (futureResult.isError()) {
+          final Throwable e = new RuntimeException(futureResult.error());
+          stateManager.recordThrowableEvent(e);
+          log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
+          killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
+          taskGroup.tasks.remove(taskId);
+        } else if (futureResult.valueOrThrow().isEmpty()) {
           log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
         } else {
-          taskSequences.add(new Pair<>(taskId, checkpoints));
+          taskSequences.add(new Pair<>(taskId, futureResult.valueOrThrow()));
         }
       }
     }
@@ -2858,13 +2909,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    List<Boolean> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    final List<Either<Throwable, Boolean>> results = coalesceAndAwait(futures);
     for (int i = 0; i < results.size(); i++) {
-      // false means the task hasn't started running yet and that's okay; null means it should be running but the HTTP
-      // request threw an exception so kill the task
-      if (results.get(i) == null) {
+      // Ignore return value; but kill tasks that failed to return anything at all.
+      if (results.get(i).isError()) {
         String taskId = futureTaskIds.get(i);
-        log.warn("Task [%s] failed to return start time, killing task", taskId);
+        log.noStackTrace().warn(results.get(i).error(), "Task [%s] failed to return start time, killing task", taskId);
         killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
       }
     }
@@ -2905,14 +2955,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    List<Map<PartitionIdType, SequenceOffsetType>> results = Futures.successfulAsList(futures)
-                                                                    .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
       TaskGroup group = activelyReadingTaskGroups.get(groupId);
-      Map<PartitionIdType, SequenceOffsetType> endOffsets = results.get(j);
 
-      if (endOffsets != null) {
+      if (results.get(j).isValue() && results.get(j).valueOrThrow() != null) {
+        Map<PartitionIdType, SequenceOffsetType> endOffsets = results.get(j).valueOrThrow();
         // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
@@ -3013,38 +3062,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     return Futures.transform(
-        Futures.successfulAsList(pauseFutures),
-        new Function<List<Map<PartitionIdType, SequenceOffsetType>>, Map<PartitionIdType, SequenceOffsetType>>()
+        FutureUtils.coalesce(pauseFutures),
+        new Function<List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>>, Map<PartitionIdType, SequenceOffsetType>>()
         {
           @Nullable
           @Override
-          public Map<PartitionIdType, SequenceOffsetType> apply(List<Map<PartitionIdType, SequenceOffsetType>> input)
+          public Map<PartitionIdType, SequenceOffsetType> apply(List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> input)
           {
             // 3) Build a map of the highest sequence read by any task in the group for each partition
             final Map<PartitionIdType, SequenceOffsetType> endOffsets = new HashMap<>();
             for (int i = 0; i < input.size(); i++) {
-              final Map<PartitionIdType, SequenceOffsetType> result = input.get(i);
               final String taskId = pauseTaskIds.get(i);
 
-              if (result == null) {
+              if (input.get(i).isError()) {
                 // Get the exception
-                final Throwable pauseException;
-                try {
-                  // The below get should throw ExecutionException since result is null.
-                  final Map<PartitionIdType, SequenceOffsetType> pauseResult = pauseFutures.get(i).get();
-                  throw new ISE(
-                      "Pause request for task [%s] should have failed, but returned [%s]",
-                      taskId,
-                      pauseResult
-                  );
-                }
-                catch (InterruptedException e) {
-                  throw new RuntimeException(e);
-                }
-                catch (ExecutionException e) {
-                  stateManager.recordThrowableEvent(e);
-                  pauseException = e.getCause() == null ? e : e.getCause();
-                }
+                final Throwable pauseException = input.get(i).error();
+                stateManager.recordThrowableEvent(pauseException);
 
                 killTask(
                     taskId,
@@ -3054,11 +3087,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 );
                 taskGroup.tasks.remove(taskId);
 
-              } else if (result.isEmpty()) {
+              } else if (input.get(i).valueOrThrow() == null || input.get(i).valueOrThrow().isEmpty()) {
                 killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
                 taskGroup.tasks.remove(taskId);
               } else { // otherwise build a map of the highest sequences seen
-                for (Entry<PartitionIdType, SequenceOffsetType> sequence : result.entrySet()) {
+                for (Entry<PartitionIdType, SequenceOffsetType> sequence : input.get(i).valueOrThrow().entrySet()) {
                   if (!endOffsets.containsKey(sequence.getKey())
                       || makeSequenceNumber(endOffsets.get(sequence.getKey())).compareTo(
                       makeSequenceNumber(sequence.getValue())) < 0) {
@@ -3098,10 +3131,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                 setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, finalize));
               }
 
-              List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
-                                             .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+              List<Either<Throwable, Boolean>> results = coalesceAndAwait(setEndOffsetFutures);
               for (int i = 0; i < results.size(); i++) {
-                if (results.get(i) == null || !results.get(i)) {
+                if (results.get(i).isValue() && Boolean.valueOf(true).equals(results.get(i).valueOrThrow())) {
+                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
+                } else {
                   String taskId = setEndOffsetTaskIds.get(i);
                   killTask(
                       taskId,
@@ -3109,8 +3143,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       taskId
                   );
                   taskGroup.tasks.remove(taskId);
-                } else {
-                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 }
               }
             }
@@ -3131,7 +3163,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup, String stopReasonFormat, Object... args)
+  private ListenableFuture<Void> stopTasksInGroup(
+      @Nullable TaskGroup taskGroup,
+      String stopReasonFormat,
+      Object... args
+  )
   {
     if (taskGroup == null) {
       return Futures.immediateFuture(null);
@@ -3154,13 +3190,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    return Futures.successfulAsList(futures);
+    return FutureUtils.transform(FutureUtils.coalesce(futures), xs -> null);
   }
 
   private void checkPendingCompletionTasks()
       throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = new ArrayList<>();
+    List<ListenableFuture<Void>> futures = new ArrayList<>();
 
     for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
@@ -3256,15 +3292,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       taskGroupList.removeAll(toRemove);
     }
 
-    // wait for all task shutdowns to complete before returning
-    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    // Ignore return value; just await.
+    coalesceAndAwait(futures);
   }
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
     Map<String, Task> activeTaskMap = getActiveTaskMap();
 
-    List<ListenableFuture<?>> futures = new ArrayList<>();
+    List<ListenableFuture<Void>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = activelyReadingTaskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
@@ -3314,8 +3350,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.debug("Task group [%d] post-pruning: %s", groupId, taskGroup.taskIds());
     }
 
-    // wait for all task shutdowns to complete before returning
-    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    // Ignore return value; just await.
+    coalesceAndAwait(futures);
   }
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
@@ -3746,7 +3782,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         )
     ).collect(Collectors.toList());
 
-    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    // Ignore return value; just await.
+    coalesceAndAwait(futures);
   }
 
   protected abstract void updatePartitionLagFromStream();
@@ -4085,6 +4122,28 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     finally {
       recordSupplierLock.unlock();
+    }
+  }
+
+  /**
+   * Call {@link FutureUtils#coalesce} on the provided list, and wait for it up to {@link #futureTimeoutInSeconds}.
+   */
+  private <T> List<Either<Throwable, T>> coalesceAndAwait(final List<ListenableFuture<T>> futures)
+      throws ExecutionException, InterruptedException, TimeoutException
+  {
+    final ListenableFuture<List<Either<Throwable, T>>> coalesced = FutureUtils.coalesce(futures);
+
+    try {
+      if (tuningConfig.getChatAsync()) {
+        // Let the async client handle timeouts.
+        return coalesced.get();
+      } else {
+        return coalesced.get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+      }
+    }
+    catch (InterruptedException | TimeoutException e) {
+      coalesced.cancel(true);
+      throw e;
     }
   }
 

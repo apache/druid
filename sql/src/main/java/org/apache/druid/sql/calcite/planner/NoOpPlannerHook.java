@@ -17,27 +17,45 @@
  * under the License.
  */
 
-package org.apache.druid.frame.write;
+package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.calcite.interpreter.BindableRel;
+import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.sql.SqlInsert;
+import org.apache.druid.sql.calcite.rel.DruidRel;
 
-/**
- * Exception that is conventionally thrown by workers when they call
- * {@link FrameWriter#addSelection} and it returns false on an empty frame, or in
- * a situation where allocating a new frame is impractical.
- */
-public class FrameRowTooLargeException extends RuntimeException
+public class NoOpPlannerHook implements PlannerHook
 {
-  private final long maxFrameSize;
+  public static final NoOpPlannerHook INSTANCE = new NoOpPlannerHook();
 
-  public FrameRowTooLargeException(final long maxFrameSize)
+  @Override
+  public void captureSql(String sql)
   {
-    super(StringUtils.format("Row too large to add to frame (max frame size = %,d)", maxFrameSize));
-    this.maxFrameSize = maxFrameSize;
   }
 
-  public long getMaxFrameSize()
+  @Override
+  public void captureQueryRel(RelRoot rootQueryRel)
   {
-    return maxFrameSize;
+  }
+
+  @Override
+  public void captureDruidRel(DruidRel<?> druidRel)
+  {
+  }
+
+  @Override
+  public void captureBindableRel(BindableRel bindableRel)
+  {
+  }
+
+  @Override
+  public void captureParameterTypes(RelDataType parameterTypes)
+  {
+  }
+
+  @Override
+  public void captureInsert(SqlInsert insert)
+  {
   }
 }
