@@ -39,6 +39,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ *
+ */
 public class ComposingOutputChannelFactory implements OutputChannelFactory
 {
   private final List<OutputChannelFactory> channelFactories;
@@ -69,6 +72,9 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
       writableFrameChannelSuppliersBuilder.add(() -> channel.get().getWritableChannel());
       readableFrameChannelSuppliersBuilder.add(() -> channel.get().getReadableChannelSupplier().get());
     }
+
+    // the map maintains a mapping of channels which have the data for a given partition.
+    // it is useful to identify the readable channels to open in the composition while reading the partition data.
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
         writableFrameChannelSuppliersBuilder.build(),
@@ -108,6 +114,9 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
       writableFrameChannelsBuilder.add(() -> channel.get().getWritableChannel());
       readableFrameChannelSuppliersBuilder.add(() -> channel.get().getReadableChannelSupplier().get());
     }
+    // the map maintains a mapping of channels which have the data for a given partition.
+    // it is useful to identify the readable channels to open in the composition while reading the partition data.
+
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
     ComposingWritableFrameChannel writableFrameChannel = new ComposingWritableFrameChannel(
         writableFrameChannelsBuilder.build(),
@@ -118,6 +127,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
         readableFrameChannelSuppliersBuilder.build();
     PartitionedReadableFrameChannel partitionedReadableFrameChannel = new PartitionedReadableFrameChannel()
     {
+      // maintained so that we only close channels which were opened for reading
       private final Set<Integer> openedChannels = Sets.newHashSetWithExpectedSize(1);
 
       @Override
@@ -158,6 +168,10 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
+    // Doing this since some output channel factories create marker objects for nil channels
+    for (OutputChannelFactory outputChannelFactory : channelFactories) {
+      outputChannelFactory.openNilChannel(partitionNumber);
+    }
     return OutputChannel.nil(partitionNumber);
   }
 }
