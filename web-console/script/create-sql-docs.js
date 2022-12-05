@@ -23,7 +23,7 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 150;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 162;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
 
 function hasHtmlTags(str) {
@@ -63,13 +63,14 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-scalar.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-aggregations.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
   ].join('\n');
 
   const lines = data.split('\n');
 
   const functionDocs = {};
-  const dataTypeDocs = [];
+  const dataTypeDocs = {};
   for (let line of lines) {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
@@ -83,25 +84,21 @@ const readDoc = async () => {
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
-      dataTypeDocs.push([
-        dataTypeMatch[1],
-        dataTypeMatch[2],
-        convertMarkdownToHtml(dataTypeMatch[4]),
-      ]);
+      dataTypeDocs[dataTypeMatch[1]] = [dataTypeMatch[2], convertMarkdownToHtml(dataTypeMatch[4])];
     }
   }
 
   // Make sure there are enough functions found
   const numFunction = Object.keys(functionDocs).length;
-  if (numFunction < MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS) {
+  if (!(MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS <= numFunction)) {
     throw new Error(
       `Did not find enough function entries did the structure of '${readfile}' change? (found ${numFunction} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
   // Make sure there are at least 10 data types for sanity
-  const numDataTypes = dataTypeDocs.length;
-  if (numDataTypes < MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES) {
+  const numDataTypes = Object.keys(dataTypeDocs).length;
+  if (!(MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES <= numDataTypes)) {
     throw new Error(
       `Did not find enough data type entries did the structure of '${readfile}' change? (found ${numDataTypes} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );

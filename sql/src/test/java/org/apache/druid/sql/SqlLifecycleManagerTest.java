@@ -20,13 +20,15 @@
 package org.apache.druid.sql;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.sql.SqlLifecycle.State;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class SqlLifecycleManagerTest
 {
@@ -39,17 +41,10 @@ public class SqlLifecycleManagerTest
   }
 
   @Test
-  public void testAddNonAuthorizedLifeCycle()
-  {
-    SqlLifecycle lifecycle = mockLifecycle(State.INITIALIZED);
-    Assert.assertThrows(AssertionError.class, () -> lifecycleManager.add("sqlId", lifecycle));
-  }
-
-  @Test
   public void testAddAuthorizedLifecycle()
   {
     final String sqlId = "sqlId";
-    SqlLifecycle lifecycle = mockLifecycle(State.AUTHORIZED);
+    Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
     Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
   }
@@ -58,7 +53,7 @@ public class SqlLifecycleManagerTest
   public void testRemoveValidLifecycle()
   {
     final String sqlId = "sqlId";
-    SqlLifecycle lifecycle = mockLifecycle(State.AUTHORIZED);
+    Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
     Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
     lifecycleManager.remove(sqlId, lifecycle);
@@ -69,7 +64,7 @@ public class SqlLifecycleManagerTest
   public void testRemoveInvalidSqlQueryId()
   {
     final String sqlId = "sqlId";
-    SqlLifecycle lifecycle = mockLifecycle(State.AUTHORIZED);
+    Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
     Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
     lifecycleManager.remove("invalid", lifecycle);
@@ -80,10 +75,10 @@ public class SqlLifecycleManagerTest
   public void testRemoveValidSqlQueryIdDifferntLifecycleObject()
   {
     final String sqlId = "sqlId";
-    SqlLifecycle lifecycle = mockLifecycle(State.AUTHORIZED);
+    Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
     Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
-    lifecycleManager.remove(sqlId, mockLifecycle(State.AUTHORIZED));
+    lifecycleManager.remove(sqlId, mockLifecycle());
     Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
   }
 
@@ -91,10 +86,10 @@ public class SqlLifecycleManagerTest
   public void testRemoveAllValidSqlQueryIdSubsetOfLifecycles()
   {
     final String sqlId = "sqlId";
-    final List<SqlLifecycle> lifecycles = ImmutableList.of(
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED)
+    final List<Cancelable> lifecycles = ImmutableList.of(
+        mockLifecycle(),
+        mockLifecycle(),
+        mockLifecycle()
     );
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
     Assert.assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
@@ -106,10 +101,10 @@ public class SqlLifecycleManagerTest
   public void testRemoveAllInvalidSqlQueryId()
   {
     final String sqlId = "sqlId";
-    final List<SqlLifecycle> lifecycles = ImmutableList.of(
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED)
+    final List<Cancelable> lifecycles = ImmutableList.of(
+        mockLifecycle(),
+        mockLifecycle(),
+        mockLifecycle()
     );
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
     Assert.assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
@@ -121,22 +116,34 @@ public class SqlLifecycleManagerTest
   public void testGetAllReturnsListCopy()
   {
     final String sqlId = "sqlId";
-    final List<SqlLifecycle> lifecycles = ImmutableList.of(
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED),
-        mockLifecycle(State.AUTHORIZED)
+    final List<Cancelable> lifecycles = ImmutableList.of(
+        mockLifecycle(),
+        mockLifecycle(),
+        mockLifecycle()
     );
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
-    final List<SqlLifecycle> lifecyclesFromGetAll = lifecycleManager.getAll(sqlId);
+    final List<Cancelable> lifecyclesFromGetAll = lifecycleManager.getAll(sqlId);
     lifecycleManager.removeAll(sqlId, lifecyclesFromGetAll);
     Assert.assertEquals(lifecycles, lifecyclesFromGetAll);
     Assert.assertTrue(lifecycleManager.getAll(sqlId).isEmpty());
   }
 
-  private static SqlLifecycle mockLifecycle(State state)
+  private static Cancelable mockLifecycle()
   {
-    SqlLifecycle lifecycle = Mockito.mock(SqlLifecycle.class);
-    Mockito.when(lifecycle.getState()).thenReturn(state);
-    return lifecycle;
+    return new MockCancellable();
+  }
+
+  private static class MockCancellable implements Cancelable
+  {
+    @Override
+    public Set<ResourceAction> resources()
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public void cancel()
+    {
+    }
   }
 }

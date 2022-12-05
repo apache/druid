@@ -45,11 +45,11 @@ the Overlord APIs.
 
 A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
-The reporting feature is supported by the [simple native batch task](../ingestion/native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+The reporting feature is supported by [native batch tasks](../ingestion/native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
 
 ### Completion report
 
-After a task completes, a completion report can be retrieved at:
+After a task completes, if it supports reports, its report can be retrieved at:
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
@@ -102,12 +102,6 @@ When a task is running, a live report containing ingestion state, unparseable ev
 
 ```
 http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/task/<task-id>/reports
-```
-
-and 
-
-```
-http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/liveReports
 ```
 
 An example output is shown below:
@@ -163,20 +157,20 @@ A description of the fields:
 The `ingestionStatsAndErrors` report provides information about row counts and errors.
 
 The `ingestionState` shows what step of ingestion the task reached. Possible states include:
-* `NOT_STARTED`: The task has not begun reading any rows
-* `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
-* `BUILD_SEGMENTS`: The task is processing rows to construct segments
-* `COMPLETED`: The task has finished its work.
+- `NOT_STARTED`: The task has not begun reading any rows
+- `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
+- `BUILD_SEGMENTS`: The task is processing rows to construct segments
+- `COMPLETED`: The task has finished its work.
 
 Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as those created by the Kafka Indexing Service do not have a DETERMINE_PARTITIONS phase.
 
 `unparseableEvents` contains lists of exception messages that were caused by unparseable inputs. This can help with identifying problematic input rows. There will be one list each for the DETERMINE_PARTITIONS and BUILD_SEGMENTS phases. Note that the Hadoop batch task does not support saving of unparseable events.
 
 the `rowStats` map contains information about row counts. There is one entry for each ingestion phase. The definitions of the different row counts are shown below:
-* `processed`: Number of rows successfully ingested without parsing errors
-* `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
-* `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
-* `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
+- `processed`: Number of rows successfully ingested without parsing errors
+- `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
+- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
+- `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
 
 The `errorMsg` field shows a message describing the error that caused a task to fail. It will be null if the task was successful.
 
@@ -184,7 +178,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The non-parallel [simple native batch task](./native-batch-simple-task.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The [native batch task](./native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -254,7 +248,7 @@ and Kinesis indexing services.
 This section explains the task locking system in Druid. Druid's locking system
 and versioning system are tightly coupled with each other to guarantee the correctness of ingested data.
 
-## "Overshadowing" between segments
+### "Overshadowing" between segments
 
 You can run a task to overwrite existing data. The segments created by an overwriting task _overshadows_ existing segments.
 Note that the overshadow relation holds only for the same time chunk and the same data source.
@@ -263,7 +257,7 @@ These overshadowed segments are not considered in query processing to filter out
 Each segment has a _major_ version and a _minor_ version. The major version is
 represented as a timestamp in the format of [`"yyyy-MM-dd'T'hh:mm:ss"`](https://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat)
 while the minor version is an integer number. These major and minor versions
-are used to determine the overshadow relation between segments as seen below. 
+are used to determine the overshadow relation between segments as seen below.
 
 A segment `s1` overshadows another `s2` if
 
@@ -277,9 +271,9 @@ Here are some examples.
 - A segment of the major version of `2019-01-01T00:00:00.000Z` and the minor version of `1` overshadows
  another of the major version of `2019-01-01T00:00:00.000Z` and the minor version of `0`.
 
-## Locking
+### Locking
 
-If you are running two or more [druid tasks](./tasks.md) which generate segments for the same data source and the same time chunk,
+If you are running two or more [Druid tasks](./tasks.md) which generate segments for the same data source and the same time chunk,
 the generated segments could potentially overshadow each other, which could lead to incorrect query results.
 
 To avoid this problem, tasks will attempt to get locks prior to creating any segment in Druid.
@@ -331,14 +325,14 @@ For example, Kafka indexing tasks of the same supervisor have the same groupId a
 
 <a name="priority"></a>
 
-## Lock priority
+### Lock priority
 
 Each task type has a different default lock priority. The below table shows the default priorities of different task types. Higher the number, higher the priority.
 
 |task type|default priority|
 |---------|----------------|
 |Realtime index task|75|
-|Batch index task|50|
+|Batch index tasks, including [native batch](native-batch.md), [SQL](../multi-stage-query/index.md), and [Hadoop-based](hadoop.md)|50|
 |Merge/Append/Compaction task|25|
 |Other tasks|0|
 
@@ -354,19 +348,22 @@ You can override the task priority by setting your priority in the task context 
 
 ## Context parameters
 
-The task context is used for various individual task configuration. The following parameters apply to all task types.
+The task context is used for various individual task configuration.
+Specify task context configurations in the `context` field of the ingestion spec.
+When configuring [automatic compaction](../data-management/automatic-compaction.md), set the task context configurations in `taskContext` rather than in `context`.
+The settings get passed into the `context` field of the compaction tasks issued to MiddleManagers.
+
+The following parameters apply to all task types.
 
 |property|default|description|
 |--------|-------|-----------|
-|`taskLockTimeout`|300000|task lock timeout in millisecond. For more details, see [Locking](#locking).|
-|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If this set, it will overwrite the `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
+|`taskLockTimeout`|300000|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|
+|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If set, this parameter overwrites `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
 |`priority`|Different based on task types. See [Priority](#priority).|Task priority|
 |`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
+|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
 
-> When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
-> As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.
-
-## Task Logs
+## Task logs
 
 Logs are created by ingestion tasks as they run.  You can configure Druid to push these into a repository for long-term storage after they complete.
 
@@ -391,20 +388,11 @@ You can configure retention periods for logs in milliseconds by setting `druid.i
 
 > Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store.  Large clock skews between Druid processes and the long-term store might result in unintended behavior.
 
-
 ## All task types
-
-### `index`
-
-See [Native batch ingestion (simple task)](./native-batch-simple-task.md).
 
 ### `index_parallel`
 
 See [Native batch ingestion (parallel task)](native-batch.md).
-
-### `index_sub`
-
-Submitted automatically, on your behalf, by an [`index_parallel`](#index_parallel) task.
 
 ### `index_hadoop`
 
@@ -420,16 +408,12 @@ Submitted automatically, on your behalf, by a
 Submitted automatically, on your behalf, by a
 [Kinesis-based ingestion supervisor](../development/extensions-core/kinesis-ingestion.md).
 
-### `index_realtime`
-
-Submitted automatically, on your behalf, by [Tranquility](tranquility.md). 
-
 ### `compact`
 
 Compaction tasks merge all segments of the given interval. See the documentation on
-[compaction](compaction.md) for details.
+[compaction](../data-management/compaction.md) for details.
 
 ### `kill`
 
 Kill tasks delete all metadata about certain segments and removes them from deep storage.
-See the documentation on [deleting data](../ingestion/data-management.md#delete) for details.
+See the documentation on [deleting data](../data-management/delete.md) for details.

@@ -86,4 +86,21 @@ public class MomentSketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    MomentSketchAggregatorFactory sketchAggFactory = new MomentSketchAggregatorFactory(
+        "name", "fieldName", 128, true
+    );
+    Assert.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
+    Assert.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
+
+
+    MomentSketchMergeAggregatorFactory sketchMergeAggregatorFactory = new MomentSketchMergeAggregatorFactory(
+        "name", 128, true
+    );
+    Assert.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
+    Assert.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
+  }
 }

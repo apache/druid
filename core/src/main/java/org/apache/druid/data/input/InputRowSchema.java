@@ -19,8 +19,12 @@
 
 package org.apache.druid.data.input;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+
+import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  * Schema of {@link InputRow}.
@@ -30,6 +34,12 @@ public class InputRowSchema
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
   private final ColumnsFilter columnsFilter;
+  /**
+   * Set of metric names for further downstream processing by {@link InputSource}.
+   * Empty set if no metric given.
+   */
+  @NotNull
+  private final Set<String> metricNames;
 
   public InputRowSchema(
       final TimestampSpec timestampSpec,
@@ -37,9 +47,26 @@ public class InputRowSchema
       final ColumnsFilter columnsFilter
   )
   {
+    this(timestampSpec, dimensionsSpec, columnsFilter, ImmutableSet.of());
+  }
+
+  public InputRowSchema(
+      final TimestampSpec timestampSpec,
+      final DimensionsSpec dimensionsSpec,
+      final ColumnsFilter columnsFilter,
+      final Set<String> metricNames
+  )
+  {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
     this.columnsFilter = columnsFilter;
+    this.metricNames = metricNames == null ? ImmutableSet.of() : metricNames;
+  }
+
+  @NotNull
+  public Set<String> getMetricNames()
+  {
+    return metricNames;
   }
 
   public TimestampSpec getTimestampSpec()

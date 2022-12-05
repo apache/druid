@@ -20,9 +20,12 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+
+import javax.annotation.Nullable;
 
 public final class Intervals
 {
@@ -66,6 +69,32 @@ public final class Intervals
   public static boolean isEternity(final Interval interval)
   {
     return ETERNITY.equals(interval);
+  }
+
+  /**
+   * Finds an interval from the given set of sortedIntervals which overlaps with
+   * the searchInterval. If multiple candidate intervals overlap with the
+   * searchInterval, the "smallest" interval based on the
+   * {@link Comparators#intervalsByStartThenEnd()} is returned.
+   *
+   * @param searchInterval  Interval which should overlap with the result
+   * @param sortedIntervals Candidate overlapping intervals, sorted in ascending
+   *                        order, using {@link Comparators#intervalsByStartThenEnd()}.
+   * @return The first overlapping interval, if one exists, otherwise null.
+   */
+  @Nullable
+  public static Interval findOverlappingInterval(Interval searchInterval, Interval[] sortedIntervals)
+  {
+    for (Interval interval : sortedIntervals) {
+      if (interval.overlaps(searchInterval)) {
+        return interval;
+      } else if (interval.getStart().isAfter(searchInterval.getEnd())) {
+        // Intervals after this cannot have an overlap
+        return null;
+      }
+    }
+
+    return null;
   }
 
   private Intervals()

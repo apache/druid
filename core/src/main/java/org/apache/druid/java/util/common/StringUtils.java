@@ -20,9 +20,13 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
+import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -77,6 +81,148 @@ public class StringUtils
     return string == null ? EMPTY_BYTES : toUtf8(string);
   }
 
+  /**
+   * Compares two Java Strings in Unicode code-point order.
+   *
+   * Order is consistent with {@link #compareUtf8(byte[], byte[])}, but is not consistent with
+   * {@link String#compareTo(String)}.
+   */
+  public static int compareUnicode(final String a, final String b)
+  {
+    final int commonLength = Math.min(a.length(), b.length());
+
+    for (int i = 0; i < commonLength; i++) {
+      int char1 = a.charAt(i) & 0xFFFF; // Unsigned
+      int char2 = b.charAt(i) & 0xFFFF; // Unsigned
+
+      if (char1 != char2 && char1 >= 0xd800 && char2 >= 0xd800) {
+        // Fixup logic for code units at or above the surrogate range, based on logic described at
+        // https://www.icu-project.org/docs/papers/utf16_code_point_order.html.
+        //
+        // If both code units are at or above the surrogate range (>= 0xd800) then adjust non-surrogates (legitimate
+        // single-code-unit characters) to be below the surrogate range, so they compare earlier than surrogates.
+
+        if (!Character.isSurrogate((char) char1)) {
+          char1 -= 0x2800;
+        }
+
+        if (!Character.isSurrogate((char) char2)) {
+          char2 -= 0x2800;
+        }
+      }
+
+      final int cmp = char1 - char2;
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return Integer.compare(a.length(), b.length());
+  }
+
+  /**
+   * Compares two UTF-8 byte strings in Unicode code-point order.
+   *
+   * Equivalent to a comparison of the two byte arrays as if they were unsigned bytes.
+   *
+   * Order is consistent with {@link #compareUnicode(String, String)}, but is not consistent with
+   * {@link String#compareTo(String)}. For an ordering consistent with {@link String#compareTo(String)}, use
+   * {@link #compareUtf8UsingJavaStringOrdering(byte[], byte[])} instead.
+   */
+  public static int compareUtf8(final byte[] a, final byte[] b)
+  {
+    final int commonLength = Math.min(a.length, b.length);
+
+    for (int i = 0; i < commonLength; i++) {
+      final byte byte1 = a[i];
+      final byte byte2 = b[i];
+      final int cmp = (byte1 & 0xFF) - (byte2 & 0xFF); // Unsigned comparison
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return Integer.compare(a.length, b.length);
+  }
+
+  /**
+   * Compares two UTF-8 byte strings in UTF-16 code-unit order.
+   *
+   * Order is consistent with {@link String#compareTo(String)}, but is not consistent with
+   * {@link #compareUnicode(String, String)} or {@link #compareUtf8(byte[], byte[])}.
+   */
+  public static int compareUtf8UsingJavaStringOrdering(final byte[] a, final byte[] b)
+  {
+    final int commonLength = Math.min(a.length, b.length);
+
+    for (int i = 0; i < commonLength; i++) {
+      final int cmp = compareUtf8UsingJavaStringOrdering(a[i], b[i]);
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return Integer.compare(a.length, b.length);
+  }
+
+  /**
+   * Compares two UTF-8 byte strings in UTF-16 code-unit order.
+   *
+   * Order is consistent with {@link String#compareTo(String)}, but is not consistent with
+   * {@link #compareUnicode(String, String)} or {@link #compareUtf8(byte[], byte[])}.
+   */
+  public static int compareUtf8UsingJavaStringOrdering(
+      final ByteBuffer buf1,
+      final int position1,
+      final int length1,
+      final ByteBuffer buf2,
+      final int position2,
+      final int length2
+  )
+  {
+    final int commonLength = Math.min(length1, length2);
+
+    for (int i = 0; i < commonLength; i++) {
+      final int cmp = compareUtf8UsingJavaStringOrdering(buf1.get(position1 + i), buf2.get(position2 + i));
+      if (cmp != 0) {
+        return cmp;
+      }
+    }
+
+    return Integer.compare(length1, length2);
+  }
+
+  /**
+   * Compares two bytes from UTF-8 strings in such a way that the entire byte arrays are compared in UTF-16
+   * code-unit order.
+   *
+   * Compatible with {@link #compareUtf8UsingJavaStringOrdering(byte[], byte[])} and
+   * {@link #compareUtf8UsingJavaStringOrdering(ByteBuffer, int, int, ByteBuffer, int, int)}.
+   */
+  public static int compareUtf8UsingJavaStringOrdering(byte byte1, byte byte2)
+  {
+    // Treat as unsigned bytes.
+    int ubyte1 = byte1 & 0xFF;
+    int ubyte2 = byte2 & 0xFF;
+
+    if (ubyte1 != ubyte2 && ubyte1 >= 0xEE && ubyte2 >= 0xEE) {
+      // Fixup logic for lead bytes for U+E000 ... U+FFFF, based on logic described at
+      // https://www.icu-project.org/docs/papers/utf16_code_point_order.html.
+      //
+      // Move possible lead bytes for this range (0xEE and 0xEF) above all other bytes, so they compare later.
+
+      if (ubyte1 == 0xEE || ubyte1 == 0xEF) {
+        ubyte1 += 0xFF;
+      }
+
+      if (ubyte2 == 0xEE || ubyte2 == 0xEF) {
+        ubyte2 += 0xFF;
+      }
+    }
+
+    return ubyte1 - ubyte2;
+  }
+
   public static String fromUtf8(final byte[] bytes)
   {
     try {
@@ -100,14 +246,37 @@ public class StringUtils
   }
 
   /**
-   * Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Decodes a UTF-8 string from the remaining bytes of a non-null buffer.
    * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * Use {@link #fromUtf8Nullable(ByteBuffer)} if the buffer might be null.
    */
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
+  /**
+   * If buffer is Decodes a UTF-8 string from the remaining bytes of a buffer.
+   * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
+   *
+   * If the value is null, this method returns null. If the buffer will never be null, use {@link #fromUtf8(ByteBuffer)}
+   * instead.
+   */
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final ByteBuffer buffer)
+  {
+    if (buffer == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(buffer, buffer.remaining());
+  }
+
+  /**
+   * Converts a string to a UTF-8 byte array.
+   *
+   * @throws NullPointerException if "string" is null
+   */
   public static byte[] toUtf8(final String string)
   {
     try {
@@ -117,6 +286,16 @@ public class StringUtils
       // Should never happen
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Converts a string to UTF-8 bytes, returning them as a newly-allocated on-heap {@link ByteBuffer}.
+   * If "string" is null, returns null.
+   */
+  @Nullable
+  public static ByteBuffer toUtf8ByteBuffer(@Nullable final String string)
+  {
+    return string == null ? null : ByteBuffer.wrap(toUtf8(string));
   }
 
   /**
@@ -620,6 +799,20 @@ public class StringUtils
       return s;
     } else {
       return s.substring(0, maxBytes);
+    }
+  }
+
+  public static String getResource(Object ref, String resource)
+  {
+    try {
+      InputStream is = ref.getClass().getResourceAsStream(resource);
+      if (is == null) {
+        throw new ISE("Resource not found: [%s]", resource);
+      }
+      return IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
   }
 }

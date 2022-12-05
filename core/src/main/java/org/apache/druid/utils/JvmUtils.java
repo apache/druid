@@ -19,6 +19,7 @@
 
 package org.apache.druid.utils;
 
+import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 
 import java.io.File;
@@ -36,19 +37,37 @@ import java.util.stream.Stream;
 
 public class JvmUtils
 {
-  private static final boolean IS_JAVA9_COMPATIBLE = isJava9Compatible(System.getProperty("java.specification.version"));
+  public static final int UNKNOWN_VERSION = -1;
+  private static final int MAJOR_VERSION = computeMajorVersion();
 
-  private static boolean isJava9Compatible(String versionString)
+  private static int computeMajorVersion()
   {
-    final StringTokenizer st = new StringTokenizer(versionString, ".");
-    int majorVersion = Integer.parseInt(st.nextToken());
+    final StringTokenizer st = new StringTokenizer(System.getProperty("java.specification.version"), ".");
+    if (!st.hasMoreTokens()) {
+      return UNKNOWN_VERSION;
+    }
 
-    return majorVersion >= 9;
+    final String majorVersionString = st.nextToken();
+    final Integer majorVersion = Ints.tryParse(majorVersionString);
+    return majorVersion == null ? UNKNOWN_VERSION : majorVersion;
+  }
+
+  /**
+   * Returns the major version of the current Java runtime for Java 9 and above. For example: 9, 11, 17, etc.
+   *
+   * Returns 1 for Java 8 and earlier.
+   *
+   * Returns {@link #UNKNOWN_VERSION} if the major version cannot be determined. This is a negative number and is
+   * therefore lower than all valid versions.
+   */
+  public static int majorVersion()
+  {
+    return MAJOR_VERSION;
   }
 
   public static boolean isIsJava9Compatible()
   {
-    return IS_JAVA9_COMPATIBLE;
+    return MAJOR_VERSION >= 9;
   }
 
   @Inject

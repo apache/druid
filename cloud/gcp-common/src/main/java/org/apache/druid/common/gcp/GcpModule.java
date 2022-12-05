@@ -19,14 +19,12 @@
 
 package org.apache.druid.common.gcp;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
@@ -35,22 +33,14 @@ import org.apache.druid.initialization.DruidModule;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
-import java.util.List;
 
 public class GcpModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
-
   @Override
   public void configure(Binder binder)
   {
     // Nothing to proactively bind
   }
-
 
   @Provides
   @LazySingleton

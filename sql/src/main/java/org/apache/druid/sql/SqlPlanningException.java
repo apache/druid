@@ -22,6 +22,7 @@ package org.apache.druid.sql;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.BadQueryException;
@@ -63,6 +64,11 @@ public class SqlPlanningException extends BadQueryException
   }
 
   public SqlPlanningException(ValidationException e)
+  {
+    this(PlanningError.VALIDATION_ERROR, e.getMessage());
+  }
+
+  public SqlPlanningException(CalciteContextException e)
   {
     this(PlanningError.VALIDATION_ERROR, e.getMessage());
   }

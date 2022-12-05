@@ -155,7 +155,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           <ButtonGroup className="right-buttons">
             {downloadFilename && (
               <AnchorButton
-                text="Save"
+                text="Download"
                 minimal
                 download={downloadFilename}
                 href={UrlBaser.base(endpoint)}
@@ -184,7 +184,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             <Loader />
           ) : (
             <textarea
-              className="bp3-input"
+              className="bp4-input"
               readOnly
               value={logState.data || logState.getErrorMessage()}
               ref={this.log}

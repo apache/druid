@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.segment.loading.URIDataPuller;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.druid.utils.JvmUtils;
@@ -62,11 +63,11 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
 
   @Override
   @Nullable
-  public CacheScheduler.VersionedCache generateCache(
+  public String generateCache(
       final UriExtractionNamespace extractionNamespace,
       final CacheScheduler.EntryImpl<UriExtractionNamespace> entryId,
       @Nullable final String lastVersion,
-      final CacheScheduler scheduler
+      final CacheHandler cache
   ) throws Exception
   {
     final boolean doSearch = extractionNamespace.getUriPrefix() != null;
@@ -143,31 +144,30 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
             }
           };
 
-          final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
           try {
             final long startNs = System.nanoTime();
             final MapPopulator.PopulateResult populateResult = new MapPopulator<>(
                 extractionNamespace.getNamespaceParseSpec().getParser()
             ).populateAndWarnAtByteLimit(
                 source,
-                versionedCache.getCache(),
+                cache.getCache(),
                 (long) (MAX_MEMORY * extractionNamespace.getMaxHeapPercentage() / 100.0),
                 null == entryId ? null : entryId.toString()
             );
             final long duration = System.nanoTime() - startNs;
             log.info(
-                "Finished loading %,d values (%d bytes) from %,d lines for [%s] in %,d ns",
+                "Finished loading %d values (%d bytes) from %d lines for [%s] in %d ns",
                 populateResult.getEntries(),
                 populateResult.getBytes(),
                 populateResult.getLines(),
                 entryId,
                 duration
             );
-            return versionedCache;
+            return version;
           }
           catch (Throwable t) {
             try {
-              versionedCache.close();
+              cache.close();
             }
             catch (Exception e) {
               t.addSuppressed(e);

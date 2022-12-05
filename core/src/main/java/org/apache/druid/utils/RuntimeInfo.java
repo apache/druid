@@ -19,10 +19,12 @@
 
 package org.apache.druid.utils;
 
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.UOE;
 
 import java.lang.reflect.InvocationTargetException;
 
+@LazySingleton
 public class RuntimeInfo
 {
   public int getAvailableProcessors()
@@ -48,7 +50,7 @@ public class RuntimeInfo
   public long getDirectMemorySizeBytes()
   {
     try {
-      Class<?> vmClass = Class.forName("sun.misc.VM");
+      Class<?> vmClass = Class.forName(JvmUtils.majorVersion() >= 9 ? "jdk.internal.misc.VM" : "sun.misc.VM");
       Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
 
       if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {

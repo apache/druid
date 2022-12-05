@@ -26,13 +26,22 @@ public class NullValueHandlingConfig
 {
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
 
+  //added to preserve backward compatibility
+  //and not count nulls during cardinality aggrgation over strings
+
+  public static final String NULL_HANDLING_DURING_STRING_CARDINALITY = "druid.generic.ignoreNullsForStringCardinality";
+
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;
+
+  @JsonProperty("ignoreNullsForStringCardinality")
+  private final boolean ignoreNullsForStringCardinality;
 
 
   @JsonCreator
   public NullValueHandlingConfig(
-      @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull
+      @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull,
+      @JsonProperty("ignoreNullsForStringCardinality") Boolean ignoreNullsForStringCardinality
   )
   {
     if (useDefaultValuesForNull == null) {
@@ -40,6 +49,23 @@ public class NullValueHandlingConfig
     } else {
       this.useDefaultValuesForNull = useDefaultValuesForNull;
     }
+    if (ignoreNullsForStringCardinality == null) {
+      this.ignoreNullsForStringCardinality = Boolean.valueOf(System.getProperty(
+          NULL_HANDLING_DURING_STRING_CARDINALITY,
+          "false"
+      ));
+    } else {
+      if (this.useDefaultValuesForNull) {
+        this.ignoreNullsForStringCardinality = ignoreNullsForStringCardinality;
+      } else {
+        this.ignoreNullsForStringCardinality = false;
+      }
+    }
+  }
+
+  public boolean isIgnoreNullsForStringCardinality()
+  {
+    return ignoreNullsForStringCardinality;
   }
 
   public boolean isUseDefaultValuesForNull()

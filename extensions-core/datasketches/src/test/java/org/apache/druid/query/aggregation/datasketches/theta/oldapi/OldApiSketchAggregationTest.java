@@ -242,6 +242,23 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
+  @Test
+  public void testWithNameMerge()
+  {
+    OldSketchMergeAggregatorFactory factory = new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+
+  @Test
+  public void testWithNameBuild()
+  {
+    OldSketchBuildAggregatorFactory factory = new OldSketchBuildAggregatorFactory("name", "fieldName", 16);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
   {
     Assert.assertEquals(

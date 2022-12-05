@@ -136,7 +136,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled userMap cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
             }
           }
       );
@@ -162,7 +162,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
               LOG.debug("Scheduled groupMappingMap cache poll is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while polling for cachedGroupMappingMaps.").emit();
+              LOG.makeAlert(t, "Error occurred while polling for cachedGroupMappingMaps.").emit();
             }
           }
       );

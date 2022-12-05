@@ -11,7 +11,7 @@ exports[`LookupsView matches snapshot 1`] = `
       localStorageKey="lookups-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint3.Button
+    <Blueprint4.Button
       icon="plus"
       onClick={[Function]}
       text="Add lookup"
@@ -90,6 +90,7 @@ exports[`LookupsView matches snapshot 1`] = `
     columns={
       Array [
         Object {
+          "Cell": [Function],
           "Header": "Lookup name",
           "accessor": "id",
           "filterable": true,
@@ -98,6 +99,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "width": 200,
         },
         Object {
+          "Cell": [Function],
           "Header": "Lookup tier",
           "accessor": "tier",
           "filterable": true,
@@ -106,6 +108,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "width": 100,
         },
         Object {
+          "Cell": [Function],
           "Header": "Type",
           "accessor": "spec.type",
           "filterable": true,
@@ -114,6 +117,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "width": 150,
         },
         Object {
+          "Cell": [Function],
           "Header": "Version",
           "accessor": "version",
           "filterable": true,
@@ -125,15 +129,18 @@ exports[`LookupsView matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Poll period",
           "accessor": [Function],
+          "className": "padded",
           "id": "poolPeriod",
           "show": true,
           "width": 150,
         },
         Object {
+          "Cell": [Function],
           "Header": "Summary",
           "accessor": [Function],
           "id": "summary",
           "show": true,
+          "width": 600,
         },
         Object {
           "Cell": [Function],
@@ -172,6 +179,7 @@ exports[`LookupsView matches snapshot 1`] = `
       }
     }
     filterable={true}
+    filtered={Array []}
     freezeWhenExpanded={false}
     getLoadingProps={[Function]}
     getNoDataProps={[Function]}
@@ -205,6 +213,7 @@ exports[`LookupsView matches snapshot 1`] = `
     noDataText=""
     ofText="of"
     onFetchData={[Function]}
+    onFilteredChange={[Function]}
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={

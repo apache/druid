@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -68,5 +69,11 @@ public class CacheTestSegmentCacheManager implements SegmentCacheManager
   public Set<DataSegment> getSegmentsInTrash()
   {
     return segmentsInTrash;
+  }
+
+  @Override
+  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  {
+    throw new UnsupportedOperationException();
   }
 }

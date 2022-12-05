@@ -26,9 +26,13 @@ import java.io.Closeable;
  * necessarily good at this job, but it works.  I think.
  *
  * Essentially, you can think of a Yielder as a linked list of items where the Yielder gives you access to the current
- * head via get() and it will give you another Yielder representing the next item in the chain via next().  A Yielder
- * that isDone() may return anything from both get() and next(), there is no contract and depending on those return
- * values will likely lead to bugs.
+ * head via get() and it will give you another Yielder representing the next item in the chain via next().  When using
+ * a yielder object, a call to yield() on the yielding accumulator will result in a new Yielder being returned whose
+ * get() method will return the return value of the accumulator from the call that called yield().
+ *
+ * When a call to next() exhausts the underlying data stream without having a yield() call, various implementations
+ * of Sequences and Yielders assume that they will receive a Yielder where isDone() is true and get() will return the
+ * accumulated value up until that point.
  *
  * Once next is called, there is no guarantee and no requirement that references to old Yielder objects will continue
  * to obey the contract.
@@ -60,9 +64,8 @@ public interface Yielder<T> extends Closeable
   Yielder<T> next(T initValue);
 
   /**
-   * Returns true if this is the last Yielder in the chain.  A Yielder that isDone() may return anything
-   * from both get() and next(), there is no contract and depending on those return values will likely lead to bugs.
-   * It will probably break your code to call next() on a Yielder that is done and expect something good from it.
+   * Returns true if this is the last Yielder in the chain.  Review the class level javadoc for an understanding
+   * of the contract for other methods when isDone() is true.
    *
    * Once next() is called on this Yielder object, all further operations on this object are undefined.
    *

@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -45,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
@@ -495,8 +497,9 @@ public class CachingQueryRunnerTest
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 
     try (JsonGenerator gen = objectMapper.getFactory().createGenerator(bytes)) {
+      final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
       for (T result : results) {
-        gen.writeObject(result);
+        JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, result);
       }
     }
 

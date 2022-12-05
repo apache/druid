@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
@@ -51,9 +52,15 @@ public class EnvironmentVariableDynamicConfigProvider implements DynamicConfigPr
   {
     HashMap<String, String> map = new HashMap<>();
     for (Map.Entry<String, String> entry : variables.entrySet()) {
-      map.put(entry.getKey(), System.getenv(entry.getValue()));
+      map.put(entry.getKey(), getEnv(entry.getValue()));
     }
     return map;
+  }
+
+  @VisibleForTesting
+  protected String getEnv(String var)
+  {
+    return System.getenv(var);
   }
 
   @Override

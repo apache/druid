@@ -51,6 +51,10 @@ public abstract class DruidCoordinatorConfig
   @Default("P90D")
   public abstract Duration getCoordinatorKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.ignoreDurationToRetain")
+  @Default("false")
+  public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
+
   @Config("druid.coordinator.kill.maxSegments")
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
@@ -97,16 +101,10 @@ public abstract class DruidCoordinatorConfig
     return new Duration(15 * 60 * 1000);
   }
 
-  @Config("druid.coordinator.loadqueuepeon.repeatDelay")
-  public Duration getLoadQueuePeonRepeatDelay()
-  {
-    return Duration.millis(50);
-  }
-
   @Config("druid.coordinator.loadqueuepeon.type")
   public String getLoadQueuePeonType()
   {
-    return "curator";
+    return "http";
   }
 
   @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")

@@ -43,14 +43,13 @@ public class CombiningIterable<T> implements Iterable<T>
    * @return An Iterable that is the merge of all Iterables from in such that there is only one instance of
    * equivalent objects.
    */
-  @SuppressWarnings("unchecked")
   public static <T> CombiningIterable<T> createSplatted(
       Iterable<? extends Iterable<T>> in,
       Comparator<T> comparator
   )
   {
     return create(
-        new MergeIterable<>(comparator, (Iterable<Iterable<T>>) in),
+        new MergeIterable<>(in, comparator),
         comparator,
         GuavaUtils::firstNonNull
     );

@@ -107,10 +107,10 @@ public class ITSqlCancelTest
         throw new ISE("Query is not canceled after cancel request");
       }
       QueryException queryException = jsonMapper.readValue(queryResponse.getContent(), QueryException.class);
-      if (!QueryInterruptedException.QUERY_CANCELLED.equals(queryException.getErrorCode())) {
+      if (!QueryInterruptedException.QUERY_CANCELED.equals(queryException.getErrorCode())) {
         throw new ISE(
             "Expected error code [%s], actual [%s]",
-            QueryInterruptedException.QUERY_CANCELLED,
+            QueryInterruptedException.QUERY_CANCELED,
             queryException.getErrorCode()
         );
       }

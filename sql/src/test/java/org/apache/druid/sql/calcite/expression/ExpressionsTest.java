@@ -31,7 +31,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
@@ -588,6 +588,18 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("format('%s %,d',\"s\",1234,6789)"),
         "foo 1,234"
     );
+
+    testHelper.testExpressionString(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%.2f %.2f %.2f"),
+            testHelper.makeLiteral(1234d),
+            testHelper.makeLiteral(123.4),
+            testHelper.makeLiteral(123.456789)
+        ),
+        makeExpression("format('%.2f %.2f %.2f',1234.0,123.4,123.456789)"),
+        "1234.00 123.40 123.46"
+    );
   }
 
   @Test
@@ -651,7 +663,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("parse_long"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.STRING, "hexstr"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -679,7 +691,7 @@ public class ExpressionsTest extends ExpressionTestBase
                         DruidExpression.ofColumn(ColumnType.STRING, "hexstr")
                     )
                 ),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(16))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(16))
             )
         ),
         239L
@@ -929,7 +941,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.2
@@ -946,7 +958,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         -2.2
@@ -963,7 +975,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         20.0
@@ -980,7 +992,7 @@ public class ExpressionsTest extends ExpressionTestBase
             (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         0.0
@@ -1029,7 +1041,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
             )
         ),
         30L
@@ -1059,7 +1071,7 @@ public class ExpressionsTest extends ExpressionTestBase
             DruidExpression.functionCall("round"),
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(1))
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
             )
         ),
         2.3
@@ -1099,8 +1111,8 @@ public class ExpressionsTest extends ExpressionTestBase
 
     if (!NullHandling.sqlCompatible()) {
       expectException(
-          IAE.class,
-          "The first argument to the function[round] should be integer or double type but got the type: STRING"
+          ExpressionValidationException.class,
+          "Function[round] first argument should be a LONG or DOUBLE but got STRING instead"
       );
     }
     testHelper.testExpression(
@@ -1123,8 +1135,8 @@ public class ExpressionsTest extends ExpressionTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectException(
-        IAE.class,
-        "The second argument to the function[round] should be integer type but got the type: STRING"
+        ExpressionValidationException.class,
+        "Function[round] second argument should be a LONG but got STRING instead"
     );
     testHelper.testExpressionString(
         roundFunction,
@@ -1769,7 +1781,7 @@ public class ExpressionsTest extends ExpressionTestBase
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
                 // RexNode type "interval year to month" is not reported as ColumnType.STRING
                 DruidExpression.ofLiteral(null, DruidExpression.stringLiteral("P13M")),
-                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.numberLiteral(-1)),
+                DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1)),
                 DruidExpression.ofStringLiteral("UTC")
             )
         ),
@@ -2082,7 +2094,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalReverseWithWrongType()
   {
-    expectException(IAE.class, "Function[reverse] needs a string argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[reverse] needs a STRING argument but got LONG instead"
+    );
 
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
@@ -2155,7 +2170,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    expectException(IAE.class, "Function[right] needs a postive integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[right] needs a positive integer as the second argument"
+    );
 
     testHelper.testExpressionString(
         new RightOperatorConversion().calciteOperator(),
@@ -2171,7 +2189,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRightWithWrongType()
   {
-    expectException(IAE.class, "Function[right] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[right] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new RightOperatorConversion().calciteOperator(),
@@ -2241,7 +2262,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    expectException(IAE.class, "Function[left] needs a postive integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[left] needs a postive integer as second argument"
+    );
 
     testHelper.testExpressionString(
         new LeftOperatorConversion().calciteOperator(),
@@ -2257,7 +2281,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalLeftWithWrongType()
   {
-    expectException(IAE.class, "Function[left] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[left] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new LeftOperatorConversion().calciteOperator(),
@@ -2307,7 +2334,10 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRepeatWithWrongType()
   {
-    expectException(IAE.class, "Function[repeat] needs a string as first argument and an integer as second argument");
+    expectException(
+        ExpressionValidationException.class,
+        "Function[repeat] needs a STRING as first argument and a LONG as second argument"
+    );
 
     testHelper.testExpressionString(
         new RepeatOperatorConversion().calciteOperator(),
@@ -2446,11 +2476,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_binary_byte_format(9223372036854775807)"),
         "8.00 EiB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     * This cases has also been verified in the tests of underlying implementation
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_binary_byte_format(-9223372036854775808)"),
+        "-8.00 EiB"
+    );
 
     /*
      * test input with variable reference
@@ -2540,10 +2573,14 @@ public class ExpressionsTest extends ExpressionTestBase
         makeExpression("human_readable_decimal_byte_format(9223372036854775807)"),
         "9.22 EB"
     );
-
-    /*
-     * NOTE: Test for Long.MIN_VALUE is skipped since ExprListnerImpl#exitLongExpr fails to parse Long.MIN_VALUE
-     */
+    testHelper.testExpressionString(
+        HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT.calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(Long.MIN_VALUE)
+        ),
+        makeExpression("human_readable_decimal_byte_format(-9223372036854775808)"),
+        "-9.22 EB"
+    );
 
     /*
      * test input with variable reference

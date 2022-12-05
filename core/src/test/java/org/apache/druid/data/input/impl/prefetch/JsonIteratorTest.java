@@ -23,9 +23,11 @@ package org.apache.druid.data.input.impl.prefetch;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,9 +52,10 @@ public class JsonIteratorTest
     };
     try (FileOutputStream fos = new FileOutputStream(testFile)) {
       final JsonGenerator jg = mapper.getFactory().createGenerator(fos);
+      final SerializerProvider serializers = mapper.getSerializerProviderInstance();
       jg.writeStartArray();
       for (Map<String, Object> mapFromList : expectedList) {
-        jg.writeObject(mapFromList);
+        JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, mapFromList);
       }
       jg.writeEndArray();
       jg.close();

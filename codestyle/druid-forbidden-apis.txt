@@ -1,8 +1,11 @@
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.databind.JavaType) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(java.lang.Class) @ Use ObjectMapper#readerFor instead
+com.fasterxml.jackson.databind.ObjectMapper#writeValue(com.fasterxml.jackson.core.JsonGenerator, java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
+com.fasterxml.jackson.core.JsonGenerator#writeObject(java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
 com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
 com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
+com.google.common.collect.Iterators#mergeSorted(java.lang.Iterable,java.util.Comparator) @ Use org.apache.druid.java.util.common.collect.Utils#mergeSorted()
 com.google.common.collect.Lists#newArrayList() @ Create java.util.ArrayList directly
 com.google.common.collect.Lists#newLinkedList() @ Use ArrayList or ArrayDeque instead
 com.google.common.collect.Lists#newLinkedList(java.lang.Iterable) @ Use ArrayList or ArrayDeque instead

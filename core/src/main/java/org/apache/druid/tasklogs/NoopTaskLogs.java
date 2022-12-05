@@ -20,17 +20,17 @@
 package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.io.InputStream;
 
 public class NoopTaskLogs implements TaskLogs
 {
   private final Logger log = new Logger(TaskLogs.class);
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
     return Optional.absent();
   }

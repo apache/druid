@@ -35,7 +35,7 @@ sidebar_label: "Multi-value string functions"
 > This document describes the SQL language.
 
 Druid supports string dimensions containing multiple values.
-This page describes the operations you can perform on multi-value string dimensions.
+This page describes the operations you can perform on multi-value string dimensions using [Druid SQL](./sql.md).
 See [Multi-value dimensions](multi-value-dimensions.md) for more information.
 
 All "array" references in the multi-value string function documentation can refer to multi-value string columns or

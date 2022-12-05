@@ -166,6 +166,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FilteredAggregatorFactory(delegate.withName(newName), dimFilter, newName);
+  }
+
+  @Override
   public List<String> requiredFields()
   {
     return ImmutableList.copyOf(

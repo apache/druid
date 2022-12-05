@@ -20,7 +20,6 @@ import { useEffect, useState } from 'react';
 
 import { QueryManager, QueryManagerOptions, QueryState } from '../utils';
 
-import { useConstant } from './use-constant';
 import { usePermanentCallback } from './use-permanent-callback';
 
 export interface UseQueryManagerOptions<Q, R, I, E extends Error>
@@ -41,7 +40,7 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
 
   const [resultState, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
 
-  const queryManager = useConstant(() => {
+  function makeQueryManager() {
     return new QueryManager<Q, R, I, E>({
       ...options,
       initState,
@@ -49,14 +48,28 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
       backgroundStatusCheck: backgroundStatusCheck ? concreteBackgroundStatusCheck : undefined,
       onStateChange: setResultState,
     });
-  });
+  }
+
+  const [queryManager, setQueryManager] = useState<QueryManager<Q, R, I, E>>(makeQueryManager);
 
   useEffect(() => {
+    // Initialize queryManager on mount if needed to ensure that useQueryManager
+    // will be compatible with future React versions that may mount/unmount/remount
+    // the same component multiple times while.
+    //
+    // See https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state
+    // and https://github.com/reactwg/react-18/discussions/18
+    let myQueryManager = queryManager;
+    if (queryManager.isTerminated()) {
+      myQueryManager = makeQueryManager();
+      setQueryManager(myQueryManager);
+    }
+
     if (typeof initQuery !== 'undefined') {
-      queryManager.runQuery(initQuery);
+      myQueryManager.runQuery(initQuery);
     }
     return () => {
-      queryManager.terminate();
+      myQueryManager.terminate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

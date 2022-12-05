@@ -19,6 +19,8 @@
 export * from './capabilities';
 export * from './column-metadata';
 export * from './date';
+export * from './download';
+export * from './download-query-detail-archive';
 export * from './druid-lookup';
 export * from './druid-query';
 export * from './formatter';
@@ -31,5 +33,8 @@ export * from './query-action';
 export * from './query-cursor';
 export * from './query-manager';
 export * from './query-state';
+export * from './sample-query';
 export * from './sanitizers';
+export * from './sql';
 export * from './table-helpers';
+export * from './types';

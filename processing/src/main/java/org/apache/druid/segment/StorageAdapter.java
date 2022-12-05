@@ -59,14 +59,27 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   }
 
   /**
-   * Returns the number of distinct values for the given column if known, or {@link Integer#MAX_VALUE} if unknown,
-   * e. g. the column is numeric. If the column doesn't exist, returns 0.
+   * Returns the number of distinct values for a column, or {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN}
+   * if unknown.
+   *
+   * If the column doesn't exist, returns 1, because a column that doesn't exist is treated as a column of default
+   * (or null) values.
    */
   int getDimensionCardinality(String column);
   DateTime getMinTime();
   DateTime getMaxTime();
+
+  /**
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the minimum value.
+   */
   @Nullable
   Comparable getMinValue(String column);
+
+  /**
+   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
+   * if not known. Does not scan the column to find the maximum value.
+   */
   @Nullable
   Comparable getMaxValue(String column);
 
@@ -90,6 +103,8 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
 
   int getNumRows();
   DateTime getMaxIngestedEventTime();
+
+  @Nullable
   Metadata getMetadata();
 
   /**

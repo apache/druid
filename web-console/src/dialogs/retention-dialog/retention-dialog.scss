@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .retention-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     top: 5%;
     width: 750px;
   }
 
-  .bp3-dialog-body {
+  .#{$bp-ns}-dialog-body {
     .rule-editor {
       margin-bottom: 15px;
     }

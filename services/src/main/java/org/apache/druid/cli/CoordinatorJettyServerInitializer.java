@@ -26,7 +26,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.http.OverlordProxyServlet;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -51,21 +50,19 @@ import java.util.Properties;
  */
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
-  private static List<String> UNSECURED_PATHS = ImmutableList.of(
+  private static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/coordinator/false",
       "/overlord/false",
       "/status/health",
       "/druid/coordinator/v1/isLeader"
   );
 
-  private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
   private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, ServerConfig serverConfig)
+  CoordinatorJettyServerInitializer(Properties properties, ServerConfig serverConfig)
   {
-    this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
     this.serverConfig = serverConfig;
   }
@@ -84,6 +81,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+    JettyServerInitUtils.addQosFilters(root, injector);
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization/authentication for these resources

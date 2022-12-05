@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -148,9 +149,10 @@ public class AlertEvent implements Event
 
   @Override
   @JsonValue
-  public Map<String, Object> toMap()
+  public EventMap toMap()
   {
-    return ImmutableMap.<String, Object>builder()
+    return EventMap
+        .builder()
         .put("feed", getFeed())
         .put("timestamp", createdTime.toString())
         .putAll(serviceDimensions)

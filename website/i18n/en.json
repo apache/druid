@@ -32,6 +32,25 @@
       "configuration/logging": {
         "title": "Logging"
       },
+      "data-management/automatic-compaction": {
+        "title": "Automatic compaction"
+      },
+      "data-management/compaction": {
+        "title": "Compaction"
+      },
+      "data-management/delete": {
+        "title": "Data deletion"
+      },
+      "data-management/index": {
+        "title": "Data management",
+        "sidebar_label": "Overview"
+      },
+      "data-management/schema-changes": {
+        "title": "Schema changes"
+      },
+      "data-management/update": {
+        "title": "Data updates"
+      },
       "dependencies/deep-storage": {
         "title": "Deep storage"
       },
@@ -104,6 +123,9 @@
       "development/extensions-contrib/cloudfiles": {
         "title": "Rackspace Cloud Files"
       },
+      "development/extensions-contrib/compressed-big-decimal": {
+        "title": "Compressed Big Decimal"
+      },
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
@@ -173,6 +195,9 @@
       "development/extensions-core/datasketches-hll": {
         "title": "DataSketches HLL Sketch module"
       },
+      "development/extensions-core/datasketches-kll": {
+        "title": "DataSketches KLL Sketch module"
+      },
       "development/extensions-core/datasketches-quantiles": {
         "title": "DataSketches Quantiles Sketch module"
       },
@@ -214,7 +239,15 @@
       },
       "development/extensions-core/kafka-ingestion": {
         "title": "Apache Kafka ingestion",
-        "sidebar_label": "Apache Kafka"
+        "sidebar_label": "Apache Kafka ingestion"
+      },
+      "development/extensions-core/kafka-supervisor-operations": {
+        "title": "Apache Kafka supervisor operations reference",
+        "sidebar_label": "Apache Kafka operations"
+      },
+      "development/extensions-core/kafka-supervisor-reference": {
+        "title": "Apache Kafka supervisor reference",
+        "sidebar_label": "Apache Kafka supervisor"
       },
       "development/extensions-core/kinesis-ingestion": {
         "title": "Amazon Kinesis ingestion",
@@ -273,14 +306,8 @@
       "development/versioning": {
         "title": "Versioning"
       },
-      "ingestion/compaction": {
-        "title": "Compaction"
-      },
       "ingestion/data-formats": {
         "title": "Data formats"
-      },
-      "ingestion/data-management": {
-        "title": "Data management"
       },
       "ingestion/data-model": {
         "title": "Druid data model",
@@ -300,6 +327,18 @@
       "ingestion/ingestion-spec": {
         "title": "Ingestion spec reference",
         "sidebar_label": "Ingestion spec"
+      },
+      "ingestion/native-batch-firehose": {
+        "title": "Native batch ingestion with firehose",
+        "sidebar_label": "Firehose (deprecated)"
+      },
+      "ingestion/native-batch-input-sources": {
+        "title": "Native batch input sources",
+        "sidebar_label": "Native batch: input sources"
+      },
+      "ingestion/native-batch-simple-task": {
+        "title": "Native batch simple task indexing",
+        "sidebar_label": "Native batch (simple)"
       },
       "ingestion/native-batch": {
         "title": "Native batch ingestion",
@@ -331,6 +370,34 @@
       "misc/papers-and-talks": {
         "title": "Papers"
       },
+      "multi-stage-query/api": {
+        "title": "SQL-based ingestion and multi-stage query task API",
+        "sidebar_label": "API"
+      },
+      "multi-stage-query/concepts": {
+        "title": "SQL-based ingestion concepts",
+        "sidebar_label": "Key concepts"
+      },
+      "multi-stage-query/examples": {
+        "title": "SQL-based ingestion query examples",
+        "sidebar_label": "Examples"
+      },
+      "multi-stage-query/index": {
+        "title": "SQL-based ingestion",
+        "sidebar_label": "Overview"
+      },
+      "multi-stage-query/known-issues": {
+        "title": "SQL-based ingestion known issues",
+        "sidebar_label": "Known issues"
+      },
+      "multi-stage-query/reference": {
+        "title": "SQL-based ingestion reference",
+        "sidebar_label": "Reference"
+      },
+      "multi-stage-query/security": {
+        "title": "SQL-based ingestion security",
+        "sidebar_label": "Security"
+      },
       "operations/alerts": {
         "title": "Alerts"
       },
@@ -349,9 +416,6 @@
       },
       "operations/deep-storage-migration": {
         "title": "Deep storage migration"
-      },
-      "operations/druid-console": {
-        "title": "Web console"
       },
       "operations/dump-segment": {
         "title": "dump-segment tool"
@@ -374,17 +438,21 @@
       "operations/insert-segment-to-db": {
         "title": "insert-segment-to-db tool"
       },
+      "operations/java": {
+        "title": "Java runtime"
+      },
       "operations/kubernetes": {
         "title": "kubernetes"
-      },
-      "operations/management-uis": {
-        "title": "Legacy Management UIs"
       },
       "operations/metadata-migration": {
         "title": "Metadata Migration"
       },
       "operations/metrics": {
         "title": "Metrics"
+      },
+      "operations/mixed-workloads": {
+        "title": "Configure Druid for mixed workloads",
+        "sidebar_label": "Mixed workloads"
       },
       "operations/other-hadoop": {
         "title": "Working with different versions of Apache Hadoop"
@@ -394,6 +462,10 @@
       },
       "operations/pull-deps": {
         "title": "pull-deps tool"
+      },
+      "operations/request-logging": {
+        "title": "Request logging",
+        "sidebar_label": "Request logging"
       },
       "operations/reset-cluster": {
         "title": "reset-cluster tool"
@@ -411,7 +483,7 @@
         "title": "User authentication and authorization"
       },
       "operations/segment-optimization": {
-        "title": "Segment Size Optimization"
+        "title": "Segment size optimization"
       },
       "operations/single-server": {
         "title": "Single server deployment"
@@ -421,6 +493,9 @@
       },
       "operations/use_sbt_to_build_fat_jar": {
         "title": "Content for build.sbt"
+      },
+      "operations/web-console": {
+        "title": "Web console"
       },
       "querying/aggregations": {
         "title": "Aggregations"
@@ -473,12 +548,16 @@
         "title": "Multitenancy considerations",
         "sidebar_label": "Multitenancy"
       },
+      "querying/nested-columns": {
+        "title": "Nested columns",
+        "sidebar_label": "Nested columns"
+      },
       "querying/post-aggregations": {
         "title": "Post-aggregations"
       },
       "querying/query-context": {
         "title": "Query context",
-        "sidebar_label": "Context parameters"
+        "sidebar_label": "Query context"
       },
       "querying/query-execution": {
         "title": "Query execution"
@@ -505,9 +584,57 @@
       "querying/sorting-orders": {
         "title": "String comparators"
       },
+      "querying/sql-aggregations": {
+        "title": "SQL aggregation functions",
+        "sidebar_label": "Aggregation functions"
+      },
+      "querying/sql-api": {
+        "title": "Druid SQL API",
+        "sidebar_label": "Druid SQL API"
+      },
+      "querying/sql-data-types": {
+        "title": "SQL data types",
+        "sidebar_label": "SQL data types"
+      },
+      "querying/sql-functions": {
+        "title": "All Druid SQL functions",
+        "sidebar_label": "All functions"
+      },
+      "querying/sql-jdbc": {
+        "title": "SQL JDBC driver API",
+        "sidebar_label": "JDBC driver API"
+      },
+      "querying/sql-json-functions": {
+        "title": "SQL JSON functions",
+        "sidebar_label": "JSON functions"
+      },
+      "querying/sql-metadata-tables": {
+        "title": "SQL metadata tables",
+        "sidebar_label": "SQL metadata tables"
+      },
+      "querying/sql-multivalue-string-functions": {
+        "title": "SQL multi-value string functions",
+        "sidebar_label": "Multi-value string functions"
+      },
+      "querying/sql-operators": {
+        "title": "Druid SQL Operators",
+        "sidebar_label": "Operators"
+      },
+      "querying/sql-query-context": {
+        "title": "SQL query context",
+        "sidebar_label": "SQL query context"
+      },
+      "querying/sql-scalar": {
+        "title": "SQL scalar functions",
+        "sidebar_label": "Scalar functions"
+      },
+      "querying/sql-translation": {
+        "title": "SQL query translation",
+        "sidebar_label": "SQL query translation"
+      },
       "querying/sql": {
-        "title": "SQL",
-        "sidebar_label": "Druid SQL"
+        "title": "Druid SQL overview",
+        "sidebar_label": "Overview and syntax"
       },
       "querying/timeboundaryquery": {
         "title": "TimeBoundary queries",
@@ -524,6 +651,10 @@
         "title": "TopN queries",
         "sidebar_label": "TopN"
       },
+      "querying/troubleshooting": {
+        "title": "Troubleshooting query execution in Druid",
+        "sidebar_label": "Troubleshooting"
+      },
       "querying/using-caching": {
         "title": "Using query caching"
       },
@@ -534,18 +665,21 @@
         "title": "Clustered deployment"
       },
       "tutorials/docker": {
-        "title": "Docker"
+        "title": "Tutorial: Run with Docker"
       },
       "tutorials/index": {
-        "title": "Quickstart"
+        "title": "Quickstart (local)"
       },
       "tutorials/tutorial-batch-hadoop": {
         "title": "Tutorial: Load batch data using Apache Hadoop",
         "sidebar_label": "Load from Apache Hadoop"
       },
+      "tutorials/tutorial-batch-native": {
+        "title": "Load data with native batch ingestion"
+      },
       "tutorials/tutorial-batch": {
         "title": "Tutorial: Loading a file",
-        "sidebar_label": "Loading files natively"
+        "sidebar_label": "Load files natively"
       },
       "tutorials/tutorial-compaction": {
         "title": "Tutorial: Compacting segments",
@@ -567,6 +701,14 @@
         "title": "Configuring Apache Druid to use Kerberized Apache Hadoop as deep storage",
         "sidebar_label": "Kerberized HDFS deep storage"
       },
+      "tutorials/tutorial-msq-convert-spec": {
+        "title": "Tutorial: Convert an ingestion spec for SQL-based ingestion",
+        "sidebar_label": "Convert ingestion spec to SQL"
+      },
+      "tutorials/tutorial-msq-extern": {
+        "title": "Tutorial: Load files with SQL-based ingestion",
+        "sidebar_label": "Load files using SQL 🆕"
+      },
       "tutorials/tutorial-query": {
         "title": "Tutorial: Querying data",
         "sidebar_label": "Querying data"
@@ -578,6 +720,10 @@
       "tutorials/tutorial-rollup": {
         "title": "Tutorial: Roll-up",
         "sidebar_label": "Roll-up"
+      },
+      "tutorials/tutorial-sketches-theta": {
+        "title": "Approximations with Theta sketches",
+        "sidebar_label": "Theta sketches"
       },
       "tutorials/tutorial-transform-spec": {
         "title": "Tutorial: Transforming input data",
@@ -602,6 +748,7 @@
       "Tutorials": "Tutorials",
       "Design": "Design",
       "Ingestion": "Ingestion",
+      "Data management": "Data management",
       "Querying": "Querying",
       "Configuration": "Configuration",
       "Operations": "Operations",

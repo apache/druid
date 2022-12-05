@@ -42,6 +42,23 @@
         margin-right: 5px;
       }
     }
+
+    .spec-detail {
+      position: relative;
+      cursor: pointer;
+
+      .full-shard-spec-icon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        color: #f5f8fa;
+        display: none;
+      }
+
+      &:hover .full-shard-spec-icon {
+        display: block;
+      }
+    }
   }
 
   &.show-segment-timeline {

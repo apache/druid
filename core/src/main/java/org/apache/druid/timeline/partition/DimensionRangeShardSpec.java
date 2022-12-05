@@ -25,12 +25,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,15 +37,10 @@ import java.util.Objects;
 /**
  * {@link ShardSpec} for partitioning based on ranges of one or more dimensions.
  */
-public class DimensionRangeShardSpec implements ShardSpec
+public class DimensionRangeShardSpec extends BaseDimensionRangeShardSpec
 {
   public static final int UNKNOWN_NUM_CORE_PARTITIONS = -1;
 
-  private final List<String> dimensions;
-  @Nullable
-  private final StringTuple start;
-  @Nullable
-  private final StringTuple end;
   private final int partitionNum;
   private final int numCorePartitions;
 
@@ -65,15 +59,13 @@ public class DimensionRangeShardSpec implements ShardSpec
       @JsonProperty("numCorePartitions") @Nullable Integer numCorePartitions // nullable for backward compatibility
   )
   {
+    super(dimensions, start, end);
     Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
     Preconditions.checkArgument(
         dimensions != null && !dimensions.isEmpty(),
         "dimensions should be non-null and non-empty"
     );
 
-    this.dimensions = dimensions;
-    this.start = start;
-    this.end = end;
     this.partitionNum = partitionNum;
     this.numCorePartitions = numCorePartitions == null ? UNKNOWN_NUM_CORE_PARTITIONS : numCorePartitions;
   }
@@ -118,43 +110,9 @@ public class DimensionRangeShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
-  {
-    return createLookup(shardSpecs);
-  }
-
-  private static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((DimensionRangeShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
-  }
-
-  @Override
   public List<String> getDomainDimensions()
   {
     return Collections.unmodifiableList(dimensions);
-  }
-
-  /**
-   * Check if a given domain of Strings is a singleton set containing the given value
-   * @param rangeSet Domain of Strings
-   * @param val Value of String
-   * @return rangeSet == {val}
-   */
-  private boolean isRangeSetSingletonWithVal(RangeSet<String> rangeSet, String val)
-  {
-    if (val == null) {
-      return false;
-    }
-    return rangeSet.asRanges().equals(
-        Collections.singleton(Range.singleton(val))
-    );
   }
 
   /**
@@ -250,16 +208,31 @@ public class DimensionRangeShardSpec implements ShardSpec
 
       // EffectiveDomain[i] = QueryDomain[i] INTERSECTION SegmentRange[i]
       RangeSet<String> effectiveDomainForDimension = queryDomainForDimension.subRangeSet(rangeTillSegmentBoundary);
+
+      // Create an iterator to use for checking if the RangeSet is empty or is a singleton. This is significantly
+      // faster than using isEmpty() and equals(), because those methods call size() internally, which iterates
+      // the entire RangeSet.
+      final Iterator<Range<String>> effectiveDomainRangeIterator = effectiveDomainForDimension.asRanges().iterator();
+
       // Prune segment because query domain is out of segment range
-      if (effectiveDomainForDimension.isEmpty()) {
+      if (!effectiveDomainRangeIterator.hasNext()) {
         return false;
       }
 
-      // EffectiveDomain is singleton and lies only on the boundaries -> consider next dimensions
+      final Range<String> firstRange = effectiveDomainRangeIterator.next();
+      final boolean effectiveDomainIsSingleRange = !effectiveDomainRangeIterator.hasNext();
+
+      // Effective domain contained only one Range.
+      // If it's a singleton and lies only on the boundaries -> consider next dimensions
       effectiveDomainIsStart = effectiveDomainIsStart
-                                && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentStart.get(i));
+                               && effectiveDomainIsSingleRange
+                               && segmentStart.get(i) != null
+                               && firstRange.equals(Range.singleton(segmentStart.get(i)));
+
       effectiveDomainIsEnd = effectiveDomainIsEnd
-                           && isRangeSetSingletonWithVal(effectiveDomainForDimension, segmentEnd.get(i));
+                             && effectiveDomainIsSingleRange
+                             && segmentEnd.get(i) != null
+                             && firstRange.equals(Range.singleton(segmentEnd.get(i)));
 
       // EffectiveDomain lies within the boundaries as well -> cannot prune based on next dimensions
       if (!effectiveDomainIsStart && !effectiveDomainIsEnd) {
@@ -277,33 +250,6 @@ public class DimensionRangeShardSpec implements ShardSpec
     } else {
       return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
     }
-  }
-
-  private boolean isInChunk(InputRow inputRow)
-  {
-    return isInChunk(dimensions, start, end, inputRow);
-  }
-
-  public static boolean isInChunk(
-      List<String> dimensions,
-      @Nullable StringTuple start,
-      @Nullable StringTuple end,
-      InputRow inputRow
-  )
-  {
-    final String[] inputDimensionValues = new String[dimensions.size()];
-    for (int i = 0; i < dimensions.size(); ++i) {
-      // Get the values of this dimension, treat multiple values as null
-      List<String> values = inputRow.getDimension(dimensions.get(i));
-      inputDimensionValues[i] = values != null && values.size() == 1 ? values.get(0) : null;
-    }
-    final StringTuple inputRowTuple = StringTuple.create(inputDimensionValues);
-
-    int inputVsStart = inputRowTuple.compareTo(start);
-    int inputVsEnd = inputRowTuple.compareTo(end);
-
-    return (inputVsStart >= 0 || start == null)
-           && (inputVsEnd < 0 || end == null);
   }
 
   @Override

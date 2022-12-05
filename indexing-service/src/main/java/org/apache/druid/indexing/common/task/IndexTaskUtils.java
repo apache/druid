@@ -114,6 +114,14 @@ public class IndexTaskUtils
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
   }
 
+  public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final AbstractTask task)
+  {
+    metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
+    metricBuilder.setDimension(DruidMetrics.TASK_TYPE, task.getType());
+    metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
+    metricBuilder.setDimension(DruidMetrics.TASK_INGESTION_MODE, ((AbstractTask) task).getIngestionMode());
+  }
+
   public static void setTaskStatusDimensions(
       final ServiceMetricEvent.Builder metricBuilder,
       final TaskStatus taskStatus

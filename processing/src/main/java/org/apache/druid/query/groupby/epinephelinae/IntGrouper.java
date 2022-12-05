@@ -26,7 +26,7 @@ import java.util.function.ToIntFunction;
 /**
  * {@link Grouper} specialized for the primitive int type
  */
-public interface IntGrouper extends Grouper<Integer>
+public interface IntGrouper extends Grouper<IntKey>
 {
   default AggregateResult aggregate(int key)
   {
@@ -42,7 +42,7 @@ public interface IntGrouper extends Grouper<Integer>
    */
   @Deprecated
   @Override
-  default AggregateResult aggregate(Integer key)
+  default AggregateResult aggregate(IntKey key)
   {
     Preconditions.checkNotNull(key);
     return aggregate(key.intValue());
@@ -55,7 +55,7 @@ public interface IntGrouper extends Grouper<Integer>
    */
   @Deprecated
   @Override
-  default AggregateResult aggregate(Integer key, int keyHash)
+  default AggregateResult aggregate(IntKey key, int keyHash)
   {
     Preconditions.checkNotNull(key);
     return aggregateKeyHash(keyHash);
@@ -64,10 +64,10 @@ public interface IntGrouper extends Grouper<Integer>
   @Override
   IntGrouperHashFunction hashFunction();
 
-  interface IntGrouperHashFunction extends ToIntFunction<Integer>
+  interface IntGrouperHashFunction extends ToIntFunction<IntKey>
   {
     @Override
-    default int applyAsInt(Integer value)
+    default int applyAsInt(IntKey value)
     {
       return apply(value.intValue());
     }

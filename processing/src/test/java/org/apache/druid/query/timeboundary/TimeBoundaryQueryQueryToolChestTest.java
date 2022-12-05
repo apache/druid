@@ -25,11 +25,14 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -287,6 +290,43 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     Assert.assertEquals(7, segments.size());
+  }
+
+  @Test(expected = UOE.class)
+  public void testResultArraySignature()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .build();
+    new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
+  }
+
+  @Test
+  public void testResultArraySignatureWithMinTime()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .bound(TimeBoundaryQuery.MIN_TIME)
+                                                .context(ImmutableMap.of(TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME, "foo"))
+                                                .build();
+    RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
+    RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();
+    expectedRowSignatureBuilder.add("foo", ColumnType.LONG);
+    Assert.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
+  }
+
+  @Test
+  public void testResultArraySignatureWithMaxTime()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .bound(TimeBoundaryQuery.MAX_TIME)
+                                                .context(ImmutableMap.of(TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME, "foo"))
+                                                .build();
+    RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
+    RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();
+    expectedRowSignatureBuilder.add("foo", ColumnType.LONG);
+    Assert.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
   }
 
   @Test

@@ -95,6 +95,10 @@ spec:
       - name: druid
         args: [ "historical" ]
         env:
+        - name: POD_NAME
+          valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
         {{- range $key, $val := .Values.historical.config }}
         - name: {{ $key }}
           value: {{ $val | quote }}
@@ -105,12 +109,12 @@ spec:
         resources:
 {{ toYaml .Values.historical.resources | indent 12 }}
         livenessProbe:
-          initialDelaySeconds: 60
+          initialDelaySeconds: {{ .Values.historical.livenessProbeInitialDelaySeconds }}
           httpGet:
             path: /status/health
             port: {{ .Values.historical.port }}
         readinessProbe:
-          initialDelaySeconds: 60
+          initialDelaySeconds: {{ .Values.historical.readinessProbeInitialDelaySeconds }}
           httpGet:
             path: /status/health
             port: {{ .Values.historical.port }}

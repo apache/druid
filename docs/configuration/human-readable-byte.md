@@ -64,15 +64,20 @@ To make it clear, the base of units are defined in Druid as below
 | G | Giga Decimal Byte | 1_000_000_000 |
 | T | Tera Decimal Byte | 1_000_000_000_000 |
 | P | Peta Decimal Byte | 1_000_000_000_000_000 |
+| Ki | Kilo Binary Byte | 1024 |
+| Mi  | Mega Binary Byte | 1024 * 1024 |
+| Gi | Giga Binary Byte | 1024 * 1024 * 1024 |
+| Ti  | Tera Binary Byte | 1024 * 1024 * 1024 * 1024 |
+| Pi  | Peta Binary Byte | 1024 * 1024 * 1024 * 1024 * 1024 |
 | KiB | Kilo Binary Byte | 1024 |
 | MiB  | Mega Binary Byte | 1024 * 1024 |
 | GiB | Giga Binary Byte | 1024 * 1024 * 1024 |
 | TiB  | Tera Binary Byte | 1024 * 1024 * 1024 * 1024 |
 | PiB  | Peta Binary Byte | 1024 * 1024 * 1024 * 1024 * 1024 |
 
-Unit is case-insensitive. `k`, `kib`, `KiB`, `kiB` are all acceptable.
+Unit is case-insensitive. `k`, `kib`, `ki`, `KiB`, `Ki`, `kiB` are all acceptable.
 
-Here are two examples
+Here are some examples
 
 ```properties
 # 1G bytes = 1_000_000_000 bytes
@@ -82,6 +87,11 @@ druid.cache.sizeInBytes=1g
 ```properties
 # 256MiB bytes = 256 * 1024 * 1024 bytes
 druid.cache.sizeInBytes=256MiB 
+```
+
+```properties
+# 256Mi = 256MiB = 256 * 1024 * 1024 bytes
+druid.cache.sizeInBytes=256Mi
 ```
 
 

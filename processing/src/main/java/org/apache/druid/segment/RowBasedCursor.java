@@ -70,6 +70,7 @@ public class RowBasedCursor<RowType> implements Cursor
             () -> rowId,
             rowAdapter,
             rowSignature,
+            false,
             false
         )
     );

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.avro.Schema;
@@ -64,6 +65,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -128,7 +130,7 @@ public class AvroStreamInputRowParserTest
                                                                   .build();
   private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1");
   private static final List<Integer> SOME_INT_ARRAY_VALUE = Arrays.asList(1, 2, 4, 8);
-  private static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
+  static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
       new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, Integer>()
       {
         @Nonnull
@@ -139,7 +141,7 @@ public class AvroStreamInputRowParserTest
         }
       }
   );
-  private static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
+  static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
       new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, CharSequence>()
       {
         @Nonnull
@@ -325,7 +327,46 @@ public class AvroStreamInputRowParserTest
           inputRow.getDimension("someStringArray")
       );
 
+      final Object someRecordArrayObj = inputRow.getRaw("someRecordArray");
+      Assert.assertNotNull(someRecordArrayObj);
+      Assert.assertTrue(someRecordArrayObj instanceof List);
+      Assert.assertEquals(1, ((List) someRecordArrayObj).size());
+      final Object recordArrayElementObj = ((List) someRecordArrayObj).get(0);
+      Assert.assertNotNull(recordArrayElementObj);
+      Assert.assertTrue(recordArrayElementObj instanceof LinkedHashMap);
+      LinkedHashMap recordArrayElement = (LinkedHashMap) recordArrayElementObj;
+      Assert.assertEquals("string in record", recordArrayElement.get("nestedString"));
     }
+
+    final Object someIntValueMapObj = inputRow.getRaw("someIntValueMap");
+    Assert.assertNotNull(someIntValueMapObj);
+    Assert.assertTrue(someIntValueMapObj instanceof LinkedHashMap);
+    LinkedHashMap someIntValueMap = (LinkedHashMap) someIntValueMapObj;
+    Assert.assertEquals(4, someIntValueMap.size());
+    Assert.assertEquals(1, someIntValueMap.get("1"));
+    Assert.assertEquals(2, someIntValueMap.get("2"));
+    Assert.assertEquals(4, someIntValueMap.get("4"));
+    Assert.assertEquals(8, someIntValueMap.get("8"));
+
+
+    final Object someStringValueMapObj = inputRow.getRaw("someStringValueMap");
+    Assert.assertNotNull(someStringValueMapObj);
+    Assert.assertTrue(someStringValueMapObj instanceof LinkedHashMap);
+    LinkedHashMap someStringValueMap = (LinkedHashMap) someStringValueMapObj;
+    Assert.assertEquals(4, someStringValueMap.size());
+    Assert.assertEquals("1", someStringValueMap.get("1"));
+    Assert.assertEquals("2", someStringValueMap.get("2"));
+    Assert.assertEquals("4", someStringValueMap.get("4"));
+    Assert.assertEquals("8", someStringValueMap.get("8"));
+
+
+    final Object someRecordObj = inputRow.getRaw("someRecord");
+    Assert.assertNotNull(someRecordObj);
+    Assert.assertTrue(someRecordObj instanceof LinkedHashMap);
+    LinkedHashMap someRecord = (LinkedHashMap) someRecordObj;
+    Assert.assertEquals(4892, someRecord.get("subInt"));
+    Assert.assertEquals(1543698L, someRecord.get("subLong"));
+
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
     Assert.assertEquals(1, inputRow.getDimension("someIntValueMap").size());
     Assert.assertEquals(
@@ -369,7 +410,7 @@ public class AvroStreamInputRowParserTest
     );
     Assert.assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
     Assert.assertEquals(
-        Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)),
+        Collections.singletonList(ImmutableMap.of("subInt", 4892, "subLong", 1543698L).toString()),
         inputRow.getDimension("someRecord")
     );
 

@@ -67,7 +67,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
   private final IndexIO indexIO;
-  private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMerger;
   private final ServiceEmitter emitter;
   private final AppenderatorConfig tuningConfig;
 
@@ -223,7 +223,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true);
+          true
+      );
     } else {
       appenderator = Appenderators.createClosedSegmentsOffline(
           schema.getDataSource(),
@@ -236,7 +237,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true);
+          true
+      );
     }
   }
 

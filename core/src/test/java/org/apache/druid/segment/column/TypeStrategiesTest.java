@@ -91,6 +91,12 @@ public class TypeStrategiesTest
       }
 
       @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
+
+      @Override
       public int write(ByteBuffer buffer, String value, int maxSizeBytes)
       {
         return 1;
@@ -659,6 +665,12 @@ public class TypeStrategiesTest
     }
 
     @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
+    }
+
+    @Override
     public int write(ByteBuffer buffer, NullableLongPair value, int maxSizeBytes)
     {
       NullableTypeStrategy<Long> longTypeStrategy = ExpressionType.LONG.getNullableStrategy();
@@ -668,6 +680,12 @@ public class TypeStrategiesTest
         written = next > 0 ? written + next : next;
       }
       return written;
+    }
+
+    @Override
+    public NullableLongPair fromBytes(byte[] value)
+    {
+      return read(ByteBuffer.wrap(value));
     }
   }
 }

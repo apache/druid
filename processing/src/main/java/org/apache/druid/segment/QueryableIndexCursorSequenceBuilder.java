@@ -30,9 +30,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Offset;
@@ -50,50 +51,63 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class QueryableIndexCursorSequenceBuilder
 {
   private final QueryableIndex index;
   private final Interval interval;
   private final VirtualColumns virtualColumns;
-  @Nullable
-  private final ImmutableBitmap filterBitmap;
+  private final Filter filter;
+  private final QueryMetrics<? extends Query> metrics;
   private final long minDataTimestamp;
   private final long maxDataTimestamp;
   private final boolean descending;
-  @Nullable
-  private final Filter postFilter;
-  @Nullable
-  private final ColumnSelectorBitmapIndexSelector bitmapIndexSelector;
 
   public QueryableIndexCursorSequenceBuilder(
       QueryableIndex index,
       Interval interval,
       VirtualColumns virtualColumns,
-      @Nullable ImmutableBitmap filterBitmap,
+      @Nullable Filter filter,
+      @Nullable QueryMetrics<? extends Query> metrics,
       long minDataTimestamp,
       long maxDataTimestamp,
-      boolean descending,
-      @Nullable Filter postFilter,
-      @Nullable ColumnSelectorBitmapIndexSelector bitmapIndexSelector
+      boolean descending
   )
   {
     this.index = index;
     this.interval = interval;
     this.virtualColumns = virtualColumns;
-    this.filterBitmap = filterBitmap;
+    this.filter = filter;
+    this.metrics = metrics;
     this.minDataTimestamp = minDataTimestamp;
     this.maxDataTimestamp = maxDataTimestamp;
     this.descending = descending;
-    this.postFilter = postFilter;
-    this.bitmapIndexSelector = bitmapIndexSelector;
   }
 
   public Sequence<Cursor> build(final Granularity gran)
   {
+    final Closer closer = Closer.create();
+
+    // Column caches shared amongst all cursors in this sequence.
+    final ColumnCache columnCache = new ColumnCache(index, closer);
+
     final Offset baseOffset;
+
+    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
+        index.getBitmapFactoryForDimensions(),
+        virtualColumns,
+        columnCache
+    );
+
+    final FilterAnalysis filterAnalysis = FilterAnalysis.analyzeFilter(
+        filter,
+        bitmapIndexSelector,
+        metrics,
+        index.getNumRows()
+    );
+
+    final ImmutableBitmap filterBitmap = filterAnalysis.getPreFilterBitmap();
+    final Filter postFilter = filterAnalysis.getPostFilter();
 
     if (filterBitmap == null) {
       baseOffset = descending
@@ -103,13 +117,7 @@ public class QueryableIndexCursorSequenceBuilder
       baseOffset = BitmapOffset.of(filterBitmap, descending, index.getNumRows());
     }
 
-    // Column caches shared amongst all cursors in this sequence.
-    final Map<String, BaseColumn> columnCache = new HashMap<>();
-
-    final NumericColumn timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
-
-    final Closer closer = Closer.create();
-    closer.register(timestamps);
+    final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
 
     Iterable<Interval> iterable = gran.getIterable(interval);
     if (descending) {
@@ -161,10 +169,8 @@ public class QueryableIndexCursorSequenceBuilder
 
                 final Offset baseCursorOffset = offset.clone();
                 final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-                    index,
                     virtualColumns,
                     descending,
-                    closer,
                     baseCursorOffset.getBaseReadableOffset(),
                     columnCache
                 );
@@ -195,8 +201,25 @@ public class QueryableIndexCursorSequenceBuilder
     // Sanity check - matches QueryableIndexStorageAdapter.canVectorize
     Preconditions.checkState(!descending, "!descending");
 
-    final Map<String, BaseColumn> columnCache = new HashMap<>();
     final Closer closer = Closer.create();
+    final ColumnCache columnCache = new ColumnCache(index, closer);
+
+    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
+        index.getBitmapFactoryForDimensions(),
+        virtualColumns,
+        columnCache
+    );
+
+    final FilterAnalysis filterAnalysis = FilterAnalysis.analyzeFilter(
+        filter,
+        bitmapIndexSelector,
+        metrics,
+        index.getNumRows()
+    );
+
+    final ImmutableBitmap filterBitmap = filterAnalysis.getPreFilterBitmap();
+    final Filter postFilter = filterAnalysis.getPostFilter();
+
 
     NumericColumn timestamps = null;
 
@@ -204,8 +227,7 @@ public class QueryableIndexCursorSequenceBuilder
     final int endOffset;
 
     if (interval.getStartMillis() > minDataTimestamp) {
-      timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
-      closer.register(timestamps);
+      timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
 
       startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
     } else {
@@ -214,8 +236,7 @@ public class QueryableIndexCursorSequenceBuilder
 
     if (interval.getEndMillis() <= maxDataTimestamp) {
       if (timestamps == null) {
-        timestamps = (NumericColumn) index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn();
-        closer.register(timestamps);
+        timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
       }
 
       endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
@@ -231,8 +252,7 @@ public class QueryableIndexCursorSequenceBuilder
     // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
     final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
         columnCache,
-        baseOffset,
-        closer
+        baseOffset
     );
     if (postFilter == null) {
       return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
@@ -244,33 +264,22 @@ public class QueryableIndexCursorSequenceBuilder
       );
 
       // Now create the cursor and column selector that will be returned to the caller.
-      //
-      // There is an inefficiency with how we do things here: this cursor (the one that will be provided to the
-      // caller) does share a columnCache with "baseColumnSelectorFactory", but it *doesn't* share vector data. This
-      // means that if the caller wants to read from a column that is also used for filtering, the underlying column
-      // object will get hit twice for some of the values (anything that matched the filter). This is probably most
-      // noticeable if it causes thrashing of decompression buffers due to out-of-order reads. I haven't observed
-      // this directly but it seems possible in principle.
-      // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
       final VectorColumnSelectorFactory filteredColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
           columnCache,
-          filteredOffset,
-          closer
+          filteredOffset
       );
       return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize, closer);
     }
   }
 
   VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-      Map<String, BaseColumn> columnCache,
-      VectorOffset baseOffset,
-      Closer closer
+      ColumnCache columnCache,
+      VectorOffset baseOffset
   )
   {
     return new QueryableIndexVectorColumnSelectorFactory(
         index,
         baseOffset,
-        closer,
         columnCache,
         virtualColumns
     );
@@ -280,11 +289,10 @@ public class QueryableIndexCursorSequenceBuilder
    * Search the time column using binary search. Benchmarks on various other approaches (linear search, binary
    * search that switches to linear at various closeness thresholds) indicated that a pure binary search worked best.
    *
-   * @param timeColumn          the column
-   * @param timestamp           the timestamp to search for
-   * @param startIndex          first index to search, inclusive
-   * @param endIndex            last index to search, exclusive
-   *
+   * @param timeColumn the column
+   * @param timestamp  the timestamp to search for
+   * @param startIndex first index to search, inclusive
+   * @param endIndex   last index to search, exclusive
    * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
   @VisibleForTesting

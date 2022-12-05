@@ -29,9 +29,11 @@ import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -146,6 +148,40 @@ public final class CollectionUtils
   public static boolean isNullOrEmpty(@Nullable Collection<?> list)
   {
     return list == null || list.isEmpty();
+  }
+
+  /**
+   * Subtract one set from another: {@code C = A - B}.
+   */
+  public static <T> Set<T> subtract(Set<T> left, Set<T> right)
+  {
+    Set<T> result = new HashSet<>(left);
+    result.removeAll(right);
+    return result;
+  }
+
+  /**
+   * Intersection of two sets: {@code C = A ∩ B}.
+   */
+  public static <T> Set<T> intersect(Set<T> left, Set<T> right)
+  {
+    Set<T> result = new HashSet<>();
+    for (T key : left) {
+      if (right.contains(key)) {
+        result.add(key);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Intersection of two sets: {@code C = A ∪ B}.
+   */
+  public static <T> Set<T> union(Set<T> left, Set<T> right)
+  {
+    Set<T> result = new HashSet<>(left);
+    result.addAll(right);
+    return result;
   }
 
   private CollectionUtils()

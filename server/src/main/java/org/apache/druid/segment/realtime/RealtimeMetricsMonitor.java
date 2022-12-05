@@ -113,7 +113,17 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previous.mergeCpuTime()));
       emitter.emit(builder.build("ingest/handoff/count", metrics.handOffCount() - previous.handOffCount()));
       emitter.emit(builder.build("ingest/sink/count", metrics.sinkCount()));
-      emitter.emit(builder.build("ingest/events/messageGap", metrics.messageGap()));
+
+      long messageGap = metrics.messageGap();
+      if (messageGap >= 0) {
+        emitter.emit(builder.build("ingest/events/messageGap", messageGap));
+      }
+
+      long maxSegmentHandoffTime = metrics.maxSegmentHandoffTime();
+      if (maxSegmentHandoffTime >= 0) {
+        emitter.emit(builder.build("ingest/handoff/time", maxSegmentHandoffTime));
+      }
+
       previousValues.put(fireDepartment, metrics);
     }
 

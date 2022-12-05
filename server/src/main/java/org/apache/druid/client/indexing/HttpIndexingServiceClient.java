@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
@@ -103,10 +104,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments), dropExisting),
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity), dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
@@ -207,6 +209,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
             response.getStatus(),
             response.getContent()
         );
+
       }
       final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
           response.getContent(),
@@ -315,27 +318,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
-  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
-  {
-    try {
-      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskIds))
-      );
-
-      return jsonMapper.readValue(
-          responseHolder.getContent(),
-          new TypeReference<Map<String, TaskStatus>>()
-          {
-          }
-      );
-    }
-    catch (IOException e) {
       throw new RuntimeException(e);
     }
   }

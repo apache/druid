@@ -97,8 +97,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Before
   public void setUp()
   {
-    EasyMock.expect(plannerConfig.isMetadataSegmentCacheEnable()).andStubReturn(false);
-    EasyMock.expect(plannerConfig.getMetadataSegmentPollPeriod()).andStubReturn(6000L);
     EasyMock.replay(plannerConfig);
     target = new DruidCalciteSchemaModule();
     injector = Guice.createInjector(

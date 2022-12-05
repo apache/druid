@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
@@ -103,7 +104,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   NewestSegmentFirstIterator(
       ObjectMapper objectMapper,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, SegmentTimeline> dataSources,
       Map<String, List<Interval>> skipIntervals
   )
   {
@@ -111,7 +112,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     this.compactionConfigs = compactionConfigs;
     this.timelineIterators = Maps.newHashMapWithExpectedSize(dataSources.size());
 
-    dataSources.forEach((String dataSource, VersionedIntervalTimeline<String, DataSegment> timeline) -> {
+    dataSources.forEach((String dataSource, SegmentTimeline timeline) -> {
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
@@ -121,13 +122,18 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
           // Create a new timeline to hold segments in the new configured segment granularity
-          VersionedIntervalTimeline<String, DataSegment> timelineWithConfiguredSegmentGranularity = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+          SegmentTimeline timelineWithConfiguredSegmentGranularity = new SegmentTimeline();
           Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           for (DataSegment segment : segments) {
             // Convert original segmentGranularity to new granularities bucket by configuredSegmentGranularity
             // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
             // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
             // of 2020-01/2020-02 and 2020-02/2020-03.
+            if (Intervals.ETERNITY.equals(segment.getInterval())) {
+              // This is to prevent the coordinator from crashing as raised in https://github.com/apache/druid/issues/13208
+              log.warn("Cannot compact datasource[%s] with ALL granularity", dataSource);
+              return;
+            }
             for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
               intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
             }
@@ -162,7 +168,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           timeline = timelineWithConfiguredSegmentGranularity;
         }
         final List<Interval> searchIntervals =
-            findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
+            findInitialSearchInterval(dataSource, timeline, config.getSkipOffsetFromLatest(), configuredSegmentGranularity, skipIntervals.get(dataSource));
         if (!searchIntervals.isEmpty()) {
           timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals, originalTimeline));
         }
@@ -338,7 +344,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   {
     Preconditions.checkState(!candidates.isEmpty(), "Empty candidates");
     final ClientCompactionTaskQueryTuningConfig tuningConfig =
-        ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment());
+        ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), null);
     final PartitionsSpec partitionsSpecFromConfig = findPartitionsSpecFromConfig(tuningConfig);
     final CompactionState lastCompactionState = candidates.segments.get(0).getLastCompactionState();
     if (lastCompactionState == null) {
@@ -595,7 +601,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    *
    * @return found interval to search or null if it's not found
    */
-  private static List<Interval> findInitialSearchInterval(
+  private List<Interval> findInitialSearchInterval(
+      String dataSourceName,
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset,
       Granularity configuredSegmentGranularity,
@@ -614,11 +621,21 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         skipIntervals
     );
 
+    // Calcuate stats of all skipped segments
+    for (Interval skipInterval : fullSkipIntervals) {
+      final List<DataSegment> segments = new ArrayList<>(timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE));
+      collectSegmentStatistics(skippedSegments, dataSourceName, new SegmentsToCompact(segments));
+    }
+
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
     final List<Interval> filteredInterval = filterSkipIntervals(totalInterval, fullSkipIntervals);
     final List<Interval> searchIntervals = new ArrayList<>();
 
     for (Interval lookupInterval : filteredInterval) {
+      if (Intervals.ETERNITY.equals(lookupInterval)) {
+        log.warn("Cannot compact datasource[%s] since interval is ETERNITY.", dataSourceName);
+        return Collections.emptyList();
+      }
       final List<DataSegment> segments = timeline
           .findNonOvershadowedObjectsInInterval(lookupInterval, Partitions.ONLY_COMPLETE)
           .stream()

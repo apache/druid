@@ -68,17 +68,21 @@ public interface TypeStrategy<T> extends Comparator<T>
    */
   int estimateSizeBytes(T value);
 
-
   /**
    * Read a non-null value from the {@link ByteBuffer} at the current {@link ByteBuffer#position()}. This will move
    * the underlying position by the size of the value read.
    *
-   * The contract of this method is that any value returned from this method MUST be completely detached from the
-   * underlying {@link ByteBuffer}, since it might outlive the memory location being allocated to hold the object.
-   * In other words, if an object is memory mapped, it must be copied on heap, or relocated to another memory location
-   * that is owned by the caller with {@link #write}.
+   * The value returned from this method may retain a reference to the provided {@link ByteBuffer}. If it does, then
+   * {@link #readRetainsBufferReference()} returns true.
    */
   T read(ByteBuffer buffer);
+
+  /**
+   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
+   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
+   * is *never* retained.
+   */
+  boolean readRetainsBufferReference();
 
   /**
    * Write a non-null value to the {@link ByteBuffer} at position {@link ByteBuffer#position()}. This will move the
@@ -144,5 +148,19 @@ public interface TypeStrategy<T> extends Comparator<T>
     finally {
       buffer.position(oldPosition);
     }
+  }
+
+  /**
+   * Translate raw byte array into a value. This is primarily useful for transforming self contained values that are
+   * serialized into byte arrays, such as happens with 'COMPLEX' types which serialize to base64 strings in JSON
+   * responses.
+   *
+   * 'COMPLEX' types should implement this method to participate in the expression systems built-in function
+   * to deserialize base64 encoded values,
+   * {@link org.apache.druid.math.expr.BuiltInExprMacros.ComplexDecodeBase64ExprMacro}.
+   */
+  default T fromBytes(byte[] value)
+  {
+    throw new IllegalStateException("Not supported");
   }
 }

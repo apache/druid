@@ -39,12 +39,16 @@ import java.nio.ByteBuffer;
     @JsonSubTypes.Type(name = "floatV2", value = FloatNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "longV2", value = LongNumericColumnPartSerdeV2.class),
     @JsonSubTypes.Type(name = "doubleV2", value = DoubleNumericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "null", value = NullColumnPartSerde.class)
 })
 public interface ColumnPartSerde
 {
   @Nullable
   Serializer getSerializer();
 
+  /**
+   * Returns a Deserializer to read a column from a segment.
+   */
   Deserializer getDeserializer();
 
   interface Deserializer

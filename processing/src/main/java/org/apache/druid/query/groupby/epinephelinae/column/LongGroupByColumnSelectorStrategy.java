@@ -51,21 +51,17 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
     valuess[columnIndex] = selector.getLong();
+    return 0;
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    return selector.getLong();
-  }
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putLong(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) obj));
+    keyBuffer.putLong(keyBufferPosition, selector.getLong());
+    return 0;
   }
 
   @Override
@@ -84,14 +80,14 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    writeToKeyBuffer(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) rowObj), keyBuffer);
+    stack[dimensionIndex] = 1;
   }
 
   @Override
@@ -105,5 +101,16 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
     // rows from a long column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
+  }
+
+  public void writeToKeyBuffer(int keyBufferPosition, long value, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putLong(keyBufferPosition, value);
   }
 }

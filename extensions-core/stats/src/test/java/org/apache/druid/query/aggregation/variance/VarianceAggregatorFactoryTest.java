@@ -85,4 +85,20 @@ public class VarianceAggregatorFactoryTest extends InitializedNullHandlingTest
     VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
     Assert.assertEquals(NullHandling.defaultDoubleValue(), target.finalizeComputation(null));
   }
+
+  @Test
+  public void testWithName()
+  {
+    VarianceAggregatorFactory varianceAggregatorFactory = new VarianceAggregatorFactory("variance", "col");
+    Assert.assertEquals(varianceAggregatorFactory, varianceAggregatorFactory.withName("variance"));
+    Assert.assertEquals("newTest", varianceAggregatorFactory.withName("newTest").getName());
+
+    VarianceFoldingAggregatorFactory varianceFoldingAggregatorFactory = new VarianceFoldingAggregatorFactory(
+        "varianceFold",
+        "col",
+        null
+    );
+    Assert.assertEquals(varianceFoldingAggregatorFactory, varianceFoldingAggregatorFactory.withName("varianceFold"));
+    Assert.assertEquals("newTest", varianceFoldingAggregatorFactory.withName("newTest").getName());
+  }
 }

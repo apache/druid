@@ -20,7 +20,6 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
@@ -100,56 +99,45 @@ public class AzureTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     return streamTaskFile(taskid, offset, getTaskLogKey(taskid));
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     return streamTaskFile(taskid, 0, getTaskReportsKey(taskid));
   }
 
-  private Optional<ByteSource> streamTaskFile(final String taskid, final long offset, String taskKey) throws IOException
+  private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
+      throws IOException
   {
     final String container = config.getContainer();
-
     try {
       if (!azureStorage.getBlobExists(container, taskKey)) {
         return Optional.absent();
       }
+      try {
+        final long start;
+        final long length = azureStorage.getBlobLength(container, taskKey);
 
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                final long start;
-                final long length = azureStorage.getBlobLength(container, taskKey);
+        if (offset > 0 && offset < length) {
+          start = offset;
+        } else if (offset < 0 && (-1 * offset) < length) {
+          start = length + offset;
+        } else {
+          start = 0;
+        }
 
-                if (offset > 0 && offset < length) {
-                  start = offset;
-                } else if (offset < 0 && (-1 * offset) < length) {
-                  start = length + offset;
-                } else {
-                  start = 0;
-                }
+        InputStream stream = azureStorage.getBlobInputStream(container, taskKey);
+        stream.skip(start);
 
-                InputStream stream = azureStorage.getBlobInputStream(container, taskKey);
-                stream.skip(start);
-
-                return stream;
-
-              }
-              catch (Exception e) {
-                throw new IOException(e);
-              }
-            }
-          }
-      );
+        return Optional.of(stream);
+      }
+      catch (Exception e) {
+        throw new IOException(e);
+      }
     }
     catch (StorageException | URISyntaxException e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);

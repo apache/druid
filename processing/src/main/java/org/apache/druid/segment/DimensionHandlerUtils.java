@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -326,8 +327,19 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to long. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -354,8 +366,19 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to float", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to float. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -381,8 +404,12 @@ public final class DimensionHandlerUtils
         switch (type.getElementType().getType()) {
           case STRING:
             return convertToComparableStringArray(obj);
-          default:
-            return convertToList(obj);
+          case LONG:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+          case FLOAT:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+          case DOUBLE:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
         }
 
       default:
@@ -391,18 +418,57 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static ComparableList convertToList(Object obj)
+  public static ComparableList convertToList(Object obj, ValueType elementType)
+  {
+    switch (elementType) {
+      case LONG:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+      case FLOAT:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+      case DOUBLE:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+    }
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableList.class.getName()
+    );
+  }
+
+
+  private static <T> ComparableList convertToListWithObjectFunction(Object obj, Function<Object, T> convertFunction)
   {
     if (obj == null) {
       return null;
     }
     if (obj instanceof List) {
-      return new ComparableList((List) obj);
+      return convertToComparableList((List) obj, convertFunction);
     }
     if (obj instanceof ComparableList) {
-      return (ComparableList) obj;
+      return convertToComparableList(((ComparableList) obj).getDelegate(), convertFunction);
     }
-    throw new ISE("Unable to convert type %s to %s", obj.getClass().getName(), ComparableList.class.getName());
+    if (obj instanceof Object[]) {
+      final List<T> delegateList = new ArrayList<>();
+      for (Object eachObj : (Object[]) obj) {
+        delegateList.add(convertFunction.apply(eachObj));
+      }
+      return new ComparableList(delegateList);
+    }
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableList.class.getName()
+    );
+  }
+
+  @Nonnull
+  private static <T> ComparableList convertToComparableList(List obj, Function<Object, T> convertFunction)
+  {
+    final List<T> delegateList = new ArrayList<>();
+    for (Object eachObj : obj) {
+      delegateList.add(convertFunction.apply(eachObj));
+    }
+    return new ComparableList(delegateList);
   }
 
 
@@ -415,19 +481,27 @@ public final class DimensionHandlerUtils
     if (obj instanceof ComparableStringArray) {
       return (ComparableStringArray) obj;
     }
-    if (obj instanceof String[]) {
-      return ComparableStringArray.of((String[]) obj);
-    }
     // Jackson converts the serialized array into a list. Converting it back to a string array
     if (obj instanceof List) {
-      return ComparableStringArray.of((String[]) ((List) obj).toArray(new String[0]));
+      String[] delegate = new String[((List) obj).size()];
+      for (int i = 0; i < delegate.length; i++) {
+        delegate[i] = convertObjectToString(((List) obj).get(i));
+      }
+      return ComparableStringArray.of(delegate);
     }
-    Objects[] objects = (Objects[]) obj;
-    String[] delegate = new String[objects.length];
-    for (int i = 0; i < objects.length; i++) {
-      delegate[i] = convertObjectToString(objects[i]);
+    if (obj instanceof Object[]) {
+      Object[] objects = (Object[]) obj;
+      String[] delegate = new String[objects.length];
+      for (int i = 0; i < objects.length; i++) {
+        delegate[i] = convertObjectToString(objects[i]);
+      }
+      return ComparableStringArray.of(delegate);
     }
-    return ComparableStringArray.of(delegate);
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableStringArray.class.getName()
+    );
   }
 
   public static int compareObjectsAsType(
@@ -485,8 +559,19 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to double", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as double. A double column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to double. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 

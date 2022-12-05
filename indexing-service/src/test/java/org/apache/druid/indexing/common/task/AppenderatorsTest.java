@@ -183,7 +183,7 @@ public class AppenderatorsTest
           objectMapper,
           () -> 0
       );
-      IndexMerger indexMerger = new IndexMergerV9(
+      IndexMergerV9 indexMerger = new IndexMergerV9(
           objectMapper,
           indexIO,
           OffHeapMemorySegmentWriteOutMediumFactory.instance()
@@ -246,7 +246,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -261,7 +261,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
 
           break;
@@ -277,7 +277,7 @@ public class AppenderatorsTest
               indexMerger,
               rowIngestionMeters,
               new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-              true
+              false
           );
           break;
         default:

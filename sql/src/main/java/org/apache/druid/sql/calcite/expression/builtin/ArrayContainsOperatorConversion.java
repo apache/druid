@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
@@ -104,7 +105,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
         // Evaluate the expression to get out the array elements.
         // We can safely pass a noop ObjectBinding if the expression is literal.
         ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
-        String[] arrayElements = exprEval.asStringArray();
+        Object[] arrayElements = exprEval.asArray();
         if (arrayElements == null || arrayElements.length == 0) {
           // If arrayElements is empty which means rightExpr is an empty array,
           // it is technically more correct to return a TrueDimFiler here.
@@ -112,11 +113,11 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           // to create an empty array with no argument, we just return null.
           return null;
         } else if (arrayElements.length == 1) {
-          return newSelectorDimFilter(leftExpr.getSimpleExtraction(), arrayElements[0]);
+          return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
           final List<DimFilter> selectFilters = Arrays
               .stream(arrayElements)
-              .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), val))
+              .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val)))
               .collect(Collectors.toList());
           return new AndDimFilter(selectFilters);
         }

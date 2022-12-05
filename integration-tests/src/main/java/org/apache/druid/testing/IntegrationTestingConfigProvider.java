@@ -30,4 +30,5 @@ import com.google.inject.Provider;
 })
 public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
 {
+  String PROPERTY_BASE = "druid.test.config";
 }

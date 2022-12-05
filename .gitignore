@@ -13,7 +13,7 @@ target
 .settings/
 .vscode
 *.log
-*.DS_Store
+.DS_Store
 _site
 dependency-reduced-pom.xml
 LICENSE.BINARY
@@ -21,7 +21,9 @@ NOTICE.BINARY
 README.BINARY
 README
 *.lock
-**/.pmd
-**/.pmdruleset.xml
+.pmd
+.pmdruleset.xml
 .java-version
 integration-tests/gen-scripts/
+/bin/
+*.hprof

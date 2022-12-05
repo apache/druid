@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.RE;
@@ -77,9 +78,7 @@ public class ParseExceptionHandler
       rowIngestionMeters.incrementUnparseable();
     }
 
-    if (logParseExceptions) {
-      LOG.error(e, "Encountered parse exception");
-    }
+    logParseExceptionHelper(e);
 
     if (savedParseExceptionReports != null) {
       ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
@@ -102,5 +101,13 @@ public class ParseExceptionHandler
   public CircularBuffer<ParseExceptionReport> getSavedParseExceptionReports()
   {
     return savedParseExceptionReports;
+  }
+
+  @VisibleForTesting
+  public void logParseExceptionHelper(Exception e)
+  {
+    if (logParseExceptions) {
+      LOG.error(e, "Encountered parse exception");
+    }
   }
 }

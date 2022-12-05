@@ -21,6 +21,7 @@ export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 export interface QueryStateOptions<T, E extends Error = Error, I = never> {
   loading?: boolean;
   intermediate?: I;
+  intermediateError?: Error;
   error?: E;
   data?: T;
   lastData?: T;
@@ -32,6 +33,7 @@ export class QueryState<T, E extends Error = Error, I = never> {
 
   public state: QueryStateState = 'init';
   public intermediate?: I;
+  public intermediateError?: Error;
   public error?: E;
   public data?: T;
   public lastData?: T;
@@ -52,6 +54,7 @@ export class QueryState<T, E extends Error = Error, I = never> {
       } else if (opts.loading) {
         this.state = 'loading';
         this.intermediate = opts.intermediate;
+        this.intermediateError = opts.intermediateError;
       } else {
         this.state = 'init';
       }

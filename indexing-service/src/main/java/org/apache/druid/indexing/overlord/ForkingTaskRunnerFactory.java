@@ -43,6 +43,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
   private final TaskLogPusher persistentTaskLogs;
   private final DruidNode node;
   private final StartupLoggingConfig startupLoggingConfig;
+  private ForkingTaskRunner runner;
 
   @Inject
   public ForkingTaskRunnerFactory(
@@ -69,6 +70,13 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
   @Override
   public ForkingTaskRunner build()
   {
-    return new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node, startupLoggingConfig);
+    runner = new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node, startupLoggingConfig);
+    return runner;
+  }
+
+  @Override
+  public ForkingTaskRunner get()
+  {
+    return runner;
   }
 }

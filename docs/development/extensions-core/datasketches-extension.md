@@ -36,4 +36,5 @@ The following modules are available:
 * [Theta sketch](datasketches-theta.md) - approximate distinct counting with set operations (union, intersection and set difference).
 * [Tuple sketch](datasketches-tuple.md) - extension of Theta sketch to support values associated with distinct keys (arrays of numeric values in this specialized implementation).
 * [Quantiles sketch](datasketches-quantiles.md) - approximate distribution of comparable values to obtain ranks, quantiles and histograms. This is a specialized implementation for numeric values.
+* [KLL Quantiles sketch](datasketches-kll.md) - approximate distribution of comparable values to obtain ranks, quantiles and histograms. This is a specialized implementation for numeric values. This is a more advanced algorithm compared to the classic quantiles above, sketches are more compact for the same accuracy, or more accurate for the same size.
 * [HLL sketch](datasketches-hll.md) - approximate distinct counting using very compact HLL sketch.

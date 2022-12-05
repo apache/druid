@@ -62,7 +62,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public IncrementalIndexAdapterTest(String indexType) throws JsonProcessingException
   {
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
-        .setSimpleTestingIndexSchema("rollup".equals(args[0]), new CountAggregatorFactory("count"))
+        .setSimpleTestingIndexSchema("rollup".equals(args[0]), null, new CountAggregatorFactory("count"))
         .setMaxRowCount(1_000_000)
         .build()
     ));

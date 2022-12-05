@@ -230,7 +230,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -298,7 +299,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -402,7 +404,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorageMock,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -544,7 +547,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -719,7 +723,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -916,7 +921,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1405,7 +1411,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1517,7 +1524,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1625,7 +1633,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorage,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     );
 
     taskRunner.start();
@@ -1896,7 +1905,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override

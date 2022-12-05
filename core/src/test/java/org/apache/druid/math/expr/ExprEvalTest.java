@@ -20,6 +20,8 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,6 +37,7 @@ import org.junit.rules.ExpectedException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ExprEvalTest extends InitializedNullHandlingTest
 {
@@ -131,6 +134,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public void testLongArraySerde()
   {
     assertExpr(0, new Long[]{1L, 2L, 3L});
+    assertExpr(0, new long[]{1L, 2L, 3L});
     assertExpr(1234, new Long[]{1L, 2L, null, 3L});
     assertExpr(1234, new Long[]{});
   }
@@ -165,6 +169,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   public void testDoubleArraySerde()
   {
     assertExpr(0, new Double[]{1.1, 2.2, 3.3});
+    assertExpr(0, new double[]{1.1, 2.2, 3.3});
     assertExpr(1234, new Double[]{1.1, 2.2, null, 3.3});
     assertExpr(1234, new Double[]{});
   }
@@ -327,6 +332,70 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
+    List<List<String>> nestedLists = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of("d", "e", "f")
+    );
+    coerced = ExprEval.coerceListToArray(nestedLists, false);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY), coerced.lhs);
+    Assert.assertArrayEquals(
+        new Object[]{new Object[]{"a", "b", "c"}, new Object[]{"d", "e", "f"}},
+        coerced.rhs
+    );
+
+    Map<String, Object> unknown1 = ImmutableMap.of("x", 1L, "y", 2L);
+    Map<String, Object> unknown2 = ImmutableMap.of("x", 4L, "y", 5L);
+    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(unknown1, unknown2);
+    coerced = ExprEval.coerceListToArray(listUnknownComplex, false);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX), coerced.lhs);
+    Assert.assertArrayEquals(
+        new Object[]{unknown1, unknown2},
+        coerced.rhs
+    );
+
+
+    Map<String, Object> unknown3 = ImmutableMap.of("x", 5L, "y", 7L);
+    Map<String, Object> unknown4 = ImmutableMap.of("x", 6L, "y", 8L);
+
+    List<List<Map<String, Object>>> nestedListsComplex = ImmutableList.of(
+        ImmutableList.of(unknown1, unknown2),
+        ImmutableList.of(unknown3, unknown4)
+    );
+    coerced = ExprEval.coerceListToArray(nestedListsComplex, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{unknown1, unknown2},
+            new Object[]{unknown3, unknown4}
+        },
+        coerced.rhs
+    );
+
+    List<List<Object>> mixed = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of("a", 2L, 3.0)
+    );
+    coerced = ExprEval.coerceListToArray(mixed, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a", "b", "c"},
+            new Object[]{"1", "2", "3"},
+            new Object[]{"3.0", "4.0", "5.0"},
+            new Object[]{"a", "2", "3.0"}
+        },
+        coerced.rhs
+    );
   }
 
   @Test
@@ -334,12 +403,12 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   {
     ExprEval someStringArray = ExprEval.ofStringArray(new String[]{"1", "2", "foo", null, "3.3"});
     Assert.assertArrayEquals(
-        new Long[]{1L, 2L, null, null, 3L},
-        someStringArray.asLongArray()
+        new Object[]{1L, 2L, NullHandling.defaultLongValue(), NullHandling.defaultLongValue(), 3L},
+        someStringArray.castTo(ExpressionType.LONG_ARRAY).asArray()
     );
     Assert.assertArrayEquals(
-        new Double[]{1.0, 2.0, null, null, 3.3},
-        someStringArray.asDoubleArray()
+        new Object[]{1.0, 2.0, NullHandling.defaultDoubleValue(), NullHandling.defaultDoubleValue(), 3.3},
+        someStringArray.castTo(ExpressionType.DOUBLE_ARRAY).asArray()
     );
   }
 
@@ -368,13 +437,27 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     ExprEval.serialize(buffer, position, expected.type(), expected, maxSizeBytes);
     if (expected.type().isArray()) {
       Assert.assertArrayEquals(
+          "deserialized value with buffer references allowed",
           expected.asArray(),
-          ExprEval.deserialize(buffer, position, expected.type()).asArray()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).asArray()
+      );
+
+      Assert.assertArrayEquals(
+          "deserialized value with buffer references not allowed",
+          expected.asArray(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).asArray()
       );
     } else {
       Assert.assertEquals(
+          "deserialized value with buffer references allowed",
           expected.value(),
-          ExprEval.deserialize(buffer, position, expected.type()).value()
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), true).value()
+      );
+
+      Assert.assertEquals(
+          "deserialized value with buffer references not allowed",
+          expected.value(),
+          ExprEval.deserialize(buffer, position, MAX_SIZE_BYTES, expected.type(), false).value()
       );
     }
   }

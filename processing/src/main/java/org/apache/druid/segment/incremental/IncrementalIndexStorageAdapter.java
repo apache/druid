@@ -149,7 +149,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public int getDimensionCardinality(String dimension)
   {
     if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return Integer.MAX_VALUE;
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
     }
 
     IncrementalIndex.DimensionDesc desc = index.getDimension(dimension);
@@ -157,9 +157,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    DimensionIndexer indexer = desc.getIndexer();
-    int cardinality = indexer.getCardinality();
-    return cardinality != DimensionDictionarySelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
+    return desc.getIndexer().getCardinality();
   }
 
   @Override
@@ -231,8 +229,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   /**
    * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
    * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
-   * string columns as having multiple values. This method returns the actual capabilities of the underlying
-   * {@link IncrementalIndex}at the time this method is called.
+   * columns as having multiple values. This method returns the actual capabilities of the underlying
+   * {@link IncrementalIndex} at the time this method is called.
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
@@ -260,6 +258,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   {
     if (index.isEmpty()) {
       return Sequences.empty();
+    }
+
+    if (queryMetrics != null) {
+      queryMetrics.vectorized(false);
     }
 
     final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));

@@ -30,7 +30,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React, { ReactNode, useState } from 'react';
 
-import { WarningChecklist } from '../../components/warning-checklist/warning-checklist';
+import { WarningChecklist } from '../../components';
 import { AppToaster } from '../../singletons';
 
 import './async-action-dialog.scss';
@@ -47,7 +47,7 @@ export interface AsyncActionDialogProps {
   intent?: Intent;
   successText: string;
   failText: string;
-  warningChecks?: string[];
+  warningChecks?: ReactNode[];
   children?: ReactNode;
 }
 

@@ -35,6 +35,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -164,13 +165,70 @@ public class FileUtils
    *
    * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
    *
-   * @throws FileNotFoundException if the {@code file} does not exist
-   * @throws IOException           if an I/O error occurs
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
    * @see FileChannel#map(FileChannel.MapMode, long, long)
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
-    MappedByteBuffer mappedByteBuffer = com.google.common.io.Files.map(file);
+    return map(file, 0, file.length());
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param file   the file to map
+   * @param offset starting offset for the mmap
+   * @param length length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
+   *
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(File file, long offset, long length) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+         final FileChannel channel = randomAccessFile.getChannel()) {
+      final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
+      return new MappedByteBufferHandler(mappedByteBuffer);
+    }
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param randomAccessFile the file to map. The file will not be closed.
+   * @param offset           starting offset for the mmap
+   * @param length           length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code randomAccessFile}
+   *
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(
+      RandomAccessFile randomAccessFile,
+      long offset,
+      long length
+  ) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    final FileChannel channel = randomAccessFile.getChannel();
+    final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
     return new MappedByteBufferHandler(mappedByteBuffer);
   }
 

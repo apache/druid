@@ -47,7 +47,9 @@ public class DruidServerConfig
 
   @JsonProperty
   @NotNull
-  private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.password");
+  private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey",
+                                                         "druid.metadata.storage.connector.password",
+                                                         "password", "key", "token", "pwd");
 
   private SegmentLoaderConfig segmentLoaderConfig;
 

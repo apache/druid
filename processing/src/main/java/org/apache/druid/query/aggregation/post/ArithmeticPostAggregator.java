@@ -20,6 +20,8 @@
 package org.apache.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
@@ -33,6 +35,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -169,6 +172,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   }
 
   @JsonProperty("ordering")
+  @JsonInclude(Include.NON_NULL)
   public String getOrdering()
   {
     return ordering;

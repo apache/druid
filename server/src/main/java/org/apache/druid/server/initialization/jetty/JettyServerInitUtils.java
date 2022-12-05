@@ -54,11 +54,28 @@ public class JettyServerInitUtils
     return gzipHandler;
   }
 
+  /**
+   * Add any filters that were registered with {@link JettyBindings#addQosFilter}. These must be added first in
+   * the filter chain, because when a request is suspended and later resumed due to QoS constraints, its filter
+   * chain is restarted. Placing QoSFilters first in the chain avoids double-execution of other filters.
+   */
+  public static void addQosFilters(ServletContextHandler handler, Injector injector)
+  {
+    final Set<JettyBindings.QosFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<JettyBindings.QosFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
+
   public static void addExtensionFilters(ServletContextHandler handler, Injector injector)
   {
-    Set<ServletFilterHolder> extensionFilters = injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>(){}));
+    final Set<ServletFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
 
-    for (ServletFilterHolder servletFilterHolder : extensionFilters) {
+  public static void addFilters(ServletContextHandler handler, Set<? extends ServletFilterHolder> filterHolders)
+  {
+    for (ServletFilterHolder servletFilterHolder : filterHolders) {
       // Check the Filter first to guard against people who don't read the docs and return the Class even
       // when they have an instance.
       FilterHolder holder;

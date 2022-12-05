@@ -41,7 +41,24 @@ import org.joda.time.Interval;
 @PublicApi
 public interface LogicalSegment
 {
+
+  // With the addition of tombstones the broker and other places may need to be aware of
+  // them...
+  // The reason this is an ENUM and not simply boolean is that when we add awareness to the broker
+  // that tombstones should have been loaded, but they are not we might want to introduce a third value:
+  // MISSING
+  enum Status
+  {
+    READY, /* It has data and it is ready */
+    EMPTY /* It has no data */
+  }
+
   Interval getInterval();
 
   Interval getTrueInterval();
+
+  default Status getStatus()
+  {
+    return Status.READY;
+  }
 }

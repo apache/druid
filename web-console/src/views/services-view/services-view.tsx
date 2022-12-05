@@ -30,17 +30,21 @@ import {
   MoreButton,
   RefreshButton,
   TableColumnSelector,
+  TableFilterableCell,
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
-import { Api } from '../../singletons';
+import { QueryWithContext } from '../../druid-models';
+import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import { Api, AppToaster } from '../../singletons';
 import {
-  addFilter,
   Capabilities,
   CapabilitiesMode,
   deepGet,
+  filterMap,
   formatBytes,
   formatBytesCompact,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
@@ -50,8 +54,6 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 
@@ -63,7 +65,7 @@ const allColumns: string[] = [
   'Tier',
   'Host',
   'Port',
-  'Curr size',
+  'Current size',
   'Max size',
   'Usage',
   'Detail',
@@ -73,7 +75,7 @@ const allColumns: string[] = [
 const tableColumns: Record<CapabilitiesMode, string[]> = {
   'full': allColumns,
   'no-sql': allColumns,
-  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Curr size', 'Max size', 'Usage'],
+  'no-proxy': ['Service', 'Type', 'Tier', 'Host', 'Port', 'Current size', 'Max size', 'Usage'],
 };
 
 function formatQueues(
@@ -101,8 +103,7 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
-  goToQuery: (initSql: string) => void;
-  goToTask: (taskId: string) => void;
+  goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
 
@@ -117,7 +118,7 @@ export interface ServicesViewState {
   visibleColumns: LocalStorageBackedVisibility;
 }
 
-interface ServiceQueryResultRow {
+interface ServiceResultRow {
   readonly service: string;
   readonly service_type: string;
   readonly tier: string;
@@ -127,16 +128,18 @@ interface ServiceQueryResultRow {
   readonly max_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
+  loadQueueInfo?: LoadQueueInfo;
+  workerInfo?: WorkerInfo;
 }
 
-interface LoadQueueStatus {
+interface LoadQueueInfo {
   readonly segmentsToDrop: NumberLike;
   readonly segmentsToDropSize: NumberLike;
   readonly segmentsToLoad: NumberLike;
   readonly segmentsToLoadSize: NumberLike;
 }
 
-interface MiddleManagerQueryResultRow {
+interface WorkerInfo {
   readonly availabilityGroups: string[];
   readonly blacklistedUntil: string | null;
   readonly currCapacityUsed: NumberLike;
@@ -152,11 +155,6 @@ interface MiddleManagerQueryResultRow {
     readonly category: string;
   };
 }
-
-interface ServiceResultRow
-  extends ServiceQueryResultRow,
-    Partial<LoadQueueStatus>,
-    Partial<MiddleManagerQueryResultRow> {}
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
   private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
@@ -198,7 +196,7 @@ ORDER BY
   ) DESC,
   "service" DESC`;
 
-  static async getServices(): Promise<ServiceQueryResultRow[]> {
+  static async getServices(): Promise<ServiceResultRow[]> {
     const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
     const allServices = allServiceResp.data;
     return allServices.map((s: any) => {
@@ -228,7 +226,7 @@ ORDER BY
 
     this.serviceQueryManager = new QueryManager({
       processQuery: async capabilities => {
-        let services: ServiceQueryResultRow[];
+        let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
           services = await queryDruidSql({ query: ServicesView.SERVICE_SQL });
         } else if (capabilities.hasCoordinatorAccess()) {
@@ -238,50 +236,49 @@ ORDER BY
         }
 
         if (capabilities.hasCoordinatorAccess()) {
-          const loadQueueResponse = await Api.instance.get(
-            '/druid/coordinator/v1/loadqueue?simple',
-          );
-          const loadQueues: Record<string, LoadQueueStatus> = loadQueueResponse.data;
-          services = services.map(s => {
-            const loadQueueInfo = loadQueues[s.service];
-            if (loadQueueInfo) {
-              s = { ...s, ...loadQueueInfo };
-            }
-            return s;
-          });
+          try {
+            const loadQueueInfos = (
+              await Api.instance.get<Record<string, LoadQueueInfo>>(
+                '/druid/coordinator/v1/loadqueue?simple',
+              )
+            ).data;
+            services.forEach(s => {
+              s.loadQueueInfo = loadQueueInfos[s.service];
+            });
+          } catch {
+            AppToaster.show({
+              icon: IconNames.ERROR,
+              intent: Intent.DANGER,
+              message: 'There was an error getting the load queue info',
+            });
+          }
         }
 
         if (capabilities.hasOverlordAccess()) {
-          let middleManagers: MiddleManagerQueryResultRow[];
           try {
-            const middleManagerResponse = await Api.instance.get('/druid/indexer/v1/workers');
-            middleManagers = middleManagerResponse.data;
+            const workerInfos = (await Api.instance.get<WorkerInfo[]>('/druid/indexer/v1/workers'))
+              .data;
+
+            const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(
+              workerInfos,
+              m => m.worker?.host,
+            );
+
+            services.forEach(s => {
+              s.workerInfo = workerInfoLookup[s.service];
+            });
           } catch (e) {
+            // Swallow this error because it simply a reflection of a local task runner.
             if (
-              e.response &&
-              typeof e.response.data === 'object' &&
-              e.response.data.error === 'Task Runner does not support worker listing'
+              deepGet(e, 'response.data.error') !== 'Task Runner does not support worker listing'
             ) {
-              // Swallow this error because it simply a reflection of a local task runner.
-              middleManagers = [];
-            } else {
-              // Otherwise re-throw.
-              throw e;
+              AppToaster.show({
+                icon: IconNames.ERROR,
+                intent: Intent.DANGER,
+                message: 'There was an error getting the worker info',
+              });
             }
           }
-
-          const middleManagersLookup: Record<string, MiddleManagerQueryResultRow> = lookupBy(
-            middleManagers,
-            m => m.worker.host,
-          );
-
-          services = services.map(s => {
-            const middleManagerInfo = middleManagersLookup[s.service];
-            if (middleManagerInfo) {
-              s = { ...s, ...middleManagerInfo };
-            }
-            return s;
-          });
         }
 
         return services;
@@ -301,6 +298,21 @@ ORDER BY
 
   componentWillUnmount(): void {
     this.serviceQueryManager.terminate();
+  }
+
+  private renderFilterableCell(field: string) {
+    const { serviceFilter } = this.state;
+
+    return (row: { value: any }) => (
+      <TableFilterableCell
+        field={field}
+        value={row.value}
+        filters={serviceFilter}
+        onFiltersChange={filters => this.setState({ serviceFilter: filters })}
+      >
+        {row.value}
+      </TableFilterableCell>
+    );
   }
 
   renderServicesTable() {
@@ -341,6 +353,7 @@ ORDER BY
             show: visibleColumns.shown('Service'),
             accessor: 'service',
             width: 300,
+            Cell: this.renderFilterableCell('service'),
             Aggregated: () => '',
           },
           {
@@ -348,49 +361,32 @@ ORDER BY
             show: visibleColumns.shown('Type'),
             accessor: 'service_type',
             width: 150,
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({
-                      serviceFilter: addFilter(serviceFilter, 'service_type', value),
-                    });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('service_type'),
           },
           {
             Header: 'Tier',
             show: visibleColumns.shown('Tier'),
             id: 'tier',
+            width: 180,
             accessor: row => {
-              return row.tier ? row.tier : row.worker ? row.worker.category : null;
+              if (row.tier) return row.tier;
+              return deepGet(row, 'workerInfo.worker.category');
             },
-            Cell: ({ value }) => {
-              return (
-                <a
-                  onClick={() => {
-                    this.setState({ serviceFilter: addFilter(serviceFilter, 'tier', value) });
-                  }}
-                >
-                  {value}
-                </a>
-              );
-            },
+            Cell: this.renderFilterableCell('tier'),
           },
           {
             Header: 'Host',
             show: visibleColumns.shown('Host'),
             accessor: 'host',
+            width: 200,
+            Cell: this.renderFilterableCell('host'),
             Aggregated: () => '',
           },
           {
             Header: 'Port',
             show: visibleColumns.shown('Port'),
             id: 'port',
+            width: 100,
             accessor: row => {
               const ports: string[] = [];
               if (row.plaintext_port !== -1) {
@@ -401,15 +397,17 @@ ORDER BY
               }
               return ports.join(', ') || 'No port';
             },
+            Cell: this.renderFilterableCell('port'),
             Aggregated: () => '',
           },
           {
-            Header: 'Curr size',
-            show: visibleColumns.shown('Curr size'),
+            Header: 'Current size',
+            show: visibleColumns.shown('Current size'),
             id: 'curr_size',
             width: 100,
             filterable: false,
             accessor: 'curr_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -429,6 +427,7 @@ ORDER BY
             width: 100,
             filterable: false,
             accessor: 'max_size',
+            className: 'padded',
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
               const originals = row.subRows.map(r => r._original);
@@ -447,11 +446,14 @@ ORDER BY
             id: 'usage',
             width: 140,
             filterable: false,
+            className: 'padded',
             accessor: row => {
               if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
-                return row.worker
-                  ? (Number(row.currCapacityUsed) || 0) / Number(row.worker.capacity)
-                  : null;
+                const { workerInfo } = row;
+                if (!workerInfo) return 0;
+                return (
+                  (Number(workerInfo.currCapacityUsed) || 0) / Number(workerInfo.worker?.capacity)
+                );
               } else {
                 return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
               }
@@ -467,15 +469,21 @@ ORDER BY
 
                 case 'indexer':
                 case 'middle_manager': {
-                  const originalMiddleManagers: ServiceResultRow[] = row.subRows.map(
-                    r => r._original,
+                  const workerInfos: WorkerInfo[] = filterMap(
+                    row.subRows,
+                    r => r._original.workerInfo,
                   );
+
+                  if (!workerInfos.length) {
+                    return 'Could not get worker infos';
+                  }
+
                   const totalCurrCapacityUsed = sum(
-                    originalMiddleManagers,
-                    s => Number(s.currCapacityUsed) || 0,
+                    workerInfos,
+                    w => Number(w.currCapacityUsed) || 0,
                   );
                   const totalWorkerCapacity = sum(
-                    originalMiddleManagers,
+                    workerInfos,
                     s => deepGet(s, 'worker.capacity') || 0,
                   );
                   return `${totalCurrCapacityUsed} / ${totalWorkerCapacity} (total slots)`;
@@ -494,8 +502,12 @@ ORDER BY
 
                 case 'indexer':
                 case 'middle_manager': {
-                  const currCapacityUsed = deepGet(row, 'original.currCapacityUsed') || 0;
-                  const capacity = deepGet(row, 'original.worker.capacity');
+                  if (!deepGet(row, 'original.workerInfo')) {
+                    return 'Could not get capacity info';
+                  }
+                  const currCapacityUsed =
+                    deepGet(row, 'original.workerInfo.currCapacityUsed') || 0;
+                  const capacity = deepGet(row, 'original.workerInfo.worker.capacity');
                   if (typeof capacity === 'number') {
                     return `Slots used: ${currCapacityUsed} of ${capacity}`;
                   } else {
@@ -514,31 +526,60 @@ ORDER BY
             id: 'queue',
             width: 400,
             filterable: false,
+            className: 'padded',
             accessor: row => {
-              if (oneOf(row.service_type, 'middle_manager', 'indexer')) {
-                if (deepGet(row, 'worker.version') === '') return 'Disabled';
+              switch (row.service_type) {
+                case 'middle_manager':
+                case 'indexer': {
+                  if (deepGet(row, 'worker.version') === '') return 'Disabled';
+                  const { workerInfo } = row;
+                  if (!workerInfo) {
+                    return 'Could not get detail info';
+                  }
 
-                const details: string[] = [];
-                if (row.lastCompletedTaskTime) {
-                  details.push(`Last completed task: ${row.lastCompletedTaskTime}`);
+                  const details: string[] = [];
+                  if (workerInfo.lastCompletedTaskTime) {
+                    details.push(`Last completed task: ${workerInfo.lastCompletedTaskTime}`);
+                  }
+                  if (workerInfo.blacklistedUntil) {
+                    details.push(`Blacklisted until: ${workerInfo.blacklistedUntil}`);
+                  }
+                  return details.join(' ');
                 }
-                if (row.blacklistedUntil) {
-                  details.push(`Blacklisted until: ${row.blacklistedUntil}`);
+
+                case 'coordinator':
+                case 'overlord':
+                  return row.is_leader === 1 ? 'Leader' : '';
+
+                case 'historical': {
+                  const { loadQueueInfo } = row;
+                  if (!loadQueueInfo) return 0;
+                  return (
+                    (Number(loadQueueInfo.segmentsToLoad) || 0) +
+                    (Number(loadQueueInfo.segmentsToDrop) || 0)
+                  );
                 }
-                return details.join(' ');
-              } else if (oneOf(row.service_type, 'coordinator', 'overlord')) {
-                return row.is_leader === 1 ? 'Leader' : '';
-              } else {
-                return (Number(row.segmentsToLoad) || 0) + (Number(row.segmentsToDrop) || 0);
+
+                default:
+                  return 0;
               }
             },
             Cell: row => {
               if (row.aggregated) return '';
               const { service_type } = row.original;
               switch (service_type) {
+                case 'middle_manager':
+                case 'indexer':
+                case 'coordinator':
+                case 'overlord':
+                  return row.value;
+
                 case 'historical': {
+                  const { loadQueueInfo } = row.original;
+                  if (!loadQueueInfo) return 'Could not get load queue info';
+
                   const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
-                    row.original;
+                    loadQueueInfo;
                   return formatQueues(
                     segmentsToLoad,
                     segmentsToLoadSize,
@@ -547,25 +588,31 @@ ORDER BY
                   );
                 }
 
-                case 'indexer':
-                case 'middle_manager':
-                  return row.value;
-
-                case 'coordinator':
-                case 'overlord':
-                  return row.value;
-
                 default:
                   return '';
               }
             },
             Aggregated: row => {
               if (row.row._pivotVal !== 'historical') return '';
-              const originals: ServiceResultRow[] = row.subRows.map(r => r._original);
-              const segmentsToLoad = sum(originals, s => Number(s.segmentsToLoad) || 0);
-              const segmentsToLoadSize = sum(originals, s => Number(s.segmentsToLoadSize) || 0);
-              const segmentsToDrop = sum(originals, s => Number(s.segmentsToDrop) || 0);
-              const segmentsToDropSize = sum(originals, s => Number(s.segmentsToDropSize) || 0);
+              const loadQueueInfos: LoadQueueInfo[] = filterMap(
+                row.subRows,
+                r => r._original.loadQueueInfo,
+              );
+
+              if (!loadQueueInfos.length) {
+                return 'Could not get load queue infos';
+              }
+
+              const segmentsToLoad = sum(loadQueueInfos, s => Number(s.segmentsToLoad) || 0);
+              const segmentsToLoadSize = sum(
+                loadQueueInfos,
+                s => Number(s.segmentsToLoadSize) || 0,
+              );
+              const segmentsToDrop = sum(loadQueueInfos, s => Number(s.segmentsToDrop) || 0);
+              const segmentsToDropSize = sum(
+                loadQueueInfos,
+                s => Number(s.segmentsToDropSize) || 0,
+              );
               return formatQueues(
                 segmentsToLoad,
                 segmentsToLoadSize,
@@ -579,13 +626,14 @@ ORDER BY
             show: capabilities.hasOverlordAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
-            accessor: row => row.worker,
+            accessor: row => row.workerInfo,
             filterable: false,
             Cell: ({ value, aggregated }) => {
               if (aggregated) return '';
               if (!value) return null;
-              const disabled = value.version === '';
-              const workerActions = this.getWorkerActions(value.host, disabled);
+              const { worker } = value;
+              const disabled = worker.version === '';
+              const workerActions = this.getWorkerActions(worker.host, disabled);
               return <ActionCell actions={workerActions} />;
             },
             Aggregated: () => '',
@@ -682,7 +730,7 @@ ORDER BY
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            onClick={() => goToQuery(ServicesView.SERVICE_SQL)}
+            onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />
         )}
       </MoreButton>
@@ -718,7 +766,10 @@ ORDER BY
             </Button>
           </ButtonGroup>
           <RefreshButton
-            onRefresh={auto => this.serviceQueryManager.rerunLastQuery(auto)}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.serviceQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}
           />
           {this.renderBulkServicesActions()}

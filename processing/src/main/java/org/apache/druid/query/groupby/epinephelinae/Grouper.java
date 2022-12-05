@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -28,7 +26,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.ToIntFunction;
@@ -122,69 +119,11 @@ public interface Grouper<KeyType> extends Closeable
    */
   CloseableIterator<Entry<KeyType>> iterator(boolean sorted);
 
-  class Entry<T>
+  interface Entry<T>
   {
-    final T key;
-    final Object[] values;
+    T getKey();
 
-    @JsonCreator
-    public Entry(
-        @JsonProperty("k") T key,
-        @JsonProperty("v") Object[] values
-    )
-    {
-      this.key = key;
-      this.values = values;
-    }
-
-    @JsonProperty("k")
-    public T getKey()
-    {
-      return key;
-    }
-
-    @JsonProperty("v")
-    public Object[] getValues()
-    {
-      return values;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      Entry<?> entry = (Entry<?>) o;
-
-      if (!key.equals(entry.key)) {
-        return false;
-      }
-      // Probably incorrect - comparing Object[] arrays with Arrays.equals
-      return Arrays.equals(values, entry.values);
-
-    }
-
-    @Override
-    public int hashCode()
-    {
-      int result = key.hashCode();
-      result = 31 * result + Arrays.hashCode(values);
-      return result;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "Entry{" +
-             "key=" + key +
-             ", values=" + Arrays.toString(values) +
-             '}';
-    }
+    Object[] getValues();
   }
 
   interface KeySerdeFactory<T>
@@ -205,6 +144,12 @@ public interface Grouper<KeyType> extends Closeable
      * Create a new {@link KeySerde} with the given dictionary.
      */
     KeySerde<T> factorizeWithDictionary(List<String> dictionary);
+
+    /**
+     * Copies a key. Required if the key from an {@link Entry} from {@link #iterator} will be retained past the
+     * following call to next().
+     */
+    T copyKey(T key);
 
     /**
      * Return an object that knows how to compare two serialized key instances. Will be called by the
@@ -254,14 +199,18 @@ public interface Grouper<KeyType> extends Closeable
     ByteBuffer toByteBuffer(T key);
 
     /**
+     * Create a reusable key that can be passed to {@link #readFromByteBuffer}.
+     */
+    T createKey();
+
+    /**
      * Deserialize a key from a buffer. Will be called by the {@link #iterator(boolean)} method.
      *
+     * @param key      object from {@link #createKey()}
      * @param buffer   buffer containing the key
      * @param position key start position in the buffer
-     *
-     * @return key object
      */
-    T fromByteBuffer(ByteBuffer buffer, int position);
+    void readFromByteBuffer(T key, ByteBuffer buffer, int position);
 
     /**
      * Return an object that knows how to compare two serialized keys. Will be called by the
@@ -276,15 +225,15 @@ public interface Grouper<KeyType> extends Closeable
      * using the bufferComparator.
      *
      * @param aggregatorFactories Array of aggregators from a GroupByQuery
-     * @param aggregatorOffsets Offsets for each aggregator in aggregatorFactories pointing to their location
-     *                          within the grouping key + aggs buffer.
+     * @param aggregatorOffsets   Offsets for each aggregator in aggregatorFactories pointing to their location
+     *                            within the grouping key + aggs buffer.
      *
      * @return comparator for keys + aggs
      */
     BufferComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
 
     /**
-     * Reset the keySerde to its initial state. After this method is called, {@link #fromByteBuffer(ByteBuffer, int)}
+     * Reset the keySerde to its initial state. After this method is called, {@link #readFromByteBuffer}
      * and {@link #bufferComparator()} may no longer work properly on previously-serialized keys.
      */
     void reset();

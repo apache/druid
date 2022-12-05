@@ -75,6 +75,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
+import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
@@ -131,10 +132,12 @@ public class JettyServerModule extends JerseyServletModule
     Jerseys.addResource(binder, StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
-    // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none
-    // are provided by extensions.
+    // Add empty binding for Handlers so that the injector returns an empty set if none are provided by extensions.
     Multibinder.newSetBinder(binder, Handler.class);
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class);
+    Multibinder.newSetBinder(binder, JettyBindings.QosFilterHolder.class);
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+               .addBinding()
+               .to(StandardResponseHeaderFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);
   }
@@ -345,6 +348,11 @@ public class JettyServerModule extends JerseyServletModule
       }
       connector.setPort(node.getTlsPort());
       serverConnectors.add(connector);
+      if (tlsServerConfig.isReloadSslContext()) {
+        KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);
+        keyStoreScanner.setScanInterval(tlsServerConfig.getReloadSslContextSeconds());
+        server.addBean(keyStoreScanner);
+      }
     } else {
       sslContextFactory = null;
     }

@@ -37,6 +37,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Locale;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -60,7 +61,7 @@ public class MySQLConnector extends SQLMetadataConnector
   )
   {
     super(config, dbTables);
-    log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
+    log.info("Loading MySQL metadata connector driver %s", driverConfig.getDriverClassName());
     tryLoadDriverClass(driverConfig.getDriverClassName(), true);
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
@@ -178,6 +179,12 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     String databaseCharset = handle
@@ -254,7 +261,7 @@ public class MySQLConnector extends SQLMetadataConnector
       if (failIfNotFound) {
         throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                          + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                         + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "'mysql-connector-java-5.1.49.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                          + "https://druid.apache.org/downloads for more details.",
                       className
         );

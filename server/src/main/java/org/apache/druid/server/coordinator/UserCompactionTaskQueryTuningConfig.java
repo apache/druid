@@ -26,6 +26,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Duration;
 
@@ -36,6 +37,7 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
   @JsonCreator
   public UserCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
@@ -51,11 +53,13 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
-      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     super(
         null,
+        appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
@@ -72,7 +76,8 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
         chatHandlerTimeout,
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
-        totalNumMergeTasks
+        totalNumMergeTasks,
+        maxColumnsToMerge
     );
   }
 

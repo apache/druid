@@ -60,6 +60,16 @@ public class AllowedRegexErrorResponseTransformStrategyTest
   }
 
   @Test
+  public void testGetErrorMessageTransformFunctionWithNullMessage()
+  {
+    AllowedRegexErrorResponseTransformStrategy allowedRegex = new AllowedRegexErrorResponseTransformStrategy(
+        ImmutableList.of("acbd", "qwer")
+    );
+    String result = allowedRegex.getErrorMessageTransformFunction().apply(null);
+    Assert.assertNull(result);
+  }
+
+  @Test
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(AllowedRegexErrorResponseTransformStrategy.class)

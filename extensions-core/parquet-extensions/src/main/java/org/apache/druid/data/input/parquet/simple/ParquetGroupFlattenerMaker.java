@@ -31,7 +31,6 @@ import org.apache.parquet.schema.Type;
 import javax.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -89,6 +88,16 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   }
 
   @Override
+  public Function<Group, Object> makeJsonTreeExtractor(List<String> nodes)
+  {
+    if (nodes.size() == 1) {
+      return (Group group) -> getRootField(group, nodes.get(0));
+    }
+
+    throw new UnsupportedOperationException("Parque does not support nested tree extraction");
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return parquetJsonProvider;
@@ -101,24 +110,19 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   }
 
   /**
-   * After json conversion, wrapped list items can still need unwrapped. See
-   * {@link ParquetGroupConverter#isWrappedListPrimitive(Object)} and
-   * {@link ParquetGroupConverter#unwrapListPrimitive(Object)} for more details.
-   *
-   * @param o
-   *
-   * @return
+   * {@link ParquetGroupConverter} lazily/non-recursively translates {@link Group} into plain java objects, which means
+   * garbage that downstream druid cannot understand can be left behind in list and map types, so we deal with it here.
    */
   private Object finalizeConversion(Object o)
   {
     // conversion can leave 'wrapped' list primitives
-    if (ParquetGroupConverter.isWrappedListPrimitive(o)) {
-      return converter.unwrapListPrimitive(o);
-    } else if (o instanceof List) {
-      List<Object> asList = ((List<?>) o).stream().filter(Objects::nonNull).collect(Collectors.toList());
-      if (asList.stream().allMatch(ParquetGroupConverter::isWrappedListPrimitive)) {
-        return asList.stream().map(Group.class::cast).map(converter::unwrapListPrimitive).collect(Collectors.toList());
-      }
+    if (o instanceof List) {
+      return ((List<?>) o).stream()
+                          .map(converter::unwrapListElement)
+                          .map(this::toPlainJavaType)
+                          .collect(Collectors.toList());
+    } else if (o instanceof Group) {
+      return toPlainJavaType(o);
     }
     return o;
   }

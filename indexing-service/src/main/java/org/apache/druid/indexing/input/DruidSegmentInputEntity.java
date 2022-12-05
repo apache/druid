@@ -91,4 +91,10 @@ public class DruidSegmentInputEntity implements InputEntity
       }
     };
   }
+
+  public boolean isFromTombstone()
+  {
+    return segment.isTombstone();
+  }
+
 }

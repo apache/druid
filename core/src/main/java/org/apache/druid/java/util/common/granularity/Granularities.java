@@ -33,6 +33,7 @@ public class Granularities
   public static final Granularity THIRTY_MINUTE = GranularityType.THIRTY_MINUTE.getDefaultGranularity();
   public static final Granularity HOUR = GranularityType.HOUR.getDefaultGranularity();
   public static final Granularity SIX_HOUR = GranularityType.SIX_HOUR.getDefaultGranularity();
+  public static final Granularity EIGHT_HOUR = GranularityType.EIGHT_HOUR.getDefaultGranularity();
   public static final Granularity DAY = GranularityType.DAY.getDefaultGranularity();
   public static final Granularity WEEK = GranularityType.WEEK.getDefaultGranularity();
   public static final Granularity MONTH = GranularityType.MONTH.getDefaultGranularity();

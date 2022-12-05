@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
@@ -29,10 +30,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AvroFlattenerMakerTest
 {
@@ -214,8 +217,13 @@ public class AvroFlattenerMakerTest
         record.getSomeEnum().toString(),
         flattener.getRootField(record, "someEnum")
     );
+    Map<String, Object> map = new HashMap<>();
+    record.getSomeRecord()
+          .getSchema()
+          .getFields()
+          .forEach(field -> map.put(field.name(), record.getSomeRecord().get(field.name())));
     Assert.assertEquals(
-        record.getSomeRecord(),
+        map,
         flattener.getRootField(record, "someRecord")
     );
     Assert.assertEquals(
@@ -230,8 +238,17 @@ public class AvroFlattenerMakerTest
         record.getSomeFloat(),
         flattener.getRootField(record, "someFloat")
     );
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (GenericRecord genericRecord : record.getSomeRecordArray()) {
+      Map<String, Object> map1 = new HashMap<>();
+      genericRecord
+          .getSchema()
+          .getFields()
+          .forEach(field -> map1.put(field.name(), genericRecord.get(field.name())));
+      list.add(map1);
+    }
     Assert.assertEquals(
-        record.getSomeRecordArray(),
+        list,
         flattener.getRootField(record, "someRecordArray")
     );
   }
@@ -328,8 +345,13 @@ public class AvroFlattenerMakerTest
         record.getSomeEnum().toString(),
         flattener.makeJsonPathExtractor("$.someEnum").apply(record)
     );
+    Map<String, Object> map = new HashMap<>();
+    record.getSomeRecord()
+          .getSchema()
+          .getFields()
+          .forEach(field -> map.put(field.name(), record.getSomeRecord().get(field.name())));
     Assert.assertEquals(
-        record.getSomeRecord(),
+        map,
         flattener.makeJsonPathExtractor("$.someRecord").apply(record)
     );
     Assert.assertEquals(
@@ -344,8 +366,19 @@ public class AvroFlattenerMakerTest
         record.getSomeFloat(),
         flattener.makeJsonPathExtractor("$.someFloat").apply(record)
     );
+
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (GenericRecord genericRecord : record.getSomeRecordArray()) {
+      Map<String, Object> map1 = new HashMap<>();
+      genericRecord
+          .getSchema()
+          .getFields()
+          .forEach(field -> map1.put(field.name(), genericRecord.get(field.name())));
+      list.add(map1);
+    }
+
     Assert.assertEquals(
-        record.getSomeRecordArray(),
+        list,
         flattener.makeJsonPathExtractor("$.someRecordArray").apply(record)
     );
 
@@ -355,7 +388,7 @@ public class AvroFlattenerMakerTest
     );
 
     Assert.assertEquals(
-        record.getSomeRecordArray(),
+        list,
         flattener.makeJsonPathExtractor("$.someRecordArray[?(@.nestedString)]").apply(record)
     );
 

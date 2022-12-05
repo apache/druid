@@ -37,7 +37,7 @@ The following recommendations apply to the Druid cluster setup:
    > **WARNING!** \
    Druid administrators have the same OS permissions as the Unix user account running Druid. See [Authentication and authorization model](security-user-auth.md#authentication-and-authorization-model). If the Druid process is running under the OS root user account, then Druid administrators can read or write all files that the root account has access to, including sensitive files such as `/etc/passwd`.
 * Enable authentication to the Druid cluster for production environments and other environments that can be accessed by untrusted networks.
-* Enable authorization and do not expose the Druid Console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the Druid Console process.
+* Enable authorization and do not expose the web console without authorization enabled. If authorization is not enabled, any user that has access to the web console has the same privileges as the operating system user that runs the web console process.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow users who only need to query data to write to data sources or view state.
 * Do not provide plain-text passwords for production systems in configuration specs. For example, sensitive properties should not be in the `consumerProperties` field of `KafkaSupervisorIngestionSpec`. See [Environment variable dynamic config provider](./dynamic-config-provider.md#environment-variable-dynamic-config-provider) for more information.
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
@@ -51,7 +51,7 @@ The following recommendations apply to the network where Druid runs:
 * When possible, use firewall and other network layer filtering to only expose Druid services and ports specifically required for your use case. For example, only expose Broker ports to downstream applications that execute queries. You can limit access to a specific IP address or IP range to further tighten and enhance security.
 
 The following recommendation applies to Druid's authorization and authentication model:
-* Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the Druid Console process. Additionally, users with `WRITE` permissions can make changes to datasources and they have access to both task and supervisor update (POST) APIs which may affect ingestion.
+* Only grant `WRITE` permissions to any `DATASOURCE` to trusted users. Druid's trust model assumes those users have the same privileges as the operating system user that runs the web console process. Additionally, users with `WRITE` permissions can make changes to datasources and they have access to both task and supervisor update (POST) APIs which may affect ingestion.
 * Only grant `STATE READ`, `STATE WRITE`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
 
@@ -108,7 +108,7 @@ druid.extensions.loadList=[......., "simple-client-sslcontext"]
 # Setup client side TLS
 druid.client.https.protocol=TLSv1.2
 druid.client.https.trustStoreType=jks
-druid.client.https.trustStorePath=truststore.jks # replace with correct turstStore file
+druid.client.https.trustStorePath=truststore.jks # replace with correct trustStore file
 druid.client.https.trustStorePassword=secret123  # replace with your own password
 
 # Setup server side TLS
@@ -250,80 +250,7 @@ The following steps walk through a sample setup procedure:
 
 ## Configuring an LDAP authenticator
 
-As an alternative to using the basic metadata authenticator, you can use LDAP to authenticate users. The following steps provide an overview of the setup procedure. For more information on these settings, see [Properties for LDAP user authentication](../development/extensions-core/druid-basic-security.md#properties-for-ldap-user-authentication).
-
-1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
-   ```
-   # Druid basic security
-   druid.auth.authenticatorChain=["ldap", "MyBasicMetadataAuthenticator"]
-   ```
-
-2. Configure LDAP settings in `common.runtime.properties` as appropriate for your LDAP scheme and system. For example:
-   ```
-   druid.auth.authenticator.ldap.type=basic
-   druid.auth.authenticator.ldap.enableCacheNotifications=true
-   druid.auth.authenticator.ldap.credentialsValidator.type=ldap
-   druid.auth.authenticator.ldap.credentialsValidator.url=ldap://ad_host:389
-   druid.auth.authenticator.ldap.credentialsValidator.bindUser=ad_admin_user
-   druid.auth.authenticator.ldap.credentialsValidator.bindPassword=ad_admin_password
-   druid.auth.authenticator.ldap.credentialsValidator.baseDn=dc=example,dc=com 
-   druid.auth.authenticator.ldap.credentialsValidator.userSearch=(&(sAMAccountName=%s)(objectClass=user))
-   druid.auth.authenticator.ldap.credentialsValidator.userAttribute=sAMAccountName
-   druid.auth.authenticator.ldap.authorizerName=ldapauth
-   druid.escalator.type=basic
-   druid.escalator.internalClientUsername=ad_interal_user
-   druid.escalator.internalClientPassword=Welcome123
-   druid.escalator.authorizerName=ldapauth
-   druid.auth.authorizers=["ldapauth"]
-   druid.auth.authorizer.ldapauth.type=basic
-   druid.auth.authorizer.ldapauth.initialAdminUser=<ad_initial_admin_user>
-   druid.auth.authorizer.ldapauth.initialAdminRole=admin
-   druid.auth.authorizer.ldapauth.roleProvider.type=ldap
-   ```
-
-3. Use the Druid API to create the group mapping and allocate initial roles. For example, using curl and given a group named `group1` in the directory, run: 
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-   ```
-   The `groupmap.json` file contents would be something like:
-   ```
-   {
-     "name": "group1map",
-     "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
-     "roles": [
-         "readRole"
-     ]
-   }
-   ```
-4. Check if the group mapping is created successfully by executing the following API. This lists all group mappings.
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
-   ```
-   
-   Alternatively, to check the details of a specific group mapping, use the following API:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-   ```
-   
-5. To add additional roles to the group mapping, use the following API: 
-   ``` 
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
-   ```
-
-6. Add the LDAP user to Druid. To add a user, use the following authentication API:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
-   ```
-
-7. Use the following command to assign the role to a user:
-   ```
-   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
-   ```   
-
-
-
-Congratulations, you have configured permissions for user-assigned roles in Druid!
-
+As an alternative to using the basic metadata authenticator, you can use LDAP to authenticate users. See [Configure LDAP authentication](./auth-ldap.md) for information on configuring Druid for LDAP and LDAPS.
 
 ## Druid security trust model
 Within Druid's trust model there users can have different authorization levels:

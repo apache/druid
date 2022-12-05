@@ -80,6 +80,12 @@ public class TLSServerConfig
   @JsonProperty
   private String crlPath;
 
+  @JsonProperty
+  private boolean reloadSslContext = false;
+
+  @JsonProperty
+  private int reloadSslContextSeconds = 60;
+
   public String getKeyStorePath()
   {
     return keyStorePath;
@@ -170,6 +176,16 @@ public class TLSServerConfig
     return crlPath;
   }
 
+  public int getReloadSslContextSeconds()
+  {
+    return reloadSslContextSeconds;
+  }
+
+  public boolean isReloadSslContext()
+  {
+    return reloadSslContext;
+  }
+
   @Override
   public String toString()
   {
@@ -189,6 +205,8 @@ public class TLSServerConfig
            ", trustStoreAlgorithm='" + trustStoreAlgorithm + '\'' +
            ", validateHostnames='" + validateHostnames + '\'' +
            ", crlPath='" + crlPath + '\'' +
+           ", reloadSslContext='" + reloadSslContext + '\'' +
+           ", reloadSslContextSeconds='" + reloadSslContextSeconds + '\'' +
            '}';
   }
 }

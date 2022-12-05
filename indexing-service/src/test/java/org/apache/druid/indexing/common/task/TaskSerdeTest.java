@@ -94,6 +94,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(false, ioConfig.isAppendToExisting());
+    Assert.assertEquals(false, ioConfig.isDropExisting());
   }
 
   @Test
@@ -293,6 +294,7 @@ public class TaskSerdeTest
     Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
+    Assert.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();

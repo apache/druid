@@ -549,8 +549,6 @@ public class SketchAggregationTest
   @Test
   public void testAggregateWithSize()
   {
-    SketchAggregator.initialize();
-
     final String[] columnValues = new String[20];
     for (int i = 0; i < columnValues.length; ++i) {
       columnValues[i] = "" + i;

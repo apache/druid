@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -41,8 +42,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -59,6 +58,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
+import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -99,7 +99,11 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     super(transientTaskFailureRate, transientApiCallFailureRate);
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
-    getObjectMapper().registerSubtypes(ParallelIndexTuningConfig.class, DruidInputSource.class);
+    getObjectMapper().registerSubtypes(
+        ParallelIndexTuningConfig.class,
+        DruidInputSource.class,
+        TombstoneLoadSpec.class
+    );
   }
 
   boolean isUseInputFormatApi()
@@ -131,6 +135,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         partitionsSpec,
         maxNumConcurrentSubTasks,
         expectedTaskStatus,
+        false,
         false
     );
   }
@@ -141,12 +146,13 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       @Nullable InputFormat inputFormat,
       @Nullable ParseSpec parseSpec,
       Interval interval,
-      File inputDir,
+      File inputDirectory,
       String filter,
       PartitionsSpec partitionsSpec,
       int maxNumConcurrentSubTasks,
       TaskState expectedTaskStatus,
-      boolean appendToExisting
+      boolean appendToExisting,
+      boolean dropExisting
   )
   {
     final ParallelIndexSupervisorTask task = createTask(
@@ -155,11 +161,12 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         inputFormat,
         parseSpec,
         interval,
-        inputDir,
+        inputDirectory,
         filter,
         partitionsSpec,
         maxNumConcurrentSubTasks,
-        appendToExisting
+        appendToExisting,
+        dropExisting
     );
 
     return runTask(task, expectedTaskStatus);
@@ -169,7 +176,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
   Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
@@ -181,7 +188,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getTaskReport(task.getId());
+    return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
   }
 
   protected ParallelIndexSupervisorTask createTask(
@@ -190,11 +197,12 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       @Nullable InputFormat inputFormat,
       @Nullable ParseSpec parseSpec,
       Interval interval,
-      File inputDir,
+      File inputDirectory,
       String filter,
       PartitionsSpec partitionsSpec,
       int maxNumConcurrentSubTasks,
-      boolean appendToExisting
+      boolean appendToExisting,
+      boolean dropExisting
   )
   {
     GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -215,17 +223,17 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
-          new LocalInputSource(inputDir, filter),
+          new LocalInputSource(inputDirectory, filter),
           inputFormat,
           appendToExisting,
-          null
+          dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
               DATASOURCE,
               timestampSpec,
               dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null
           ),
@@ -235,8 +243,9 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     } else {
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDir, filter, null),
-          appendToExisting
+          new LocalFirehoseFactory(inputDirectory, filter, null),
+          appendToExisting,
+          dropExisting
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(
@@ -246,9 +255,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                   new StringInputRowParser(parseSpec, null),
                   Map.class
               ),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
+              DEFAULT_METRICS_SPEC,
               granularitySpec,
               null,
               getObjectMapper()

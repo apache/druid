@@ -75,7 +75,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.future = future;
     this.url = url;
     if (query != null) {
-      this.timeoutAt = query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+      this.timeoutAt = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
       this.queryId = query.getId();
     } else {
       this.timeoutAt = -1;

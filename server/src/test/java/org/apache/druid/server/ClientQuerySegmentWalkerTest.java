@@ -59,7 +59,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -78,6 +77,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -126,6 +126,7 @@ public class ClientQuerySegmentWalkerTest
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
   private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
+
 
   private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
@@ -502,7 +503,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -570,7 +575,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -638,11 +647,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -693,11 +698,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -757,7 +758,8 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           null
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -1023,7 +1025,6 @@ public class ClientQuerySegmentWalkerTest
         )
     );
   }
-
 
   @Test
   public void testGroupByOnArraysUnknownStrings()
@@ -1341,6 +1342,7 @@ public class ClientQuerySegmentWalkerTest
             .put(globalFactory.getClass(), GlobalTableDataSource.class)
             .build()
     );
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     class CapturingWalker implements QuerySegmentWalker
     {
@@ -1389,7 +1391,7 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
-                joinableFactory,
+                joinableFactoryWrapper,
                 conglomerate,
                 schedulerForTest
             ),
@@ -1399,7 +1401,7 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory,
+                joinableFactoryWrapper,
                 schedulerForTest
                 ),
             ClusterOrLocal.LOCAL
@@ -1469,12 +1471,12 @@ public class ClientQuerySegmentWalkerTest
       this.how = how;
     }
 
-    static ExpectedQuery local(final Query query)
+    static ExpectedQuery local(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.LOCAL);
     }
 
-    static ExpectedQuery cluster(final Query query)
+    static ExpectedQuery cluster(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.CLUSTER);
     }

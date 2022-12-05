@@ -202,12 +202,20 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
         break;
       case 2:
+        int maxStringBytes;
+        try {
+          maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
+        }
+        catch (AssertionError ae) {
+          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", rexNodes.get(1), aggregateCall.getName());
+          return null;
+        }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             null,
             outputType,
-            RexLiteral.intValue(rexNodes.get(1))
+            maxStringBytes
         );
         break;
       default:

@@ -42,8 +42,9 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -154,7 +155,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   {
     final Query<T> query = queryPlus.getQuery();
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = QueryContexts.isBySegment(query);
+    boolean isBySegment = query.context().isBySegment();
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
@@ -162,13 +163,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final String cancelUrl = url + query.getId();
 
     try {
-      log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
+      log.debug("Querying queryId [%s] url [%s]", query.getId(), url);
 
       final long requestStartTimeNs = System.nanoTime();
-      final long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
-      final long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
+      final QueryContext queryContext = query.context();
+      // Will NPE if the value is not set.
+      final long timeoutAt = queryContext.getLong(QUERY_FAIL_TIME);
+      final long maxScatterGatherBytes = queryContext.getMaxScatterGatherBytes();
       final AtomicLong totalBytesGathered = context.getTotalBytes();
-      final long maxQueuedBytes = QueryContexts.getMaxQueuedBytes(query, 0);
+      final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
       final boolean usingBackpressure = maxQueuedBytes > 0;
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
@@ -472,7 +475,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(QueryContexts.withTimeout(query, timeLeft)))
+          ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON

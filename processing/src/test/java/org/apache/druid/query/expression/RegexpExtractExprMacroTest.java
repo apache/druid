@@ -36,14 +36,14 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] must have 2 to 3 arguments");
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
     eval("regexp_extract()", InputBindings.withMap(ImmutableMap.of()));
   }
 
   @Test
   public void testErrorFourArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] must have 2 to 3 arguments");
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
     eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.withMap(ImmutableMap.of()));
   }
 

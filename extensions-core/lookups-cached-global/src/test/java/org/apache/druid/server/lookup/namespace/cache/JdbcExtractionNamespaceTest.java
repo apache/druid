@@ -56,7 +56,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -126,160 +125,117 @@ public class JdbcExtractionNamespaceTest
     setupTeardownService =
         MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "JDBCExtractionNamespaceTeardown--%s"));
     final ListenableFuture<Handle> setupFuture = setupTeardownService.submit(
-        new Callable<Handle>()
-        {
-          @Override
-          public Handle call()
-          {
-            final Handle handle = derbyConnectorRule.getConnector().getDBI().open();
-            Assert.assertEquals(
-                0,
-                handle.createStatement(
-                    StringUtils.format(
-                        "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
-                        TABLE_NAME,
-                        TS_COLUMN,
-                        FILTER_COLUMN,
-                        KEY_NAME,
-                        VAL_NAME
-                    )
-                ).setQueryTimeout(1).execute()
-            );
-            handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", TABLE_NAME)).setQueryTimeout(1).execute();
-            handle.commit();
-            closer.register(new Closeable()
+        () -> {
+          final Handle handle = derbyConnectorRule.getConnector().getDBI().open();
+          Assert.assertEquals(
+              0,
+              handle.createStatement(
+                  StringUtils.format(
+                      "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
+                      TABLE_NAME,
+                      TS_COLUMN,
+                      FILTER_COLUMN,
+                      KEY_NAME,
+                      VAL_NAME
+                  )
+              ).setQueryTimeout(1).execute()
+          );
+          handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", TABLE_NAME)).setQueryTimeout(1).execute();
+          handle.commit();
+          closer.register(() -> {
+            handle.createStatement("DROP TABLE " + TABLE_NAME).setQueryTimeout(1).execute();
+            final ListenableFuture future = setupTeardownService.submit(new Runnable()
             {
               @Override
-              public void close() throws IOException
+              public void run()
               {
-                handle.createStatement("DROP TABLE " + TABLE_NAME).setQueryTimeout(1).execute();
-                final ListenableFuture future = setupTeardownService.submit(new Runnable()
-                {
-                  @Override
-                  public void run()
-                  {
-                    handle.close();
-                  }
-                });
-                try (Closeable closeable = new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    future.cancel(true);
-                  }
-                }) {
-                  future.get(10, TimeUnit.SECONDS);
-                }
-                catch (InterruptedException | ExecutionException | TimeoutException e) {
-                  throw new IOException("Error closing handle", e);
-                }
+                handle.close();
               }
             });
-            closer.register(new Closeable()
-            {
-              @Override
-              public void close()
-              {
-                if (scheduler == null) {
-                  return;
-                }
-                Assert.assertEquals(0, scheduler.getActiveEntries());
-              }
-            });
-            for (Map.Entry<String, String[]> entry : RENAMES.entrySet()) {
-              try {
-                String key = entry.getKey();
-                String value = entry.getValue()[0];
-                String filter = entry.getValue()[1];
-                insertValues(handle, key, value, filter, "2015-01-01 00:00:00");
-              }
-              catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
-              }
+            try (Closeable ignored = () -> future.cancel(true)) {
+              future.get(10, TimeUnit.SECONDS);
             }
-
-            NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
-            scheduler = new CacheScheduler(
-                noopServiceEmitter,
-                ImmutableMap.of(
-                    JdbcExtractionNamespace.class,
-                    new CacheGenerator<JdbcExtractionNamespace>()
-                    {
-                      private final JdbcCacheGenerator delegate =
-                          new JdbcCacheGenerator();
-
-                      @Override
-                      public CacheScheduler.VersionedCache generateCache(
-                          final JdbcExtractionNamespace namespace,
-                          final CacheScheduler.EntryImpl<JdbcExtractionNamespace> id,
-                          final String lastVersion,
-                          final CacheScheduler scheduler
-                      ) throws InterruptedException
-                      {
-                        updateLock.lockInterruptibly();
-                        try {
-                          log.debug("Running cache generator");
-                          try {
-                            return delegate.generateCache(namespace, id, lastVersion, scheduler);
-                          }
-                          finally {
-                            updates.incrementAndGet();
-                          }
-                        }
-                        finally {
-                          updateLock.unlock();
-                        }
-                      }
-                    }
-                ),
-                new OnHeapNamespaceExtractionCacheManager(
-                    lifecycle,
-                    noopServiceEmitter,
-                    new NamespaceExtractionConfig()
-                )
-            );
+            catch (InterruptedException | ExecutionException | TimeoutException e) {
+              throw new IOException("Error closing handle", e);
+            }
+          });
+          closer.register(() -> {
+            if (scheduler == null) {
+              return;
+            }
+            Assert.assertEquals(0, scheduler.getActiveEntries());
+          });
+          for (Map.Entry<String, String[]> entry : RENAMES.entrySet()) {
             try {
-              lifecycle.start();
+              String key = entry.getKey();
+              String value = entry.getValue()[0];
+              String filter = entry.getValue()[1];
+              insertValues(handle, key, value, filter, "2015-01-01 00:00:00");
             }
-            catch (Exception e) {
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               throw new RuntimeException(e);
             }
-            closer.register(
-                new Closeable()
-                {
-                  @Override
-                  public void close() throws IOException
+          }
+
+          NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+          scheduler = new CacheScheduler(
+              noopServiceEmitter,
+              ImmutableMap.of(
+                  JdbcExtractionNamespace.class,
+                  new CacheGenerator<JdbcExtractionNamespace>()
                   {
-                    final ListenableFuture future = setupTeardownService.submit(
-                        new Runnable()
-                        {
-                          @Override
-                          public void run()
-                          {
-                            lifecycle.stop();
-                          }
-                        }
-                    );
-                    try (final Closeable closeable = new Closeable()
+                    private final JdbcCacheGenerator delegate =
+                        new JdbcCacheGenerator();
+
+                    @Override
+                    public String generateCache(
+                        final JdbcExtractionNamespace namespace,
+                        final CacheScheduler.EntryImpl<JdbcExtractionNamespace> id,
+                        final String lastVersion,
+                        final CacheHandler cache
+                    ) throws InterruptedException
                     {
-                      @Override
-                      public void close()
-                      {
-                        future.cancel(true);
+                      updateLock.lockInterruptibly();
+                      try {
+                        log.debug("Running cache generator");
+                        try {
+                          return delegate.generateCache(namespace, id, lastVersion, cache);
+                        }
+                        finally {
+                          updates.incrementAndGet();
+                        }
                       }
-                    }) {
-                      future.get(30, TimeUnit.SECONDS);
-                    }
-                    catch (InterruptedException | ExecutionException | TimeoutException e) {
-                      throw new IOException("Error stopping lifecycle", e);
+                      finally {
+                        updateLock.unlock();
+                      }
                     }
                   }
-                }
-            );
-            return handle;
+              ),
+              new OnHeapNamespaceExtractionCacheManager(
+                  lifecycle,
+                  noopServiceEmitter,
+                  new NamespaceExtractionConfig()
+              )
+          );
+          try {
+            lifecycle.start();
           }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+          closer.register(
+              () -> {
+                final ListenableFuture future = setupTeardownService.submit(() -> lifecycle.stop());
+                try (final Closeable ignored = () -> future.cancel(true)) {
+                  future.get(30, TimeUnit.SECONDS);
+                }
+                catch (InterruptedException | ExecutionException | TimeoutException e) {
+                  throw new IOException("Error stopping lifecycle", e);
+                }
+              }
+          );
+          return handle;
         }
     );
 
@@ -293,35 +249,25 @@ public class JdbcExtractionNamespaceTest
   public void tearDown() throws InterruptedException, ExecutionException, TimeoutException, IOException
   {
     final ListenableFuture<?> tearDownFuture = setupTeardownService.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              closer.close();
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
+        () -> {
+          try {
+            closer.close();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
           }
         }
     );
-    try (final Closeable closeable = new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        setupTeardownService.shutdownNow();
-        try {
-          if (!setupTeardownService.awaitTermination(60, TimeUnit.SECONDS)) {
-            log.error("Tear down service didn't finish");
-          }
+    try (final Closeable ignored = () -> {
+      setupTeardownService.shutdownNow();
+      try {
+        if (!setupTeardownService.awaitTermination(60, TimeUnit.SECONDS)) {
+          log.error("Tear down service didn't finish");
         }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Interrupted", e);
-        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted", e);
       }
     }) {
       tearDownFuture.get(60, TimeUnit.SECONDS);

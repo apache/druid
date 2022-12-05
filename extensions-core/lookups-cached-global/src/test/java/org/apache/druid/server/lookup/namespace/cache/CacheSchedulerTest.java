@@ -22,15 +22,20 @@ package org.apache.druid.server.lookup.namespace.cache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
+import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
+import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
@@ -54,7 +59,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -134,30 +139,20 @@ public class CacheSchedulerTest
     lifecycle.start();
     cacheManager = createCacheManager.apply(lifecycle);
     final Path tmpDir = temporaryFolder.newFolder().toPath();
-    final CacheGenerator<UriExtractionNamespace> cacheGenerator = new
-        CacheGenerator<UriExtractionNamespace>()
-    {
-      @Override
-      public CacheScheduler.VersionedCache generateCache(
-          final UriExtractionNamespace extractionNamespace,
-          final CacheScheduler.EntryImpl<UriExtractionNamespace> id,
-          final String lastVersion,
-          final CacheScheduler scheduler
-      ) throws InterruptedException
-      {
-        Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
-        String version = Long.toString(System.currentTimeMillis());
-        CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
-        // Don't actually read off disk because TravisCI doesn't like that
-        versionedCache.getCache().put(KEY, VALUE);
-        return versionedCache;
-      }
+    final CacheGenerator<UriExtractionNamespace> cacheGenerator = (extractionNamespace, id, lastVersion, cache) -> {
+      Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
+      String version = Long.toString(System.currentTimeMillis());
+      // Don't actually read off disk because TravisCI doesn't like that
+      cache.getCache().put(KEY, VALUE);
+      return version;
     };
     scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
         ImmutableMap.of(
             UriExtractionNamespace.class,
-            cacheGenerator
+            cacheGenerator,
+            JdbcExtractionNamespace.class,
+            new JdbcCacheGenerator()
         ),
         cacheManager
     );
@@ -193,9 +188,7 @@ public class CacheSchedulerTest
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     waitFor(entry);
-    Map<String, String> cache = entry.getCache();
-    Assert.assertNull(cache.put("key", "val"));
-    Assert.assertEquals("val", cache.get("key"));
+    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
   }
 
   @Test(timeout = 60_000L)
@@ -425,6 +418,62 @@ public class CacheSchedulerTest
       Thread.sleep(1000);
     }
     Assert.assertEquals(0, scheduler.getActiveEntries());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testSimpleSubmissionSuccessWithWait() throws InterruptedException
+  {
+    UriExtractionNamespace namespace = new UriExtractionNamespace(
+        tmpFile.toURI(),
+        null, null,
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        ),
+        new Period(0),
+        null,
+        null
+    );
+    CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000L);
+    waitFor(entry);
+    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+  }
+
+
+  @Test(timeout = 20_000L)
+  public void testSimpleSubmissionFailureWithWait() throws InterruptedException
+  {
+    JdbcExtractionNamespace namespace = new JdbcExtractionNamespace(
+        new MetadataStorageConnectorConfig()
+        {
+          @Override
+          public String getConnectURI()
+          {
+            return "jdbc:mysql://dummy:3306/db";
+          }
+        },
+        "foo",
+        "k",
+        "val",
+        "time",
+        "some filter",
+        new Period(10_000),
+        null,
+        new JdbcAccessSecurityConfig()
+        {
+          @Override
+          public Set<String> getAllowedProperties()
+          {
+            return ImmutableSet.of("valid_key1", "valid_key2");
+          }
+
+          @Override
+          public boolean isEnforceAllowedProperties()
+          {
+            return true;
+          }
+        }
+    );
+    scheduler.scheduleAndWait(namespace, 40_000L);
   }
 
   private void scheduleDanglingEntry() throws InterruptedException

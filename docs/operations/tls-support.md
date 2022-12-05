@@ -42,7 +42,7 @@ To get more in-depth knowledge of TLS/SSL support in Java in general, refer to t
 The [Configuring the Jetty SslContextFactory](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#configuring-sslcontextfactory)
 section can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
 Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
-values for the configs belong, among others provided by Java implementation.
+values for the configs below, among others provided by Java implementation.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -50,6 +50,8 @@ values for the configs belong, among others provided by Java implementation.
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Key Store.|none|yes|
+|`druid.server.https.reloadSslContext`| Should Druid server detect Key Store file change and reload.|false|no|
+|`druid.server.https.reloadSslContextSeconds`| How frequently should Druid server scan for Key Store file change.|60|yes|
 
 The following table contains configuration options related to client certificate authentication.
 

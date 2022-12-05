@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
@@ -113,6 +114,9 @@ public class SingleDimensionRangeBucketShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SingleDimensionRangeBucketShardSpec.class).usingGetClass().verify();
+    EqualsVerifier.forClass(SingleDimensionRangeBucketShardSpec.class)
+                  .usingGetClass()
+                  .suppress(Warning.ALL_FIELDS_SHOULD_BE_USED)
+                  .verify();
   }
 }

@@ -22,7 +22,9 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.io.SerializedString;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -30,11 +32,13 @@ import java.io.OutputStream;
 
 public class ArrayLinesWriter implements ResultFormat.Writer
 {
-  private final OutputStream outputStream;
+  private final SerializerProvider serializers;
   private final JsonGenerator jsonGenerator;
+  private final OutputStream outputStream;
 
   public ArrayLinesWriter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
   {
+    this.serializers = jsonMapper.getSerializerProviderInstance();
     this.outputStream = outputStream;
     this.jsonGenerator = jsonMapper.writer().getFactory().createGenerator(outputStream);
     jsonGenerator.setRootValueSeparator(new SerializedString("\n"));
@@ -75,7 +79,7 @@ public class ArrayLinesWriter implements ResultFormat.Writer
   @Override
   public void writeRowField(final String name, @Nullable final Object value) throws IOException
   {
-    jsonGenerator.writeObject(value);
+    JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, value);
   }
 
   @Override

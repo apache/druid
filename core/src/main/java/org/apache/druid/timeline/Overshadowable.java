@@ -27,7 +27,7 @@ package org.apache.druid.timeline;
  * An Overshadowable overshadows another if its root partition range contains that of another
  * and has a higher minorVersion. For more details, check https://github.com/apache/druid/issues/7491.
  */
-public interface Overshadowable<T extends Overshadowable>
+public interface Overshadowable<T extends Overshadowable<T>>
 {
   /**
    * Returns true if this overshadowable overshadows the other.
@@ -75,4 +75,9 @@ public interface Overshadowable<T extends Overshadowable>
    * {@link VersionedIntervalTimeline}.
    */
   short getAtomicUpdateGroupSize();
+
+  default boolean hasData()
+  {
+    return true;
+  }
 }

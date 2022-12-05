@@ -136,4 +136,5 @@ public interface InputEntity
   {
     return Predicates.alwaysFalse();
   }
+
 }

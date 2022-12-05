@@ -82,9 +82,9 @@ public class BasicMonitorSchedulerTest
     );
     scheduler.start();
     Thread.sleep(100);
-    // monitor.monitor() is called 5 times since a new task is scheduled first and then the current one is executed.
+    // monitor.monitor() is called at least 5 times since a new task is scheduled first and then the current one is executed.
     // See ScheduledExecutors.scheduleAtFixedRate() for details.
-    Mockito.verify(monitor, Mockito.times(5)).monitor(ArgumentMatchers.any());
+    Mockito.verify(monitor, Mockito.atLeast(5)).monitor(ArgumentMatchers.any());
     scheduler.stop();
   }
 
@@ -102,8 +102,8 @@ public class BasicMonitorSchedulerTest
         exec
     );
     scheduler.start();
-    Thread.sleep(100);
-    // monitor.monitor() is called 5 times since a new task is scheduled first and then the current one is executed.
+    Thread.sleep(1000);
+    // monitor.monitor() is called at least twice
     // See ScheduledExecutors.scheduleAtFixedRate() for details.
     Mockito.verify(monitor, Mockito.atLeast(2)).monitor(ArgumentMatchers.any());
     scheduler.stop();

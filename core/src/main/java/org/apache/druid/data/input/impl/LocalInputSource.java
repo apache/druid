@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -56,6 +57,7 @@ import java.util.stream.Stream;
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
   private static final Logger log = new Logger(LocalInputSource.class);
+  public static final String TYPE_KEY = "local";
 
   @Nullable
   private final File baseDir;
@@ -86,6 +88,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public File getBaseDir()
   {
     return baseDir;
@@ -93,12 +96,14 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFilter()
   {
     return filter;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<File> getFiles()
   {
     return files;

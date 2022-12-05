@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
@@ -44,6 +45,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,7 +63,6 @@ import java.util.UUID;
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
-
 })
 public interface Query<T>
 {
@@ -95,13 +96,71 @@ public interface Query<T>
 
   DateTimeZone getTimezone();
 
+  /**
+   * Returns the context as an (immutable) map.
+   */
   Map<String, Object> getContext();
 
-  <ContextType> ContextType getContextValue(String key);
+  /**
+   * Returns the query context as a {@link QueryContext}, which provides
+   * convenience methods for accessing typed context values. The returned
+   * instance is a view on top of the context provided by {@link #getContext()}.
+   * <p>
+   * The default implementation is for backward compatibility. Derived classes should
+   * store and return the {@link QueryContext} directly.
+   */
+  default QueryContext context()
+  {
+    return QueryContext.of(getContext());
+  }
 
-  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+  /**
+   * Get context value and cast to ContextType in an unsafe way.
+   *
+   * For safe conversion, it's recommended to use following methods instead:
+   * <p>
+   * {@link QueryContext#getBoolean(String)} <br/>
+   * {@link QueryContext#getString(String)} <br/>
+   * {@link QueryContext#getInt(String)} <br/>
+   * {@link QueryContext#getLong(String)} <br/>
+   * {@link QueryContext#getFloat(String)} <br/>
+   * {@link QueryContext#getEnum(String, Class, Enum)} <br/>
+   * {@link QueryContext#getHumanReadableBytes(String, HumanReadableBytes)}
+   *
+   * @deprecated use {@code queryContext().get<Type>()} instead
+   */
+  @Deprecated
+  @SuppressWarnings("unchecked")
+  @Nullable
+  default <ContextType> ContextType getContextValue(String key)
+  {
+    return (ContextType) context().get(key);
+  }
 
-  boolean getContextBoolean(String key, boolean defaultValue);
+  /**
+   * @deprecated use {@code queryContext().getBoolean()} instead.
+   */
+  @Deprecated
+  default boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    return context().getBoolean(key, defaultValue);
+  }
+
+  /**
+   * Returns {@link HumanReadableBytes} for a specified context key. If the context is null or the key doesn't exist
+   * a caller specified default value is returned. A default implementation is provided since Query is an extension
+   * point. Extensions can choose to rely on this default to retain compatibility with core Druid.
+   *
+   * @param key          The context key value being looked up
+   * @param defaultValue The default to return if the key value doesn't exist or the context is null.
+   * @return {@link HumanReadableBytes}
+   * @deprecated use {@code queryContext().getContextHumanReadableBytes()} instead.
+   */
+  @Deprecated
+  default HumanReadableBytes getContextHumanReadableBytes(String key, HumanReadableBytes defaultValue)
+  {
+    return context().getHumanReadableBytes(key, defaultValue);
+  }
 
   boolean isDescending();
 
@@ -159,7 +218,7 @@ public interface Query<T>
   @Nullable
   default String getSqlQueryId()
   {
-    return null;
+    return context().getString(BaseQuery.SQL_QUERY_ID);
   }
 
   /**

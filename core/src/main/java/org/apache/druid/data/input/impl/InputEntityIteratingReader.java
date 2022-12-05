@@ -78,7 +78,9 @@ public class InputEntityIteratingReader implements InputSourceReader
         return reader.read();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw new RuntimeException(entity.getUri() != null ?
+                                   "Error occurred while trying to read uri: " + entity.getUri() :
+                                   "Error occurred while reading input", e);
       }
     });
   }

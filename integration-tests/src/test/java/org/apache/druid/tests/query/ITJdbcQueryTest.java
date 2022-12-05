@@ -211,7 +211,7 @@ public class ITJdbcQueryTest
     }
   }
 
-  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position\\[0] is not bound")
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position \\[0] is not bound")
   public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
   {
     for (String url : connections) {

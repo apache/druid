@@ -22,6 +22,7 @@ package org.apache.druid.query.timeboundary;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.Iterator;
 import java.util.List;
@@ -118,7 +120,8 @@ public class TimeBoundaryQueryRunnerFactory
           VirtualColumns.EMPTY,
           descending,
           Granularities.ALL,
-          this.skipToFirstMatching
+          this.skipToFirstMatching,
+          null
       );
       final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
       if (resultList.size() > 0) {
@@ -155,7 +158,7 @@ public class TimeBoundaryQueryRunnerFactory
               final DateTime minTime;
               final DateTime maxTime;
 
-              if (legacyQuery.getFilter() != null) {
+              if (legacyQuery.getFilter() != null || !queryIntervalContainsAdapterInterval()) {
                 minTime = getTimeBoundary(adapter, legacyQuery, false);
                 if (minTime == null) {
                   maxTime = null;
@@ -182,6 +185,15 @@ public class TimeBoundaryQueryRunnerFactory
             public void cleanup(Iterator<Result<TimeBoundaryResultValue>> toClean)
             {
 
+            }
+
+            private boolean queryIntervalContainsAdapterInterval()
+            {
+              List<Interval> queryIntervals = legacyQuery.getQuerySegmentSpec().getIntervals();
+              if (queryIntervals.size() != 1) {
+                throw new IAE("Should only have one interval, got[%s]", queryIntervals);
+              }
+              return queryIntervals.get(0).contains(adapter.getInterval());
             }
           }
       );

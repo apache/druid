@@ -737,8 +737,6 @@ public class BatchAppenderator implements Appenderator
       final Sink sink
   )
   {
-
-
     // Use a descriptor file to indicate that pushing has completed.
     final File persistDir = computePersistDir(identifier);
     final File mergedTarget = new File(persistDir, "merged");

@@ -74,6 +74,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 {
   private static final Logger log = new Logger(StreamAppenderatorDriver.class);
 
+  private static final long HANDOFF_TIME_THRESHOLD = 600_000;
+
   private final SegmentHandoffNotifier handoffNotifier;
   private final FireDepartmentMetrics metrics;
   private final ObjectMapper objectMapper;
@@ -282,6 +284,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
             null,
             null,
+            null,
             sam,
             publisher,
             java.util.function.Function.identity()
@@ -331,6 +334,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       }
 
       log.debug("Register handoff of segments: [%s]", waitingSegmentIdList);
+      final long handoffStartTime = System.currentTimeMillis();
 
       final SettableFuture<SegmentsAndCommitMetadata> resultFuture = SettableFuture.create();
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
@@ -357,7 +361,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
                         List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
-                        log.debug("Successfully handed off [%d] segments.", segments.size());
+                        log.info("Successfully handed off [%d] segments.", segments.size());
+                        final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
+                        metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
+                        if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
+                          log.warn("Slow segment handoff! Time taken for [%d] segments is %d ms",
+                                   segments.size(), handoffTotalTime);
+                        }
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
                                 segments,

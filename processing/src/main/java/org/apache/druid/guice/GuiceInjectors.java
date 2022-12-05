@@ -19,51 +19,27 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.jackson.JacksonModule;
-import org.apache.druid.math.expr.ExpressionProcessingModule;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 
 /**
+ * Creates the startup injector. Retained for backward compatibility.
+ * New code should prefer using {@link StartupInjectorBuilder}
  */
 public class GuiceInjectors
 {
-  public static Collection<Module> makeDefaultStartupModules()
-  {
-    return ImmutableList.of(
-        new DruidGuiceExtensions(),
-        new JacksonModule(),
-        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
-        new RuntimeInfoModule(),
-        new ConfigModule(),
-        new NullHandlingModule(),
-        new ExpressionProcessingModule(),
-        binder -> {
-          binder.bind(DruidSecondaryModule.class);
-          JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-          JsonConfigProvider.bind(binder, "druid.modules", ModulesConfig.class);
-        }
-    );
-  }
-
   public static Injector makeStartupInjector()
   {
-    return Guice.createInjector(makeDefaultStartupModules());
+    return makeStartupInjectorWithModules(Collections.emptyList());
   }
 
   public static Injector makeStartupInjectorWithModules(Iterable<? extends Module> modules)
   {
-    List<Module> theModules = new ArrayList<>(makeDefaultStartupModules());
-    for (Module theModule : modules) {
-      theModules.add(theModule);
-    }
-    return Guice.createInjector(theModules);
+    return new StartupInjectorBuilder()
+        .forServer()
+        .addAll(modules)
+        .build();
   }
 }

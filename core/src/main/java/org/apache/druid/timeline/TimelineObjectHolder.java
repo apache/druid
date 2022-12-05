@@ -106,4 +106,13 @@ public class TimelineObjectHolder<VersionType, ObjectType extends Overshadowable
            ", object=" + object +
            '}';
   }
+
+  @Override
+  public LogicalSegment.Status getStatus()
+  {
+    if (object.hasData()) {
+      return Status.READY;
+    }
+    return Status.EMPTY;
+  }
 }

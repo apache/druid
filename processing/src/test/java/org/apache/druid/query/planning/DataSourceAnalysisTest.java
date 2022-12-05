@@ -612,7 +612,8 @@ public class DataSourceAnalysisTest
         joinClause(rightPrefix).getOriginalExpression(),
         joinType,
         dimFilter,
-        ExprMacroTable.nil()
+        ExprMacroTable.nil(),
+        null
     );
   }
 

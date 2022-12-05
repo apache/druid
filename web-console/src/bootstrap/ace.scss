@@ -25,6 +25,18 @@
 .ace-solarized-dark {
   background-color: rgba($dark-gray1, 0.5);
 
+  // START: Custom code styles
+  .ace_variable.ace_column {
+    color: #2ceefb;
+  }
+
+  .ace_comment.ace_issue {
+    color: #cb3116;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+  // END: Custom code styles
+
   &.no-background {
     background-color: transparent;
   }
@@ -41,7 +53,7 @@
     background: $gray5;
     color: $gray1;
 
-    .bp3-dark & {
+    .#{$bp-ns}-dark & {
       background: $dark-gray4;
       color: $gray5;
     }
@@ -79,7 +91,7 @@
   border-radius: 2px;
   box-shadow: 0 5px 15px rgba(15, 19, 32, 0.45);
 
-  .bp3-dark & {
+  .#{$bp-ns}-dark & {
     background: $dark-gray4;
   }
 

@@ -25,7 +25,6 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
-import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.BeforeClass;
 
@@ -39,7 +38,6 @@ public abstract class CalciteTestBase
   @BeforeClass
   public static void setupCalciteProperties()
   {
-    Calcites.setSystemProperties();
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests(null);
   }

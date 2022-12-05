@@ -16,13 +16,21 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .coordinator-dynamic-config-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     margin-top: 5vh;
     top: 5%;
   }
 
-  .bp3-dialog-body {
+  .loader {
+    position: relative;
+    height: 60vh;
+    width: 100%;
+  }
+
+  .#{$bp-ns}-dialog-body {
     max-height: 70vh;
 
     .auto-form {

@@ -22,14 +22,18 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.EntryExistsException;
-import org.joda.time.Duration;
+import org.apache.druid.metadata.TaskLookup;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public interface TaskStorage
 {
@@ -148,30 +152,42 @@ public interface TaskStorage
   List<Task> getActiveTasksByDatasource(String datasource);
 
   /**
-   * Returns a list of currently running or pending tasks as stored in the storage facility as {@link TaskInfo}. No
-   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   * Returns the status of tasks in metadata storage as TaskStatusPlus
+   * No particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @return list of {@link TaskInfo}
+   * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
+   * See {@link TaskLookup} for more details of active and complete tasks.
+   *
+   * @param taskLookups lookup types and filters
+   * @param datasource  datasource filter
    */
-  List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource);
-
-  /**
-   * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage
-   * facility. No particular order is guaranteed, but implementations are encouraged to return tasks in descending order
-   * of creation. No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply
-   * return nothing.
-   *
-   * @param maxTaskStatuses   maxTaskStatuses
-   * @param durationBeforeNow duration
-   * @param datasource        datasource
-   *
-   * @return list of {@link TaskInfo}
-   */
-  List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(
-      @Nullable Integer maxTaskStatuses,
-      @Nullable Duration durationBeforeNow,
+  List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
+
+  /**
+   * Returns a list of tasks stored in the storage facility as {@link TaskInfo}. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   *
+   * The returned list can contain active tasks and complete tasks depending on the {@code taskLookups} parameter.
+   * See {@link TaskLookup} for more details of active and complete tasks.
+   *
+   * @param taskLookups lookup types and filters
+   * @param datasource  datasource filter
+   */
+  List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  default List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      TaskLookup taskLookup,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(Collections.singletonMap(taskLookup.getType(), taskLookup), datasource);
+  }
 
   /**
    * Returns a list of locks for a particular task.

@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .snitch-dialog {
-  .bp3-dialog-footer-actions {
+  .#{$bp-ns}-dialog-footer-actions {
     position: relative;
 
     .left-align-button {

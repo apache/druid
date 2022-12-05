@@ -5,35 +5,35 @@ exports[`WarningChecklist matches snapshot 1`] = `
   class="warning-checklist"
 >
   <label
-    class="bp3-control bp3-switch"
+    class="bp4-control bp4-switch"
   >
     <input
       type="checkbox"
     />
     <span
-      class="bp3-control-indicator"
+      class="bp4-control-indicator"
     />
     Check A
   </label>
   <label
-    class="bp3-control bp3-switch"
+    class="bp4-control bp4-switch"
   >
     <input
       type="checkbox"
     />
     <span
-      class="bp3-control-indicator"
+      class="bp4-control-indicator"
     />
     Check B
   </label>
   <label
-    class="bp3-control bp3-switch"
+    class="bp4-control bp4-switch"
   >
     <input
       type="checkbox"
     />
     <span
-      class="bp3-control-indicator"
+      class="bp4-control-indicator"
     />
     I am totes sure
   </label>

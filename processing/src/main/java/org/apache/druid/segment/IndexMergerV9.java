@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilities.CoercionLogic;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -59,6 +61,7 @@ import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
 import org.apache.druid.segment.serde.FloatNumericColumnPartSerdeV2;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerde;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerdeV2;
+import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.DateTime;
@@ -74,14 +77,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class IndexMergerV9 implements IndexMerger
 {
@@ -159,14 +164,39 @@ public class IndexMergerV9 implements IndexMerger
   private final ObjectMapper mapper;
   private final IndexIO indexIO;
   private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
+  /**
+   * This is a flag to enable storing empty columns in the segments.
+   * It exists today only just in case where there is an unknown bug in storing empty columns.
+   * We will get rid of it eventually in the near future.
+   */
+  private final boolean storeEmptyColumns;
 
-  @Inject
-  public IndexMergerV9(ObjectMapper mapper, IndexIO indexIO, SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory)
+  public IndexMergerV9(
+      ObjectMapper mapper,
+      IndexIO indexIO,
+      SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory,
+      boolean storeEmptyColumns
+  )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
     this.defaultSegmentWriteOutMediumFactory =
         Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
+    this.storeEmptyColumns = storeEmptyColumns;
+  }
+
+  /**
+   * This constructor is used only for Hadoop ingestion and Tranquility as they do not support storing empty columns yet.
+   * See {@code HadoopDruidIndexerConfig} and {@code PlumberSchool} for hadoop ingestion and Tranquility, respectively.
+   */
+  @Inject
+  public IndexMergerV9(
+      ObjectMapper mapper,
+      IndexIO indexIO,
+      SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory
+  )
+  {
+    this(mapper, indexIO, defaultSegmentWriteOutMediumFactory, false);
   }
 
   private File makeIndexFiles(
@@ -174,7 +204,8 @@ public class IndexMergerV9 implements IndexMerger
       final @Nullable AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
-      final List<String> mergedDimensions,
+      final List<String> mergedDimensions, // should have both explicit and implicit dimensions
+      final DimensionsSpecInspector dimensionsSpecInspector,
       final List<String> mergedMetrics,
       final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
       final boolean fillRowNumConversions,
@@ -240,7 +271,15 @@ public class IndexMergerV9 implements IndexMerger
       final List<DimensionMergerV9> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
-        mergers.add(handler.makeMerger(indexSpec, segmentWriteOutMedium, dimCapabilities.get(i), progress, closer));
+        mergers.add(
+            handler.makeMerger(
+                indexSpec,
+                segmentWriteOutMedium,
+                dimCapabilities.get(i),
+                progress,
+                closer
+            )
+        );
       }
 
       /************* Setup Dim Conversions **************/
@@ -263,7 +302,7 @@ public class IndexMergerV9 implements IndexMerger
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
           setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec);
-      List<IntBuffer> rowNumConversions = mergeIndexesAndWriteColumns(
+      IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
           adapters,
           progress,
           timeAndDimsIterator,
@@ -289,19 +328,36 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = mergers.get(i);
-        merger.writeIndexes(rowNumConversions);
-        if (merger.canSkip()) {
-          continue;
+        merger.writeIndexes(indexMergeResult.rowNumConversions);
+        if (!merger.hasOnlyNulls()) {
+          ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
+          makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
+        } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
+          // shouldStore AND hasOnlyNulls
+          ColumnDescriptor columnDesc = ColumnDescriptor
+              .builder()
+              .setValueType(dimCapabilities.get(i).getType())
+              .addSerde(new NullColumnPartSerde(indexMergeResult.rowCount, indexSpec.getBitmapSerdeFactory()))
+              .build();
+          makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
         }
-        ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
-        makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
       }
 
       progress.stopSection(section);
 
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
-      makeIndexBinary(v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers);
+      makeIndexBinary(
+          v9Smoosher,
+          adapters,
+          outDir,
+          mergedDimensions,
+          mergedMetrics,
+          progress,
+          indexSpec,
+          mergers,
+          dimensionsSpecInspector
+      );
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
       v9Smoosher.close();
@@ -338,50 +394,95 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
-      final List<DimensionMergerV9> mergers
+      final List<DimensionMergerV9> mergers,
+      final DimensionsSpecInspector dimensionsSpecInspector
   ) throws IOException
   {
+    final Set<String> columnSet = new HashSet<>(mergedDimensions);
+    columnSet.addAll(mergedMetrics);
+    Preconditions.checkState(
+        columnSet.size() == mergedDimensions.size() + mergedMetrics.size(),
+        "column names are not unique in dims%s and mets%s",
+        mergedDimensions,
+        mergedMetrics
+    );
+
     final String section = "make index.drd";
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> finalDimensions = new LinkedHashSet<>();
-    final Set<String> finalColumns = new LinkedHashSet<>(mergedMetrics);
+
+    // The original column order is encoded in the below arrayLists.
+    // At the positions where there is a non-null column in uniqueDims/uniqueMets,
+    // null is stored instead of actual column name. At other positions, the name of null columns are stored.
+    // When the segment is loaded, original column order is restored
+    // by merging nonNullOnlyColumns/nonNullOnlyDimensions and allColumns/allDimensions.
+    // See V9IndexLoader.restoreColumns() for more details of how the original order is restored.
+    final List<String> nonNullOnlyDimensions = new ArrayList<>(mergedDimensions.size());
+    final List<String> nonNullOnlyColumns = new ArrayList<>(mergedDimensions.size() + mergedMetrics.size());
+    nonNullOnlyColumns.addAll(mergedMetrics);
+    final List<String> allDimensions = new ArrayList<>(mergedDimensions.size());
+    final List<String> allColumns = new ArrayList<>(mergedDimensions.size() + mergedMetrics.size());
+    IntStream.range(0, mergedMetrics.size()).forEach(i -> allColumns.add(null));
     for (int i = 0; i < mergedDimensions.size(); ++i) {
-      if (mergers.get(i).canSkip()) {
-        continue;
+      if (!mergers.get(i).hasOnlyNulls()) {
+        nonNullOnlyDimensions.add(mergedDimensions.get(i));
+        nonNullOnlyColumns.add(mergedDimensions.get(i));
+        allDimensions.add(null);
+        allColumns.add(null);
+      } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
+        // shouldStore AND hasOnlyNulls
+        allDimensions.add(mergedDimensions.get(i));
+        allColumns.add(mergedDimensions.get(i));
       }
-      finalColumns.add(mergedDimensions.get(i));
-      finalDimensions.add(mergedDimensions.get(i));
     }
 
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> nonNullCols = GenericIndexed.fromIterable(
+        nonNullOnlyColumns,
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String> nonNullDims = GenericIndexed.fromIterable(
+        nonNullOnlyDimensions,
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String> nullCols = GenericIndexed.fromIterable(allColumns, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> nullDims = GenericIndexed.fromIterable(
+        allDimensions,
+        GenericIndexed.STRING_STRATEGY
+    );
 
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
-    final long numBytes = cols.getSerializedSize()
-                          + dims.getSerializedSize()
+    final long numBytes = nonNullCols.getSerializedSize()
+                          + nonNullDims.getSerializedSize()
+                          + nullCols.getSerializedSize()
+                          + nullDims.getSerializedSize()
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
-    final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
-    cols.writeTo(writer, v9Smoosher);
-    dims.writeTo(writer, v9Smoosher);
+    try (final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes)) {
+      nonNullCols.writeTo(writer, v9Smoosher);
+      nonNullDims.writeTo(writer, v9Smoosher);
 
-    DateTime minTime = DateTimes.MAX;
-    DateTime maxTime = DateTimes.MIN;
+      DateTime minTime = DateTimes.MAX;
+      DateTime maxTime = DateTimes.MIN;
 
-    for (IndexableAdapter index : adapters) {
-      minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
-      maxTime = JodaUtils.maxDateTime(maxTime, index.getDataInterval().getEnd());
+      for (IndexableAdapter index : adapters) {
+        minTime = JodaUtils.minDateTime(minTime, index.getDataInterval().getStart());
+        maxTime = JodaUtils.maxDateTime(maxTime, index.getDataInterval().getEnd());
+      }
+      final Interval dataInterval = new Interval(minTime, maxTime);
+
+      SERIALIZER_UTILS.writeLong(writer, dataInterval.getStartMillis());
+      SERIALIZER_UTILS.writeLong(writer, dataInterval.getEndMillis());
+
+      SERIALIZER_UTILS.writeString(writer, bitmapSerdeFactoryType);
+
+      // Store null-only dimensions at the end of this section,
+      // so that historicals of an older version can ignore them instead of exploding while reading this segment.
+      // Those historicals will still serve any query that reads null-only columns.
+      nullCols.writeTo(writer, v9Smoosher);
+      nullDims.writeTo(writer, v9Smoosher);
     }
-    final Interval dataInterval = new Interval(minTime, maxTime);
-
-    SERIALIZER_UTILS.writeLong(writer, dataInterval.getStartMillis());
-    SERIALIZER_UTILS.writeLong(writer, dataInterval.getEndMillis());
-
-    SERIALIZER_UTILS.writeString(writer, bitmapSerdeFactoryType);
-    writer.close();
 
     IndexIO.checkFileSize(new File(outDir, "index.drd"));
     log.debug("Completed index.drd in %,d millis.", System.currentTimeMillis() - startTime);
@@ -533,11 +634,23 @@ public class IndexMergerV9 implements IndexMerger
     }
   }
 
+  private static class IndexMergeResult
+  {
+    @Nullable
+    private final List<IntBuffer> rowNumConversions;
+    private final int rowCount;
+
+    private IndexMergeResult(@Nullable List<IntBuffer> rowNumConversions, int rowCount)
+    {
+      this.rowNumConversions = rowNumConversions;
+      this.rowCount = rowCount;
+    }
+  }
+
   /**
    * Returns rowNumConversions, if fillRowNumConversions argument is true
    */
-  @Nullable
-  private List<IntBuffer> mergeIndexesAndWriteColumns(
+  private IndexMergeResult mergeIndexesAndWriteColumns(
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
       final TimeAndDimsIterator timeAndDimsIterator,
@@ -574,7 +687,7 @@ public class IndexMergerV9 implements IndexMerger
 
       for (int dimIndex = 0; dimIndex < timeAndDims.getNumDimensions(); dimIndex++) {
         DimensionMerger merger = mergers.get(dimIndex);
-        if (merger.canSkip()) {
+        if (merger.hasOnlyNulls()) {
           continue;
         }
         merger.processMergedRow(timeAndDims.getDimensionSelector(dimIndex));
@@ -629,11 +742,13 @@ public class IndexMergerV9 implements IndexMerger
     }
     log.debug("completed walk through of %,d rows in %,d millis.", rowCount, System.currentTimeMillis() - startTime);
     progress.stopSection(section);
-    return rowNumConversions;
+    return new IndexMergeResult(rowNumConversions, rowCount);
   }
 
-  private GenericColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec)
-      throws IOException
+  private GenericColumnSerializer setupTimeWriter(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      IndexSpec indexSpec
+  ) throws IOException
   {
     GenericColumnSerializer timeWriter = createLongColumnSerializer(
         segmentWriteOutMedium,
@@ -792,13 +907,13 @@ public class IndexMergerV9 implements IndexMerger
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
         capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
-            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
+            mergeCapabilities(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
         );
       }
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
+            mergeCapabilities(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
@@ -806,6 +921,75 @@ public class IndexMergerV9 implements IndexMerger
     }
     for (String dim : mergedDimensions) {
       dimCapabilities.add(capabilitiesMap.get(dim));
+    }
+  }
+
+  /**
+   * Creates a merged columnCapabilities to merge two queryableIndexes.
+   * This method first snapshots a pair of capabilities and then merges them.
+   */
+  @Nullable
+  private static ColumnCapabilitiesImpl mergeCapabilities(
+      @Nullable final ColumnCapabilities capabilities,
+      @Nullable final ColumnCapabilities other,
+      CoercionLogic coercionLogic
+  )
+  {
+    ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.snapshot(capabilities, coercionLogic);
+    ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.snapshot(other, coercionLogic);
+    if (merged == null) {
+      return otherSnapshot;
+    } else if (otherSnapshot == null) {
+      return merged;
+    }
+
+    throwIfTypeNotMatchToMerge(merged, otherSnapshot);
+
+    merged.setDictionaryEncoded(merged.isDictionaryEncoded().or(otherSnapshot.isDictionaryEncoded()).isTrue());
+    merged.setHasMultipleValues(merged.hasMultipleValues().or(otherSnapshot.hasMultipleValues()).isTrue());
+    merged.setDictionaryValuesSorted(
+        merged.areDictionaryValuesSorted().and(otherSnapshot.areDictionaryValuesSorted()).isTrue()
+    );
+    merged.setDictionaryValuesUnique(
+        merged.areDictionaryValuesUnique().and(otherSnapshot.areDictionaryValuesUnique()).isTrue()
+    );
+    merged.setHasNulls(merged.hasNulls().or(other.hasNulls()).isTrue());
+    // When merging persisted queryableIndexes in the same ingestion job,
+    // all queryableIndexes should have the exact same hasBitmapIndexes flag set which is set in the ingestionSpec.
+    // One exception is null-only columns as they always do NOT have bitmap indexes no matter whether the flag is set
+    // in the ingestionSpec. As a result, the mismatch checked in the if clause below can happen
+    // when one of the columnCapability is from a real column and another is from a null-only column.
+    // See NullColumnPartSerde for how columnCapability is created for null-only columns.
+    // When the mismatch is found, we prefer the flag set in the ingestionSpec over
+    // the columnCapability of null-only columns.
+    if (merged.hasBitmapIndexes() != otherSnapshot.hasBitmapIndexes()) {
+      merged.setHasBitmapIndexes(false);
+    }
+    if (merged.hasSpatialIndexes() != otherSnapshot.hasSpatialIndexes()) {
+      merged.setHasSpatialIndexes(merged.hasSpatialIndexes() || otherSnapshot.hasSpatialIndexes());
+    }
+    merged.setFilterable(merged.isFilterable() && otherSnapshot.isFilterable());
+
+    return merged;
+  }
+
+  private static void throwIfTypeNotMatchToMerge(ColumnCapabilitiesImpl c1, ColumnCapabilitiesImpl c2)
+  {
+    if (!Objects.equals(c1.getType(), c2.getType())
+        || !Objects.equals(c1.getElementType(), c2.getElementType())) {
+      final String mergedType = c1.getType() == null ? null : c1.asTypeString();
+      final String otherType = c2.getType() == null ? null : c2.asTypeString();
+      throw new ISE(
+          "Cannot merge columns of type[%s] and [%s]",
+          mergedType,
+          otherType
+      );
+    } else if (!Objects.equals(c1.getComplexTypeName(), c2.getComplexTypeName())) {
+      throw new ISE(
+          "Cannot merge columns of type[%s] and [%s]",
+          c1.getComplexTypeName(),
+          c2.getComplexTypeName()
+      );
     }
   }
 
@@ -851,7 +1035,7 @@ public class IndexMergerV9 implements IndexMerger
         //                     while merging a single iterable
         false,
         index.getMetricAggs(),
-        null,
+        index.getDimensionsSpec(),
         outDir,
         indexSpec,
         indexSpec,
@@ -895,6 +1079,7 @@ public class IndexMergerV9 implements IndexMerger
       boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
+      DimensionsSpec dimensionsSpec,
       IndexSpec indexSpec,
       int maxColumnsToMerge
   ) throws IOException
@@ -903,7 +1088,7 @@ public class IndexMergerV9 implements IndexMerger
         indexes,
         rollup,
         metricAggs,
-        null,
+        dimensionsSpec,
         outDir,
         indexSpec,
         indexSpec,
@@ -1121,6 +1306,7 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         progress,
         mergedDimensions,
+        new DimensionsSpecInspector(storeEmptyColumns, dimensionsSpec),
         mergedMetrics,
         rowMergerFn,
         true,
@@ -1263,6 +1449,36 @@ public class IndexMergerV9 implements IndexMerger
           reorderedMetricSelectors,
           reorderedMetrics
       );
+    }
+  }
+
+  private static class DimensionsSpecInspector
+  {
+    private final boolean storeEmptyColumns;
+    private final Set<String> explicitDimensions;
+    private final boolean includeAllDimensions;
+
+    private DimensionsSpecInspector(
+        boolean storeEmptyColumns,
+        @Nullable DimensionsSpec dimensionsSpec
+    )
+    {
+      this.storeEmptyColumns = storeEmptyColumns;
+      this.explicitDimensions = dimensionsSpec == null
+                                ? ImmutableSet.of()
+                                : new HashSet<>(dimensionsSpec.getDimensionNames());
+      this.includeAllDimensions = dimensionsSpec != null && dimensionsSpec.isIncludeAllDimensions();
+    }
+
+    /**
+     * Returns true if the given dimension should be stored in the segment even when the column has only nulls.
+     * If it has non-nulls, then the column must be stored.
+     *
+     * @see DimensionMerger#hasOnlyNulls()
+     */
+    private boolean shouldStore(String dimension)
+    {
+      return storeEmptyColumns && (includeAllDimensions || explicitDimensions.contains(dimension));
     }
   }
 }

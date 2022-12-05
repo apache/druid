@@ -52,14 +52,14 @@ public class TimestampShiftMacroTest extends MacroTestBase
   @Test
   public void testZeroArguments()
   {
-    expectException(IAE.class, "Function[timestamp_shift] must have 3 to 4 arguments");
+    expectException(IAE.class, "Function[timestamp_shift] requires 3 to 4 arguments");
     apply(Collections.emptyList());
   }
 
   @Test
   public void testOneArguments()
   {
-    expectException(IAE.class, "Function[timestamp_shift] must have 3 to 4 arguments");
+    expectException(IAE.class, "Function[timestamp_shift] requires 3 to 4 arguments");
     apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr()
@@ -69,7 +69,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
   @Test
   public void testTwoArguments()
   {
-    expectException(IAE.class, "Function[timestamp_shift] must have 3 to 4 arguments");
+    expectException(IAE.class, "Function[timestamp_shift] requires 3 to 4 arguments");
     apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
@@ -80,7 +80,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
   @Test
   public void testMoreThanFourArguments()
   {
-    expectException(IAE.class, "Function[timestamp_shift] must have 3 to 4 arguments");
+    expectException(IAE.class, "Function[timestamp_shift] requires 3 to 4 arguments");
     apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),

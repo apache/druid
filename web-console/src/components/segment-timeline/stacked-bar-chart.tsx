@@ -31,6 +31,7 @@ export interface BarUnitData {
   width: number;
   datasource: string;
   color: string;
+  dailySize?: number;
 }
 
 export interface BarChartMargin {
@@ -48,6 +49,7 @@ export interface HoveredBarInfo {
   datasource?: string;
   xValue?: number;
   yValue?: number;
+  dailySize?: number;
 }
 
 interface StackedBarChartProps {
@@ -151,6 +153,11 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
           <div className="bar-chart-tooltip">
             <div>Datasource: {hoverOn.datasource}</div>
             <div>Time: {hoverOn.xValue}</div>
+            <div>
+              {`${
+                activeDataType === 'countData' ? 'Daily total count:' : 'Daily total size:'
+              } ${formatTick(hoverOn.dailySize!)}`}
+            </div>
             <div>
               {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${formatTick(
                 hoverOn.yValue!,

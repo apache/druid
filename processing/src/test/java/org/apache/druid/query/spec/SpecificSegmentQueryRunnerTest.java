@@ -21,6 +21,7 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -181,6 +182,8 @@ public class SpecificSegmentQueryRunnerTest
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
+                                  // Do one test with CTX_SET_THREAD_NAME = false.
+                                  .context(ImmutableMap.of(SpecificSegmentQueryRunner.CTX_SET_THREAD_NAME, false))
                                   .build();
     Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     List<Result<TimeseriesResultValue>> res = results.toList();

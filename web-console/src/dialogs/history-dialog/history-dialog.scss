@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .history-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     width: 75%;
     top: 5%;
     height: 75vh;
   }
 
-  .bp3-tabs {
+  .#{$bp-ns}-tabs {
     position: relative;
     height: 100%;
     width: 100%;
 
-    .bp3-tab-panel {
+    .#{$bp-ns}-tab-panel {
       flex: 1;
     }
   }

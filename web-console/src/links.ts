@@ -19,7 +19,7 @@
 import hasOwnProp from 'has-own-prop';
 
 // This is set to the latest available version and should be updated to the next version before release
-const DRUID_DOCS_VERSION = '0.20.0';
+const DRUID_DOCS_VERSION = 'latest';
 
 function fillVersion(str: string): string {
   return str.replace(/\{\{VERSION}}/g, DRUID_DOCS_VERSION);
@@ -63,6 +63,7 @@ export type LinkNames =
   | 'DOCS_SQL'
   | 'DOCS_RUNE'
   | 'DOCS_API'
+  | 'DOCS_MSQ_ERROR'
   | 'COMMUNITY'
   | 'SLACK'
   | 'USER_GROUP'
@@ -82,6 +83,8 @@ export function getLink(linkName: LinkNames): string {
       return `${links.docsHref}/querying/querying.html`;
     case 'DOCS_API':
       return `${links.docsHref}/operations/api-reference.html`;
+    case 'DOCS_MSQ_ERROR':
+      return `${links.docsHref}/multi-stage-query/concepts.html#error-codes`;
     case 'COMMUNITY':
       return links.communityHref;
     case 'SLACK':

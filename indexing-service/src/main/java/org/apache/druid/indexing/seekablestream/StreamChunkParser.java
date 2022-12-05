@@ -51,7 +51,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
   @Nullable
-  private final SettableByteEntityReader byteEntityReader;
+  private final SettableByteEntityReader<RecordType> byteEntityReader;
   private final Predicate<InputRow> rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
@@ -76,7 +76,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
     // parser is already decorated with transformSpec in DataSchema
     this.parser = parser;
     if (inputFormat != null) {
-      this.byteEntityReader = new SettableByteEntityReader(
+      this.byteEntityReader = new SettableByteEntityReader<>(
           inputFormat,
           inputRowSchema,
           transformSpec,

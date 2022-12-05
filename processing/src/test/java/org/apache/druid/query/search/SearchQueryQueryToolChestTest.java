@@ -29,11 +29,18 @@ import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SearchQueryQueryToolChestTest
+import java.util.Arrays;
+
+public class SearchQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
 
   @Test
@@ -48,6 +55,7 @@ public class SearchQueryQueryToolChestTest
                 1,
                 new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
                 ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("dim1")),
+                VirtualColumns.EMPTY,
                 new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
                 null,
                 null
@@ -72,5 +80,83 @@ public class SearchQueryQueryToolChestTest
     Result<SearchResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
+  }
+
+  @Test
+  public void testCacheStrategyVirtualColumns()
+  {
+    SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest(null, null);
+    SearchQuery query1 = new SearchQuery(
+        new TableDataSource("dummy"),
+        null,
+        Granularities.ALL,
+        1,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+        ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            )
+        ),
+        new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
+        null,
+        null
+    );
+
+    SearchQuery query2 = new SearchQuery(
+        new TableDataSource("dummy"),
+        null,
+        Granularities.ALL,
+        1,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+        ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn("v0", "concat(dim2, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            )
+        ),
+        new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
+        null,
+        null
+    );
+
+    SearchQuery query3 = new SearchQuery(
+        new TableDataSource("dummy"),
+        null,
+        Granularities.ALL,
+        1,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+        ImmutableList.of(Druids.DIMENSION_IDENTITY.apply("v0")),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            )
+        ),
+        new FragmentSearchQuerySpec(ImmutableList.of("a", "b")),
+        null,
+        null
+    );
+
+    Assert.assertArrayEquals(
+        toolChest.getCacheStrategy(query1).computeCacheKey(query1),
+        toolChest.getCacheStrategy(query1).computeCacheKey(query1)
+    );
+
+    Assert.assertArrayEquals(
+        toolChest.getCacheStrategy(query2).computeCacheKey(query2),
+        toolChest.getCacheStrategy(query2).computeCacheKey(query2)
+    );
+
+    Assert.assertArrayEquals(
+        toolChest.getCacheStrategy(query1).computeCacheKey(query1),
+        toolChest.getCacheStrategy(query3).computeCacheKey(query3)
+    );
+
+    Assert.assertFalse(
+        Arrays.equals(
+            toolChest.getCacheStrategy(query1).computeCacheKey(query1),
+            toolChest.getCacheStrategy(query2).computeCacheKey(query2)
+        )
+    );
   }
 }

@@ -48,9 +48,7 @@ ace.define(
       ).join('|');
 
       // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      var dataTypes = druidFunctions.SQL_DATA_TYPES.map(function (f) {
-        return f[0];
-      }).join('|');
+      var dataTypes = Object.keys(druidFunctions.SQL_DATA_TYPES).join('|');
 
       var keywordMapper = this.createKeywordMapper(
         {
@@ -66,6 +64,10 @@ ace.define(
       this.$rules = {
         start: [
           {
+            token: 'comment.issue',
+            regex: '--:ISSUE:.*$',
+          },
+          {
             token: 'comment',
             regex: '--.*$',
           },
@@ -75,16 +77,12 @@ ace.define(
             end: '\\*/',
           },
           {
-            token: 'string', // " string
+            token: 'variable.column', // " quoted reference
             regex: '".*?"',
           },
           {
-            token: 'string', // ' string
+            token: 'string', // ' string literal
             regex: "'.*?'",
-          },
-          {
-            token: 'string', // ` string (apache drill)
-            regex: '`.*?`',
           },
           {
             token: 'constant.numeric', // float

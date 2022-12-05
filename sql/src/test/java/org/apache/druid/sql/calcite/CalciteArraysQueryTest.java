@@ -70,7 +70,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
   // array aggregator
   @Test
-  public void testSelectConstantArrayExpressionFromTable() throws Exception
+  public void testSelectConstantArrayExpressionFromTable()
   {
     testQuery(
         "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
@@ -92,7 +92,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByArrayFromCase() throws Exception
+  public void testGroupByArrayFromCase()
   {
     cannotVectorize();
     testQuery(
@@ -121,7 +121,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonConstantArrayExpressionFromTable() throws Exception
+  public void testSelectNonConstantArrayExpressionFromTable()
   {
     testQuery(
         "SELECT ARRAY[CONCAT(dim1, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
@@ -151,7 +151,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonConstantArrayExpressionFromTableForMultival() throws Exception
+  public void testSelectNonConstantArrayExpressionFromTableForMultival()
   {
     final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
     final Query<?> scanQuery = newScanQueryBuilder()
@@ -204,7 +204,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSomeArrayFunctionsWithScanQuery() throws Exception
+  public void testSomeArrayFunctionsWithScanQuery()
   {
     // Yes these outputs are strange sometimes, arrays are in a partial state of existence so end up a bit
     // stringy for now this is because virtual column selectors are coercing values back to stringish so that
@@ -356,7 +356,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSomeArrayFunctionsWithScanQueryNoStringify() throws Exception
+  public void testSomeArrayFunctionsWithScanQueryNoStringify()
   {
     // when not stringifying arrays, some things are still stringified, because they are inferred to be typed as strings
     // the planner context which controls stringification of arrays does not apply to multi-valued string columns,
@@ -474,7 +474,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilter() throws Exception
+  public void testArrayOverlapFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
@@ -497,7 +497,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterNonLiteral() throws Exception
+  public void testArrayOverlapFilterNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
@@ -519,7 +519,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilter() throws Exception
+  public void testArrayContainsFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
@@ -546,7 +546,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsArrayOfOneElement() throws Exception
+  public void testArrayContainsArrayOfOneElement()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY['a']) LIMIT 5",
@@ -568,7 +568,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsArrayOfNonLiteral() throws Exception
+  public void testArrayContainsArrayOfNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
@@ -591,7 +591,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArraySlice() throws Exception
+  public void testArraySlice()
   {
     testQuery(
         "SELECT ARRAY_SLICE(dim3, 1) FROM druid.numfoo",
@@ -619,7 +619,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayLength() throws Exception
+  public void testArrayLength()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -662,7 +662,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAppend() throws Exception
+  public void testArrayAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -719,7 +719,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayPrepend() throws Exception
+  public void testArrayPrepend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -776,7 +776,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayPrependAppend() throws Exception
+  public void testArrayPrependAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -840,7 +840,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayConcat() throws Exception
+  public void testArrayConcat()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -897,7 +897,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOffset() throws Exception
+  public void testArrayOffset()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -936,7 +936,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsLongArray() throws Exception
+  public void testArrayGroupAsLongArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
@@ -985,7 +985,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testArrayGroupAsDoubleArray() throws Exception
+  public void testArrayGroupAsDoubleArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
@@ -1034,7 +1034,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsFloatArray() throws Exception
+  public void testArrayGroupAsFloatArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
@@ -1069,21 +1069,21 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         useDefault ? ImmutableList.of(
-            new Object[]{ImmutableList.of(0.0), 4L},
-            new Object[]{ImmutableList.of(0.10000000149011612), 1L},
-            new Object[]{ImmutableList.of(1.0), 1L}
+            new Object[]{ImmutableList.of(0.0F), 4L},
+            new Object[]{ImmutableList.of(0.10000000149011612F), 1L},
+            new Object[]{ImmutableList.of(1.0F), 1L}
         ) :
         ImmutableList.of(
             new Object[]{Collections.singletonList(null), 3L},
-            new Object[]{ImmutableList.of(0.0), 1L},
-            new Object[]{ImmutableList.of(0.10000000149011612), 1L},
-            new Object[]{ImmutableList.of(1.0), 1L}
+            new Object[]{ImmutableList.of(0.0F), 1L},
+            new Object[]{ImmutableList.of(0.10000000149011612F), 1L},
+            new Object[]{ImmutableList.of(1.0F), 1L}
         )
     );
   }
 
   @Test
-  public void testArrayGroupAsArrayWithFunction() throws Exception
+  public void testArrayGroupAsArrayWithFunction()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1127,7 +1127,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOrdinal() throws Exception
+  public void testArrayOrdinal()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1170,7 +1170,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOffsetOf() throws Exception
+  public void testArrayOffsetOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1219,7 +1219,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOrdinalOf() throws Exception
+  public void testArrayOrdinalOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1269,7 +1269,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayToString() throws Exception
+  public void testArrayToString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1325,7 +1325,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayToStringToMultiValueString() throws Exception
+  public void testArrayToStringToMultiValueString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1384,7 +1384,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAgg() throws Exception
+  public void testArrayAgg()
   {
     cannotVectorize();
     testQuery(
@@ -1466,7 +1466,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggMultiValue() throws Exception
+  public void testArrayAggMultiValue()
   {
     cannotVectorize();
     testQuery(
@@ -1524,7 +1524,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggNumeric() throws Exception
+  public void testArrayAggNumeric()
   {
     cannotVectorize();
     testQuery(
@@ -1660,7 +1660,50 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArrays() throws Exception
+  public void testArrayAggQuantile()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_QUANTILE(ARRAY_AGG(l1), 0.9) FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("l1"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              true,
+                              false,
+                              "array_append(\"__acc\", \"l1\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .postAggregators(
+                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)")
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        // Different results because there are some nulls in the column. In SQL-compatible mode we ignore them;
+        // in replace-with-default mode we treat them as zeroes.
+        ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 260259.80000000002 : 162665.0})
+    );
+  }
+
+  @Test
+  public void testArrayAggArrays()
   {
     try {
       ExpressionProcessing.initializeForTests(true);
@@ -1762,7 +1805,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArraysNoNest() throws Exception
+  public void testArrayAggArraysNoNest()
   {
     cannotVectorize();
     testQueryThrows(
@@ -1823,7 +1866,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayConcatAggArrays() throws Exception
+  public void testArrayConcatAggArrays()
   {
     cannotVectorize();
     testQuery(
@@ -1884,7 +1927,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggToString() throws Exception
+  public void testArrayAggToString()
   {
     cannotVectorize();
     testQuery(
@@ -1926,7 +1969,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggExpression() throws Exception
+  public void testArrayAggExpression()
   {
     cannotVectorize();
     testQuery(
@@ -1970,7 +2013,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggMaxBytes() throws Exception
+  public void testArrayAggMaxBytes()
   {
     cannotVectorize();
     testQuery(
@@ -2028,7 +2071,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggAsArrayFromJoin() throws Exception
+  public void testArrayAggAsArrayFromJoin()
   {
     cannotVectorize();
     List<Object[]> expectedResults;
@@ -2110,7 +2153,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggFromSubquery() throws Exception
+  public void testArrayAggGroupByArrayAggFromSubquery()
   {
     cannotVectorize();
 
@@ -2178,7 +2221,213 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArrayContainsSubquery() throws Exception
+  public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, count(*) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new QueryDataSource(
+                                            GroupByQuery.builder()
+                                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                        .setGranularity(Granularities.ALL)
+                                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                                                        .setDimensions(
+                                                            new DefaultDimensionSpec("dim1", "d0"),
+                                                            new DefaultDimensionSpec("dim2", "d1"),
+                                                            new DefaultDimensionSpec("dim3", "d2"
+                                                            )
+                                                        )
+                                                        .setAggregatorSpecs(
+                                                            new CountAggregatorFactory("a0"))
+                                                        .build()))
+                                        .setQuerySegmentSpec(
+                                            querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec(
+                                                "d0",
+                                                "_d0"
+                                            ),
+                                            new DefaultDimensionSpec(
+                                                "d1",
+                                                "_d1"
+                                            )
+                                        )
+                                        .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                            "_a0",
+                                            ImmutableSet.of("a0"),
+                                            "__acc",
+                                            "ARRAY<LONG>[]",
+                                            "ARRAY<LONG>[]",
+                                            true,
+                                            true,
+                                            false,
+                                            "array_append(\"__acc\", \"a0\")",
+                                            "array_concat(\"__acc\", \"_a0\")",
+                                            null,
+                                            null,
+                                            new HumanReadableBytes(1024),
+                                            ExprMacroTable.nil()
+                                        ))
+                                        .build()))
+                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.LONG_ARRAY))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1L), 4L},
+            new Object[]{ImmutableList.of(1L, 1L), 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new QueryDataSource(
+                                            GroupByQuery.builder()
+                                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                        .setGranularity(Granularities.ALL)
+                                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                                                        .setDimensions(
+                                                            new DefaultDimensionSpec("dim1", "d0"),
+                                                            new DefaultDimensionSpec("dim2", "d1"),
+                                                            new DefaultDimensionSpec("dim3", "d2"
+                                                            )
+                                                        )
+                                                        .setAggregatorSpecs(
+                                                            new CountAggregatorFactory("a0"))
+                                                        .build()))
+                                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("d0", "_d0"),
+                                            new DefaultDimensionSpec("d1", "_d1")
+                                        )
+                                        .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                            "_a0",
+                                            ImmutableSet.of("a0"),
+                                            "__acc",
+                                            "ARRAY<STRING>[]",
+                                            "ARRAY<STRING>[]",
+                                            true,
+                                            true,
+                                            false,
+                                            "array_append(\"__acc\", \"a0\")",
+                                            "array_concat(\"__acc\", \"_a0\")",
+                                            null,
+                                            null,
+                                            new HumanReadableBytes(1024),
+                                            ExprMacroTable.nil()
+                                        ))
+                                        .build()))
+                        .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.STRING_ARRAY))
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of("1"), 4L},
+            new Object[]{ImmutableList.of("1", "1"), 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
+  {
+    requireMergeBuffers(3);
+    cannotVectorize();
+    testQuery(
+        "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as DOUBLE ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery
+                .builder()
+                .setDataSource(new QueryDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource(new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                                .setGranularity(Granularities.ALL)
+                                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                                                .setDimensions(
+                                                    new DefaultDimensionSpec("dim1", "d0"),
+                                                    new DefaultDimensionSpec("dim2", "d1"),
+                                                    new DefaultDimensionSpec("dim3", "d2"
+                                                    )
+                                                )
+                                                .setAggregatorSpecs(
+                                                    new CountAggregatorFactory("a0"))
+                                                .build()))
+                                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                                .setGranularity(Granularities.ALL)
+                                .setDimensions(
+                                    new DefaultDimensionSpec("d0", "_d0"),
+                                    new DefaultDimensionSpec("d1", "_d1")
+                                )
+                                .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
+                                    "_a0",
+                                    ImmutableSet.of("a0"),
+                                    "__acc",
+                                    "ARRAY<DOUBLE>[]",
+                                    "ARRAY<DOUBLE>[]",
+                                    true,
+                                    true,
+                                    false,
+                                    "array_append(\"__acc\", \"a0\")",
+                                    "array_concat(\"__acc\", \"_a0\")",
+                                    null,
+                                    null,
+                                    new HumanReadableBytes(1024),
+                                    ExprMacroTable.nil()
+                                ))
+                                .build()))
+                .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .setDimensions(new DefaultDimensionSpec("_a0", "d0", ColumnType.DOUBLE_ARRAY))
+                .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1.0), 4L},
+            new Object[]{ImmutableList.of(1.0, 1.0), 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayAggArrayContainsSubquery()
   {
     cannotVectorize();
     List<Object[]> expectedResults;
@@ -2261,7 +2510,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayContainsSubquery() throws Exception
+  public void testArrayAggGroupByArrayContainsSubquery()
   {
     cannotVectorize();
     List<Object[]> expectedResults;

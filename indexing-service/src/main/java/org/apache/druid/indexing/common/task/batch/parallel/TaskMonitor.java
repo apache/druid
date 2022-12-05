@@ -25,14 +25,16 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.rpc.indexing.OverlordClient;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -83,7 +85,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   private final Object startStopLock = new Object();
 
   // overlord client
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final int maxRetry;
   private final int estimatedNumSucceededTasks;
 
@@ -104,9 +106,11 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int estimatedNumSucceededTasks)
+  TaskMonitor(OverlordClient overlordClient, int maxRetry, int estimatedNumSucceededTasks)
   {
-    this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
+    // Unlimited retries for Overlord APIs: if it goes away, we'll wait indefinitely for it to come back.
+    this.overlordClient = Preconditions.checkNotNull(overlordClient, "overlordClient")
+                                       .withRetryPolicy(StandardRetryPolicy.unlimited());
     this.maxRetry = maxRetry;
     this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
 
@@ -129,7 +133,10 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
                 final String specId = entry.getKey();
                 final MonitorEntry monitorEntry = entry.getValue();
                 final String taskId = monitorEntry.runningTask.getId();
-                final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
+
+                // Could improve this by switching to the bulk taskStatuses API.
+                final TaskStatusResponse taskStatusResponse =
+                    FutureUtils.getUnchecked(overlordClient.taskStatus(taskId), true);
                 final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
                 if (taskStatus != null) {
                   switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
@@ -213,7 +220,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
               iterator.remove();
               final String taskId = entry.runningTask.getId();
               log.info("Request to cancel subtask[%s]", taskId);
-              indexingServiceClient.cancelTask(taskId);
+              FutureUtils.getUnchecked(overlordClient.cancelTask(taskId), true);
               numRunningTasks--;
               numCanceledTasks++;
             }
@@ -249,9 +256,10 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
       incrementNumRunningTasks();
 
       final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
+      final TaskStatusResponse statusResponse = FutureUtils.getUnchecked(overlordClient.taskStatus(task.getId()), true);
       runningTasks.put(
           spec.getId(),
-          new MonitorEntry(spec, task, indexingServiceClient.getTaskStatus(task.getId()).getStatus(), taskFuture)
+          new MonitorEntry(spec, task, statusResponse.getStatus(), taskFuture)
       );
 
       return taskFuture;
@@ -264,6 +272,7 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
     // Here, we simply make sure the current report is exactly the same as the previous one.
     reportsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
       if (prevReport != null) {
+        log.warn("Received duplicate report for task [%s]", taskId);
         Preconditions.checkState(
             prevReport.equals(report),
             "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
@@ -294,13 +303,11 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
         log.info("Submitted a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
         incrementNumRunningTasks();
 
+        final TaskStatusResponse statusResponse =
+            FutureUtils.getUnchecked(overlordClient.taskStatus(task.getId()), true);
         runningTasks.put(
             subTaskSpecId,
-            monitorEntry.withNewRunningTask(
-                task,
-                indexingServiceClient.getTaskStatus(task.getId()).getStatus(),
-                lastFailedTaskStatus
-            )
+            monitorEntry.withNewRunningTask(task, statusResponse.getStatus(), lastFailedTaskStatus)
         );
       }
     }
@@ -310,13 +317,13 @@ public class TaskMonitor<T extends Task, SubTaskReportType extends SubTaskReport
   {
     T task = spec.newSubTask(numAttempts);
     try {
-      indexingServiceClient.runTask(task.getId(), task);
+      FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
     }
     catch (Exception e) {
       if (isUnknownTypeIdException(e)) {
         log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
         task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
-        indexingServiceClient.runTask(task.getId(), task);
+        FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
       } else {
         throw e;
       }

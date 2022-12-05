@@ -414,8 +414,8 @@ public class ParallelCombiner<KeyType>
               while (mergedIterator.hasNext()) {
                 final Entry<KeyType> next = mergedIterator.next();
 
-                settableColumnSelectorFactory.set(next.values);
-                grouper.aggregate(next.key); // grouper always returns ok or throws an exception
+                settableColumnSelectorFactory.set(next.getValues());
+                grouper.aggregate(next.getKey()); // grouper always returns ok or throws an exception
                 settableColumnSelectorFactory.set(null);
               }
             }

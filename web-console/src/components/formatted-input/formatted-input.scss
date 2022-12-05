@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .formatted-input {
   position: relative;
 
-  & > .bp3-popover2-target {
+  & > .#{$bp-ns}-popover2-target {
     position: absolute;
     width: 0;
     right: 0;

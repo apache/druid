@@ -118,6 +118,12 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new VarianceAggregatorFactory(newName, getFieldName(), getEstimator(), inputType);
+  }
+
+  @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     ColumnValueSelector<?> selector = metricFactory.makeColumnValueSelector(fieldName);

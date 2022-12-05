@@ -57,7 +57,7 @@ def generate_notice(source_notice, dependences_yaml):
     # Print Apache license first.
     print_outfile(source_notice)
     with open(dependences_yaml, encoding='utf-8') as registry_file:
-        dependencies = list(yaml.load_all(registry_file))
+        dependencies = list(yaml.load_all(registry_file, Loader=yaml.Loader))
 
     # Group dependencies by module
     modules_map = defaultdict(list)

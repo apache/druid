@@ -104,9 +104,14 @@ public class DruidExpression
     return escaped.toString();
   }
 
-  public static String numberLiteral(final Number n)
+  public static String longLiteral(final long n)
   {
-    return n == null ? nullLiteral() : n.toString();
+    return String.valueOf(n);
+  }
+
+  public static String doubleLiteral(final double n)
+  {
+    return String.valueOf(n);
   }
 
   public static String stringLiteral(final String s)
@@ -387,6 +392,15 @@ public class DruidExpression
     return virtualColumnCreator.create(name, outputType, expression.get(), macroTable);
   }
 
+  public VirtualColumn toExpressionVirtualColumn(
+      final String name,
+      final ColumnType outputType,
+      final ExprMacroTable macroTable
+  )
+  {
+    return DEFAULT_VIRTUAL_COLUMN_BUILDER.create(name, outputType, expression.get(), macroTable);
+  }
+
   public NodeType getType()
   {
     return nodeType;
@@ -495,7 +509,7 @@ public class DruidExpression
     {
       List<DruidExpression> list = new ArrayList<>(expressions.size());
       for (DruidExpression expr : expressions) {
-        list.add(visit(expr));
+        list.add(visit(expr.visit(this)));
       }
       return list;
     }

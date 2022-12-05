@@ -23,7 +23,22 @@ import java.util.Map;
 
 public interface ObjectFlattener<T>
 {
+  /**
+   * Transforms an input row object into a {@link Map}, likely based on the instructions in some {@link JSONPathSpec}.
+   *
+   * This method is used in normal ingestion to extract values into a map to translate into an
+   * {@link org.apache.druid.data.input.InputRow}
+   */
   Map<String, Object> flatten(T obj);
 
+  /**
+   * Completely transforms an input row into a {@link Map}, including translating all nested structure into plain java
+   * objects such as {@link Map} and {@link java.util.List}. This method should translate everything as much as
+   * possible, ignoring any instructions in {@link JSONPathSpec} which might otherwise limit the amount of
+   * transformation done.
+   *
+   * This method is used by the ingestion "sampler" to provide a "raw" JSON form of the original input data, regardless
+   * of actual format, so that it can use "inline" JSON datasources and reduce sampling overhead.
+   */
   Map<String, Object> toMap(T obj);
 }

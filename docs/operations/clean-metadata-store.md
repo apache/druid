@@ -68,7 +68,7 @@ The cleanup of one entity may depend on the cleanup of another entity as follows
 For details on configuration properties, see [Metadata management](../configuration/index.md#metadata-management).
 If you want to skip the details, check out the [example](#example) for configuring automated metadata cleanup.
 
-<a name="kill-task">
+<a name="kill-task"></a>
 ### Segment records and segments in deep storage (kill task)
 
 > The kill task is the only configuration in this topic that affects actual data in deep storage and not simply metadata or logs.

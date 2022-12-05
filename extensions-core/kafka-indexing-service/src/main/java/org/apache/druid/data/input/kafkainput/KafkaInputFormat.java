@@ -28,9 +28,11 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.DateTimes;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.Objects;
 
@@ -79,28 +81,29 @@ public class KafkaInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    KafkaRecordEntity record = (KafkaRecordEntity) source;
+    SettableByteEntity<KafkaRecordEntity> settableByteEntitySource = (SettableByteEntity<KafkaRecordEntity>) source;
     InputRowSchema newInputRowSchema = new InputRowSchema(dummyTimestampSpec, inputRowSchema.getDimensionsSpec(), inputRowSchema.getColumnsFilter());
     return new KafkaInputReader(
         inputRowSchema,
-        record,
+        settableByteEntitySource,
         (headerFormat == null) ?
-          null :
-          headerFormat.createReader(record.getRecord().headers(), headerColumnPrefix),
-        (keyFormat == null || record.getRecord().key() == null) ?
-          null :
-          keyFormat.createReader(
-                  newInputRowSchema,
-                  new ByteEntity(record.getRecord().key()),
-                  temporaryDirectory
-          ),
-        (record.getRecord().value() == null) ?
-          null :
-          valueFormat.createReader(
-                  newInputRowSchema,
-                  source,
-                  temporaryDirectory
-          ),
+            null :
+            record -> headerFormat.createReader(record.getRecord().headers(), headerColumnPrefix),
+        (keyFormat == null) ?
+            null :
+            record ->
+                (record.getRecord().key() == null) ?
+                    null :
+                    keyFormat.createReader(
+                        newInputRowSchema,
+                        new ByteEntity(record.getRecord().key()),
+                        temporaryDirectory
+                    ),
+        valueFormat.createReader(
+            newInputRowSchema,
+            source,
+            temporaryDirectory
+        ),
         keyColumnName,
         timestampColumnName
     );

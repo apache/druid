@@ -23,6 +23,7 @@ import com.github.rvesse.airline.builder.CliBuilder;
 
 public class CustomNodeRoleCommandCreator implements CliCommandCreator
 {
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   @Override
   public void addCommands(CliBuilder builder)
   {

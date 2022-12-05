@@ -44,6 +44,17 @@ public class TaskLocationTest
   }
 
   @Test
+  public void testTlsForPeonJobs()
+  {
+    TaskLocation noTls = TaskLocation.create("foo", 1, 2, false);
+    Assert.assertEquals(-1, noTls.getTlsPort());
+    Assert.assertEquals(1, noTls.getPort());
+    TaskLocation tls = TaskLocation.create("foo", 1, 2, true);
+    Assert.assertEquals(-1, tls.getPort());
+    Assert.assertEquals(2, tls.getTlsPort());
+  }
+
+  @Test
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(TaskLocation.class).usingGetClass().verify();

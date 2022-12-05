@@ -91,6 +91,7 @@ public class HumanReadableBytesTest
     Assert.assertEquals(1024, HumanReadableBytes.parse("1kib"));
     Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9KiB"));
     Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9Kib"));
+    Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9Ki"));
   }
 
   @Test
@@ -99,6 +100,7 @@ public class HumanReadableBytesTest
     Assert.assertEquals(1024 * 1024, HumanReadableBytes.parse("1mib"));
     Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9MiB"));
     Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mib"));
+    Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mi"));
   }
 
   @Test
@@ -107,6 +109,7 @@ public class HumanReadableBytesTest
     Assert.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1gib"));
     Assert.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1GiB"));
     Assert.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gib"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gi"));
   }
 
   @Test
@@ -115,6 +118,7 @@ public class HumanReadableBytesTest
     Assert.assertEquals(1024L * 1024 * 1024 * 1024, HumanReadableBytes.parse("1tib"));
     Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9TiB"));
     Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Tib"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Ti"));
   }
 
   @Test
@@ -123,6 +127,7 @@ public class HumanReadableBytesTest
     Assert.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("1pib"));
     Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9PiB"));
     Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pib"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pi"));
   }
 
   @Test
@@ -207,6 +212,13 @@ public class HumanReadableBytesTest
   }
 
   @Test
+  public void testInvalidFormatOneCharK8s()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    HumanReadableBytes.parse("i");
+  }
+
+  @Test
   public void testInvalidFormatOneChar2()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
@@ -235,11 +247,26 @@ public class HumanReadableBytesTest
   }
 
   @Test
+  public void testInvalidFormatMiExtraSpace()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    HumanReadableBytes.parse("1 mi");
+  }
+
+  @Test
   public void testInvalidFormatTiB()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("tib");
   }
+
+  @Test
+  public void testInvalidFormatTi()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    HumanReadableBytes.parse("ti");
+  }
+
 
   @Test
   public void testInvalidFormatGiB()

@@ -23,7 +23,8 @@
 @import '~@blueprintjs/datetime/src/blueprint-datetime';
 @import '~@blueprintjs/popover2/src/blueprint-popover2';
 @import '~react-splitter-layout/lib/index';
-@import '../lib/react-table';
+@import './react-table/react-table-base-styles';
+@import './react-table/react-table-extra';
 
 html,
 body {
@@ -38,7 +39,7 @@ body {
 body {
   background: $light-gray4;
 
-  &.bp3-dark {
+  &.#{$bp-ns}-dark {
     background: $dark-gray2;
   }
 

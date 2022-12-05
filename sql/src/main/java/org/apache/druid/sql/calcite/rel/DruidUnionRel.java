@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -30,14 +31,19 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,7 +53,7 @@ import java.util.stream.Collectors;
  * but rather, it represents the concatenation of a series of native queries in the SQL layer. Therefore,
  * {@link #getPartialDruidQuery()} returns null, and this rel cannot be built on top of. It must be the outer rel in a
  * query plan.
- *
+ * <p>
  * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a {@link UnionDataSource}.
  * In the future we expect that {@link UnionDataSource} will gain the ability to union query datasources together, and
  * then this rel could be replaced by {@link DruidUnionDataSourceRel}.
@@ -100,18 +106,51 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
-  public Sequence<Object[]> runQuery()
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public QueryResponse<Object[]> runQuery()
   {
     // Lazy: run each query in sequence, not all at once.
     if (limit == 0) {
-      return Sequences.empty();
+      return new QueryResponse<Object[]>(Sequences.empty(), ResponseContext.createEmpty());
     } else {
-      final Sequence baseSequence = Sequences.concat(
-          FluentIterable.from(rels).transform(rel -> ((DruidRel) rel).runQuery())
-      );
 
-      return limit > 0 ? baseSequence.limit(limit) : baseSequence;
+      // We run the first rel here for two reasons:
+      // 1) So that we get things running as normally expected when runQuery() is called
+      // 2) So that we have a QueryResponse to return, note that the response headers from the query will only
+      //    have values from this first query and will not contain values from subsequent queries.  This is definitely
+      //    sub-optimal, the other option would be to fire off all queries and combine their QueryResponses, but that
+      //    is also sub-optimal as it would consume parallel query resources and potentially starve the system.
+      //    Instead, we only return the headers from the first query and potentially exception out and fail the query
+      //    if there are any response headers that come from subsequent queries that are correctness concerns
+      final QueryResponse<Object[]> queryResponse = ((DruidRel) rels.get(0)).runQuery();
+
+      final List<Sequence<Object[]>> firstAsList = Collections.singletonList(queryResponse.getResults());
+      final Iterable<Sequence<Object[]>> theRestTransformed = FluentIterable
+          .from(rels.subList(1, rels.size()))
+          .transform(
+              rel -> {
+                final QueryResponse response = ((DruidRel) rel).runQuery();
+
+                final ResponseContext nextContext = response.getResponseContext();
+                final List<Interval> uncoveredIntervals = nextContext.getUncoveredIntervals();
+                if (uncoveredIntervals == null || uncoveredIntervals.isEmpty()) {
+                  return response.getResults();
+                } else {
+                  throw new ISE(
+                      "uncoveredIntervals[%s] existed on a sub-query of a union, incomplete data, failing",
+                      uncoveredIntervals
+                  );
+                }
+              }
+          );
+
+      final Iterable<Sequence<Object[]>> recombinedSequences = Iterables.concat(firstAsList, theRestTransformed);
+
+      final Sequence returnSequence = Sequences.concat(recombinedSequences);
+      return new QueryResponse<Object[]>(
+          limit > 0 ? returnSequence.limit(limit) : returnSequence,
+          queryResponse.getResponseContext()
+      );
     }
   }
 

@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
@@ -41,8 +42,6 @@ import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -81,24 +80,11 @@ public class RunRulesTest
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
 
-    DateTime start = DateTimes.of("2012-01-01");
-    usedSegments = new ArrayList<>();
-    for (int i = 0; i < 24; i++) {
-      usedSegments.add(
-          new DataSegment(
-              "test",
-              new Interval(start, start.plusHours(1)),
-              DateTimes.nowUtc().toString(),
-              new HashMap<>(),
-              new ArrayList<>(),
-              new ArrayList<>(),
-              NoneShardSpec.instance(),
-              IndexIO.CURRENT_VERSION_ID,
-              1
-          )
-      );
-      start = start.plusHours(1);
-    }
+    usedSegments = CreateDataSegments.ofDatasource("test")
+                                     .forIntervals(24, Granularities.HOUR)
+                                     .startingAt("2012-01-01")
+                                     .withNumPartitions(1)
+                                     .eachOfSizeInMb(1);
 
     ruleRunner = new RunRules(new ReplicationThrottler(24, 1, false), coordinator);
   }

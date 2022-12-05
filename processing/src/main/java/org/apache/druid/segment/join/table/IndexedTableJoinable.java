@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -33,7 +34,6 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -93,38 +93,36 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(final String columnName, final int maxNumValues)
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, final int maxNumValues)
   {
     final int columnPosition = table.rowSignature().indexOf(columnName);
 
     if (columnPosition < 0) {
-      return Optional.empty();
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
 
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
       // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
       // The hopes are that this will improve locality and therefore improve performance.
-      //
-      // Note: we are using Comparators.naturalNullsFirst() because it prevents the need for lambda-wrapping in
-      // InDimFilter's "createStringPredicate" method.
-      final Set<String> allValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      final Set<String> allValues = createValuesSet();
+      boolean allUnique = true;
 
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
 
         if (!NullHandling.isNullOrEquivalent(s)) {
           if (!allValues.add(s)) {
-            // Duplicate found. Since the values are not all unique, we must return an empty Optional.
-            return Optional.empty();
+            // Duplicate found
+            allUnique = false;
           }
 
           if (allValues.size() > maxNumValues) {
-            return Optional.empty();
+            return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
           }
         }
       }
 
-      return Optional.of(allValues);
+      return new ColumnValuesWithUniqueFlag(allValues, allUnique);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -147,7 +145,7 @@ public class IndexedTableJoinable implements Joinable
       return Optional.empty();
     }
     try (final Closer closer = Closer.create()) {
-      Set<String> correlatedValues = new HashSet<>();
+      Set<String> correlatedValues = createValuesSet();
       if (table.keyColumns().contains(searchColumnName)) {
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
         IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
@@ -195,5 +193,13 @@ public class IndexedTableJoinable implements Joinable
   public Optional<Closeable> acquireReferences()
   {
     return table.acquireReferences();
+  }
+
+  /**
+   * Create a Set that InDimFilter will accept without incurring a copy.
+   */
+  private static Set<String> createValuesSet()
+  {
+    return new TreeSet<>(Comparators.naturalNullsFirst());
   }
 }

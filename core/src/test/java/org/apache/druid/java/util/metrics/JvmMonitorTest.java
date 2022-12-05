@@ -41,7 +41,7 @@ public class JvmMonitorTest
     serviceEmitter.start();
     final JvmMonitor jvmMonitor = new JvmMonitor();
     // skip tests if gc counters fail to initialize with this JDK
-    Assume.assumeNotNull(jvmMonitor.gcCounters);
+    Assume.assumeNotNull(jvmMonitor.gcCollectors);
 
     while (true) {
       // generate some garbage to see gc counters incremented

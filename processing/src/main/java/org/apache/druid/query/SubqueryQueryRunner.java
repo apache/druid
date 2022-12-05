@@ -41,7 +41,7 @@ public class SubqueryQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = queryPlus.getQuery().getDataSource();
     boolean forcePushDownNestedQuery = queryPlus.getQuery()
-                                                .getContextBoolean(
+                                                .context().getBoolean(
                                                     GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY,
                                                     false
                                                 );

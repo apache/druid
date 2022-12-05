@@ -37,6 +37,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -362,6 +363,52 @@ public class DataSegmentTest
                                            .size(0)
                                            .build();
     Assert.assertEquals(segment1, segment2.withLastCompactionState(compactionState));
+  }
+
+  @Test
+  public void testTombstoneType()
+  {
+
+    final DataSegment segment1 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(new TombstoneShardSpec())
+                                            .loadSpec(Collections.singletonMap(
+                                                "type",
+                                                DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                            ))
+                                            .size(0)
+                                            .build();
+    Assert.assertTrue(segment1.isTombstone());
+    Assert.assertFalse(segment1.hasData());
+
+    final DataSegment segment2 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .loadSpec(Collections.singletonMap(
+                                                "type",
+                                                "foo"
+                                            ))
+                                            .size(0)
+                                            .build();
+
+    Assert.assertFalse(segment2.isTombstone());
+    Assert.assertTrue(segment2.hasData());
+
+    final DataSegment segment3 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .build();
+
+    Assert.assertFalse(segment3.isTombstone());
+    Assert.assertTrue(segment3.hasData());
+
   }
 
   private DataSegment makeDataSegment(String dataSource, String interval, String version)

@@ -54,8 +54,16 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   {
     final int complexLength = buffer.getInt();
     ByteBuffer dupe = buffer.duplicate();
+    dupe.order(buffer.order());
     dupe.limit(dupe.position() + complexLength);
     return objectStrategy.fromByteBuffer(dupe, complexLength);
+  }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    // Can't guarantee that ObjectStrategy *doesn't* retain a reference.
+    return true;
   }
 
   @Override
@@ -77,5 +85,11 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public int compare(T o1, T o2)
   {
     return objectStrategy.compare(o1, o2);
+  }
+
+  @Override
+  public T fromBytes(byte[] value)
+  {
+    return objectStrategy.fromByteBufferSafe(ByteBuffer.wrap(value), value.length);
   }
 }

@@ -22,19 +22,17 @@ title: "Router Process"
   ~ under the License.
   -->
 
-
-> The Router is an optional and [experimental](../development/experimental.md) feature due to the fact that its recommended place in the Druid cluster architecture is still evolving.
-> However, it has been battle-tested in production, and it hosts the powerful [Druid Console](../operations/druid-console.md), so you should feel safe deploying it.
-
 The Apache Druid Router process can be used to route queries to different Broker processes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.md) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data.
 
 For query routing purposes, you should only ever need the Router process if you have a Druid cluster well into the terabyte range.
 
-In addition to query routing, the Router also runs the [Druid Console](../operations/druid-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+In addition to query routing, the Router also runs the [web console](../operations/web-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
 ### Configuration
 
 For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.md#router).
+
+For basic tuning guidance for the Router process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#router).
 
 ### HTTP endpoints
 

@@ -36,7 +36,9 @@ import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -139,6 +141,16 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
   @Override
+  public Function<GenericRecord, Object> makeJsonTreeExtractor(List<String> nodes)
+  {
+    if (nodes.size() == 1) {
+      return (GenericRecord record) -> getRootField(record, nodes.get(0));
+    }
+
+    throw new UnsupportedOperationException("Avro + nested tree extraction not supported");
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return avroJsonProvider;
@@ -164,7 +176,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     } else if (field instanceof Utf8) {
       return field.toString();
     } else if (field instanceof List) {
-      return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
+      return ((List<?>) field).stream().filter(Objects::nonNull).map(this::transformValue).collect(Collectors.toList());
     } else if (field instanceof GenericEnumSymbol) {
       return field.toString();
     } else if (field instanceof GenericFixed) {
@@ -173,6 +185,20 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       } else {
         return ((GenericFixed) field).bytes();
       }
+    } else if (field instanceof Map) {
+      LinkedHashMap<String, Object> retVal = new LinkedHashMap<>();
+      Map<?, ?> fieldMap = (Map<?, ?>) field;
+      for (Map.Entry<?, ?> entry : fieldMap.entrySet()) {
+        retVal.put(String.valueOf(entry.getKey()), transformValue(entry.getValue()));
+      }
+      return retVal;
+    } else if (field instanceof GenericRecord) {
+      LinkedHashMap<String, Object> retVal = new LinkedHashMap<>();
+      GenericRecord record = (GenericRecord) field;
+      for (Schema.Field key : record.getSchema().getFields()) {
+        retVal.put(key.name(), transformValue(record.get(key.pos())));
+      }
+      return retVal;
     }
     return field;
   }

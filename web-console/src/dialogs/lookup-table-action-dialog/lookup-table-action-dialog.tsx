@@ -18,9 +18,10 @@
 
 import React, { useState } from 'react';
 
-import { LookupValuesTable } from '../../components/lookup-values-table/lookup-values-table';
 import { BasicAction } from '../../utils/basic-action';
 import { SideButtonMetaData, TableActionDialog } from '../table-action-dialog/table-action-dialog';
+
+import { LookupValuesTable } from './lookup-values-table/lookup-values-table';
 
 interface LookupTableActionDialogProps {
   lookupId?: string;

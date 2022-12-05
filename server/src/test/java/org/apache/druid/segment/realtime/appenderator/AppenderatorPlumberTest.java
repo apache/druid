@@ -29,16 +29,27 @@ import org.apache.druid.segment.realtime.plumber.NoopRejectionPolicyFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class AppenderatorPlumberTest
 {
-  private final AppenderatorPlumber plumber;
-  private final StreamAppenderatorTester streamAppenderatorTester;
+  private AppenderatorPlumber plumber;
+  private StreamAppenderatorTester streamAppenderatorTester;
 
-  public AppenderatorPlumberTest() throws Exception
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Before
+  public void setUp() throws Exception
   {
-    this.streamAppenderatorTester = new StreamAppenderatorTester(10);
+    this.streamAppenderatorTester =
+        new StreamAppenderatorTester.Builder()
+            .maxRowsInMemory(10)
+            .basePersistDirectory(temporaryFolder.newFolder())
+            .build();
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
     segmentAnnouncer.announceSegment(EasyMock.anyObject());
@@ -60,7 +71,7 @@ public class AppenderatorPlumberTest
                 EasyMock.anyObject(),
                 EasyMock.anyObject(),
                 EasyMock.anyObject())).andReturn(true).anyTimes();
-    
+
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         null,
         1,
@@ -68,7 +79,7 @@ public class AppenderatorPlumberTest
         null,
         null,
         null,
-        null,
+        temporaryFolder.newFolder(),
         new IntervalStartVersioningPolicy(),
         new NoopRejectionPolicyFactory(),
         null,
@@ -88,7 +99,6 @@ public class AppenderatorPlumberTest
                                            tuningConfig, streamAppenderatorTester.getMetrics(),
                                            segmentAnnouncer, segmentPublisher, handoffNotifier,
                                            streamAppenderatorTester.getAppenderator());
-
   }
 
   @Test

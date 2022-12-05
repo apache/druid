@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
@@ -247,6 +249,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     private final Cache cache;
     private final ObjectMapper mapper;
+    private final SerializerProvider serialiers;
     private final Cache.NamedKey key;
     private final CacheConfig cacheConfig;
     @Nullable
@@ -262,6 +265,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     {
       this.cache = cache;
       this.mapper = mapper;
+      this.serialiers = mapper.getSerializerProviderInstance();
       this.key = key;
       this.cacheConfig = cacheConfig;
       this.cacheObjectStream = shouldPopulate ? new ByteArrayOutputStream() : null;
@@ -285,7 +289,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream");
       int cacheLimit = cacheConfig.getResultLevelCacheLimit();
       try (JsonGenerator gen = mapper.getFactory().createGenerator(cacheObjectStream)) {
-        gen.writeObject(cacheFn.apply(resultEntry));
+        JacksonUtils.writeObjectUsingSerializerProvider(gen, serialiers, cacheFn.apply(resultEntry));
         if (cacheLimit > 0 && cacheObjectStream.size() > cacheLimit) {
           stopPopulating();
         }

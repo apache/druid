@@ -113,48 +113,30 @@ public class CacheKeyBuilder
     }
   }
 
-  private static byte[] stringCollectionToByteArray(Collection<String> input, boolean preserveOrder)
+  private static byte[] stringCollectionToByteArray(
+      @Nullable Collection<String> input,
+      boolean preserveOrder
+  )
   {
-    return collectionToByteArray(
-        input,
-        new Function<String, byte[]>()
-        {
-          @Override
-          public byte[] apply(@Nullable String input)
-          {
-            return StringUtils.toUtf8WithNullToEmpty(input);
-          }
-        },
-        STRING_SEPARATOR,
-        preserveOrder
-    );
+    return collectionToByteArray(input, StringUtils::toUtf8WithNullToEmpty, STRING_SEPARATOR, preserveOrder);
   }
 
-  private static byte[] cacheableCollectionToByteArray(Collection<? extends Cacheable> input, boolean preserveOrder)
+  private static byte[] cacheableCollectionToByteArray(
+      @Nullable Collection<? extends Cacheable> input,
+      boolean preserveOrder
+  )
   {
-    return collectionToByteArray(
-        input,
-        new Function<Cacheable, byte[]>()
-        {
-          @Override
-          public byte[] apply(@Nullable Cacheable input)
-          {
-            return input == null ? EMPTY_BYTES : input.getCacheKey();
-          }
-        },
-        EMPTY_BYTES,
-        preserveOrder
-    );
+    return collectionToByteArray(input, CacheKeyBuilder::cacheableToByteArray, EMPTY_BYTES, preserveOrder);
   }
 
   private static <T> byte[] collectionToByteArray(
-      Collection<? extends T> collection,
+      @Nullable Collection<? extends T> collection,
       Function<T, byte[]> serializeFunction,
       byte[] separator,
       boolean preserveOrder
   )
   {
-    if (collection.size() > 0) {
+    if (collection != null && collection.size() > 0) {
       List<byte[]> byteArrayList = Lists.newArrayListWithCapacity(collection.size());
       int totalByteLength = 0;
       for (T eachItem : collection) {
@@ -183,6 +165,7 @@ public class CacheKeyBuilder
       return EMPTY_BYTES;
     }
   }
+
 
   private final List<Item> items = new ArrayList<>();
   private final byte id;

@@ -197,6 +197,12 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

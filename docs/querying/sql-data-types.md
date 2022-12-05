@@ -27,13 +27,13 @@ sidebar_label: "SQL data types"
 > This document describes the SQL language.
 
 
-Columns in Druid are associated with a specific data type. This topic describes supported data types in Druid SQL. 
+Columns in Druid are associated with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md). 
 
 ## Standard types
 
 Druid natively supports five basic column types: "long" (64 bit signed int), "float" (32 bit float), "double" (64 bit
 float) "string" (UTF-8 encoded strings and string arrays), and "complex" (catch-all for more exotic data types like
-hyperUnique and approxHistogram columns).
+json, hyperUnique, and approxHistogram columns).
 
 Timestamps (including the `__time` column) are treated by Druid as longs, with the value being the number of
 milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
@@ -85,17 +85,44 @@ the `UNNEST` functionality available in some other SQL dialects. Refer to the do
 
 ## NULL values
 
-The `druid.generic.useDefaultValueForNull` [runtime property](../configuration/index.md#sql-compatible-null-handling)
-controls Druid's NULL handling mode.
+The [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling)
+runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, set this to `false`.
 
-In the default value mode (`true`), Druid treats NULLs and empty strings interchangeably, rather than according to the SQL
-standard. In this mode Druid SQL only has partial support for NULLs. For example, the expressions `col IS NULL` and
-`col = ''` are equivalent, and both will evaluate to true if `col` contains an empty string. Similarly, the expression
-`COALESCE(col1, col2)` will return `col2` if `col1` is an empty string. While the `COUNT(*)` aggregator counts all rows,
-the `COUNT(expr)` aggregator will count the number of rows where `expr` is neither null nor the empty string. Numeric
-columns in this mode are not nullable; any null or missing values will be treated as zeroes.
+When `druid.generic.useDefaultValueForNull = true` (the default mode), Druid treats NULLs and empty strings
+interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
+For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both will evaluate to true if `col`
+contains an empty string. Similarly, the expression `COALESCE(col1, col2)` will return `col2` if `col1` is an empty
+string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator will count the number of rows
+where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
+values will be treated as zeroes.
 
-In SQL compatible mode (`false`), NULLs are treated more closely to the SQL standard. The property affects both storage
-and querying, so for correct behavior, it should be set on all Druid service types to be available at both ingestion
-time and query time. There is some overhead associated with the ability to handle NULLs; see
-the [segment internals](../design/segments.md#sql-compatible-null-handling) documentation for more details.
+When `druid.generic.useDefaultValueForNull = false`, NULLs are treated more closely to the SQL standard. In this mode,
+numeric NULL is permitted, and NULLs and empty strings are no longer treated as interchangeable. This property
+affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time
+and query time. There is some overhead associated with the ability to handle NULLs; see
+the [segment internals](../design/segments.md#handling-null-values) documentation for more details.
+
+## Boolean logic
+
+The [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations)
+runtime property controls Druid's boolean logic mode. For the most SQL compliant behavior, set this to `true`.
+
+When `druid.expressions.useStrictBooleans = false` (the default mode), Druid uses two-valued logic.
+
+When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
+[expressions](../misc/math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
+However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
+
+## Nested columns
+
+Druid supports storing nested data structures in segments using the native `COMPLEX<json>` type. See [Nested columns](./nested-columns.md) for more information.
+
+You can interact with nested data using [JSON functions](./sql-json-functions.md), which can extract nested values, parse from string, serialize to string, and create new `COMPLEX<json>` structures.
+
+`COMPLEX` types have limited functionality outside the specialized functions that use them, so their behavior is undefined when:
+
+* Grouping on complex values.
+* Filtering directly on complex values, such as `WHERE json is NULL`.
+* Used as inputs to aggregators without specialized handling for a specific complex type.
+
+In many cases, functions are provided to translate `COMPLEX` value types to `STRING`, which serves as a workaround solution until `COMPLEX` type functionality can be improved.

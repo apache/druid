@@ -28,6 +28,7 @@ import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
 {
@@ -68,6 +69,12 @@ public class ConciseBitmapSerdeFactory implements BitmapSerdeFactory
         return new byte[]{};
       }
       return val.toBytes();
+    }
+
+    @Override
+    public boolean canCompare()
+    {
+      return false;
     }
 
     @Override

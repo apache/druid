@@ -77,4 +77,3 @@ public class TaskInfo<EntryType, StatusType>
     return task;
   }
 }
-

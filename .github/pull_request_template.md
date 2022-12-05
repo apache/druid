@@ -37,6 +37,15 @@ In each section, please describe design decisions made, including:
 
 <!-- Some of the aspects mentioned above may be omitted for simple and small changes. -->
 
+#### Release note
+<!-- Give your best effort to summarize your changes in a couple of sentences aimed toward Druid users. 
+
+If your change doesn't have end user impact, you can skip this section.
+
+-->
+For tips about how to write a good release note, see [Release notes](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#release-notes).
+
+
 <hr>
 
 ##### Key changed/added classes in this PR
@@ -49,9 +58,11 @@ In each section, please describe design decisions made, including:
 <!-- Check the items by putting "x" in the brackets for the done things. Not all of these items apply to every PR. Remove the items which are not done or not relevant to the PR. None of the items from the checklist below are strictly necessary, but it would be very helpful if you at least self-review the PR. -->
 
 This PR has:
+
 - [ ] been self-reviewed.
    - [ ] using the [concurrency checklist](https://github.com/apache/druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
+- [ ] a release note entry in the PR description.
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
 - [ ] added or updated version, license, or notice information in [licenses.yaml](https://github.com/apache/druid/blob/master/dev/license.md)
 - [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar reader.

@@ -123,18 +123,12 @@ public class SequenceTestHelper
 
   public static void testClosed(AtomicInteger closedCounter, Sequence<Integer> seq)
   {
+    // closing with accumulate
     boolean exceptionThrown = false;
     try {
       seq.accumulate(
           1,
-          new Accumulator<Integer, Integer>()
-          {
-            @Override
-            public Integer accumulate(Integer accumulated, Integer in)
-            {
-              return accumulated + 1;
-            }
-          }
+          (accumulated, in) -> accumulated + 1
       );
     }
     catch (UnsupportedOperationException e) {
@@ -144,6 +138,7 @@ public class SequenceTestHelper
     Assert.assertTrue(exceptionThrown);
     Assert.assertEquals(1, closedCounter.get());
 
+    // closing with yielder
     exceptionThrown = false;
     Yielder<Integer> yielder = null;
     try {
@@ -166,5 +161,17 @@ public class SequenceTestHelper
     Assert.assertNull(yielder);
     Assert.assertTrue(exceptionThrown);
     Assert.assertEquals(2, closedCounter.get());
+
+    // closing with forEach
+    exceptionThrown = false;
+    try {
+      seq.forEach(i -> {});
+    }
+    catch (UnsupportedOperationException e) {
+      exceptionThrown = true;
+    }
+
+    Assert.assertTrue(exceptionThrown);
+    Assert.assertEquals(3, closedCounter.get());
   }
 }

@@ -60,7 +60,8 @@ public class ServerConfigTest
         true,
         ImmutableList.of(HttpMethod.OPTIONS),
         true,
-        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*"))
+        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
+        "my-cool-policy"
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -71,6 +72,8 @@ public class ServerConfigTest
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
     Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
     Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
+    Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
+    Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
   }
 
   @Test

@@ -50,15 +50,6 @@ services:
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-historical:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-historical
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    depends_on:
-      - druid-zookeeper-kafka
-
   druid-broker:
     extends:
       file: docker-compose.base.yml
@@ -67,7 +58,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
-      - druid-historical
+      - druid-historical-for-query-retry-test
 
   druid-router:
     extends:

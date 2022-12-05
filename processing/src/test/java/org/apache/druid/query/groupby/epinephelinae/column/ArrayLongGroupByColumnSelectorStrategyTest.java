@@ -118,7 +118,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
     Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(1L, 2L));
-    Assert.assertEquals(0, strategy.getOnlyValue(columnValueSelector));
+    Assert.assertEquals(0, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
@@ -126,7 +126,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList(ImmutableList.of(1L, 2L)), row.get(0));
+    Assert.assertEquals(new ComparableList<>(ImmutableList.of(1L, 2L)), row.get(0));
   }
 
 
@@ -135,7 +135,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
     Mockito.when(columnValueSelector.getObject()).thenReturn(ImmutableList.of(4L, 2L));
-    Assert.assertEquals(3, strategy.getOnlyValue(columnValueSelector));
+    Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
@@ -143,7 +143,7 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList(ImmutableList.of(4L, 2L)), row.get(0));
+    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4L, 2L)), row.get(0));
   }
 
   @Test
@@ -151,14 +151,14 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   {
     ColumnValueSelector columnValueSelector = Mockito.mock(ColumnValueSelector.class);
     Mockito.when(columnValueSelector.getObject()).thenReturn(new Object[]{4L, 2L});
-    Assert.assertEquals(3, strategy.getOnlyValue(columnValueSelector));
+    Assert.assertEquals(3, strategy.computeDictionaryId(columnValueSelector));
 
     GroupByColumnSelectorPlus groupByColumnSelectorPlus = Mockito.mock(GroupByColumnSelectorPlus.class);
     Mockito.when(groupByColumnSelectorPlus.getResultRowPosition()).thenReturn(0);
     ResultRow row = ResultRow.create(1);
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList(ImmutableList.of(4L, 2L)), row.get(0));
+    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4L, 2L)), row.get(0));
   }
 
   @After

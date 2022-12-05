@@ -19,7 +19,7 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import { PluralPairIfNeeded } from '../../../components/plural-pair-if-needed/plural-pair-if-needed';
+import { PluralPairIfNeeded } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { Capabilities, lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';

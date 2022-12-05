@@ -26,7 +26,7 @@ import java.io.IOException;
 
 final class WrappingYielder<OutType> implements Yielder<OutType>
 {
-  private final Yielder<OutType> baseYielder;
+  private Yielder<OutType> baseYielder;
   private final SequenceWrapper wrapper;
 
   WrappingYielder(Yielder<OutType> baseYielder, SequenceWrapper wrapper)
@@ -50,7 +50,8 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
         @Override
         public Yielder<OutType> get()
         {
-          return new WrappingYielder<>(baseYielder.next(initValue), wrapper);
+          baseYielder = baseYielder.next(initValue);
+          return WrappingYielder.this;
         }
       });
     }

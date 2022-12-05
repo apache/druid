@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`LookupEditDialog matches snapshot 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canEscapeKeyClose={false}
   canOutsideClickClose={true}
   className="lookup-edit-dialog"
@@ -12,18 +12,18 @@ exports[`LookupEditDialog matches snapshot 1`] = `
   <div
     className="content"
   >
-    <Blueprint3.FormGroup
+    <Blueprint4.FormGroup
       label="Name"
     >
-      <Blueprint3.InputGroup
+      <Blueprint4.InputGroup
         disabled={false}
         intent="none"
         onChange={[Function]}
         placeholder="Enter the lookup name"
         value="test"
       />
-    </Blueprint3.FormGroup>
-    <Blueprint3.FormGroup
+    </Blueprint4.FormGroup>
+    <Blueprint4.FormGroup
       label="Tier"
     >
       <HTMLSelect
@@ -43,15 +43,15 @@ exports[`LookupEditDialog matches snapshot 1`] = `
           alt-tier
         </option>
       </HTMLSelect>
-    </Blueprint3.FormGroup>
-    <Blueprint3.FormGroup
+    </Blueprint4.FormGroup>
+    <Blueprint4.FormGroup
       label="Version"
     >
-      <Blueprint3.InputGroup
+      <Blueprint4.InputGroup
         onChange={[Function]}
         placeholder="Enter the lookup version"
         rightElement={
-          <Blueprint3.Button
+          <Blueprint4.Button
             minimal={true}
             onClick={[Function]}
             text="Set to current ISO time"
@@ -59,7 +59,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
         }
         value="test"
       />
-    </Blueprint3.FormGroup>
+    </Blueprint4.FormGroup>
     <Memo(FormJsonSelector)
       onChange={[Function]}
       tab="form"
@@ -74,6 +74,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "suggestions": Array [
               "map",
               "cachedNamespace",
+              "kafka",
             ],
             "type": "string",
           },
@@ -398,6 +399,35 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "name": "injective",
             "type": "boolean",
           },
+          Object {
+            "defined": [Function],
+            "info": "The Kafka topic to read the data from",
+            "name": "kafkaTopic",
+            "required": true,
+            "type": "string",
+          },
+          Object {
+            "defined": [Function],
+            "height": "100px",
+            "issueWithValue": [Function],
+            "name": "kafkaProperties",
+            "required": true,
+            "type": "json",
+          },
+          Object {
+            "defaultValue": 0,
+            "defined": [Function],
+            "info": "How long to wait for an initial connection",
+            "name": "connectTimeout",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": false,
+            "defined": [Function],
+            "info": "If the underlying map is one-to-one (keys and values are unique) then optimizations can occur internally by setting this to true",
+            "name": "isOneToOne",
+            "type": "boolean",
+          },
         ]
       }
       model={
@@ -412,16 +442,16 @@ exports[`LookupEditDialog matches snapshot 1`] = `
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -429,5 +459,5 @@ exports[`LookupEditDialog matches snapshot 1`] = `
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;

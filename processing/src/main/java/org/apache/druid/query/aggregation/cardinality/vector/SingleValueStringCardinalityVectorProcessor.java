@@ -51,6 +51,7 @@ public class SingleValueStringCardinalityVectorProcessor implements CardinalityV
 
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
 
+
       for (int i = startRow; i < endRow; i++) {
         final String value = selector.lookupName(vector[i]);
         StringCardinalityAggregatorColumnSelectorStrategy.addStringToCollector(collector, value);
@@ -74,7 +75,6 @@ public class SingleValueStringCardinalityVectorProcessor implements CardinalityV
 
       for (int i = 0; i < numRows; i++) {
         final String s = selector.lookupName(vector[rows != null ? rows[i] : i]);
-
         if (NullHandling.replaceWithDefault() || s != null) {
           final int position = positions[i] + positionOffset;
           buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());

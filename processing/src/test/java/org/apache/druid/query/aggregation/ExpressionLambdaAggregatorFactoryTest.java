@@ -254,7 +254,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         ImmutableSet.of("x"),
         null,
         "0",
-        "ARRAY<LONG>[]",
+        "ARRAY<STRING>[]",
         true,
         true,
         false,

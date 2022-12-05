@@ -36,6 +36,20 @@ describe('TableCell', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it('matches snapshot Date', () => {
+    const tableCell = <TableCell value={new Date('2022-02-24T01:02:03Z')} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot Date (invalid)', () => {
+    const tableCell = <TableCell value={new Date('blah blah')} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
   it('matches snapshot array short', () => {
     const tableCell = <TableCell value={['a', 'b', 'c']} />;
 
@@ -45,6 +59,13 @@ describe('TableCell', () => {
 
   it('matches snapshot array long', () => {
     const tableCell = <TableCell value={Array.from(new Array(100)).map((_, i) => i)} />;
+
+    const { container } = render(tableCell);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot array mixed', () => {
+    const tableCell = <TableCell value={['a', { v: 'b' }, 'c']} />;
 
     const { container } = render(tableCell);
     expect(container.firstChild).toMatchSnapshot();

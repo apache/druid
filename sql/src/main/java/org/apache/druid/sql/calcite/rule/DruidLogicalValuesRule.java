@@ -32,9 +32,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.calcite.table.InlineTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -76,12 +78,9 @@ public class DruidLogicalValuesRule extends RelOptRule
         values.getRowType().getFieldNames(),
         values.getRowType()
     );
-    final DruidTable druidTable = new DruidTable(
-        InlineDataSource.fromIterable(objectTuples, rowSignature),
-        rowSignature,
-        null,
-        true,
-        false
+    final DruidTable druidTable = new InlineTable(
+          InlineDataSource.fromIterable(objectTuples, rowSignature),
+          rowSignature
     );
     call.transformTo(
         DruidQueryRel.scanValues(values, druidTable, plannerContext)

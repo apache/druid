@@ -39,8 +39,9 @@ public final class DateTimes
   public static final DateTime EPOCH = utc(0);
   public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
   public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
-  public static final DateTime CAN_COMPARE_AS_YEAR_MIN = of("0000-01-01");
-  public static final DateTime CAN_COMPARE_AS_YEAR_MAX = of("10000-01-01").minus(1);
+  // The following two DateTime objects are utilities that can be used for accurately comparing date strings
+  public static final DateTime COMPARE_DATE_AS_STRING_MIN = of("0000-01-01");
+  public static final DateTime COMPARE_DATE_AS_STRING_MAX = of("10000-01-01").minus(1);
 
   public static final UtcFormatter ISO_DATE_TIME = wrapFormatter(ISODateTimeFormat.dateTime());
   public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapFormatter(ISODateTimeFormat.dateOptionalTimeParser());
@@ -188,8 +189,8 @@ public final class DateTimes
    */
   public static boolean canCompareAsString(final DateTime dateTime)
   {
-    return dateTime.getMillis() >= CAN_COMPARE_AS_YEAR_MIN.getMillis()
-           && dateTime.getMillis() <= CAN_COMPARE_AS_YEAR_MAX.getMillis()
+    return dateTime.getMillis() >= COMPARE_DATE_AS_STRING_MIN.getMillis()
+           && dateTime.getMillis() <= COMPARE_DATE_AS_STRING_MAX.getMillis()
            && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.segment.writeout;
 import com.google.common.io.ByteStreams;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.IOE;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,7 +60,12 @@ final class FileWriteOutBytes extends WriteOutBytes
   public void flush() throws IOException
   {
     buffer.flip();
-    Channels.writeFully(ch, buffer);
+    try {
+      Channels.writeFully(ch, buffer);
+    }
+    catch (IOException e) {
+      throw new IOE(e, "Failed to write to file: %s. Current size of file: %d", file.getAbsolutePath(), writeOutBytes);
+    }
     buffer.clear();
   }
 
@@ -131,10 +137,10 @@ final class FileWriteOutBytes extends WriteOutBytes
   @Override
   public void readFully(long pos, ByteBuffer buffer) throws IOException
   {
-    flush();
-    if (pos < 0 || pos > ch.size()) {
-      throw new IAE("pos %d out of range [%d, %d]", pos, 0, ch.size());
+    if (pos < 0 || pos > writeOutBytes) {
+      throw new IAE("pos %d out of range [%d, %d]", pos, 0, writeOutBytes);
     }
+    flush();
     ch.read(buffer, pos);
     if (buffer.remaining() > 0) {
       throw new BufferUnderflowException();
