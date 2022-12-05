@@ -196,12 +196,13 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
- * and populates data for the datasources. The import org.apache.druid.initialization.CoreInjectorBuilder;
- * does not go via the HTTP layer for communication between the various MSQ processes.
+ * and populates data for the datasources. The ruimport org.apache.druid.initialization.CoreInjectorBuilder;
+nner does not go via the HTTP layer for communication between the
+ * various MSQ processes.
  *
  * Controller -> Coordinator (Coordinator is mocked)
  *
- * In the unit tests we go from:
+ * In the Ut's we go from:
  * {@link MSQTaskQueryMaker} -> {@link MSQTestOverlordServiceClient} -> {@link Controller}
  *
  *
@@ -257,6 +258,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
+    log.error("CONFIGURE GUICE CALLED");
 
     builder.addModule(new DruidModule() {
 
@@ -265,81 +267,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
       public void configure(Binder binder)
       {
         // We want this module to bring InputSourceModule along for the ride.
-        binder.install(new InputSourceModule());
-
-        DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
-          {
-            return "test";
-          }
-        };
-
-        GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-        binder.bind(GroupByStrategySelector.class)
-              .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                                .getStrategySelector());
-
-
-
-        binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-
-        binder.bind(new TypeLiteral<Set<NodeRole>>()
-        {
-        }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-        binder.bind(QueryProcessingPool.class)
-              .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
-
-        // fault tolerance module
-        try {
-          JsonConfigProvider.bind(
-              binder,
-              MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
-              StorageConnectorProvider.class,
-              MultiStageQuery.class
-          );
-          localFileStorageDir = tmpFolder.newFolder("fault");
-          localFileStorageConnector = Mockito.spy(
-              new LocalFileStorageConnector(localFileStorageDir)
-          );
-          binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-                .toProvider(() -> localFileStorageConnector);
-        }
-        catch (IOException e) {
-          throw new ISE(e, "Unable to create setup storage connector");
-        }
-
-
-
-
-        binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-        // Hiding this because there's a default implementation already provided and we don't want to override
-        // that for unification unless absolutely required
-//        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-//            LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap()));
-        binder.install(new JoinableFactoryModule());
-
-        binder.install(new IndexingServiceTuningConfigModule());
-
-        binder.install(new MSQIndexingModule());
-
-        binder.install(new MSQExternalDataSourceModule());
-
-        binder.install(Modules.override(new MSQSqlModule()).with(
-                           binder2 -> {
-                             // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
-                             // following bindings are overriding other bindings that end up needing a lot more dependencies.
-                             // We replace the bindings with something that returns null to make things more brittle in case they
-                             // actually are used somewhere in the test.
-                             binder2.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
-                             binder2.bind(SqlToolbox.class).toProvider(Providers.of(null));
-                             binder2.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
-                           }
-                       )
-        );
-
+//        binder.install(new InputSourceModule());
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+        // Requirements of JoinableFactoryModule
+        binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
+
+        binder.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
+        binder.bind(SqlToolbox.class).toProvider(Providers.of(null));
+        binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
+
+
       }
 
       @Override
@@ -347,6 +285,98 @@ public class MSQTestBase extends BaseCalciteQueryTest
       {
         // We want this module to bring input sources along for the ride.
         return new InputSourceModule().getJacksonModules();
+      }
+    });
+
+    builder.addModule(new IndexingServiceTuningConfigModule());
+    builder.addModule(new JoinableFactoryModule());
+    builder.addModule(new MSQExternalDataSourceModule());
+
+    builder.addModule(binder -> {
+      binder.bind(new TypeLiteral<Set<NodeRole>>()
+      {
+      }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
+
+      DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
+      {
+        @Override
+        public String getFormatString()
+        {
+          return "test";
+        }
+      };
+      GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+      binder.bind(GroupByStrategySelector.class)
+            .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
+                                              .getStrategySelector());
+      binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
+      binder.bind(QueryProcessingPool.class)
+            .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
+    });
+    builder.addModule(new MSQIndexingModule());
+
+    builder.addModule(binder -> {
+      final LookupReferencesManager lookupReferencesManager =
+          EasyMock.createStrictMock(LookupReferencesManager.class);
+      EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet()).anyTimes();
+      EasyMock.replay(lookupReferencesManager);
+      binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
+      binder.bind(AppenderatorsManager.class).toProvider(() -> null);
+    });
+
+
+    builder.addModule(binder -> {
+      // fault tolerance module
+      JsonConfigProvider.bind(
+          binder,
+          MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
+          StorageConnectorProvider.class,
+          MultiStageQuery.class
+      );
+      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
+            .toProvider(() -> localFileStorageConnector);
+    });
+
+    builder.addModule(binder -> {
+      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
+      binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
+      // Client is not used in tests
+      binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
+            .toProvider(Providers.of(null));
+    });
+
+//    builder.addModule(binder -> {
+//      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+//      try {
+//        config.storageDirectory = tmpFolder.newFolder("localsegments");
+//      }
+//      catch (IOException e) {
+//        throw new ISE(e, "Unable to create folder");
+//      }
+//      binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
+//          new LocalDataSegmentPusher(config),
+//          segmentManager
+//      ));
+//      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
+//      binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
+//      // Client is not used in tests
+//      binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
+//            .toProvider(Providers.of(null));
+//    });
+
+
+    builder.addModule(new DruidModule()
+    {
+      @Override
+      public void configure(Binder binder)
+      {
+
+      }
+
+      @Override
+      public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      {
+        return DruidModule.super.getJacksonModules();
       }
     });
   }
@@ -377,6 +407,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @Before
   public void setUp2()
   {
+    log.error("SETUP2 GUICE CALLED");
     groupByBuffers = TestGroupByBuffers.createDefault();
 
     SqlTestFramework qf = queryFramework();
@@ -399,38 +430,16 @@ public class MSQTestBase extends BaseCalciteQueryTest
       throw new ISE(exception, "Unable to create segmentCacheManager");
     }
 
-    MSQSqlModule sqlModule = new MSQSqlModule();
+//    MSQSqlModule sqlModule = new MSQSqlModule();
 
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
 
     List<Module> modules = ImmutableList.of(
         binder -> {
-//          DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-//          {
-//            @Override
-//            public String getFormatString()
-//            {
-//              return "test";
-//            }
-//          };
-
-//          GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-
-//          binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-//          binder.bind(new TypeLiteral<Set<NodeRole>>()
-//          {
-//          }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-//          binder.bind(QueryProcessingPool.class)
-//                .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
                 .toInstance((dataSegment, channelCounters) ->
                                 new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
           binder.bind(IndexIO.class).toInstance(indexIO);
-          binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
-
-//          binder.bind(GroupByStrategySelector.class)
-//                .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-//                                                  .getStrategySelector());
 
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
           try {
@@ -443,72 +452,24 @@ public class MSQTestBase extends BaseCalciteQueryTest
               new LocalDataSegmentPusher(config),
               segmentManager
           ));
-          binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-          binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
-          // Client is not used in tests
-          binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
-                .toProvider(Providers.of(null));
-//          // fault tolerance module
-//          try {
-//            JsonConfigProvider.bind(
-//                binder,
-//                MSQDurableStorageModule.MSQ_INTERMEDIATE_STORAGE_PREFIX,
-//                StorageConnectorProvider.class,
-//                MultiStageQuery.class
-//            );
-//            localFileStorageDir = tmpFolder.newFolder("fault");
-//            localFileStorageConnector = Mockito.spy(
-//                new LocalFileStorageConnector(localFileStorageDir)
-//            );
-//            binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-//                  .toProvider(() -> localFileStorageConnector);
-//          }
-//          catch (IOException e) {
-//            throw new ISE(e, "Unable to create setup storage connector");
-//          }
 
-          binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-          binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-        },
-        binder -> {
-          // Requirements of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
-          final LookupReferencesManager lookupReferencesManager =
-              EasyMock.createStrictMock(LookupReferencesManager.class);
-          EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet());
-          EasyMock.replay(lookupReferencesManager);
-          binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
-          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
+          // fault tolerance module
+          try {
+            localFileStorageDir = tmpFolder.newFolder("fault");
+            localFileStorageConnector = Mockito.spy(
+                new LocalFileStorageConnector(localFileStorageDir)
+            );
+          }
+          catch (IOException e) {
+            throw new ISE(e, "Unable to create setup storage connector");
+          }
         }
-//        binder -> {
-//          // Requirements of JoinableFactoryModule
-//          binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-//          binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-//              LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap())
-//          );
-//        },
-//        new JoinableFactoryModule(),
-//        new IndexingServiceTuningConfigModule(),
-//        new MSQIndexingModule(),
-//        Modules.override(new MSQSqlModule()).with(
-//            binder -> {
-//              // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
-//              // following bindings are overriding other bindings that end up needing a lot more dependencies.
-//              // We replace the bindings with something that returns null to make things more brittle in case they
-//              // actually are used somewhere in the test.
-//              binder.bind(SqlStatementFactory.class).annotatedWith(MSQ.class).toProvider(Providers.of(null));
-//              binder.bind(SqlToolbox.class).toProvider(Providers.of(null));
-//              binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
-//            }
-//        )
-//        new MSQExternalDataSourceModule()
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
-    Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
-        .addAll(modules)
-        .build();
+    Injector injector = qf.injector().createChildInjector(modules);
 
     objectMapper = setupObjectMapper(injector);
-    objectMapper.registerModules(sqlModule.getJacksonModules());
+//    objectMapper.registerModules(sqlModule.getJacksonModules());
 
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
@@ -529,7 +490,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
-        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
+        qf.queryJsonMapper()
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -544,9 +505,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.createJoinableFactoryWrapper()
     );
 
-//    sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
-    sqlStatementFactory = testBuilderMSQ().statementFactory();
-
+    sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
   }
 
   /**
