@@ -454,11 +454,13 @@ public class QueryTestRunner
   /**
    * Verify resources for a prepared query against the expected list.
    */
-  public static class VerifyExecuteSignature extends VerifyExecStep
+  public static class VerifyExecuteSignature implements QueryVerifyStep
   {
+    private final ExecuteQuery execStep;
+
     public VerifyExecuteSignature(ExecuteQuery execStep)
     {
-      super(execStep);
+      this.execStep = execStep;
     }
 
     @Override
@@ -474,11 +476,13 @@ public class QueryTestRunner
     }
   }
 
-  public static class VerifyLogicalPlan extends VerifyExecStep
+  public static class VerifyLogicalPlan implements QueryVerifyStep
   {
+    private final ExecuteQuery execStep;
+
     public VerifyLogicalPlan(ExecuteQuery execStep)
     {
-      super(execStep);
+      this.execStep = execStep;
     }
 
     @Override
@@ -629,6 +633,12 @@ public class QueryTestRunner
       }
       if (builder.expectedResultsVerifier != null) {
         verifySteps.add(new QueryTestRunner.VerifyResults(execStep));
+      }
+
+      if (!builder.customVerifications.isEmpty()) {
+        for (QueryTestRunner.QueryVerifyStepFactory customVerification : builder.customVerifications) {
+          verifySteps.add(customVerification.make(execStep));
+        }
       }
 
       // The exception is always verified: either there should be no exception
