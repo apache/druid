@@ -151,6 +151,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     { inputSource, inputFormat, signature },
                     isArrays,
                     timeExpression,
+                    undefined,
                   ),
                 ).toString(),
                 queryContext: {
@@ -167,6 +168,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     { inputSource, inputFormat, signature },
                     isArrays,
                     timeExpression,
+                    undefined,
                   ),
                 ).toString(),
               });
