@@ -38,10 +38,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
@@ -140,7 +138,7 @@ public class WorkerSketchFetcher implements AutoCloseable
     final int workerCount = workerTaskIds.size();
     // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
-    final Queue<Future<?>> executorFutures = new ConcurrentLinkedQueue<>();
+    final List<Future<?>> executorFutures = new ArrayList<>();
 
     // Submit a task for each worker to fetch statistics
     IntStream.range(0, workerCount).forEach(workerNo -> {
@@ -260,7 +258,7 @@ public class WorkerSketchFetcher implements AutoCloseable
             stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
         // Guarded by synchronized mergedStatisticsCollector
         Set<Integer> finishedWorkers = new HashSet<>();
-        final Queue<Future<?>> executorFutures = new ConcurrentLinkedQueue<>();
+        final List<Future<?>> executorFutures = new ArrayList<>();
 
         log.debug("Query [%s]. Submitting request for statistics for time chunk %s to %s workers",
                   stageDefinition.getId().getQueryId(),

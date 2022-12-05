@@ -138,17 +138,18 @@ public class WorkerSketchFetcherTest
     }).when(executorService).submit(any(Runnable.class));
 
     doAnswer(invocation -> {
-      latch.countDown();
-      latch.await();
-      return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
+      String workerId = invocation.getArgument(0);
+      if ("2".equals(workerId)) {
+        // Cause a worker to fail instead of returning the result
+        latch.countDown();
+        latch.await();
+        return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
+      } else {
+        latch.countDown();
+        latch.await();
+        return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
+      }
     }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
-
-    // Cause a worker to fail instead of returning the result
-    doAnswer(invocation -> {
-      latch.countDown();
-      latch.await();
-      return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(eq("2"), any(), anyInt());
 
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
@@ -236,15 +237,17 @@ public class WorkerSketchFetcherTest
 
     // When fetching snapshots, return a mock and add future to queue
     doAnswer(invocation -> {
-      barrier.await();
-      return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
+      String workerId = invocation.getArgument(0);
+      long timeChunk = invocation.getArgument(3);
+      // Cause a worker in the second time chunk to fail instead of returning the result
+      if ("4".equals(workerId) && timeChunk == 2L) {
+        barrier.await();
+        return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
+      } else {
+        barrier.await();
+        return Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class));
+      }
     }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(anyString(), anyString(), anyInt(), anyLong());
-
-    // Cause a worker in the second time chunk to fail instead of returning the result
-    doAnswer(invocation -> {
-      barrier.await();
-      return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(eq("4"), any(), anyInt(), eq(2L));
 
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
