@@ -334,25 +334,11 @@ public class Lifecycle
       if (!state.compareAndSet(State.NOT_STARTED, State.RUNNING)) {
         throw new ISE("stop() is called concurrently with start()");
       }
-      Exception thrown = null;
-      for (Map.Entry<Stage, ? extends List<Handler>> entry : handlers.entrySet()) {
-        currStage = entry.getKey();
+      for (Map.Entry<Stage, ? extends List<Handler>> e : handlers.entrySet()) {
+        currStage = e.getKey();
         log.info("Starting lifecycle [%s] stage [%s]", name, currStage.name());
-        for (Handler handler : entry.getValue()) {
-          try {
-            handler.start();
-          }
-          catch (Exception e) {
-            log.warn(e, "Lifecycle [%s] encountered exception while starting %s", name, handler);
-            if (thrown == null) {
-              thrown = e;
-            } else {
-              thrown.addSuppressed(e);
-            }
-          }
-        }
-        if (thrown != null) {
-          throw new RuntimeException(thrown);
+        for (Handler handler : e.getValue()) {
+          handler.start();
         }
       }
       log.info("Successfully started lifecycle [%s]", name);
