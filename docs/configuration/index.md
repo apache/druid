@@ -418,6 +418,7 @@ There are several emitters available:
 - [`parametrized`](#parametrized-http-emitter-module) operates like the `http` emitter but fine-tunes the recipient URL based on the event feed.
 - [`composing`](#composing-emitter-module) initializes multiple emitter modules.
 - [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
+- [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
 
 ##### Logging Emitter Module
 
@@ -483,6 +484,14 @@ Instead use `recipientBaseUrlPattern` described in the table below.
 
 To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
+##### Switching Emitter
+
+To use switching as emitter set `druid.emitter=switching`. 
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.emitter.switching.emitters`|JSON map of feed to list of emitter modules that will be used for the mapped feed, e.g., {"metrics":["http"], "alerts":["logging"]}|{}|
+|`druid.emitter.switching.defaultEmitters`|JSON list of emitter modules to load that will be used if there is no emitter specifically designated for that event's feed, e.g., ["logging","http"].|[]|
 
 ### Metadata storage
 
