@@ -482,6 +482,7 @@ public class TaskLockbox
     giant.lock();
     try {
       if (isTimeChunkLock) {
+        // For time-chunk locking, segment must be allocated only after acquiring the lock
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
         allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
       } else {
@@ -489,7 +490,6 @@ public class TaskLockbox
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
 
-      // TODO: for failed allocations, cleanup newly created locks from the posse map
       holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
     }
     finally {
