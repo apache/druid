@@ -301,7 +301,7 @@ For more information, see [dump-segment tool](https://druid.apache.org/docs/late
 
 https://github.com/apache/druid/pull/13356
 
-### Segmen loading and balancings
+### Segment loading and balancing
 
 #### cachingCost balancer strategy
 
@@ -318,15 +318,15 @@ Set `useRoundRobinSegmentAssigment` to `true` in the Coordinator dynamic config 
 
 https://github.com/apache/druid/pull/13367
 
-#### Segment batch balancing
+#### Sampling segments for balancing
 
 Batch sampling is now the default method for sampling segments during balancing as it performs significantly better than the alternative when there is a large number of used segments in the cluster.
 
-As part of this change, the following properties have been deprecated and will be removed in future releases:
+As part of this change, the following have been deprecated and will be removed in future releases:
 
-- `coordinator dynamic config useBatchedSegmentSampler`
-- `coordinator dynamic config percentOfSegmentsToConsiderPerMove`
-- non-batch method of sampling segments used during coordinator duty `BalanceSegments`
+- coordinator dynamic config `useBatchedSegmentSampler`
+- coordinator dynamic config `percentOfSegmentsToConsiderPerMove`
+- non-batch method of sampling segments used by coordinator duty `BalanceSegments`
 
 The unused coordinator property `druid.coordinator.loadqueuepeon.repeatDelay` has been removed.
 
