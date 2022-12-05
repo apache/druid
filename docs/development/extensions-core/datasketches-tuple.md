@@ -60,7 +60,7 @@ You can use the `arrayOfDoublesSketch` aggregator to:
 
 #### Example on top of raw data
 
-Compute a theta of unique users, for each user store the `added` and `deleted` scoers
+Compute a theta of unique users. For each user store the `added` and `deleted` scores in a column called `users_theta`.
 
 ```json
 {
