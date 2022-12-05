@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -36,6 +37,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -71,6 +73,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -116,15 +119,18 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -255,6 +261,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
   );
 
   @Override
+  public void configureJsonMapper(ObjectMapper mapper)
+  {
+    mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+  }
+
+  @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
@@ -345,6 +357,25 @@ public class MSQTestBase extends BaseCalciteQueryTest
             .toProvider(Providers.of(null));
     });
 
+    builder.addModule(binder -> {
+      binder.bind(DataSegmentProvider.class)
+            .toInstance((dataSegment, channelCounters) ->
+                            new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
+      binder.bind(IndexIO.class).toInstance(indexIO);
+
+      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+      try {
+        config.storageDirectory = tmpFolder.newFolder("localsegments");
+      }
+      catch (IOException e) {
+        throw new ISE(e, "Unable to create folder");
+      }
+      binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
+          new LocalDataSegmentPusher(config),
+          segmentManager
+      ));
+    });
+
 //    builder.addModule(binder -> {
 //      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
 //      try {
@@ -385,6 +416,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public void tearDown2()
   {
     groupByBuffers.close();
+    EasyMock.reset();
   }
 
   // This test is a Frankenstein creation: it uses the injector set up by the
@@ -410,66 +442,64 @@ public class MSQTestBase extends BaseCalciteQueryTest
     log.error("SETUP2 GUICE CALLED");
     groupByBuffers = TestGroupByBuffers.createDefault();
 
-    SqlTestFramework qf = queryFramework();
-    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            binder -> {
-              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-            }
-        )
-    );
+    ObjectMapper testMapper = TestHelper.makeJsonMapper();
+    InjectableValues.Std injectables = new InjectableValues.Std();
+    injectables.addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller());
+//    injectables.addValue(DataSegmentProvider.class,
+//                         (DataSegmentProvider) (segmentId, channelCounters) -> new LazyResourceHolder<>(
+//                             getSupplierForSegment(segmentId)));
+    testMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    testMapper.setInjectableValues(injectables);
 
-    ObjectMapper secondMapper = setupObjectMapper(secondInjector);
-    indexIO = new IndexIO(secondMapper, () -> 0);
-
+    indexIO = new IndexIO(testMapper, () -> 0);
     try {
-      segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
+      segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(tmpFolder.newFolder("test"));
     }
     catch (IOException exception) {
       throw new ISE(exception, "Unable to create segmentCacheManager");
     }
-
-//    MSQSqlModule sqlModule = new MSQSqlModule();
-
     segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
+
+    SqlTestFramework qf = queryFramework();
+    ObjectMapper secondMapper = qf.queryJsonMapper();
+
+    try {
+      localFileStorageDir = tmpFolder.newFolder("fault");
+      localFileStorageConnector = Mockito.spy(
+          new LocalFileStorageConnector(localFileStorageDir)
+      );
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Unable to create setup storage connector");
+    }
+
 
     List<Module> modules = ImmutableList.of(
         binder -> {
-          binder.bind(DataSegmentProvider.class)
-                .toInstance((dataSegment, channelCounters) ->
-                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-          binder.bind(IndexIO.class).toInstance(indexIO);
+//          binder.bind(DataSegmentProvider.class)
+//                .toInstance((dataSegment, channelCounters) ->
+//                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
+//          binder.bind(IndexIO.class).toInstance(indexIO);
 
-          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-          try {
-            config.storageDirectory = tmpFolder.newFolder("localsegments");
-          }
-          catch (IOException e) {
-            throw new ISE(e, "Unable to create folder");
-          }
-          binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-              new LocalDataSegmentPusher(config),
-              segmentManager
-          ));
+//          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+//          try {
+//            config.storageDirectory = tmpFolder.newFolder("localsegments");
+//          }
+//          catch (IOException e) {
+//            throw new ISE(e, "Unable to create folder");
+//          }
+//          binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
+//              new LocalDataSegmentPusher(config),
+//              segmentManager
+//          ));
 
           // fault tolerance module
-          try {
-            localFileStorageDir = tmpFolder.newFolder("fault");
-            localFileStorageConnector = Mockito.spy(
-                new LocalFileStorageConnector(localFileStorageDir)
-            );
-          }
-          catch (IOException e) {
-            throw new ISE(e, "Unable to create setup storage connector");
-          }
         }
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     Injector injector = qf.injector().createChildInjector(modules);
 
-    objectMapper = setupObjectMapper(injector);
-//    objectMapper.registerModules(sqlModule.getJacksonModules());
+    objectMapper = qf.queryJsonMapper();
 
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
@@ -488,10 +518,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.TEST_AUTHORIZER_MAPPER
     );
 
-    final SqlEngine engine = new MSQTaskSqlEngine(
-        indexingServiceClient,
-        qf.queryJsonMapper()
-    );
+    final SqlEngine engine = createEngine(null, qf.queryJsonMapper());
 
     PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -506,6 +533,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+  }
+
+  @Override
+  public SqlEngine createEngine(
+      QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper
+  )
+  {
+    return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }
 
   /**
@@ -667,22 +702,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private ObjectMapper setupObjectMapper(Injector injector)
   {
-    ObjectMapper mapper = injector.getInstance(ObjectMapper.class)
-                                  .registerModules(new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
-                                                       .registerSubtypes(
-                                                           new NamedType(IndexTask.IndexTuningConfig.class, "index"),
-                                                           new NamedType(
-                                                               ParallelIndexTuningConfig.class,
-                                                               "index_parallel"
-                                                           ),
-                                                           new NamedType(
-                                                               CompactionTask.CompactionTuningConfig.class,
-                                                               "compaction"
-                                                           )
-                                                       ).registerSubtypes(ExternalDataSource.class));
-    DruidSecondaryModule.setupJackson(injector, mapper);
-
-    mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    ObjectMapper mapper = injector.getInstance(ObjectMapper.class);
+//                                  .registerModules(new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
+//                                                       .registerSubtypes(
+//                                                           new NamedType(IndexTask.IndexTuningConfig.class, "index"),
+//                                                           new NamedType(
+//                                                               ParallelIndexTuningConfig.class,
+//                                                               "index_parallel"
+//                                                           ),
+//                                                           new NamedType(
+//                                                               CompactionTask.CompactionTuningConfig.class,
+//                                                               "compaction"
+//                                                           )
+//                                                       ).registerSubtypes(ExternalDataSource.class));
+//    DruidSecondaryModule.setupJackson(injector, mapper);
+//
+//    mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
 
     // This should be reusing guice instead of using static classes
     InsertLockPreemptedFaultTest.LockPreemptedHelper.preempt(false);

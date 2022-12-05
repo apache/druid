@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.mockito.Mockito;
@@ -448,6 +449,7 @@ public class MSQInsertTest extends MSQTestBase
                      .verifyPlanningErrors();
   }
 
+  @Ignore
   @Test
   public void testInsertWithHugeClusteringKeys()
   {
