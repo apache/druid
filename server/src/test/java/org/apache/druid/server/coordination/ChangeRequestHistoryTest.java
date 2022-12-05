@@ -208,12 +208,8 @@ public class ChangeRequestHistoryTest
     Assert.assertEquals(0, history.waitingFutures.size());
     Assert.assertTrue(callbackExcecuted.get());
     Assert.assertTrue(future.isDone());
-    try {
-      ChangeRequestsSnapshot<DataSegmentChangeRequest> val = future.get();
-      Assert.fail("Should have exploded");
-    }
-    catch (Exception ex) {
-      Assert.assertEquals("java.lang.IllegalStateException: Server is shutting down.", ex.getMessage());
-    }
+
+    Throwable thrown = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals("java.lang.IllegalStateException: Server is shutting down.", thrown.getMessage());
   }
 }
