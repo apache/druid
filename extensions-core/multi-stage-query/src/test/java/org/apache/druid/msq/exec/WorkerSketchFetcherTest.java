@@ -109,6 +109,9 @@ public class WorkerSketchFetcherTest
   public void tearDown() throws Exception
   {
     mocks.close();
+    if (target != null) {
+      target.close();
+    }
   }
 
   @Test
