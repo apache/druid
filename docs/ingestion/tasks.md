@@ -350,15 +350,15 @@ You can override the task priority by setting your priority in the task context 
 These are various overlord actions performed by tasks during their lifecycle. Some typical actions are as follows:
 - `lockAcquire`: acquires a time-chunk lock on an interval for the task
 - `lockRelease`: releases a lock acquired by the task on an interval
-- `segmentTransactionalInsert`: publishes new segments created by a task and optionally overwrites and/or drops existing segments in a single transaction  
+- `segmentTransactionalInsert`: publishes new segments created by a task and optionally overwrites and/or drops existing segments in a single transaction
 - `segmentAllocate`: allocates pending segments to a task to write rows
 - etc.
 
 ### Batching `segmentAllocate` actions
 
-In a cluster with several concurrent tasks, `segmentAllocate` actions on the overlord may take very long intervals of time to finish thus causing spikes in the `task/action/run/time`. This may result in lag building up while a task waits for a segment to get allocated.
+In a cluster with several concurrent tasks, `segmentAllocate` actions on the overlord may take very long intervals of time to finish thus causing spikes in the `task/action/run/time`. This may result in ingestion lag building up while a task waits for a segment to get allocated.
 The root causes of such spikes are:
-- several concurrent tasks trying to allocate segments for the same datasource and interval 
+- several concurrent tasks trying to allocate segments for the same datasource and interval
 - large number of metadata calls made to the segments and pending segments tables 
 - concurrency limitations while acquiring a task lock required for allocating a segment
 
