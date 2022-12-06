@@ -1,0 +1,117 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Static Checks CI
+on:
+  push:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+  pull_request:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+env:
+  MVN: mvn -B
+  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+  MAVEN_SKIP_TESTS: -P skip-tests
+  MAVEN_OPTS: -Xmx3000m
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: setup jdk8
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 8
+          cache: 'maven'
+
+      - name: maven install
+        run: |
+          echo 'Running Maven install...' &&
+          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+      - name: setup branch variable
+        run: |
+          export branch=${{ github.head_ref }}
+          echo "GIT_BRANCH=${branch}" >> $GITHUB_ENV
+
+      - name: "(openjdk8) processing module test"
+        env:
+          MAVEN_PROJECTS: processing
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: true
+        run: |
+          export DRUID_USE_DEFAULT_VALUE_FOR_NULL=true
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) processing module test (SQL Compatibility)"
+        env:
+          MAVEN_PROJECTS: processing
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: false
+        run: |
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) indexing modules test"
+        env:
+          MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: true
+        run: |
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) indexing modules test (SQL Compatibility)"
+        env:
+          MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: false
+          run: |
+            ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) server module test"
+        env:
+          MAVEN_PROJECTS: server
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: true
+        run: |
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) server module test (SQL Compatibility)"
+        env:
+          MAVEN_PROJECTS: server
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: false
+        run: |
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) other modules test"
+        env:
+          MAVEN_PROJECTS: !processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: true
+        run: |
+          ./.github/scripts/test_script.sh
+
+      - name: "(openjdk8) other modules test (SQL Compatibility)"
+        env:
+          MAVEN_PROJECTS: !processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases
+          DRUID_USE_DEFAULT_VALUE_FOR_NULL: false
+        run: |
+          ./.github/scripts/test_script.sh
