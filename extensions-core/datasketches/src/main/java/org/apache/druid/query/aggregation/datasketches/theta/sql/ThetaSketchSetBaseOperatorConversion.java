@@ -64,7 +64,7 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
   )
   {
     plannerContext.setPlanningError("%s can only be used on aggregates. " +
-        "It cannot be used directly on a column or or on a scalar expression.", getFunctionName());
+        "It cannot be used directly on a column or on a scalar expression.", getFunctionName());
     return null;
   }
 
