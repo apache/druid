@@ -250,6 +250,23 @@ public class SegmentAllocationQueueTest
   }
 
   @Test
+  public void testMaxBatchSize()
+  {
+    for (int i = 0; i < 500; ++i) {
+      SegmentAllocateRequest request =
+          allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+      allocationQueue.add(request);
+    }
+
+    // Verify that next request is added to a new batch
+    Assert.assertEquals(1, allocationQueue.size());
+    SegmentAllocateRequest request =
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+    allocationQueue.add(request);
+    Assert.assertEquals(2, allocationQueue.size());
+  }
+
+  @Test
   public void testMultipleRequestsForSameSegment()
   {
     final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
