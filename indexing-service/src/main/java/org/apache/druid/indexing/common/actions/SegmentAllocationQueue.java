@@ -94,7 +94,7 @@ public class SegmentAllocationQueue
     this.emitter = emitter;
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
-    this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationMaxWaitTime();
+    this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
 
     this.executor = taskLockConfig.isBatchSegmentAllocation()
                     ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;

@@ -71,7 +71,7 @@ public class SegmentAllocationQueueTest
       }
 
       @Override
-      public long getBatchAllocationMaxWaitTime()
+      public long getBatchAllocationWaitTime()
       {
         return 0;
       }
