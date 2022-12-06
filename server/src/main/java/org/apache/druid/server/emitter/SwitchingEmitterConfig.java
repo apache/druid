@@ -17,37 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.config;
+package org.apache.druid.server.emitter;
+
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import javax.validation.constraints.NotNull;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Global configurations for task lock. Used by the overlord.
- * This config takes precedence if it has a conflicting config with {@link DefaultTaskConfig}.
  */
-public class TaskLockConfig
+public class SwitchingEmitterConfig
 {
-  @JsonProperty
-  private boolean forceTimeChunkLock = true;
 
   @JsonProperty
-  private boolean batchSegmentAllocation = false;
+  @NotNull
+  private Map<String, List<String>> emitters = ImmutableMap.of();
 
   @JsonProperty
-  private long batchAllocationMaxWaitTime = 500L;
+  @NotNull
+  private List<String> defaultEmitters = ImmutableList.of();
 
-  public boolean isForceTimeChunkLock()
+  public Map<String, List<String>> getEmitters()
   {
-    return forceTimeChunkLock;
+    return emitters;
   }
 
-  public boolean isBatchSegmentAllocation()
+  public List<String> getDefaultEmitter()
   {
-    return batchSegmentAllocation;
-  }
-
-  public long getBatchAllocationMaxWaitTime()
-  {
-    return batchAllocationMaxWaitTime;
+    return defaultEmitters;
   }
 }
