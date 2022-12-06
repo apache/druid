@@ -35,8 +35,8 @@ public class ExtensionsModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(ExtensionsLoader.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.extensions", ExtensionsConfig.class);
-    JsonConfigProvider.bind(binder, "druid.modules", ModulesConfig.class);
+    JsonConfigProvider.bind(binder, ExtensionsConfig.PROPERTY_BASE, ExtensionsConfig.class);
+    JsonConfigProvider.bind(binder, ModulesConfig.PROPERTY_BASE, ModulesConfig.class);
   }
 
   /**

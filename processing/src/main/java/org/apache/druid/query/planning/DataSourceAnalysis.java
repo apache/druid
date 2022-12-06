@@ -28,6 +28,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
@@ -112,17 +113,29 @@ public class DataSourceAnalysis
     Query<?> baseQuery = null;
     DataSource current = dataSource;
 
-    while (current instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) current).getQuery();
+    // This needs to be an or condition between QueryDataSource and UnnestDataSource
+    // As queries can have interleaving query and unnest data sources.
+    // Ideally if each data source generate their own analysis object we can avoid the or here
+    // and have cleaner code. Especially as we increase the types of data sources in future
+    // these or checks will be tedious. Future development should move forDataSource method
+    // into each data source.
 
-      if (!(subQuery instanceof BaseQuery)) {
-        // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
-        // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
-        throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+    while (current instanceof QueryDataSource || current instanceof UnnestDataSource) {
+      if (current instanceof QueryDataSource) {
+        final Query<?> subQuery = ((QueryDataSource) current).getQuery();
+
+        if (!(subQuery instanceof BaseQuery)) {
+          // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
+          // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+          throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+        }
+
+        baseQuery = subQuery;
+        current = subQuery.getDataSource();
+      } else {
+        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+        current = unnestDataSource.getBase();
       }
-
-      baseQuery = subQuery;
-      current = subQuery.getDataSource();
     }
 
     if (current instanceof JoinDataSource) {
@@ -276,7 +289,8 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if this datasource is concrete-based (see {@link #isConcreteBased()}, and the base datasource is a
-   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}. This is an
+   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}
+   * or an {@link UnnestDataSource} composed entirely of {@link TableDataSource} . This is an
    * important property, because it corresponds to datasources that can be handled by Druid's distributed query stack.
    */
   public boolean isConcreteTableBased()
@@ -286,6 +300,10 @@ public class DataSourceAnalysis
     // so check anyway for future-proofing.
     return isConcreteBased() && (baseDataSource instanceof TableDataSource
                                  || (baseDataSource instanceof UnionDataSource &&
+                                     baseDataSource.getChildren()
+                                                   .stream()
+                                                   .allMatch(ds -> ds instanceof TableDataSource))
+                                 || (baseDataSource instanceof UnnestDataSource &&
                                      baseDataSource.getChildren()
                                                    .stream()
                                                    .allMatch(ds -> ds instanceof TableDataSource)));
@@ -298,6 +316,7 @@ public class DataSourceAnalysis
   {
     return dataSource instanceof QueryDataSource;
   }
+  
 
   /**
    * Returns true if this datasource is made out of a join operation

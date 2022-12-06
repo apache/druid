@@ -19,10 +19,12 @@
 
 package org.apache.druid.utils;
 
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.UOE;
 
 import java.lang.reflect.InvocationTargetException;
 
+@LazySingleton
 public class RuntimeInfo
 {
   public int getAvailableProcessors()

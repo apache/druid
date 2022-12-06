@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -329,14 +328,7 @@ public class TaskToolbox
     // Request segment pushes for each set
     final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
         segments,
-        new Function<DataSegment, Interval>()
-        {
-          @Override
-          public Interval apply(DataSegment segment)
-          {
-            return segment.getInterval();
-          }
-        }
+        DataSegment::getInterval
     );
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
