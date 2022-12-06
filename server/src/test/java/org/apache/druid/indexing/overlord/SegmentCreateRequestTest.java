@@ -17,27 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.frame.write;
+package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Exception that is conventionally thrown by workers when they call
- * {@link FrameWriter#addSelection} and it returns false on an empty frame, or in
- * a situation where allocating a new frame is impractical.
- */
-public class FrameRowTooLargeException extends RuntimeException
+public class SegmentCreateRequestTest
 {
-  private final long maxFrameSize;
 
-  public FrameRowTooLargeException(final long maxFrameSize)
+  @Test
+  public void testNullPreviousSegmentId()
   {
-    super(StringUtils.format("Row too large to add to frame (max frame size = %,d)", maxFrameSize));
-    this.maxFrameSize = maxFrameSize;
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    SegmentCreateRequest request = new SegmentCreateRequest(
+        "sequence",
+        null,
+        "version",
+        partialShardSpec
+    );
+    Assert.assertEquals("sequence", request.getSequenceName());
+    Assert.assertEquals("", request.getPreviousSegmentId());
+    Assert.assertEquals("version", request.getVersion());
+    Assert.assertEquals(partialShardSpec, request.getPartialShardSpec());
   }
 
-  public long getMaxFrameSize()
-  {
-    return maxFrameSize;
-  }
 }

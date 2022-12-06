@@ -917,7 +917,8 @@ ORDER BY
             width: 80,
             filterable: false,
             className: 'padded',
-            Cell({ value, original }) {
+            Cell({ value, original, aggregated }) {
+              if (aggregated) return '';
               if (value > 0) {
                 return formatDuration(value);
               }

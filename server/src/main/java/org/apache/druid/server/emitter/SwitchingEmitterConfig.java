@@ -17,18 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.frame.write;
+package org.apache.druid.server.emitter;
 
-import org.junit.Assert;
-import org.junit.Test;
 
-public class FrameRowTooLargeExceptionTest
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import javax.validation.constraints.NotNull;
+import java.util.List;
+import java.util.Map;
+
+/**
+ */
+public class SwitchingEmitterConfig
 {
-  @Test
-  public void testBasic()
+
+  @JsonProperty
+  @NotNull
+  private Map<String, List<String>> emitters = ImmutableMap.of();
+
+  @JsonProperty
+  @NotNull
+  private List<String> defaultEmitters = ImmutableList.of();
+
+  public Map<String, List<String>> getEmitters()
   {
-    final int maxFrameSize = 1000;
-    final FrameRowTooLargeException e = new FrameRowTooLargeException(maxFrameSize);
-    Assert.assertEquals(maxFrameSize, e.getMaxFrameSize());
+    return emitters;
+  }
+
+  public List<String> getDefaultEmitter()
+  {
+    return defaultEmitters;
   }
 }
