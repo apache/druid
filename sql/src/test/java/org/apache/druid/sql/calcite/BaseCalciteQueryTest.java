@@ -544,11 +544,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public SqlEngine createEngine(
       final QueryLifecycleFactory qlf,
-      final ObjectMapper queryJsonMapper
+      final ObjectMapper queryJsonMapper,
+      Injector injector
   )
   {
     if (engine0 == null) {
-      return baseComponentSupplier.createEngine(qlf, queryJsonMapper);
+      return baseComponentSupplier.createEngine(qlf, queryJsonMapper, injector);
     } else {
       return engine0;
     }

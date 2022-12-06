@@ -19,46 +19,38 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.Druids;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.LookupDataSource;
+import com.google.inject.Injector;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.topn.DimensionTopNMetricSpec;
-import org.apache.druid.query.topn.InvertedTopNMetricSpec;
-import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
 {
+
+
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+  }
+
+  @Override
+  public SqlEngine createEngine(
+      QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper,
+      Injector injector
+  )
+  {
+    return super.createEngine(qlf, queryJsonMapper, injector);
+  }
 
   @Test
   public void testOrderThenLimitThenFilter()

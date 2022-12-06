@@ -149,7 +149,8 @@ public class SqlTestFramework
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        Injector injector
     );
 
     /**
@@ -240,7 +241,11 @@ public class SqlTestFramework
     }
 
     @Override
-    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper objectMapper)
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper objectMapper,
+        Injector injector
+    )
     {
       return new NativeSqlEngine(
           qlf,
@@ -541,7 +546,7 @@ public class SqlTestFramework
         .addModule(new TestSetupModule(builder));
     builder.componentSupplier.configureGuice(injectorBuilder);
     this.injector = injectorBuilder.build();
-    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper());
+    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
   }
