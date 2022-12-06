@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -36,10 +37,11 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -121,12 +123,12 @@ public class SuperSorterTest
       final SuperSorter superSorter = new SuperSorter(
           Collections.singletonList(inputChannel.readable()),
           FrameReader.create(RowSignature.empty()),
-          ClusterBy.none(),
+          Collections.emptyList(),
           outputPartitionsFuture,
           exec,
           temporaryFolder.newFolder(),
           new FileOutputChannelFactory(temporaryFolder.newFolder(), FRAME_SIZE),
-          () -> ArenaMemoryAllocator.createOnHeap(FRAME_SIZE),
+          new ArenaMemoryAllocatorFactory(FRAME_SIZE),
           2,
           2,
           -1,
@@ -282,12 +284,12 @@ public class SuperSorterTest
       final SuperSorter superSorter = new SuperSorter(
           inputChannels,
           frameReader,
-          clusterBy,
+          clusterBy.getColumns(),
           clusterByPartitionsFuture,
           exec,
           temporaryFolder.newFolder(),
           new FileOutputChannelFactory(temporaryFolder.newFolder(), maxBytesPerFrame),
-          () -> ArenaMemoryAllocator.createOnHeap(maxBytesPerFrame),
+          new ArenaMemoryAllocatorFactory(maxBytesPerFrame),
           maxActiveProcessors,
           maxChannelsPerProcessor,
           -1,
@@ -380,8 +382,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -395,8 +397,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -442,8 +444,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("quality", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("quality", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -481,9 +483,9 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn(ColumnHolder.TIME_COLUMN_NAME, false),
-              new SortColumn("market", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn(ColumnHolder.TIME_COLUMN_NAME, KeyOrder.ASCENDING),
+              new KeyColumn("market", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -521,8 +523,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("placementish", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("placementish", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -560,8 +562,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );

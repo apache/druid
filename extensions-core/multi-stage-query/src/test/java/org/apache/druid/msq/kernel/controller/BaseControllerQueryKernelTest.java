@@ -281,7 +281,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       StageDefinition stageDefinition = controllerQueryKernel.getStageDefinition(stageId);
       ClusterByPartitions clusterByPartitions =
           stageDefinition
-              .generatePartitionsForShuffle(clusterByStatisticsCollector)
+              .generatePartitionBoundariesForShuffle(clusterByStatisticsCollector)
               .valueOrThrow();
       controllerQueryKernel.setClusterByPartitionBoundaries(stageId, clusterByPartitions);
     }

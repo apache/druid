@@ -25,12 +25,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
@@ -41,6 +39,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")
@@ -78,9 +77,9 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
       ReadableInput baseInput,
       Int2ObjectMap<ReadableInput> sideChannels,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      ResourceHolder<MemoryAllocator> allocatorHolder,
+      ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       RowSignature signature,
-      ClusterBy clusterBy,
+      List<KeyColumn> sortKey,
       FrameContext frameContext
   )
   {
@@ -90,15 +89,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         sideChannels,
         new JoinableFactoryWrapper(frameContext.joinableFactory()),
         outputChannelHolder,
-        new LazyResourceHolder<>(() -> Pair.of(
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.ROW_BASED,
-                allocatorHolder.get(),
-                signature,
-                clusterBy.getColumns()
-            ),
-            allocatorHolder
-        )),
+        new LazyResourceHolder<>(() -> Pair.of(frameWriterFactoryHolder.get(), frameWriterFactoryHolder)),
         runningCountForLimit,
         frameContext.memoryParameters().getBroadcastJoinMemory()
     );

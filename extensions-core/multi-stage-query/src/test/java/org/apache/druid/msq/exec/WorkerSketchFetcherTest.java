@@ -94,8 +94,8 @@ public class WorkerSketchFetcherTest
     expectedPartitions1 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(mock(RowKey.class), mock(RowKey.class))));
     expectedPartitions2 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(mock(RowKey.class), mock(RowKey.class))));
 
-    doReturn(Either.value(expectedPartitions1)).when(stageDefinition).generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector1));
-    doReturn(Either.value(expectedPartitions2)).when(stageDefinition).generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector2));
+    doReturn(Either.value(expectedPartitions1)).when(stageDefinition).generatePartitionBoundariesForShuffle(eq(mergedClusterByStatisticsCollector1));
+    doReturn(Either.value(expectedPartitions2)).when(stageDefinition).generatePartitionBoundariesForShuffle(eq(mergedClusterByStatisticsCollector2));
 
     doReturn(
         mergedClusterByStatisticsCollector1,

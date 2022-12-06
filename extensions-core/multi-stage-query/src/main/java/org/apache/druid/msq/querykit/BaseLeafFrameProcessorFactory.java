@@ -23,15 +23,15 @@ import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -104,7 +104,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       outstandingProcessors = Math.min(totalProcessors, maxOutstandingProcessors);
     }
 
-    final AtomicReference<Queue<MemoryAllocator>> allocatorQueueRef =
+    final AtomicReference<Queue<FrameWriterFactory>> frameWriterFactoryQueueRef =
         new AtomicReference<>(new ArrayDeque<>(outstandingProcessors));
     final AtomicReference<Queue<WritableFrameChannel>> channelQueueRef =
         new AtomicReference<>(new ArrayDeque<>(outstandingProcessors));
@@ -114,7 +114,9 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
       outputChannels.add(outputChannel);
       channelQueueRef.get().add(outputChannel.getWritableChannel());
-      allocatorQueueRef.get().add(outputChannel.getFrameMemoryAllocator());
+      frameWriterFactoryQueueRef.get().add(
+          stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator())
+      );
     }
 
     // Read all base inputs in separate processors, one per processor.
@@ -147,9 +149,9 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
                     }
                   }
               ),
-              makeLazyResourceHolder(allocatorQueueRef, ignored -> {}),
+              makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
               stageDefinition.getSignature(),
-              stageDefinition.getClusterBy(),
+              stageDefinition.getSortKey(),
               frameContext
           );
         }
@@ -257,9 +259,9 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       ReadableInput baseInput,
       Int2ObjectMap<ReadableInput> sideChannels,
       ResourceHolder<WritableFrameChannel> outputChannelSupplier,
-      ResourceHolder<MemoryAllocator> allocatorSupplier,
+      ResourceHolder<FrameWriterFactory> frameWriterFactory,
       RowSignature signature,
-      ClusterBy clusterBy,
+      List<KeyColumn> sortKey,
       FrameContext providerThingy
   );
 

@@ -21,9 +21,10 @@ package org.apache.druid.frame.write;
 
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.field.FieldWriter;
 import org.apache.druid.frame.field.FieldWriters;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -35,17 +36,17 @@ import java.util.List;
 
 public class RowBasedFrameWriterFactory implements FrameWriterFactory
 {
-  private final MemoryAllocator allocator;
+  private final MemoryAllocatorFactory allocatorFactory;
   private final RowSignature signature;
-  private final List<SortColumn> sortColumns;
+  private final List<KeyColumn> sortColumns;
 
   public RowBasedFrameWriterFactory(
-      final MemoryAllocator allocator,
+      final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
-      final List<SortColumn> sortColumns
+      final List<KeyColumn> sortColumns
   )
   {
-    this.allocator = allocator;
+    this.allocatorFactory = allocatorFactory;
     this.signature = signature;
     this.sortColumns = sortColumns;
 
@@ -55,6 +56,8 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
   @Override
   public FrameWriter newFrameWriter(final ColumnSelectorFactory columnSelectorFactory)
   {
+    final MemoryAllocator allocator = allocatorFactory.newAllocator();
+
     // Only need rowOrderMemory if we are sorting.
     final AppendableMemory rowOrderMemory = sortColumns.isEmpty() ? null : AppendableMemory.create(allocator);
     final AppendableMemory rowOffsetMemory = AppendableMemory.create(allocator);
@@ -77,7 +80,13 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
   @Override
   public long allocatorCapacity()
   {
-    return allocator.capacity();
+    return allocatorFactory.allocatorCapacity();
+  }
+
+  @Override
+  public RowSignature signature()
+  {
+    return signature;
   }
 
   /**

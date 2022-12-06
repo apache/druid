@@ -105,10 +105,10 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
             )
         );
 
-    return OutputChannel.pair(
+    return OutputChannel.immediatelyReadablePair(
         writableChannel,
         ArenaMemoryAllocator.createOnHeap(frameSize),
-        () -> ReadableNilFrameChannel.INSTANCE, // remote reads should happen via the DurableStorageInputChannelFactory
+        ReadableNilFrameChannel.INSTANCE, // remote reads should happen via the DurableStorageInputChannelFactory
         partitionNumber
     );
   }

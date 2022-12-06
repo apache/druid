@@ -30,6 +30,7 @@ import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -50,7 +51,7 @@ import java.util.Objects;
  * entirely on server configuration; this makes the calculation robust to different queries running simultaneously in
  * the same JVM.
  *
- * Then, we split up the resources for each bundle in two different ways: one assuming it'll be used for a
+ * Within each bundle, we split up memory in two different ways: one assuming it'll be used for a
  * {@link org.apache.druid.frame.processor.SuperSorter}, and one assuming it'll be used for a regular
  * processor. Callers can then use whichever set of allocations makes sense. (We assume no single bundle
  * will be used for both purposes.)
@@ -160,6 +161,7 @@ public class WorkerMemoryParameters
         computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
+        0,
         0
     );
   }
@@ -173,19 +175,27 @@ public class WorkerMemoryParameters
       final int stageNumber
   )
   {
-    final IntSet inputStageNumbers =
-        InputSpecs.getStageNumbers(queryDef.getStageDefinition(stageNumber).getInputSpecs());
+    final StageDefinition stageDef = queryDef.getStageDefinition(stageNumber);
+    final IntSet inputStageNumbers = InputSpecs.getStageNumbers(stageDef.getInputSpecs());
     final int numInputWorkers =
         inputStageNumbers.intStream()
                          .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
                          .sum();
+
+    final int numHashOutputPartitions;
+    if (stageDef.doesShuffle() && stageDef.getShuffleSpec().kind().isHash()) {
+      numHashOutputPartitions = stageDef.getShuffleSpec().partitionCount();
+    } else {
+      numHashOutputPartitions = 0;
+    }
 
     return createInstance(
         Runtime.getRuntime().maxMemory(),
         computeUsableMemoryInJvm(injector),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
-        numInputWorkers
+        numInputWorkers,
+        numHashOutputPartitions
     );
   }
 
@@ -199,23 +209,33 @@ public class WorkerMemoryParameters
    * @param numWorkersInJvm           number of workers that can run concurrently in this JVM. Generally equal to
    *                                  the task capacity.
    * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
-   * @param numInputWorkers           number of workers across input stages that need to be merged together.
+   * @param numInputWorkers           total number of workers across all input stages.
+   * @param numHashOutputPartitions   total number of output partitions, if using hash partitioning; zero if not using
+   *                                  hash partitioning.
    */
   public static WorkerMemoryParameters createInstance(
       final long maxMemoryInJvm,
       final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
-      final int numInputWorkers
+      final int numInputWorkers,
+      final int numHashOutputPartitions
   )
   {
     final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
-    final long bundleMemoryForProcessing = bundleMemory - bundleMemoryForInputChannels;
+    final long bundleMemoryForHashPartitioning = memoryNeededForHashPartitioning(numHashOutputPartitions);
+    final long bundleMemoryForProcessing =
+        bundleMemory - bundleMemoryForInputChannels - bundleMemoryForHashPartitioning;
 
     if (bundleMemoryForProcessing < PROCESSING_MINIMUM_BYTES) {
-      final int maxWorkers = computeMaxWorkers(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+      final int maxWorkers = computeMaxWorkers(
+          usableMemoryInJvm,
+          numWorkersInJvm,
+          numProcessingThreadsInJvm,
+          numHashOutputPartitions
+      );
 
       if (maxWorkers > 0) {
         throw new MSQException(new TooManyWorkersFault(numInputWorkers, Math.min(Limits.MAX_WORKERS, maxWorkers)));
@@ -358,13 +378,19 @@ public class WorkerMemoryParameters
   static int computeMaxWorkers(
       final long usableMemoryInJvm,
       final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm
+      final int numProcessingThreadsInJvm,
+      final int numHashOutputPartitions
   )
   {
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
-    // Inverse of memoryNeededForInputChannels.
-    return Math.max(0, Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / STANDARD_FRAME_SIZE - 1));
+    // Compute number of workers that gives us PROCESSING_MINIMUM_BYTES of memory per bundle, while accounting for
+    // memoryNeededForInputChannels + memoryNeededForHashPartitioning.
+    final int isHashing = numHashOutputPartitions > 0 ? 1 : 0;
+    return Math.max(
+        0,
+        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / (STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
+    );
   }
 
   /**
@@ -436,6 +462,13 @@ public class WorkerMemoryParameters
     // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
     // Requirement: one input frame per worker, one buffered output frame.
     return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
+  }
+
+  private static long memoryNeededForHashPartitioning(final int numOutputPartitions)
+  {
+    // One standard frame for each processor output.
+    // May be zero, since numOutputPartitions is zero if not using hash partitioning.
+    return (long) STANDARD_FRAME_SIZE * numOutputPartitions;
   }
 
   /**

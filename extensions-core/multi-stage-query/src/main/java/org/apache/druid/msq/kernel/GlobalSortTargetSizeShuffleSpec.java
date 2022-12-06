@@ -33,34 +33,44 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Shuffle spec that generates up to a certain number of output partitions. Commonly used for shuffles between stages.
+ * Shuffle spec that generates a variable number of partitions, attempting to keep the number of rows in each partition
+ * to a particular {@link #targetSize}. Commonly used when generating segments, which we want to have a certain number
+ * of rows per segment.
  */
-public class MaxCountShuffleSpec implements ShuffleSpec
+public class GlobalSortTargetSizeShuffleSpec implements ShuffleSpec
 {
+  public static final String TYPE = "targetSize";
+
   private final ClusterBy clusterBy;
-  private final int partitions;
+  private final long targetSize;
   private final boolean aggregate;
 
   @JsonCreator
-  public MaxCountShuffleSpec(
+  public GlobalSortTargetSizeShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
-      @JsonProperty("partitions") final int partitions,
+      @JsonProperty("targetSize") final long targetSize,
       @JsonProperty("aggregate") final boolean aggregate
   )
   {
     this.clusterBy = Preconditions.checkNotNull(clusterBy, "clusterBy");
-    this.partitions = partitions;
+    this.targetSize = targetSize;
     this.aggregate = aggregate;
 
-    if (partitions < 1) {
-      throw new IAE("Partition count must be at least 1");
+    if (!clusterBy.sortable()) {
+      throw new IAE("ClusterBy key must be sortable");
     }
+  }
+
+  @Override
+  public ShuffleKind kind()
+  {
+    return ShuffleKind.GLOBAL_SORT;
   }
 
   @Override
   @JsonProperty("aggregate")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean doesAggregateByClusterKey()
+  public boolean doesAggregate()
   {
     return aggregate;
   }
@@ -68,21 +78,27 @@ public class MaxCountShuffleSpec implements ShuffleSpec
   @Override
   public boolean needsStatistics()
   {
-    return partitions > 1 || clusterBy.getBucketByCount() > 0;
+    return true;
   }
 
   @Override
-  public Either<Long, ClusterByPartitions> generatePartitions(
+  public int partitionCount()
+  {
+    throw new IllegalStateException("Number of partitions not known for target-size shuffle.");
+  }
+
+  @Override
+  public Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
       @Nullable final ClusterByStatisticsCollector collector,
       final int maxNumPartitions
   )
   {
-    if (!needsStatistics()) {
-      return Either.value(ClusterByPartitions.oneUniversalPartition());
-    } else if (partitions > maxNumPartitions) {
-      return Either.error((long) partitions);
+    final long expectedPartitions = collector.estimatedTotalWeight() / targetSize;
+
+    if (expectedPartitions > maxNumPartitions) {
+      return Either.error(expectedPartitions);
     } else {
-      final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithMaxCount(partitions);
+      final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithTargetWeight(targetSize);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);
       } else {
@@ -93,15 +109,15 @@ public class MaxCountShuffleSpec implements ShuffleSpec
 
   @Override
   @JsonProperty
-  public ClusterBy getClusterBy()
+  public ClusterBy clusterBy()
   {
     return clusterBy;
   }
 
   @JsonProperty
-  int getPartitions()
+  long targetSize()
   {
-    return partitions;
+    return targetSize;
   }
 
   @Override
@@ -113,24 +129,22 @@ public class MaxCountShuffleSpec implements ShuffleSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    MaxCountShuffleSpec that = (MaxCountShuffleSpec) o;
-    return partitions == that.partitions
-           && aggregate == that.aggregate
-           && Objects.equals(clusterBy, that.clusterBy);
+    GlobalSortTargetSizeShuffleSpec that = (GlobalSortTargetSizeShuffleSpec) o;
+    return targetSize == that.targetSize && aggregate == that.aggregate && Objects.equals(clusterBy, that.clusterBy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(clusterBy, partitions, aggregate);
+    return Objects.hash(clusterBy, targetSize, aggregate);
   }
 
   @Override
   public String toString()
   {
-    return "MaxCountShuffleSpec{" +
+    return "TargetSizeShuffleSpec{" +
            "clusterBy=" + clusterBy +
-           ", partitions=" + partitions +
+           ", targetSize=" + targetSize +
            ", aggregate=" + aggregate +
            '}';
   }

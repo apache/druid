@@ -31,15 +31,15 @@ public class WorkerMemoryParametersTest
   @Test
   public void test_oneWorkerInJvm_alone()
   {
-    Assert.assertEquals(parameters(1, 41, 224_785_000, 100_650_000, 75_000_000), compute(1_000_000_000, 1, 1, 1));
-    Assert.assertEquals(parameters(2, 13, 149_410_000, 66_900_000, 75_000_000), compute(1_000_000_000, 1, 2, 1));
-    Assert.assertEquals(parameters(4, 3, 89_110_000, 39_900_000, 75_000_000), compute(1_000_000_000, 1, 4, 1));
-    Assert.assertEquals(parameters(3, 2, 48_910_000, 21_900_000, 75_000_000), compute(1_000_000_000, 1, 8, 1));
-    Assert.assertEquals(parameters(2, 2, 33_448_460, 14_976_922, 75_000_000), compute(1_000_000_000, 1, 12, 1));
+    Assert.assertEquals(params(1, 41, 224_785_000, 100_650_000, 75_000_000), compute(1_000_000_000, 1, 1, 1, 0));
+    Assert.assertEquals(params(2, 13, 149_410_000, 66_900_000, 75_000_000), compute(1_000_000_000, 1, 2, 1, 0));
+    Assert.assertEquals(params(4, 3, 89_110_000, 39_900_000, 75_000_000), compute(1_000_000_000, 1, 4, 1, 0));
+    Assert.assertEquals(params(3, 2, 48_910_000, 21_900_000, 75_000_000), compute(1_000_000_000, 1, 8, 1, 0));
+    Assert.assertEquals(params(2, 2, 33_448_460, 14_976_922, 75_000_000), compute(1_000_000_000, 1, 12, 1, 0));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> compute(1_000_000_000, 1, 32, 1)
+        () -> compute(1_000_000_000, 1, 32, 1, 0)
     );
 
     Assert.assertEquals(new NotEnoughMemoryFault(1_000_000_000, 750_000_000, 1, 32), e.getFault());
@@ -48,12 +48,12 @@ public class WorkerMemoryParametersTest
   @Test
   public void test_oneWorkerInJvm_twoHundredWorkersInCluster()
   {
-    Assert.assertEquals(parameters(1, 83, 317_580_000, 142_200_000, 150_000_000), compute(2_000_000_000, 1, 1, 200));
-    Assert.assertEquals(parameters(2, 27, 166_830_000, 74_700_000, 150_000_000), compute(2_000_000_000, 1, 2, 200));
+    Assert.assertEquals(params(1, 83, 317_580_000, 142_200_000, 150_000_000), compute(2_000_000_000, 1, 1, 200, 0));
+    Assert.assertEquals(params(2, 27, 166_830_000, 74_700_000, 150_000_000), compute(2_000_000_000, 1, 2, 200, 0));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> compute(1_000_000_000, 1, 4, 200)
+        () -> compute(1_000_000_000, 1, 4, 200, 0)
     );
 
     Assert.assertEquals(new TooManyWorkersFault(200, 109), e.getFault());
@@ -62,21 +62,54 @@ public class WorkerMemoryParametersTest
   @Test
   public void test_fourWorkersInJvm_twoHundredWorkersInCluster()
   {
-    Assert.assertEquals(parameters(1, 150, 679_380_000, 304_200_000, 168_750_000), compute(9_000_000_000L, 4, 1, 200));
-    Assert.assertEquals(parameters(2, 62, 543_705_000, 243_450_000, 168_750_000), compute(9_000_000_000L, 4, 2, 200));
-    Assert.assertEquals(parameters(4, 22, 374_111_250, 167_512_500, 168_750_000), compute(9_000_000_000L, 4, 4, 200));
-    Assert.assertEquals(parameters(4, 14, 204_517_500, 91_575_000, 168_750_000), compute(9_000_000_000L, 4, 8, 200));
-    Assert.assertEquals(parameters(4, 8, 68_842_500, 30_825_000, 168_750_000), compute(9_000_000_000L, 4, 16, 200));
+    Assert.assertEquals(params(1, 150, 679_380_000, 304_200_000, 168_750_000), compute(9_000_000_000L, 4, 1, 200, 0));
+    Assert.assertEquals(params(2, 62, 543_705_000, 243_450_000, 168_750_000), compute(9_000_000_000L, 4, 2, 200, 0));
+    Assert.assertEquals(params(4, 22, 374_111_250, 167_512_500, 168_750_000), compute(9_000_000_000L, 4, 4, 200, 0));
+    Assert.assertEquals(params(4, 14, 204_517_500, 91_575_000, 168_750_000), compute(9_000_000_000L, 4, 8, 200, 0));
+    Assert.assertEquals(params(4, 8, 68_842_500, 30_825_000, 168_750_000), compute(9_000_000_000L, 4, 16, 200, 0));
 
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> compute(8_000_000_000L, 4, 32, 200)
+        () -> compute(8_000_000_000L, 4, 32, 200, 0)
     );
 
     Assert.assertEquals(new TooManyWorkersFault(200, 124), e.getFault());
 
-    // Make sure 107 actually works. (Verify the error message above.)
-    Assert.assertEquals(parameters(4, 3, 28_140_000, 12_600_000, 150_000_000), compute(8_000_000_000L, 4, 32, 107));
+    // Make sure 124 actually works, and 125 doesn't. (Verify the error message above.)
+    Assert.assertEquals(params(4, 3, 16_750_000, 7_500_000, 150_000_000), compute(8_000_000_000L, 4, 32, 124, 0));
+
+    final MSQException e2 = Assert.assertThrows(
+        MSQException.class,
+        () -> compute(8_000_000_000L, 4, 32, 125, 0)
+    );
+
+    Assert.assertEquals(new TooManyWorkersFault(125, 124), e2.getFault());
+  }
+
+  @Test
+  public void test_fourWorkersInJvm_twoHundredWorkersInCluster_hashPartitions()
+  {
+    Assert.assertEquals(params(1, 150, 545_380_000, 244_200_000, 168_750_000), compute(9_000_000_000L, 4, 1, 200, 200));
+    Assert.assertEquals(params(2, 62, 409_705_000, 183_450_000, 168_750_000), compute(9_000_000_000L, 4, 2, 200, 200));
+    Assert.assertEquals(params(4, 22, 240_111_250, 107_512_500, 168_750_000), compute(9_000_000_000L, 4, 4, 200, 200));
+    Assert.assertEquals(params(4, 14, 70_517_500, 31_575_000, 168_750_000), compute(9_000_000_000L, 4, 8, 200, 200));
+
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> compute(9_000_000_000L, 4, 16, 200, 200)
+    );
+
+    Assert.assertEquals(new TooManyWorkersFault(200, 138), e.getFault());
+
+    // Make sure 138 actually works, and 139 doesn't. (Verify the error message above.)
+    Assert.assertEquals(params(4, 8, 17_922_500, 8_025_000, 168_750_000), compute(9_000_000_000L, 4, 16, 138, 138));
+
+    final MSQException e2 = Assert.assertThrows(
+        MSQException.class,
+        () -> compute(9_000_000_000L, 4, 16, 139, 139)
+    );
+
+    Assert.assertEquals(new TooManyWorkersFault(139, 138), e2.getFault());
   }
 
   @Test
@@ -84,7 +117,7 @@ public class WorkerMemoryParametersTest
   {
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> WorkerMemoryParameters.createInstance(100, -50, 1, 32, 1)
+        () -> WorkerMemoryParameters.createInstance(100, -50, 1, 32, 1, 1)
     );
 
     Assert.assertEquals(new NotEnoughMemoryFault(100, -50, 1, 32), e.getFault());
@@ -96,7 +129,7 @@ public class WorkerMemoryParametersTest
     EqualsVerifier.forClass(WorkerMemoryParameters.class).usingGetClass().verify();
   }
 
-  private static WorkerMemoryParameters parameters(
+  private static WorkerMemoryParameters params(
       final int superSorterMaxActiveProcessors,
       final int superSorterMaxChannelsPerProcessor,
       final long appenderatorMemory,
@@ -117,7 +150,8 @@ public class WorkerMemoryParametersTest
       final long maxMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
-      final int numInputWorkers
+      final int numInputWorkers,
+      final int numHashOutputPartitions
   )
   {
     return WorkerMemoryParameters.createInstance(
@@ -125,7 +159,8 @@ public class WorkerMemoryParametersTest
         (long) (maxMemoryInJvm * WorkerMemoryParameters.USABLE_MEMORY_FRACTION),
         numWorkersInJvm,
         numProcessingThreadsInJvm,
-        numInputWorkers
+        numInputWorkers,
+        numHashOutputPartitions
     );
   }
 }

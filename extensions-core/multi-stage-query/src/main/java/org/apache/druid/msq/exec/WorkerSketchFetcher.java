@@ -145,7 +145,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
             if (finishedWorkers.size() == workerCount) {
               log.debug("Query [%s] Received all statistics, generating partitions", stageDefinition.getId().getQueryId());
-              partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
+              partitionFuture.complete(stageDefinition.generatePartitionBoundariesForShuffle(mergedStatisticsCollector));
             }
           }
         }
@@ -264,7 +264,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
                 if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
                   Either<Long, ClusterByPartitions> longClusterByPartitionsEither =
-                      stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector);
+                      stageDefinition.generatePartitionBoundariesForShuffle(mergedStatisticsCollector);
 
                   log.debug("Query [%s]. Received all statistics for time chunk %s, generating partitions",
                             stageDefinition.getId().getQueryId(),

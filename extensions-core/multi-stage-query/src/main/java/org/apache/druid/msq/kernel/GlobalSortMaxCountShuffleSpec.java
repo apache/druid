@@ -26,38 +26,58 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Shuffle spec that generates a variable number of partitions, attempting to keep the number of rows in each partition
- * to a particular {@link #targetSize}. Commonly used when generating segments, which we want to have a certain number
- * of rows per segment.
+ * Shuffle spec that generates up to a certain number of output partitions. Commonly used for shuffles between stages.
  */
-public class TargetSizeShuffleSpec implements ShuffleSpec
+public class GlobalSortMaxCountShuffleSpec implements ShuffleSpec
 {
+  public static final String TYPE = "maxCount";
+
   private final ClusterBy clusterBy;
-  private final long targetSize;
+  private final int maxPartitions;
   private final boolean aggregate;
 
   @JsonCreator
-  public TargetSizeShuffleSpec(
+  public GlobalSortMaxCountShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
-      @JsonProperty("targetSize") final long targetSize,
+      @JsonProperty("partitions") final int maxPartitions,
       @JsonProperty("aggregate") final boolean aggregate
   )
   {
     this.clusterBy = Preconditions.checkNotNull(clusterBy, "clusterBy");
-    this.targetSize = targetSize;
+    this.maxPartitions = maxPartitions;
     this.aggregate = aggregate;
+
+    if (maxPartitions < 1) {
+      throw new IAE("Partition count must be at least 1");
+    }
+
+    if (!clusterBy.getColumns().isEmpty() && !clusterBy.sortable()) {
+      throw new IAE("ClusterBy key must be sortable");
+    }
+
+    if (clusterBy.getBucketByCount() > 0) {
+      // Only GlobalSortTargetSizeShuffleSpec supports bucket-by.
+      throw new IAE("Cannot bucket with %s partitioning", TYPE);
+    }
+  }
+
+  @Override
+  public ShuffleKind kind()
+  {
+    return ShuffleKind.GLOBAL_SORT;
   }
 
   @Override
   @JsonProperty("aggregate")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean doesAggregateByClusterKey()
+  public boolean doesAggregate()
   {
     return aggregate;
   }
@@ -65,21 +85,21 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
   @Override
   public boolean needsStatistics()
   {
-    return true;
+    return maxPartitions > 1 || clusterBy.getBucketByCount() > 0;
   }
 
   @Override
-  public Either<Long, ClusterByPartitions> generatePartitions(
+  public Either<Long, ClusterByPartitions> generatePartitionsForGlobalSort(
       @Nullable final ClusterByStatisticsCollector collector,
       final int maxNumPartitions
   )
   {
-    final long expectedPartitions = collector.estimatedTotalWeight() / targetSize;
-
-    if (expectedPartitions > maxNumPartitions) {
-      return Either.error(expectedPartitions);
+    if (!needsStatistics()) {
+      return Either.value(ClusterByPartitions.oneUniversalPartition());
+    } else if (maxPartitions > maxNumPartitions) {
+      return Either.error((long) maxPartitions);
     } else {
-      final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithTargetWeight(targetSize);
+      final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithMaxCount(maxPartitions);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);
       } else {
@@ -90,15 +110,26 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
 
   @Override
   @JsonProperty
-  public ClusterBy getClusterBy()
+  public ClusterBy clusterBy()
   {
     return clusterBy;
   }
 
-  @JsonProperty
-  long getTargetSize()
+  @Override
+  public int partitionCount()
   {
-    return targetSize;
+    if (maxPartitions == 1) {
+      return maxPartitions;
+    } else {
+      // Number of actual partitions may be less than maxPartitions.
+      throw new IllegalStateException("Number of partitions not known.");
+    }
+  }
+
+  @JsonProperty("partitions")
+  public int getMaxPartitions()
+  {
+    return maxPartitions;
   }
 
   @Override
@@ -110,22 +141,24 @@ public class TargetSizeShuffleSpec implements ShuffleSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TargetSizeShuffleSpec that = (TargetSizeShuffleSpec) o;
-    return targetSize == that.targetSize && aggregate == that.aggregate && Objects.equals(clusterBy, that.clusterBy);
+    GlobalSortMaxCountShuffleSpec that = (GlobalSortMaxCountShuffleSpec) o;
+    return maxPartitions == that.maxPartitions
+           && aggregate == that.aggregate
+           && Objects.equals(clusterBy, that.clusterBy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(clusterBy, targetSize, aggregate);
+    return Objects.hash(clusterBy, maxPartitions, aggregate);
   }
 
   @Override
   public String toString()
   {
-    return "TargetSizeShuffleSpec{" +
+    return "MaxCountShuffleSpec{" +
            "clusterBy=" + clusterBy +
-           ", targetSize=" + targetSize +
+           ", partitions=" + maxPartitions +
            ", aggregate=" + aggregate +
            '}';
   }

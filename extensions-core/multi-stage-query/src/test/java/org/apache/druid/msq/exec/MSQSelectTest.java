@@ -37,7 +37,6 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -61,6 +60,8 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -317,8 +318,25 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testJoin()
+  public void testBroadcastJoin()
   {
+    testJoin(JoinAlgorithm.BROADCAST);
+  }
+
+  @Test
+  public void testSortMergeJoin()
+  {
+    testJoin(JoinAlgorithm.SORT_MERGE);
+  }
+
+  private void testJoin(final JoinAlgorithm joinAlgorithm)
+  {
+    final Map<String, Object> queryContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString())
+                    .build();
+
     final RowSignature resultSignature = RowSignature.builder()
                                                      .add("dim2", ColumnType.STRING)
                                                      .add("EXPR$1", ColumnType.DOUBLE)
@@ -361,6 +379,7 @@ public class MSQSelectTest extends MSQTestBase
                                     )
                                     .limit(10)
                                     .build()
+                                    .withOverriddenContext(queryContext)
                             ),
                             new QueryDataSource(
                                 newScanQueryBuilder()
@@ -374,6 +393,7 @@ public class MSQSelectTest extends MSQTestBase
                                         )
                                     )
                                     .build()
+                                    .withOverriddenContext(queryContext)
                             ),
                             "j0.",
                             equalsCondition(
@@ -418,7 +438,7 @@ public class MSQSelectTest extends MSQTestBase
 
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(queryContext)
                     .build();
 
     testSelectQuery()
@@ -429,122 +449,7 @@ public class MSQSelectTest extends MSQTestBase
             + "ON t1.m1 = t2.m1 "
             + "GROUP BY t1.dim2"
         )
-        .setExpectedMSQSpec(
-            MSQSpec.builder()
-                   .query(query)
-                   .columnMappings(new ColumnMappings(ImmutableList.of(
-                       new ColumnMapping("d0", "dim2"),
-                       new ColumnMapping("a0", "EXPR$1")
-                   )))
-                   .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .build()
-        )
-        .setExpectedRowSignature(resultSignature)
-        .setExpectedResultRows(expectedResults)
-        .verifyResults();
-  }
-
-  @Test
-  public void testBroadcastJoin()
-  {
-    final RowSignature resultSignature = RowSignature.builder()
-                                                     .add("dim2", ColumnType.STRING)
-                                                     .add("EXPR$1", ColumnType.DOUBLE)
-                                                     .build();
-
-    final ImmutableList<Object[]> expectedResults;
-
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{null, 4.0},
-          new Object[]{"", 3.0},
-          new Object[]{"a", 2.5},
-          new Object[]{"abc", 5.0}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{null, 3.6666666666666665},
-          new Object[]{"a", 2.5},
-          new Object[]{"abc", 5.0}
-      );
-    }
-
-    final GroupByQuery query =
-        GroupByQuery.builder()
-                    .setDataSource(
-                        join(
-                            new TableDataSource(CalciteTests.DATASOURCE1),
-                            new QueryDataSource(
-                                newScanQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .columns("dim2", "m1", "m2")
-                                    .context(
-                                        defaultScanQueryContext(
-                                            RowSignature.builder()
-                                                        .add("dim2", ColumnType.STRING)
-                                                        .add("m1", ColumnType.FLOAT)
-                                                        .add("m2", ColumnType.DOUBLE)
-                                                        .build()
-                                        )
-                                    )
-                                    .limit(10)
-                                    .build()
-                            ),
-                            "j0.",
-                            equalsCondition(
-                                DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
-                                DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
-                            ),
-                            JoinType.INNER
-                        )
-                    )
-                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                    .setDimensions(new DefaultDimensionSpec("j0.dim2", "d0", ColumnType.STRING))
-                    .setGranularity(Granularities.ALL)
-                    .setAggregatorSpecs(
-                        useDefault
-                        ? aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
-                            new CountAggregatorFactory("a0:count")
-                        )
-                        : aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0:count"),
-                                not(selector("j0.m2", null, null)),
-
-                                // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
-                                // May be due to JSON serialization: name is set on the serialized aggregator even
-                                // if it was originally created with no name.
-                                NullHandling.sqlCompatible() ? "a0:count" : null
-                            )
-                        )
-                    )
-                    .setPostAggregatorSpecs(
-                        ImmutableList.of(
-                            new ArithmeticPostAggregator(
-                                "a0",
-                                "quotient",
-                                ImmutableList.of(
-                                    new FieldAccessPostAggregator(null, "a0:sum"),
-                                    new FieldAccessPostAggregator(null, "a0:count")
-                                )
-                            )
-
-                        )
-                    )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
-                    .build();
-
-    testSelectQuery()
-        .setSql(
-            "SELECT t1.dim2, AVG(t1.m2) FROM "
-            + "foo "
-            + "INNER JOIN (SELECT * FROM foo LIMIT 10) AS t1 "
-            + "ON t1.m1 = foo.m1 "
-            + "GROUP BY t1.dim2"
-        )
+        .setQueryContext(queryContext)
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(query)

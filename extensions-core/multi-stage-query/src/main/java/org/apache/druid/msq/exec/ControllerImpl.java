@@ -44,9 +44,10 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.indexer.TaskState;
@@ -130,12 +131,12 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
+import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
-import org.apache.druid.msq.kernel.TargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
@@ -595,8 +596,8 @@ public class ControllerImpl implements Controller
           final StageDefinition stageDef = queryKernel.getStageDefinition(stageId);
           final ObjectMapper mapper = MSQTasks.decorateObjectMapperForKeyCollectorSnapshot(
               context.jsonMapper(),
-              stageDef.getShuffleSpec().get().getClusterBy(),
-              stageDef.getShuffleSpec().get().doesAggregateByClusterKey()
+              stageDef.getShuffleSpec().clusterBy(),
+              stageDef.getShuffleSpec().doesAggregate()
           );
 
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
@@ -1361,7 +1362,7 @@ public class ControllerImpl implements Controller
 
     if (MSQControllerTask.isIngestion(querySpec)) {
       shuffleSpecFactory = (clusterBy, aggregate) ->
-          new TargetSizeShuffleSpec(
+          new GlobalSortTargetSizeShuffleSpec(
               clusterBy,
               tuningConfig.getRowsPerSegment(),
               aggregate
@@ -1583,7 +1584,7 @@ public class ControllerImpl implements Controller
       final ColumnMappings columnMappings
   )
   {
-    final List<SortColumn> clusterByColumns = clusterBy.getColumns();
+    final List<KeyColumn> clusterByColumns = clusterBy.getColumns();
     final List<String> shardColumns = new ArrayList<>();
     final boolean boosted = isClusterByBoosted(clusterBy);
     final int numShardColumns = clusterByColumns.size() - clusterBy.getBucketByCount() - (boosted ? 1 : 0);
@@ -1593,11 +1594,11 @@ public class ControllerImpl implements Controller
     }
 
     for (int i = clusterBy.getBucketByCount(); i < clusterBy.getBucketByCount() + numShardColumns; i++) {
-      final SortColumn column = clusterByColumns.get(i);
+      final KeyColumn column = clusterByColumns.get(i);
       final List<String> outputColumns = columnMappings.getOutputColumnsForQueryColumn(column.columnName());
 
       // DimensionRangeShardSpec only handles ascending order.
-      if (column.descending()) {
+      if (column.order() != KeyOrder.ASCENDING) {
         return Collections.emptyList();
       }
 
@@ -1679,8 +1680,8 @@ public class ControllerImpl implements Controller
     // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
     // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
     // within an individual segment.
-    for (final SortColumn clusterByColumn : queryClusterBy.getColumns()) {
-      if (clusterByColumn.descending()) {
+    for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
+      if (clusterByColumn.order() == KeyOrder.DESCENDING) {
         throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
       }
 
@@ -2123,7 +2124,7 @@ public class ControllerImpl implements Controller
           segmentsToGenerate = generateSegmentIdsWithShardSpecs(
               (DataSourceMSQDestination) task.getQuerySpec().getDestination(),
               queryKernel.getStageDefinition(shuffleStageId).getSignature(),
-              queryKernel.getStageDefinition(shuffleStageId).getShuffleSpec().get().getClusterBy(),
+              queryKernel.getStageDefinition(shuffleStageId).getClusterBy(),
               partitionBoundaries,
               mayHaveMultiValuedClusterByFields
           );

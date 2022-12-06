@@ -168,7 +168,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -246,7 +245,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
           2,
           10,
-          2
+          2,
+          1
       )
   );
 

@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
@@ -90,8 +91,8 @@ public class InputChannelsImpl implements InputChannels
   {
     final StageDefinition stageDef = queryDefinition.getStageDefinition(stagePartition.getStageId());
     final ReadablePartition readablePartition = readablePartitionMap.get(stagePartition);
-    final ClusterBy inputClusterBy = stageDef.getClusterBy();
-    final boolean isSorted = inputClusterBy.getBucketByCount() != inputClusterBy.getColumns().size();
+    final ClusterBy clusterBy = stageDef.getClusterBy();
+    final boolean isSorted = clusterBy.sortable() && clusterBy.getBucketByCount() != clusterBy.getColumns().size();
 
     if (isSorted) {
       return openSorted(stageDef, readablePartition);
@@ -129,13 +130,13 @@ public class InputChannelsImpl implements InputChannels
           queueChannel.writable(),
           FrameWriters.makeFrameWriterFactory(
               FrameType.ROW_BASED,
-              allocatorMaker.get(),
+              new SingleMemoryAllocatorFactory(allocatorMaker.get()),
               stageDefinition.getFrameReader().signature(),
 
               // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
               Collections.emptyList()
           ),
-          stageDefinition.getClusterBy(),
+          stageDefinition.getSortKey(),
           null,
           -1
       );

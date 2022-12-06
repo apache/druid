@@ -27,11 +27,6 @@ public class BadQueryContextException extends BadQueryException
   public static final String ERROR_CODE = "Query context parse failed";
   public static final String ERROR_CLASS = BadQueryContextException.class.getName();
 
-  public BadQueryContextException(Exception e)
-  {
-    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
-  }
-
   public BadQueryContextException(String msg)
   {
     this(ERROR_CODE, msg, ERROR_CLASS);

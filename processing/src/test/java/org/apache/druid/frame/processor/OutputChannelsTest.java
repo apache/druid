@@ -62,10 +62,10 @@ public class OutputChannelsTest
     final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
     final OutputChannels channels = OutputChannels.wrap(
         ImmutableList.of(
-            OutputChannel.pair(
+            OutputChannel.immediatelyReadablePair(
                 channel.writable(),
                 HeapMemoryAllocator.unlimited(),
-                channel::readable,
+                channel.readable(),
                 1
             )
         )

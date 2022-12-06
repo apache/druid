@@ -37,7 +37,8 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
@@ -48,7 +49,9 @@ import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -73,7 +76,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 /**
@@ -123,12 +125,12 @@ public class SuperSorter
 
   private final List<ReadableFrameChannel> inputChannels;
   private final FrameReader frameReader;
-  private final ClusterBy clusterBy;
+  private final List<KeyColumn> sortKey;
   private final ListenableFuture<ClusterByPartitions> outputPartitionsFuture;
   private final FrameProcessorExecutor exec;
   private final File directory;
+  private final FrameWriterFactory innerFrameWriterFactory;
   private final OutputChannelFactory outputChannelFactory;
-  private final Supplier<MemoryAllocator> innerFrameAllocatorMaker;
   private final int maxChannelsPerProcessor;
   private final int maxActiveProcessors;
   private final long rowLimit;
@@ -191,7 +193,7 @@ public class SuperSorter
    *                                   {@link ClusterBy#getColumns()}, or else sorting will not produce correct
    *                                   output.
    * @param frameReader                frame reader for the input channels
-   * @param clusterBy                  desired sorting order
+   * @param sortKey                    desired sorting order
    * @param outputPartitionsFuture     a future that resolves to the desired output partitions. Sorting will block
    *                                   prior to writing out final outputs until this future resolves. However, the
    *                                   sorter will be able to read all inputs even if this future is unresolved.
@@ -202,7 +204,7 @@ public class SuperSorter
    * @param temporaryDirectory         directory to use for scratch files. This must have enough space to store at
    *                                   least two copies of the dataset in {@link FrameFile} format.
    * @param outputChannelFactory       factory for partitioned, sorted output channels
-   * @param innerFrameAllocatorMaker   supplier for allocators that are used to make merged frames for intermediate
+   * @param innerFrameAllocatorFactory factory for allocators that are used to make merged frames for intermediate
    *                                   levels of merging, prior to the final output. Final output frame allocation is
    *                                   controlled by outputChannelFactory. One allocator is created per intermediate
    *                                   scratch file.
@@ -219,12 +221,12 @@ public class SuperSorter
   public SuperSorter(
       final List<ReadableFrameChannel> inputChannels,
       final FrameReader frameReader,
-      final ClusterBy clusterBy,
+      final List<KeyColumn> sortKey,
       final ListenableFuture<ClusterByPartitions> outputPartitionsFuture,
       final FrameProcessorExecutor exec,
       final File temporaryDirectory,
       final OutputChannelFactory outputChannelFactory,
-      final Supplier<MemoryAllocator> innerFrameAllocatorMaker,
+      final MemoryAllocatorFactory innerFrameAllocatorFactory,
       final int maxActiveProcessors,
       final int maxChannelsPerProcessor,
       final long rowLimit,
@@ -234,12 +236,12 @@ public class SuperSorter
   {
     this.inputChannels = inputChannels;
     this.frameReader = frameReader;
-    this.clusterBy = clusterBy;
+    this.sortKey = sortKey;
     this.outputPartitionsFuture = outputPartitionsFuture;
     this.exec = exec;
     this.directory = temporaryDirectory;
+    this.innerFrameWriterFactory = createFrameWriterFactory(innerFrameAllocatorFactory);
     this.outputChannelFactory = outputChannelFactory;
-    this.innerFrameAllocatorMaker = innerFrameAllocatorMaker;
     this.maxChannelsPerProcessor = maxChannelsPerProcessor;
     this.maxActiveProcessors = maxActiveProcessors;
     this.rowLimit = rowLimit;
@@ -611,16 +613,17 @@ public class SuperSorter
   {
     try {
       final WritableFrameChannel writableChannel;
-      final MemoryAllocator frameAllocator;
+      final FrameWriterFactory frameWriterFactory;
 
       if (totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
         final int intRank = Ints.checkedCast(rank);
         final OutputChannel outputChannel = outputChannelFactory.openChannel(intRank);
         outputChannels.set(intRank, outputChannel.readOnly());
+        frameWriterFactory =
+            createFrameWriterFactory(new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator()));
         writableChannel = outputChannel.getWritableChannel();
-        frameAllocator = outputChannel.getFrameMemoryAllocator();
       } else {
-        frameAllocator = innerFrameAllocatorMaker.get();
+        frameWriterFactory = innerFrameWriterFactory;
         writableChannel = new WritableFrameFileChannel(
             FrameFileWriter.open(
                 Files.newByteChannel(
@@ -628,7 +631,7 @@ public class SuperSorter
                     StandardOpenOption.CREATE_NEW,
                     StandardOpenOption.WRITE
                 ),
-                ByteBuffer.allocate(Frame.compressionBufferSize(frameAllocator.capacity()))
+                ByteBuffer.allocate(Frame.compressionBufferSize(frameWriterFactory.allocatorCapacity()))
             )
         );
       }
@@ -638,15 +641,8 @@ public class SuperSorter
               in,
               frameReader,
               writableChannel,
-              FrameWriters.makeFrameWriterFactory(
-                  FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
-                  frameAllocator,
-                  frameReader.signature(),
-
-                  // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
-                  Collections.emptyList()
-              ),
-              clusterBy,
+              frameWriterFactory,
+              sortKey,
               partitions,
               rowLimit
           );
@@ -838,6 +834,16 @@ public class SuperSorter
   private File mergerOutputFile(final int level, final long rank)
   {
     return new File(directory, StringUtils.format("merged.%d.%d", level, rank));
+  }
+
+  private FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory allocatorFactory)
+  {
+    return FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        allocatorFactory,
+        frameReader.signature(),
+        Collections.emptyList() // No sorting, because input frames are already sorted; we just merge them.
+    );
   }
 
   /**

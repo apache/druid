@@ -37,6 +37,8 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.kernel.ShuffleKind;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
@@ -369,9 +371,10 @@ class ControllerStageTracker
   }
 
   /**
-   * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries} without using key statistics.
+   * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries} (if doing a global sort) without
+   * using key statistics. Called by the constructor.
    *
-   * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method should not be called.
+   * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method must not be called.
    */
   private void generateResultPartitionsAndBoundariesWithoutKeyStatistics()
   {
@@ -382,24 +385,30 @@ class ControllerStageTracker
     final int stageNumber = stageDef.getStageNumber();
 
     if (stageDef.doesShuffle()) {
-      if (stageDef.mustGatherResultKeyStatistics()) {
+      final ShuffleSpec shuffleSpec = stageDef.getShuffleSpec();
+
+      if (shuffleSpec.needsStatistics()) {
         throw new ISE("Cannot generate result partitions without key statistics");
       }
 
-      final Either<Long, ClusterByPartitions> maybeResultPartitionBoundaries =
-          stageDef.generatePartitionsForShuffle(null);
+      if (shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT) {
+        final Either<Long, ClusterByPartitions> maybeResultPartitionBoundaries =
+            stageDef.generatePartitionBoundariesForShuffle(null);
 
-      if (maybeResultPartitionBoundaries.isError()) {
-        failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
-        return;
+        if (maybeResultPartitionBoundaries.isError()) {
+          failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+          return;
+        }
+
+        resultPartitionBoundaries = maybeResultPartitionBoundaries.valueOrThrow();
+        resultPartitions = ReadablePartitions.striped(
+            stageNumber,
+            workerCount,
+            resultPartitionBoundaries.size()
+        );
+      } else {
+        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
       }
-
-      resultPartitionBoundaries = maybeResultPartitionBoundaries.valueOrThrow();
-      resultPartitions = ReadablePartitions.striped(
-          stageNumber,
-          workerCount,
-          resultPartitionBoundaries.size()
-      );
     } else {
       // No reshuffling: retain partitioning from nonbroadcast inputs.
       final Int2IntSortedMap partitionToWorkerMap = new Int2IntAVLTreeMap();
