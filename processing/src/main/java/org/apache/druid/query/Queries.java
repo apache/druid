@@ -166,7 +166,8 @@ public class Queries
     }
 
     // Verify preconditions and invariants, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
+    final DataSource retDataSource = retVal.getDataSource();
+    final DataSourceAnalysis analysis = retDataSource.getAnalysisForDataSource();
 
     // Sanity check: query must be based on a single table.
     if (!analysis.getBaseTableDataSource().isPresent()) {

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
@@ -185,6 +186,19 @@ public class UnnestDataSource implements DataSource
     // Future development should use the table name and column came to
     // create an appropriate cac
     return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysisForDataSource()
+  {
+    return getAnalysisForDataSource(null);
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysisForDataSource(Query<?> query)
+  {
+    final DataSource current = this.getBase();
+    return current.getAnalysisForDataSource();
   }
 
   @Override

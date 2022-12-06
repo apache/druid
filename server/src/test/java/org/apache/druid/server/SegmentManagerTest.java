@@ -25,7 +25,6 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -386,7 +385,7 @@ public class SegmentManagerTest
   {
     Assert.assertEquals(
         Optional.empty(),
-        segmentManager.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource("nonExisting")))
+        segmentManager.getTimeline((new TableDataSource("nonExisting")).getAnalysisForDataSource())
     );
   }
 

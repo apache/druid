@@ -124,4 +124,7 @@ public interface DataSource
    */
   byte[] getCacheKey();
 
+  DataSourceAnalysis getAnalysisForDataSource();
+
+  DataSourceAnalysis getAnalysisForDataSource(Query<?> query);
 }

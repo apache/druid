@@ -20,12 +20,10 @@
 package org.apache.druid.query.planning;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Triple;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -33,8 +31,6 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -84,7 +80,7 @@ public class DataSourceAnalysis
   private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
 
-  private DataSourceAnalysis(
+  public DataSourceAnalysis(
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
@@ -101,81 +97,6 @@ public class DataSourceAnalysis
     this.baseQuery = baseQuery;
     this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
-  }
-
-  public static DataSourceAnalysis forDataSource(final DataSource dataSource)
-  {
-    // Strip outer queries, retaining querySegmentSpecs as we go down (lowest will become the 'baseQuerySegmentSpec').
-    Query<?> baseQuery = null;
-    DataSource current = dataSource;
-
-    // This needs to be an or condition between QueryDataSource and UnnestDataSource
-    // As queries can have interleaving query and unnest data sources.
-    // Ideally if each data source generate their own analysis object we can avoid the or here
-    // and have cleaner code. Especially as we increase the types of data sources in future
-    // these or checks will be tedious. Future development should move forDataSource method
-    // into each data source.
-
-    while (current instanceof QueryDataSource || current instanceof UnnestDataSource) {
-      if (current instanceof QueryDataSource) {
-        final Query<?> subQuery = ((QueryDataSource) current).getQuery();
-
-        if (!(subQuery instanceof BaseQuery)) {
-          // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
-          // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
-          throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
-        }
-
-        baseQuery = subQuery;
-        current = subQuery.getDataSource();
-      } else {
-        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        current = unnestDataSource.getBase();
-      }
-    }
-
-    if (current instanceof JoinDataSource) {
-      final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
-      return new DataSourceAnalysis(flattened.first, baseQuery, flattened.second, flattened.third);
-    } else {
-      return new DataSourceAnalysis(current, baseQuery, null, Collections.emptyList());
-    }
-  }
-
-  /**
-   * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
-   * clauses, if any.
-   *
-   * @throws IllegalArgumentException if dataSource cannot be fully flattened.
-   */
-  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
-  {
-    DataSource current = dataSource;
-    DimFilter currentDimFilter = null;
-    final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
-
-    while (current instanceof JoinDataSource) {
-      final JoinDataSource joinDataSource = (JoinDataSource) current;
-      current = joinDataSource.getLeft();
-      if (currentDimFilter != null) {
-        throw new IAE("Left filters are only allowed when left child is direct table access");
-      }
-      currentDimFilter = joinDataSource.getLeftFilter();
-      preJoinableClauses.add(
-          new PreJoinableClause(
-              joinDataSource.getRightPrefix(),
-              joinDataSource.getRight(),
-              joinDataSource.getJoinType(),
-              joinDataSource.getConditionAnalysis()
-          )
-      );
-    }
-
-    // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
-    // going-up order. So reverse them.
-    Collections.reverse(preJoinableClauses);
-
-    return Triple.of(current, currentDimFilter, preJoinableClauses);
   }
 
   /**
