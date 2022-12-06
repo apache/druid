@@ -74,7 +74,8 @@ SERVICE_MEMORY_RATIO = {
     COORDINATOR: 30,
     BROKER: 46,
     HISTORICAL: 80,
-    TASKS: 30
+    TASKS: 30,
+    INDEXER: 32
 }
 
 MINIMUM_MEMORY_MB = {
@@ -83,7 +84,8 @@ MINIMUM_MEMORY_MB = {
     TASKS: 1024,
     BROKER: 900,
     COORDINATOR: 256,
-    HISTORICAL: 900
+    HISTORICAL: 900,
+    INDEXER: 1124
 }
 
 HEAP_TO_TOTAL_MEM_RATIO = {
@@ -92,7 +94,8 @@ HEAP_TO_TOTAL_MEM_RATIO = {
     COORDINATOR: 1,
     BROKER: 0.60,
     HISTORICAL: 0.40,
-    TASKS: 0.50
+    TASKS: 0.50,
+    INDEXER: 0.50
 }
 
 LOGGING_ENABLED = False
@@ -225,6 +228,9 @@ def parse_arguments(args):
 
             service_list.append(service)
 
+        if INDEXER in services and MIDDLE_MANAGER in services:
+            raise ValueError('one of indexer and middleManager can run')
+
     if len(service_list) == 0:
         # start all services
         service_list = DEFAULT_SERVICES
@@ -242,12 +248,12 @@ def print_startup_config(service_list, config, zk):
     print_if_verbose('\n')
 
 
-def middle_manager_task_memory_params_present(config):
+def task_memory_params_present(config, service):
     java_opts_property_present = False
     worker_capacity_property_present = False
 
-    if is_file('{0}/middleManager/runtime.properties'.format(config)):
-        with open('{0}/middleManager/runtime.properties'.format(config)) as file:
+    if is_file('{0}/{1}/runtime.properties'.format(config, service)):
+        with open('{0}/{1}/runtime.properties'.format(config, service)) as file:
             for line in file:
                 if line.startswith(TASK_JAVA_OPTS_PROPERTY):
                     java_opts_property_present = True
@@ -282,7 +288,7 @@ def verify_service_config(service, config):
         if is_file('{0}/{1}/runtime.properties'.format(config, service)) is False:
             raise ValueError('{0}/runtime.properties file is missing in the root config'.format(service))
 
-        mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
+        mm_task_java_opts_prop, mm_task_worker_capacity_prop = task_memory_params_present(config, MIDDLE_MANAGER)
 
         if mm_task_java_opts_property is False:
             raise ValueError('{0} property missing in {1}/runtime.properties'.format(TASK_JAVA_OPTS_PROPERTY, service))
@@ -307,41 +313,35 @@ def should_compute_memory(config, total_memory, service_list):
 
     mm_task_property_present = False
     if MIDDLE_MANAGER in service_list:
-        mm_task_java_opts_property, mm_task_worker_capacity_prop = middle_manager_task_memory_params_present(config)
-        mm_task_property_present = mm_task_java_opts_property or mm_task_worker_capacity_prop
+        mm_task_java_opts_prop, mm_task_worker_capacity_prop = task_memory_params_present(config, MIDDLE_MANAGER)
+        mm_task_property_present = mm_task_java_opts_prop or mm_task_worker_capacity_prop
 
-    # if indexer has to be run, all the memory related parameters need to be specified
+    indexer_task_worker_capacity_prop = False
     if INDEXER in service_list:
-        if MIDDLE_MANAGER in service_list:
-            raise ValueError("one of indexer or middleManager can run")
-        if total_memory != "":
-            raise ValueError(
-                "If service list includes indexer, jvm.config should be specified for "
-                "each service and memory argument shouldn't be specified")
-        if jvm_config_count != len(service_list):
-            raise ValueError("If service list includes indexer, jvm.config should be specified for each service")
-        for service in service_list:
-            verify_service_config(service, config)
-
-        return False
+        indexer_task_java_opts_prop, indexer_task_worker_capacity_prop = task_memory_params_present(config, INDEXER)
 
     # possible error states
     # 1. memory argument is specified, also jvm.config or middleManger/runtime.properties having
     # druid.indexer.runner.javaOptsArray or druid.worker.capacity parameters is present
     # 2. jvm.config is not present for any service, but middleManger/runtime.properties has
     # druid.indexer.runner.javaOptsArray or druid.worker.capacity parameters
+    # or indexer/runtime.properties has druid.worker.capacity
     # 3. jvm.config present for some but not all services
     # 4. jvm.config file is present for all services, but it doesn't contain required parameters
     # 5. lastly, if middleManager is to be started, and it is missing task memory properties
-    if jvm_config_count > 0 or mm_task_property_present:
+    if jvm_config_count > 0 or mm_task_property_present or indexer_task_worker_capacity_prop:
         if total_memory != "":
             raise ValueError(
-                "If jvm.config for services and/or middleManager configs "
+                "If jvm.config for services and/or middleManager/indexer configs "
                 "(druid.worker.capacity, druid.indexer.runner.javaOptsArray) is present, "
                 "memory argument shouldn't be specified")
-        if jvm_config_count == 0:
+        if jvm_config_count == 0 and mm_task_property_present:
             raise ValueError("middleManger configs (druid.indexer.runner.javaOptsArray or druid.worker.capacity) "
                              "is present in middleManager/runtime.properties, "
+                             "add jvm.config for all other services")
+        if jvm_config_count == 0 and indexer_task_worker_capacity_prop:
+            raise ValueError("indexer configs (druid.worker.capacity) "
+                             "is present in indexer/runtime.properties, "
                              "add jvm.config for all other services")
         if jvm_config_count != len(service_list):
             raise ValueError("jvm.config file should be present for all services or none")
@@ -352,6 +352,7 @@ def should_compute_memory(config, total_memory, service_list):
 
     # compute memory only when none of the specified services contains jvm.config,
     # if middleManager is to be started it shouldn't contain task memory properties
+    # if indexer is present it shouldn't contain task memory properties
     return True
 
 
@@ -467,6 +468,14 @@ def build_memory_config(service, allocated_memory):
         java_opts_array = build_mm_task_java_opts_array(memory_type)
         return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count),
                 java_opts_array], task_memory * task_count
+    elif service == INDEXER:
+        heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
+        direct_memory = int(allocated_memory - heap_memory)
+        heap_memory = int(heap_memory)
+        memory_type, task_count, task_memory = compute_tasks_memory(allocated_memory)
+        return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count),
+                '-Xms{0}m -Xmx{0}m -XX:MaxDirectMemorySize={1}m'.format(heap_memory, direct_memory)], \
+               task_memory * task_count
     else:
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
@@ -547,13 +556,13 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
         append_command(commands, "!p10 zk bin/run-zk conf")
 
     for service in service_list:
-        jvm_args = service_memory_config.get(service)
+        memory_config = service_memory_config.get(service)
 
         prefix = ''
         if service == MIDDLE_MANAGER:
             prefix = '!p90 '
 
-        if jvm_args is None:
+        if memory_config is None:
             append_command(commands, '{0}{1} bin/run-druid {1} {2}'.format(prefix, service, config))
         else:
             if service == MIDDLE_MANAGER:
@@ -563,10 +572,17 @@ def build_supervise_script_arguments(service_list, service_memory_config, config
                 append_command(
                     commands,
                     '{0}{1} bin/run-druid {1} {2} \'{3}\' \'{4} {5}\''
-                    .format(prefix, service, config, jvm_args, task_count, task_memory))
+                    .format(prefix, service, config, memory_config, task_count, task_memory))
+            elif service == INDEXER:
+                task_count = memory_config[0]
+                jvm_args = memory_config[1]
+                append_command(
+                    commands,
+                    '{0}{1} bin/run-druid {1} {2} \'{3}\' \'{4}\''
+                    .format(prefix, service, config, jvm_args, task_count))
             else:
                 append_command(commands,
-                               '{0}{1} bin/run-druid {1} {2} \'{3}\''.format(prefix, service, config, jvm_args))
+                               '{0}{1} bin/run-druid {1} {2} \'{3}\''.format(prefix, service, config, memory_config))
 
     print_if_verbose('Supervise script args:')
     for item in commands:
