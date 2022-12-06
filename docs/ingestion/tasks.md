@@ -347,23 +347,22 @@ You can override the task priority by setting your priority in the task context 
 
 ## Task actions
 
-These are various overlord actions performed by tasks during their lifecycle. Some typical actions are as follows:
+Task actions are overlord actions performed by tasks during their lifecycle. Some typical task actions are:
 - `lockAcquire`: acquires a time-chunk lock on an interval for the task
 - `lockRelease`: releases a lock acquired by the task on an interval
 - `segmentTransactionalInsert`: publishes new segments created by a task and optionally overwrites and/or drops existing segments in a single transaction
 - `segmentAllocate`: allocates pending segments to a task to write rows
-- etc.
 
 ### Batching `segmentAllocate` actions
 
-In a cluster with several concurrent tasks, `segmentAllocate` actions on the overlord may take very long intervals of time to finish thus causing spikes in the `task/action/run/time`. This may result in ingestion lag building up while a task waits for a segment to get allocated.
-The root causes of such spikes are:
+In a cluster with several concurrent tasks, `segmentAllocate` actions on the overlord can take a long time to finish, causing spikes in the `task/action/run/time`. This can result in ingestion lag building up while a task waits for a segment to be allocated.
+The root cause of such spikes is likely to be one or more of the following:
 - several concurrent tasks trying to allocate segments for the same datasource and interval
 - large number of metadata calls made to the segments and pending segments tables 
 - concurrency limitations while acquiring a task lock required for allocating a segment
 
-Since the contention typically arises from tasks allocating segments for the same datasource and interval, the run times can be improved by batching the actions together.
-Batched segment allocation can be enabled on the overlord by setting `druid.indexer.tasklock.batchSegmentAllocation=true`.See [overlord configuration](../configuration/index.md#overlord-operations) for more details.
+Since the contention typically arises from tasks allocating segments for the same datasource and interval, you can improve the run times by batching the actions together.
+To enable batched segment allocation on the overlord, set  `druid.indexer.tasklock.batchSegmentAllocation` to `true`. See [overlord configuration](../configuration/index.md#overlord-operations) for more details.
 
 <a name="context"></a>
 
