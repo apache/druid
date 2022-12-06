@@ -77,7 +77,6 @@ import java.util.Optional;
  */
 public class DataSourceAnalysis
 {
-  private final DataSource dataSource;
   private final DataSource baseDataSource;
   @Nullable
   private final Query<?> baseQuery;
@@ -86,7 +85,6 @@ public class DataSourceAnalysis
   private final List<PreJoinableClause> preJoinableClauses;
 
   private DataSourceAnalysis(
-      DataSource dataSource,
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
@@ -96,10 +94,9 @@ public class DataSourceAnalysis
     if (baseDataSource instanceof JoinDataSource) {
       // The base cannot be a join (this is a class invariant).
       // If it happens, it's a bug in the datasource analyzer.
-      throw new IAE("Base dataSource cannot be a join! Original dataSource was: %s", dataSource);
+      throw new IAE("Base dataSource cannot be a join! ");
     }
 
-    this.dataSource = dataSource;
     this.baseDataSource = baseDataSource;
     this.baseQuery = baseQuery;
     this.joinBaseTableFilter = joinBaseTableFilter;
@@ -139,9 +136,9 @@ public class DataSourceAnalysis
 
     if (current instanceof JoinDataSource) {
       final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin((JoinDataSource) current);
-      return new DataSourceAnalysis(dataSource, flattened.first, baseQuery, flattened.second, flattened.third);
+      return new DataSourceAnalysis(flattened.first, baseQuery, flattened.second, flattened.third);
     } else {
-      return new DataSourceAnalysis(dataSource, current, baseQuery, null, Collections.emptyList());
+      return new DataSourceAnalysis(current, baseQuery, null, Collections.emptyList());
     }
   }
 
@@ -260,15 +257,6 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns true if all servers have the ability to compute this datasource. These datasources depend only on
-   * globally broadcast data, like lookups or inline data or broadcast segments.
-   */
-  public boolean isGlobal()
-  {
-    return dataSource.isGlobal();
-  }
-
-  /**
    * Returns true if this datasource can be computed by the core Druid query stack via a scan of a concrete base
    * datasource. All other datasources involved, if any, must be global.
    */
@@ -318,20 +306,19 @@ public class DataSourceAnalysis
       return false;
     }
     DataSourceAnalysis that = (DataSourceAnalysis) o;
-    return Objects.equals(dataSource, that.dataSource);
+    return Objects.equals(baseDataSource, that.baseDataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource);
+    return Objects.hash(baseDataSource);
   }
 
   @Override
   public String toString()
   {
     return "DataSourceAnalysis{" +
-           "dataSource=" + dataSource +
            ", baseDataSource=" + baseDataSource +
            ", baseQuery=" + baseQuery +
            ", preJoinableClauses=" + preJoinableClauses +
