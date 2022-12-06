@@ -126,6 +126,7 @@ public class CsvWriter implements ResultFormat.Writer
   @Override
   public void close() throws IOException
   {
-    writer.close();
+    // Just flush the writer but do not close it, since we do not want to close the target output stream
+    writer.flush();
   }
 }

@@ -41,6 +41,8 @@ public class ArrayLinesWriter implements ResultFormat.Writer
     this.serializers = jsonMapper.getSerializerProviderInstance();
     this.outputStream = outputStream;
     this.jsonGenerator = jsonMapper.writer().getFactory().createGenerator(outputStream);
+    // Disable auto closing of target stream since that is not managed by this writer.
+    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
     jsonGenerator.setRootValueSeparator(new SerializedString("\n"));
   }
 

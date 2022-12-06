@@ -47,6 +47,8 @@ public class ObjectWriter implements ResultFormat.Writer
     this.jsonGenerator = jsonMapper.getFactory().createGenerator(outputStream);
     this.outputStream = outputStream;
 
+    // Disable auto closing of target stream since that is not managed by this writer.
+    jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
     // Disable automatic JSON termination, so clients can detect truncated responses.
     jsonGenerator.configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
   }

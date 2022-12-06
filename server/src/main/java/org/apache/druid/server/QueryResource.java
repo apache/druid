@@ -231,6 +231,8 @@ public class QueryResource implements QueryCountStatsProvider
                       jsonWriter.writeValue(os, yielder);
 
                       os.flush();
+
+                      // Do not close the output stream since that is not managed by QueryResource.
                     }
                     catch (Exception ex) {
                       e = ex;
