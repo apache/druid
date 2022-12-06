@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 
+import java.util.concurrent.Future;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = TaskAction.TYPE_FIELD)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = TimeChunkLockAcquireAction.class),
@@ -57,6 +59,16 @@ public interface TaskAction<RetType>
   RetType perform(Task task, TaskActionToolbox toolbox);
 
   boolean isAudited();
+
+  default boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return false;
+  }
+
+  default Future<RetType> performAsync(Task task, TaskActionToolbox toolbox)
+  {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   String toString();
