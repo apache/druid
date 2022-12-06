@@ -17,37 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.config;
+package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Global configurations for task lock. Used by the overlord.
- * This config takes precedence if it has a conflicting config with {@link DefaultTaskConfig}.
- */
-public class TaskLockConfig
+public class SegmentCreateRequestTest
 {
-  @JsonProperty
-  private boolean forceTimeChunkLock = true;
 
-  @JsonProperty
-  private boolean batchSegmentAllocation = false;
-
-  @JsonProperty
-  private long batchAllocationMaxWaitTime = 500L;
-
-  public boolean isForceTimeChunkLock()
+  @Test
+  public void testNullPreviousSegmentId()
   {
-    return forceTimeChunkLock;
+    final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    SegmentCreateRequest request = new SegmentCreateRequest(
+        "sequence",
+        null,
+        "version",
+        partialShardSpec
+    );
+    Assert.assertEquals("sequence", request.getSequenceName());
+    Assert.assertEquals("", request.getPreviousSegmentId());
+    Assert.assertEquals("version", request.getVersion());
+    Assert.assertEquals(partialShardSpec, request.getPartialShardSpec());
   }
 
-  public boolean isBatchSegmentAllocation()
-  {
-    return batchSegmentAllocation;
-  }
-
-  public long getBatchAllocationMaxWaitTime()
-  {
-    return batchAllocationMaxWaitTime;
-  }
 }
