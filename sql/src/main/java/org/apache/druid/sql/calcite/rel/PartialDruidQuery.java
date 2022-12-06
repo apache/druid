@@ -388,14 +388,13 @@ public class PartialDruidQuery
     } else if (stage.compareTo(currentStage) <= 0) {
       // Cannot go backwards.
       return false;
-    } else // Cannot do post-sort stages without a sort.
-      // Looks good.
-      if (stage.compareTo(Stage.AGGREGATE) > 0 && stage.compareTo(Stage.SORT) < 0 && aggregate == null) {
-        // Cannot do post-aggregation stages without an aggregation.
-        return false;
-      } else {
-        return stage.compareTo(Stage.SORT) <= 0 || sort != null;
-      }
+    } else if (stage.compareTo(Stage.AGGREGATE) > 0 && stage.compareTo(Stage.SORT) < 0 && aggregate == null) {
+      // Cannot do post-aggregation stages without an aggregation.
+      return false;
+    } else {
+      // If we are after the SORT phase, make sure we have a sort...
+      return stage.compareTo(Stage.SORT) <= 0 || sort != null;
+    }
   }
 
   /**
