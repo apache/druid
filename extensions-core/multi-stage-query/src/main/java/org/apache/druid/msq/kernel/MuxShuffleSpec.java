@@ -85,7 +85,7 @@ public class MuxShuffleSpec implements ShuffleSpec
   @Override
   public boolean equals(Object obj)
   {
-    return obj != null && obj.getClass().equals(MuxShuffleSpec.class);
+    return obj != null && this.getClass().equals(obj.getClass());
   }
 
   @Override

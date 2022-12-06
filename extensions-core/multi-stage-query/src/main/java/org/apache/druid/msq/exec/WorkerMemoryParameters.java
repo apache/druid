@@ -389,7 +389,7 @@ public class WorkerMemoryParameters
     final int isHashing = numHashOutputPartitions > 0 ? 1 : 0;
     return Math.max(
         0,
-        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / (STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
+        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / ((long) STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
     );
   }
 

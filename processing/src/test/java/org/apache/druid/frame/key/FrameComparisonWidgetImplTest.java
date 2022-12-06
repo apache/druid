@@ -37,7 +37,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
@@ -67,6 +69,43 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
                             .frames()
                             .toList()
     );
+  }
+
+  @Test
+  public void test_isPartiallyNullKey_someColumns()
+  {
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING)
+    );
+
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
+
+    for (int i = 0; i < frame.numRows(); i++) {
+      final boolean isPartiallyNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).limit(3).anyMatch(Objects::isNull);
+      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+    }
+  }
+
+  @Test
+  public void test_isPartiallyNullKey_allColumns()
+  {
+    final List<KeyColumn> keyColumns = ImmutableList.of(
+        new KeyColumn("1", KeyOrder.ASCENDING),
+        new KeyColumn("2", KeyOrder.ASCENDING),
+        new KeyColumn("3", KeyOrder.ASCENDING),
+        new KeyColumn("4", KeyOrder.ASCENDING)
+    );
+
+    final FrameComparisonWidget widget = createComparisonWidget(keyColumns);
+
+    for (int i = 0; i < frame.numRows(); i++) {
+      final boolean isPartiallyNull =
+          Arrays.stream(RowKeyComparatorTest.ALL_KEY_OBJECTS.get(i)).anyMatch(Objects::isNull);
+      Assert.assertEquals(isPartiallyNull, widget.isPartiallyNullKey(i));
+    }
   }
 
   @Test
