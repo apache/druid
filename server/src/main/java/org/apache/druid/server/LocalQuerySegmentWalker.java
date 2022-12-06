@@ -47,7 +47,7 @@ import java.util.stream.StreamSupport;
  * Processor that computes Druid queries, single-threaded.
  *
  * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
- * {@link DataSourceAnalysis#isGlobal()}. Its base datasource must also be handleable by the provided
+ * {@link org.apache.druid.query.DataSource#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
  *
  * Mainly designed to be used by {@link ClientQuerySegmentWalker}.
@@ -81,7 +81,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
-    if (!analysis.isConcreteBased() || !analysis.isGlobal()) {
+    if (!analysis.isConcreteBased() || !query.getDataSource().isGlobal()) {
       throw new IAE("Cannot query dataSource locally: %s", query.getDataSource());
     }
 

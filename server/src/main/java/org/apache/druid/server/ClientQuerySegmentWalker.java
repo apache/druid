@@ -247,7 +247,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // 2) Must be based on globally available data (so we have a copy here on the Broker).
     // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
     //    subqueries on its own).
-    return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && analysis.isGlobal()
+    return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && dataSourceFromQuery.isGlobal()
            && (!(dataSourceFromQuery instanceof QueryDataSource)
                || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
