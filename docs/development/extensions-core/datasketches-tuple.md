@@ -55,12 +55,12 @@ druid.extensions.loadList=["druid-datasketches"]
 
 You can use the `arrayOfDoublesSketch` aggregator to:
 
-- Build sketches from raw data. In this case, set `metricColumns` to an array.
-- Build a sketch from an existing ArrayOfDoubles sketch . In this case, leave metricColumns` is unset and set the `fieldName` to an `ArrayOfDoubles` sketch with `numberOfValues` doubles. At ingestion time, you must base64 encode `ArrayOfDoubles`  sketches at ingestion time.
+- Build a sketch from raw data. In this case, set `metricColumns` to an array.
+- Build a sketch from an existing `ArrayOfDoubles` sketch . In this case, leave `metricColumns` unset and set the `fieldName` to an `ArrayOfDoubles` sketch with `numberOfValues` doubles. At ingestion time, you must base64 encode `ArrayOfDoubles`  sketches at ingestion time.
 
 #### Example on top of raw data
 
-Compute a theta of unique users. For each user store the `added` and `deleted` scores in a column called `users_theta`.
+Compute a theta of unique users. For each user store the `added` and `deleted` scores. The new sketch column will be called `users_theta`.
 
 ```json
 {
@@ -72,9 +72,9 @@ Compute a theta of unique users. For each user store the `added` and `deleted` s
 }
 ```
 
-### Example on top of precomputed sketchs
+#### Example ingesting a precomputed sketch column
 
-Ingest a sketch column called `user_sketches` that has a base-64 encoded value of two doubles in its array and store it in a column called `users_theta`.
+Ingest a sketch column called `user_sketches` that has a base64 encoded value of two doubles in its array and store it in a column called `users_theta`.
 
 ```json
 {
