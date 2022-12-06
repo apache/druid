@@ -82,7 +82,6 @@ public class WorkerSketchFetcherTest
   private WorkerClient workerClient;
   private ClusterByPartitions expectedPartitions1;
   private ClusterByPartitions expectedPartitions2;
-  private ExecutorService executorService;
   private AutoCloseable mocks;
   private WorkerSketchFetcher target;
 
@@ -104,7 +103,6 @@ public class WorkerSketchFetcherTest
         mergedClusterByStatisticsCollector1,
         mergedClusterByStatisticsCollector2
     ).when(stageDefinition).createResultKeyStatisticsCollector(anyInt());
-    executorService = spy(Execs.multiThreaded(4, "SketchFetcherThreadPool-%d"));
   }
 
   @After
@@ -121,6 +119,7 @@ public class WorkerSketchFetcherTest
     final List<String> workerIds = ImmutableList.of("0", "1", "2", "3");
     final CountDownLatch latch = new CountDownLatch(workerIds.size());
 
+    ExecutorService executorService = spy(Execs.multiThreaded(4, "SketchFetcherThreadPool-%d"));
     target = spy(
         new WorkerSketchFetcher(
             workerClient,
@@ -219,6 +218,7 @@ public class WorkerSketchFetcherTest
     doReturn(timeSegmentVsWorkerMap).when(completeKeyStatisticsInformation).getTimeSegmentVsWorkerMap();
 
     final CyclicBarrier barrier = new CyclicBarrier(3);
+    ExecutorService executorService = spy(Execs.multiThreaded(4, "SketchFetcherThreadPool-%d"));
     target = spy(
         new WorkerSketchFetcher(
             workerClient,
