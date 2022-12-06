@@ -17,37 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.config;
+package org.apache.druid.indexing.common.actions;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
-/**
- * Global configurations for task lock. Used by the overlord.
- * This config takes precedence if it has a conflicting config with {@link DefaultTaskConfig}.
- */
-public class TaskLockConfig
+public class SegmentAllocateResult
 {
-  @JsonProperty
-  private boolean forceTimeChunkLock = true;
+  private final SegmentIdWithShardSpec segmentId;
+  private final String errorMessage;
 
-  @JsonProperty
-  private boolean batchSegmentAllocation = false;
-
-  @JsonProperty
-  private long batchAllocationMaxWaitTime = 500L;
-
-  public boolean isForceTimeChunkLock()
+  public SegmentAllocateResult(SegmentIdWithShardSpec segmentId, String errorMessage)
   {
-    return forceTimeChunkLock;
+    this.segmentId = segmentId;
+    this.errorMessage = errorMessage;
   }
 
-  public boolean isBatchSegmentAllocation()
+  public SegmentIdWithShardSpec getSegmentId()
   {
-    return batchSegmentAllocation;
+    return segmentId;
   }
 
-  public long getBatchAllocationMaxWaitTime()
+  public String getErrorMessage()
   {
-    return batchAllocationMaxWaitTime;
+    return errorMessage;
+  }
+
+  public boolean isSuccess()
+  {
+    return segmentId != null;
   }
 }

@@ -56,28 +56,6 @@ jobs:
           java-version: ${{ env.java_version }}
           cache: 'maven'
 
-      - name: license checks
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ./.github/scripts/license_checks_script.sh
-
-      - name: license checks for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
-        run: ./.github/scripts/license_checks_script.sh
-
-      - name: analyze dependencies
-        if: ${{ matrix.java == 'jdk8' }}
-        run: |
-          ./.github/scripts/analyze_dependencies_script.sh
-
-      - name: analyze dependencies for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
-        run: |
-          ./.github/scripts/analyze_dependencies_script.sh
-
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
@@ -101,6 +79,28 @@ jobs:
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+
+      - name: license checks
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ./.github/scripts/license_checks_script.sh
+
+      - name: license checks for hadoop3
+        if: ${{ matrix.java == 'jdk8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop3
+        run: ./.github/scripts/license_checks_script.sh
+
+      - name: analyze dependencies
+        if: ${{ matrix.java == 'jdk8' }}
+        run: |
+          ./.github/scripts/analyze_dependencies_script.sh
+
+      - name: analyze dependencies for hadoop3
+        if: ${{ matrix.java == 'jdk8' }}
+        env:
+          HADOOP_PROFILE: -Phadoop3
+        run: |
+          ./.github/scripts/analyze_dependencies_script.sh
 
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
