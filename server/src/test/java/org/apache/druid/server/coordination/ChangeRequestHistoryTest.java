@@ -174,7 +174,7 @@ public class ChangeRequestHistoryTest
   }
 
   @Test
-  public void testStop() throws ExecutionException, InterruptedException
+  public void testStop()
   {
     final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
