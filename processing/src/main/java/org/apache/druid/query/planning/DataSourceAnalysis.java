@@ -59,8 +59,7 @@ import java.util.Optional;
  * </pre>
  *
  * The base datasource (Db) is returned by {@link #getBaseDataSource()}. The other leaf datasources are returned by
- * {@link #getPreJoinableClauses()}. The outer query datasources are available as part of {@link #getDataSource()},
- * which just returns the original datasource that was provided for analysis.
+ * {@link #getPreJoinableClauses()}.
  *
  * The base datasource (Db) will never be a join, but it can be any other type of datasource (table, query, etc).
  * Note that join trees are only flattened if they occur at the top of the overall tree (or underneath an outer query),
@@ -180,14 +179,6 @@ public class DataSourceAnalysis
     Collections.reverse(preJoinableClauses);
 
     return Triple.of(current, currentDimFilter, preJoinableClauses);
-  }
-
-  /**
-   * Returns the topmost datasource: the original one passed to {@link #forDataSource(DataSource)}.
-   */
-  public DataSource getDataSource()
-  {
-    return dataSource;
   }
 
   /**

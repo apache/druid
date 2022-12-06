@@ -133,11 +133,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
     // Make sure this query type can handle the subquery, if present.
     if (analysis.isQuery()
-        && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
-      throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
+        && !toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", query.getDataSource());
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource().createSegmentMapFunction(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = query.getDataSource().createSegmentMapFunction(
         query,
         new AtomicLong()
     );

@@ -239,7 +239,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSourceFromQuery);
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // 1) Must be based on a concrete datasource that is not a table.
@@ -248,7 +249,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     //    subqueries on its own).
     return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && analysis.isGlobal()
            && (!analysis.isQuery()
-               || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
+               || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 
   /**
@@ -265,7 +266,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     //    subqueries on its own).
     return analysis.isConcreteTableBased()
            && (!analysis.isQuery()
-               || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
+               || toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery()));
   }
 
 

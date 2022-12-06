@@ -457,7 +457,7 @@ public class JoinDataSource implements DataSource
   {
     final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", analysis.getDataSource());
+      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
     }
 
     final CacheKeyBuilder keyBuilder;

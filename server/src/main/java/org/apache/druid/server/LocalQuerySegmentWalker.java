@@ -82,7 +82,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
 
     if (!analysis.isConcreteBased() || !analysis.isGlobal()) {
-      throw new IAE("Cannot query dataSource locally: %s", analysis.getDataSource());
+      throw new IAE("Cannot query dataSource locally: %s", query.getDataSource());
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
@@ -93,7 +93,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis
+    final Function<SegmentReference, SegmentReference> segmentMapFn = query
         .getDataSource()
         .createSegmentMapFunction(
             query,

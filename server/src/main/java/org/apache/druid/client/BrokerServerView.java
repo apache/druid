@@ -353,7 +353,7 @@ public class BrokerServerView implements TimelineServerView
   {
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
 
     synchronized (lock) {
       return Optional.ofNullable(timelines.get(table.getName()));

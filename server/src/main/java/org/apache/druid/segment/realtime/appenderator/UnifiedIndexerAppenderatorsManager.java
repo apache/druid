@@ -364,7 +364,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
 
     final DatasourceBundle bundle;
 
