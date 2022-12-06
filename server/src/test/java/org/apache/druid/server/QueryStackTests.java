@@ -50,6 +50,8 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -160,12 +162,11 @@ public class QueryStackTests
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactoryWrapper joinableFactoryWraper,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, joinableFactoryWraper, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler);
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -348,6 +349,7 @@ public class QueryStackTests
             )
             .put(GroupByQuery.class, groupByQueryRunnerFactory)
             .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
+            .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())
             .build()
     );
 
