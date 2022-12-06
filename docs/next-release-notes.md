@@ -21,19 +21,82 @@ title: "WIP release notes for 25.0"
   ~ under the License.
   -->
 
-## Query engine
+## Highlights
 
-### BIG_SUM SQL function
+### Multi-stage query 
 
-Added SQL function `BIG_SUM` that uses the [Compressed Big Decimal](https://github.com/apache/druid/pull/10705) Druid extension.
+The multi-stage query (MSQ) task engine used for SQL-based ingestion is now production ready. Use it for any supported workloads. For more information, see the following pages:
 
-https://github.com/apache/druid/pull/13102
+- [Ingestion](https://druid.apache.org/docs/latest/ingestion/index.html)
+- [SQL-based ingestion](https://druid.apache.org/docs/latest/multi-stage-query/index.html)
 
-### Added Compressed Big Decimal min and max functions
+### String dictionary compression (experimental)
 
-Added min and max functions for Compressed Big Decimal and exposed these functions via SQL: BIG_MIN and BIG_MAX.
+> Any segment written using string dictionary compression is not readable by older versions of Druid.
 
-https://github.com/apache/druid/pull/13141
+Added support for front coded string dictionaries for smaller string columns, leading to reduced segment sizes with only minor performance penalties for most Druid queries.
+
+This functionality can be utilized by a new property to `IndexSpec.stringDictionaryEncoding`, which can be set to {"type":"frontCoded", "bucketSize": 4}, {"type":"frontCoded", "bucketSize": 16}, or any power of 2 that is 128 or lower. This property instructs indexing tasks to write segments with the compressed dictionaries with the specific bucket size specified.  (`{"type":"utf8"}` is the default).
+
+For more information, see [Front coding](https://druid.apache.org/docs/latest/ingestion/ingestion-spec.html#front-coding).
+
+https://github.com/apache/druid/pull/12277
+
+### Kubernetes native tasks
+
+Druid can now use Kubernetes to launch and manage tasks, eliminating the need for MiddleManagers.
+
+To use this feature, enable the [`druid-kubernetes-overlord-extensions`]((../extensions.md#loading-extensions) in the extensions load list for your Overlord process.
+
+https://github.com/apache/druid/pull/13156
+
+## Behavior changes
+
+### HLL and quantiles sketches
+
+The aggregation functions for HLL and quantiles sketches returned sketches or numbers when they are finalized depending on where they were in the native query plan. 
+
+Druid no longer finalizes aggregators in the following two cases:
+
+  - aggregators appear in the outer level of a query
+  - aggregators are used as input to an expression or finalizing-field-access post-aggregator
+
+This change aligns the behavior of HLL and quantiles sketches with theta sketches.
+
+To provide backwards compatibility, you can use the `sqlFinalizeOuterSketches` query context parameter that restores the old behavior. 
+    
+https://github.com/apache/druid/pull/13247
+
+### Kill tasks do not include markAsUnuseddone
+
+When you kill a task, Druid no longer automatically marks segments as unused. You must explicitly mark them as unused with `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`. 
+For more information, see the [API reference](https://druid.apache.org/docs/latest/operations/api-reference.html#coordinator)
+
+https://github.com/apache/druid/pull/13104
+
+### Segment discovery
+
+The default segment discovery method now uses HTTP instead of ZooKeeper.
+
+This update changes the defaults for the following properties:
+
+| Property | New default | Previous default | 
+| - | - | - |
+| `druid.serverview.type` for segment management | http | batch |
+| `druid.coordinator.loadqueuepeon.type` for segment management | http | curator |
+| `druid.indexer.runner.type` for the Overlord | httpRemote | local |
+
+To use ZooKeeper instead of HTTP, change the values for the properties back to the previous defaults.
+
+https://github.com/apache/druid/pull/13092
+
+## Multi-stage query task engine
+
+### CLUSTERED BY limit
+
+When using the MSQ task engine to ingest data, there is now a 1,500 column limit to the number of columns that can be passed in the CLUSTERED BY clause.
+
+https://github.com/apache/druid/pull/13352
 
 ### Metrics used to downsample bucket
 
@@ -52,6 +115,7 @@ https://github.com/apache/druid/pull/13274
 Enabled MSQ task query engine for Docker by default.
 
 https://github.com/apache/druid/pull/13069
+
 
 ### Improved MSQ warnings
 
@@ -79,6 +143,12 @@ Druid now masks the sensitive keys in the log files using regular expressions.
 
 https://github.com/apache/druid/pull/13231
 
+### Query history
+
+Multi-stage queries no longer show up in the Query history dialog. They are still available in the **Recent query tasks** panel.
+
+## Query engine
+
 ### Use worker number to communicate between tasks
 
 Changed the way WorkerClient communicates between the worker tasks, to abstract away the complexity of resolving the `workerNumber` to the `taskId` from the callers.
@@ -94,16 +164,11 @@ https://github.com/apache/druid/pull/13205
 
 ## Querying
 
-### Improvements to querying user experience
+### HTTP response headers
 
-This release includes several improvements for querying:
+Exposed HTTP response headers for SQL queries. 
 
-* Exposed HTTP response headers for SQL queries (https://github.com/apache/druid/pull/13052)
-* Added the `shouldFinalize` feature for HLL and quantiles sketches. Druid will no longer finalize aggregators when:
-    - aggregators appear in the outer level of a query
-    - aggregators are used as input to an expression or finalizing-field-access post-aggregator
-
-    To provide backwards compatibility, we added a `sqlFinalizeOuterSketches` query context parameter that restores the old behavior (https://github.com/apache/druid/pull/13247)
+https://github.com/apache/druid/pull/13052
 
 ### Enabled async reads for JDBC
 
@@ -123,11 +188,48 @@ Added the following configuration keys that refine the query context security mo
 * `druid.auth.unsecuredContextKeys`: The set of query context keys that do not require a security check.
 * `druid.auth.securedContextKeys`: The set of query context keys that do require a security check.
 
+## Metrics
+
+### Improved metric reporting
+
+Improved global-cached-lookups metric reporting.
+
+https://github.com/apache/druid/pull/13219
+
+
+### New metric for segments
+
+`segment/handoff/time` captures the total time taken for handoff for a given set of published segments.
+
+https://github.com/apache/druid/pull/13238 
+
+### New metrics for streaming ingestion
+
+The following metrics related to streaming ingestion have been added:
+
+- `ingest/kafka/partitionLag`: Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. 
+- `ingest/kinesis/partitionLag/time`: Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis.
+- `ingest/pause/time`: Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
+
+https://github.com/apache/druid/pull/13331
+https://github.com/apache/druid/pull/13313
+
+### taskActionType dimension for task/action/run/time metric
+
+The `task/action/run/time` metric for the Indexing service now includes the `taskActionType` dimension.
+
+https://github.com/apache/druid/pull/13333
+
+
 ## Nested columns
+
+### Nested columns performance improvement
+
+Improved `NestedDataColumnSerializer` to no longer explicitly write null values to the field writers for the missing values of every row. Instead, passing the row counter is moved to the field writers so that they can backfill null values in bulk.
 
 ### Support for more formats
 
-Druid nested columns and associated JSON transform functions now supports Avro, ORC, and Parquet.
+Druid nested columns and the associated JSON transform functions now support Avro, ORC, and Parquet.
 
 https://github.com/apache/druid/pull/13325 
 
@@ -147,11 +249,6 @@ You can now stop at arbitrary subfolders using glob syntax in the `ioConfig.inpu
 
 https://github.com/apache/druid/pull/13027
 
-### CLUSTERED BY limit
-
-When using the MSQ task engine to ingest data, there is now a 1,500 column limit to the number of columns that can be passed in the CLUSTERED BY clause.
-
-https://github.com/apache/druid/pull/13352
 
 ### Async task client for streaming ingestion
 
@@ -170,11 +267,11 @@ The web console has been updated to include these options.
 
 https://github.com/apache/druid/pull/13089
 
-## Updated Kafka version
+### When a Kafka stream becomes inactive, prevent Supervisor from creating new indexing tasks
 
-Updated the Apache Kafka core dependency to version 3.3.1.
+Added Idle feature to `SeekableStreamSupervisor` for inactive stream.
 
-https://github.com/apache/druid/pull/13176
+https://github.com/apache/druid/pull/13144
 
 ### Kafka Consumer improvement
 
@@ -205,12 +302,6 @@ https://github.com/apache/druid/pull/13192
 For streaming ingestion, notices that are the same as one already in queue won't be enqueued. This will help reduce notice queue size. 
 
 https://github.com/apache/druid/pull/13334
-
-### When a Kafka stream becomes inactive, prevent Supervisor from creating new indexing tasks
-
-Added Idle feature to `SeekableStreamSupervisor` for inactive stream.
-
-https://github.com/apache/druid/pull/13144
 
 
 ### Sampling from stream input now respects the configured timeout
@@ -250,15 +341,11 @@ For more information, see the documentation on [Compaction](https://druid.apache
 
 https://github.com/apache/druid/pull/13280
 
-### New metric for segments
-
-`segment/handoff/time` captures the total time taken for handoff for a given set of published segments.
-
-https://github.com/apache/druid/pull/13238 
-
 ### Idle configs for the Supervisor
 
-You can now configure the following properties:
+You can now set the Supervisor to idle, which is useful in cases where freeing up slots so that autoscaling can be more effective.
+
+To configure the idle behavior, use the following properties:
 
 | Property | Description | Default |
 | - | - | -|
@@ -270,28 +357,18 @@ https://github.com/apache/druid/pull/13311
 
 https://github.com/apache/druid/pull/13321
 
-### New metrics for streaming ingestion
+### Improved supervisor termination
 
-The following metrics related to streaming ingestion have been added:
+Fixed issues with delayed supervisor termination during certain transient states.
 
-- `ingest/kafka/partitionLag`: Partition-wise lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers. 
-- `ingest/kinesis/partitionLag/time`: Partition-wise lag time in milliseconds between the current message sequence number consumed by the Kinesis indexing tasks and latest sequence number in Kinesis.
-- `ingest/pause/time`: Milliseconds spent by a task in a paused state without ingesting.|dataSource, taskId| < 10 seconds.|
+https://github.com/apache/druid/pull/13072
 
-https://github.com/apache/druid/pull/13331
-https://github.com/apache/druid/pull/13313
 
 ### Backoff for HttpPostEmitter
 
 The `HttpPostEmitter` option now has a backoff. This means that there should be less noise in the logs and lower CPU usage if you use this option for logging. 
 
 https://github.com/apache/druid/pull/12102
-
-### taskActionType dimension for task/action/run/time metric
-
-The `task/action/run/time` metric for the Indexing service now includes the `taskActionType` dimension.
-
-https://github.com/apache/druid/pull/13333
 
 ### DumpSegment tool for nested columns
 
@@ -318,7 +395,7 @@ Set `useRoundRobinSegmentAssigment` to `true` in the Coordinator dynamic config 
 
 https://github.com/apache/druid/pull/13367
 
-#### Sampling segments for balancing
+#### Segment load queue peon
 
 Batch sampling is now the default method for sampling segments during balancing as it performs significantly better than the alternative when there is a large number of used segments in the cluster.
 
@@ -334,11 +411,7 @@ Use only `druid.coordinator.loadqueuepeon.http.repeatDelay` to configure repeat 
 
 https://github.com/apache/druid/pull/13391
 
-#### Segment discovery
 
-The default segment discovery method now uses HTTP instead of ZooKeeper.
-
-https://github.com/apache/druid/pull/13092
 
 #### Segment replication
 
@@ -352,24 +425,8 @@ The task context flag `useMaxMemoryEstimates` is now set to false by default to 
 
 https://github.com/apache/druid/pull/13178
 
-### Docker improvements
-
-Updated dependencies for the Druid image for Docker, including JRE 11. Docker BuildKit cache is enabled to speed up building.
-
-https://github.com/apache/druid/pull/13059
 
 
-
-### Kill tasks do not include markAsUnuseddone
-
-When you kill a task, Druid no longer automatically marks segments as unused. You must explicitly mark them as unused with `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`. 
-For more information, see the [API reference](https://druid.apache.org/docs/latest/operations/api-reference.html#coordinator)
-
-https://github.com/apache/druid/pull/13104
-
-### Nested columns performance improvement
-
-Improved `NestedDataColumnSerializer` to no longer explicitly write null values to the field writers for the missing values of every row. Instead, passing the row counter is moved to the field writers so that they can backfill null values in bulk.
 
 https://github.com/apache/druid/pull/13101
 
@@ -391,17 +448,7 @@ https://github.com/apache/druid/pull/13020
 
 https://github.com/apache/druid/pull/13059
 
-### Improved supervisor termination
 
-Fixed issues with delayed supervisor termination during certain transient states.
-
-https://github.com/apache/druid/pull/13072
-
-### Fixed a problem when running Druid with JDK11+
-
-Export `com.sun.management.internal` when running Druid under JRE11 and JRE17.
-
-https://github.com/apache/druid/pull/13068
 
 ### Enabled cleaner JSON for various input sources and formats
 
@@ -409,29 +456,12 @@ Added `JsonInclude` to various properties, to avoid population of default values
 
 https://github.com/apache/druid/pull/13064
 
-### Improved metric reporting
-
-Improved global-cached-lookups metric reporting.
-
-https://github.com/apache/druid/pull/13219
-
-### Fixed a bug in HttpPostEmitter
-
-Fixed a bug in HttpPostEmitter where the emitting thread was prematurely stopped while there was data to be flushed.
-
-https://github.com/apache/druid/pull/13237
-
 ### Improved direct memory check on startup
 
 Improved direct memory check on startup by providing better support for Java 9+ in `RuntimeInfo`, and clearer log messages where validation fails.
 
 https://github.com/apache/druid/pull/13207
 
-### Added a new way of storing STRING type columns
-
-Added support for 'front coded' string dictionaries for smaller string columns.
-
-https://github.com/apache/druid/pull/12277
 
 ### Improved the run time of the MarkAsUnusedOvershadowedSegments duty
 
@@ -439,33 +469,6 @@ Improved the run time of the MarkAsUnusedOvershadowedSegments duty by iterating 
 
 https://github.com/apache/druid/pull/13287
 
-## Extensions
-
-### Extension optimization
-
-Optimized the `compareTo` function in `CompressedBigDecimal`.
-
-https://github.com/apache/druid/pull/13086
-
-### CompressedBigDecimal cleanup and extension
-
-Removed unnecessary generic type from CompressedBigDecimal, added support for number input types, added support for reading aggregator input types directly (uningested data), and fixed scaling bug in buffer aggregator.
-
-https://github.com/apache/druid/pull/13048
-
-### Support for running tasks as Kubernetes jobs
-
-Added an extension that allows Druid to use Kubernetes for launching and managing tasks, eliminating the need for MiddleManagers.
-To use this extension, [include](../extensions.md#loading-extensions) `druid-kubernetes-overlord-extensions` in the extensions load list for your Overlord process.
-
-https://github.com/apache/druid/pull/13156
-
-### Support for Kubernetes discovery
-
-Added `POD_NAME` and `POD_NAMESPACE` env variables to all Kubernetes Deployments and StatefulSets.
-Helm deployment is now compatible with `druid-kubernetes-extension`.
-
-https://github.com/apache/druid/pull/13262
 
 ## Web console
 
@@ -512,6 +515,53 @@ The web console now exposes a textual indication about running and pending tasks
 
 https://github.com/apache/druid/pull/13291
 
-### Query history
+## Extensions
 
-Multi-stage queries no longer show up in the Query history dialog. They are still available in the **Recent query tasks** panel.
+### BIG_SUM SQL
+
+#### BIG_SUM SQL function
+
+Added SQL function `BIG_SUM` that uses the [Compressed Big Decimal](https://github.com/apache/druid/pull/10705) Druid extension.
+
+https://github.com/apache/druid/pull/13102
+
+#### Added Compressed Big Decimal min and max functions
+
+Added min and max functions for Compressed Big Decimal and exposed these functions via SQL: BIG_MIN and BIG_MAX.
+
+https://github.com/apache/druid/pull/13141
+
+
+### Extension optimization
+
+Optimized the `compareTo` function in `CompressedBigDecimal`.
+
+https://github.com/apache/druid/pull/13086
+
+### CompressedBigDecimal cleanup and extension
+
+Removed unnecessary generic type from CompressedBigDecimal, added support for number input types, added support for reading aggregator input types directly (uningested data), and fixed scaling bug in buffer aggregator.
+
+https://github.com/apache/druid/pull/13048
+
+
+### Support for Kubernetes discovery
+
+Added `POD_NAME` and `POD_NAMESPACE` env variables to all Kubernetes Deployments and StatefulSets.
+Helm deployment is now compatible with `druid-kubernetes-extension`.
+
+https://github.com/apache/druid/pull/13262
+
+## Dependency updates
+
+### Updated Kafka version
+
+Updated the Apache Kafka core dependency to version 3.3.1.
+
+https://github.com/apache/druid/pull/13176
+
+### Docker improvements
+
+Updated dependencies for the Druid image for Docker, including JRE 11. Docker BuildKit cache is enabled to speed up building.
+
+https://github.com/apache/druid/pull/13059
