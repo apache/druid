@@ -1431,7 +1431,7 @@ public class WorkerImpl implements Worker
               FileUtils.mkdirp(sorterTmpDir);
 
               // SuperSorter will try to write to output partition zero; we remap it to the correct partition number.
-              class PartitionOverrideOutputChannelFactory implements OutputChannelFactory
+              final OutputChannelFactory partitionOverrideOutputChannelFactory = new OutputChannelFactory()
               {
                 @Override
                 public OutputChannel openChannel(int expectedZero) throws IOException
@@ -1452,7 +1452,7 @@ public class WorkerImpl implements Worker
 
                   return outputChannelFactory.openNilChannel(channel.getPartitionNumber());
                 }
-              }
+              };
 
               // Chain futures so we only sort one partition at a time.
               nextFuture = Futures.transform(
@@ -1465,7 +1465,7 @@ public class WorkerImpl implements Worker
                         Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
                         exec,
                         sorterTmpDir,
-                        new PartitionOverrideOutputChannelFactory(),
+                        partitionOverrideOutputChannelFactory,
                         new ArenaMemoryAllocatorFactory(memoryParameters.getLargeFrameSize()),
                         1,
                         2,
