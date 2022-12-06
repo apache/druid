@@ -165,7 +165,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.
-    if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
+    if ((dataSourceFromQuery instanceof QueryDataSource) && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 

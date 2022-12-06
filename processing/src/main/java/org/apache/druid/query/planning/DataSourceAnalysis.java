@@ -221,7 +221,7 @@ public class DataSourceAnalysis
    * the datasource tree. This is the query that will be applied to the base datasource plus any joinables that might
    * be present.
    *
-   * @return the query associated with the base datasource if {@link #isQuery()} is true, else empty
+   * @return the query associated with the base datasource if  is true, else empty
    */
   public Optional<Query<?>> getBaseQuery()
   {
@@ -244,7 +244,7 @@ public class DataSourceAnalysis
    * <p>
    * This {@link QuerySegmentSpec} is taken from the query returned by {@link #getBaseQuery()}.
    *
-   * @return the query segment spec associated with the base datasource if {@link #isQuery()} is true, else empty
+   * @return the query segment spec associated with the base datasource if  is true, else empty
    */
   public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
   {
@@ -299,15 +299,6 @@ public class DataSourceAnalysis
                                                    .stream()
                                                    .allMatch(ds -> ds instanceof TableDataSource)));
   }
-
-  /**
-   * Returns true if this datasource represents a subquery (that is, whether it is a {@link QueryDataSource}).
-   */
-  public boolean isQuery()
-  {
-    return dataSource instanceof QueryDataSource;
-  }
-  
 
   /**
    * Returns true if this datasource is made out of a join operation

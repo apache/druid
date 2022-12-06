@@ -248,7 +248,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
     //    subqueries on its own).
     return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && analysis.isGlobal()
-           && (!analysis.isQuery()
+           && (!(dataSourceFromQuery instanceof QueryDataSource)
                || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 
@@ -265,7 +265,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // 2) If there is an outer query, it must be handleable by the query toolchest (the cluster walker does not handle
     //    subqueries on its own).
     return analysis.isConcreteTableBased()
-           && (!analysis.isQuery()
+           && (!(query.getDataSource() instanceof QueryDataSource)
                || toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery()));
   }
 

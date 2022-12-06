@@ -132,7 +132,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
     // Make sure this query type can handle the subquery, if present.
-    if (analysis.isQuery()
+    if ((query.getDataSource() instanceof QueryDataSource)
         && !toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", query.getDataSource());
     }

@@ -185,7 +185,8 @@ public class ServerManager implements QuerySegmentWalker
         segmentManager.getTimeline(analysis);
 
     // Make sure this query type can handle the subquery, if present.
-    if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery())) {
+    if ((query.getDataSource() instanceof QueryDataSource)
+        && !toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", query.getDataSource());
     }
 
