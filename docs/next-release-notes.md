@@ -92,6 +92,12 @@ https://github.com/apache/druid/pull/13092
 
 ## Multi-stage query task engine
 
+### Worker retry
+
+The MSQ controller task now retries worker tasks if they fail up to two times. The maximum number of total retries for a job across all workers is 30.
+
+https://github.com/apache/druid/pull/13353
+
 ### CLUSTERED BY limit
 
 When using the MSQ task engine to ingest data, there is now a 1,500 column limit to the number of columns that can be passed in the CLUSTERED BY clause.
@@ -197,11 +203,30 @@ Improved global-cached-lookups metric reporting.
 https://github.com/apache/druid/pull/13219
 
 
-### New metric for segments
+### New metric for segment handoff
 
 `segment/handoff/time` captures the total time taken for handoff for a given set of published segments.
 
 https://github.com/apache/druid/pull/13238 
+
+### New metrics for segment allocation 
+
+Segment allocation can now be performed in batches, which can improve performance and decrease ingestion lag. For more information about this change, see [Segment batch allocation](#segment-batch-allocation). The following metrics correspond to those changes.
+
+Metrics for batch segment allocation (dims: dataSource, taskActionType=segmentAllocate):
+
+- `task/action/batch/runTime`: Milliseconds taken to execute a batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions
+- task/action/batch/queueTime: Milliseconds spent by a batch of task actions in queue. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
+- `task/action/batch/size`: Number of task actions in a batch that was executed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
+- `task/action/batch/attempts`: Number of execution attempts for a single batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation). 
+
+Metrics for a request (dims: taskId, taskType, dataSource, taskActionType=segmentAllocate):
+
+- `task/action/failed/count`: Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
+- `task/action/success/count`: Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
+
+https://github.com/apache/druid/pull/13369
+https://github.com/apache/druid/pull/13503
 
 ### New metrics for streaming ingestion
 
@@ -380,12 +405,34 @@ https://github.com/apache/druid/pull/13356
 
 ### Segment loading and balancing
 
+#### Segment batch allocation
+
+Segment allocation on the Overlord can take some time to finish, which can cause ingestion lag while a task waits for segments to be allocated.  Performing segment allocation in batches can help improve performance.
+
+There are two new properties that affect how Druid performs segment allocation:
+
+| Property | Description | Default | 
+| - | - | - |
+|`druid.indexer.tasklock.batchSegmentAllocation`| If set to true, Druid performs segment allocate actions in batches to improve throughput and reduce the average `task/action/run/time`. See [batching `segmentAllocate` actions](https://druid.apache.org/docs/latest/ingestion/tasks.html#batching-segmentallocate-actions) for details.|false|
+|`druid.indexer.tasklock.batchAllocationWaitTime`|Number of milliseconds after Druid adds the first segment allocate action to a batch, until it executes the batch. Allows the batch to add more requests and improve the average segment allocation run time. This configuration takes effect only if `batchSegmentAllocation` is enabled.|500|
+
+In addition to these properties, there are new metrics to track batch segment allocation. For more information, see [New metrics for segment  allocation](#new-metrics-for-segment-allocation).
+
+For more information, see the following:
+- [Overlord operations](https://druid.apache.org/docs/latest/configuration/index.html#overlord-operations)
+- [Task actions and Batching `segmentAllocate` actions](https://druid.apache.org/docs/latest/ingestion/tasks.html#task-actions)
+
+https://github.com/apache/druid/pull/13369
+https://github.com/apache/druid/pull/13503
+
 #### cachingCost balancer strategy
 
 The `cachingCost` balancer strategy now behaves more similarly to cost strategy. When computing the cost of moving a segment to a server, the following calculations are performed:
 
 - Subtract the self cost of a segment if it is being served by the target server
 - Subtract the cost of segments that are marked to be dropped
+
+https://github.com/apache/druid/pull/13321
 
 #### Segment assignment
 
@@ -471,6 +518,14 @@ https://github.com/apache/druid/pull/13287
 
 
 ## Web console
+
+###
+
+### Delete an interval
+
+You can now pick an interval to delete from a dropdown in the kill task dialog.  
+
+https://github.com/apache/druid/pull/13431
 
 ### Removed the old query view
 
