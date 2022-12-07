@@ -118,8 +118,9 @@ public class QueryDataSource implements DataSource
   {
     final Query<?> subQuery = this.getQuery();
     if (!(subQuery instanceof BaseQuery)) {
-      // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
-      // work properly. All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+      // We must verify that the subQuery is a BaseQuery, because it is required to make
+      // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
+      // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
       throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
     }
     final DataSource current = subQuery.getDataSource();
