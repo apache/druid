@@ -21,18 +21,37 @@ unset _JAVA_OPTIONS
 
 # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
 # resolving the SIGAR dependency.
-MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS} \
-${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
-sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
-free -m
-${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+#MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS} \
+#${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
+#sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
+#free -m
+#${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
 
 # Add merge target branch to determine diff.
 # This is not needed for build triggered by tags, since there will be no code diff.
 echo "GIT_BRANCH=${GIT_BRANCH}"  # for debugging
 if [[ ! ${GIT_BRANCH} =~ ^refs\/tags\/.* ]]
 then
-  git remote set-branches --add origin ${GIT_BRANCH} && git fetch
+  git ls-remote origin -h refs/heads/migrate_uts_to_gha
+  echo "*********************************"
+  git ls-remote --heads
+  echo "*********************************"
+  git ls-remote
+  echo "*********************************"
+  git branch -r | cat
+  echo "*********************************"
+  echo "adding merge target branch to determine diff"
+  git remote set-branches --add origin ${GIT_BRANCH}
+  echo "done"
+  git ls-remote origin -h refs/heads/migrate_uts_to_gha
+  echo "*********************************"
+  git ls-remote --heads
+  echo "*********************************"
+  git ls-remote
+  echo "*********************************"
+  git branch -r | cat
+  echo "*********************************"
+  git fetch
 fi
 
 # Determine the modified files that match the maven projects being tested. We use maven project lists that

@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: setup jdk8
         uses: actions/setup-java@v3
