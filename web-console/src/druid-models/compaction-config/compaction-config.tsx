@@ -23,9 +23,24 @@ import { Field } from '../../components';
 import { deepGet, deepSet, oneOf } from '../../utils';
 
 export interface CompactionConfig {
+  dataSource: string;
   skipOffsetFromLatest?: string;
   tuningConfig?: any;
   [key: string]: any;
+
+  // Deprecated:
+  inputSegmentSizeBytes?: number;
+}
+
+export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;
+
+export function compactionConfigHasLegacyInputSegmentSizeBytesSet(
+  config: CompactionConfig,
+): boolean {
+  return (
+    typeof config.inputSegmentSizeBytes === 'number' &&
+    config.inputSegmentSizeBytes < NOOP_INPUT_SEGMENT_SIZE_BYTES
+  );
 }
 
 export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [

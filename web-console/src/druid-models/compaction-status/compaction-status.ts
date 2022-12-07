@@ -16,8 +16,11 @@
  * limitations under the License.
  */
 
-import { pluralIfNeeded } from '../../utils';
-import { CompactionConfig } from '../compaction-config/compaction-config';
+import { formatBytesCompact, pluralIfNeeded } from '../../utils';
+import {
+  CompactionConfig,
+  compactionConfigHasLegacyInputSegmentSizeBytesSet,
+} from '../compaction-config/compaction-config';
 
 function capitalizeFirst(str: string): string {
   return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
@@ -67,9 +70,11 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
         !zeroCompactionStatus(status)
       ) {
         if (status.segmentCountSkipped) {
-          return `Fully compacted (except the last ${
-            config.skipOffsetFromLatest || 'P1D'
-          } of data, ${pluralIfNeeded(status.segmentCountSkipped, 'segment')} skipped)`;
+          return `Fully compacted (except the last ${config.skipOffsetFromLatest || 'P1D'} of data${
+            compactionConfigHasLegacyInputSegmentSizeBytesSet(config)
+              ? ` and segments larger than ${formatBytesCompact(config.inputSegmentSizeBytes!)}`
+              : ''
+          }, ${pluralIfNeeded(status.segmentCountSkipped, 'segment')} skipped)`;
         } else {
           return 'Fully compacted';
         }
