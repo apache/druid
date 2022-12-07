@@ -136,7 +136,7 @@ public class ExternalInputSliceReader implements InputSliceReader
       throw new ISE("Cannot create temporary directory at [%s]", temporaryDirectory);
     }
     // TODO: is this right?
-    final InputStats inputStats = new InputStats();
+    final InputStats inputStats = null;
     return Iterators.transform(
         inputSources.iterator(),
         inputSource -> {
