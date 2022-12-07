@@ -41,7 +41,6 @@ import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -56,8 +55,6 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
-import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -231,17 +228,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public void handleDisconnect()
         {
-          // this is the case where we time out and let the RetryQueryRunner try to make a query to
-          // the segments that were not able to be queried due to a query timeout.
-          if (query instanceof BaseQuery) {
-            BaseQuery<T> myQuery = (BaseQuery<T>) query;
-            QuerySegmentSpec segmentSpec = myQuery.getQuerySegmentSpec();
-            if (segmentSpec instanceof MultipleSpecificSegmentSpec) {
-              ResponseContext result = ResponseContext.createEmpty();
-              context.addMissingSegments(((MultipleSpecificSegmentSpec) segmentSpec).getDescriptors());
-              context.merge(result);
-            }
-          }
+          context.setDisconnect();
         }
 
         @Override

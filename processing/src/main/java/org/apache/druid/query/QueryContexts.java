@@ -60,6 +60,7 @@ public class QueryContexts
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String RETRY_ON_DISCONNECT = "retryOnDisconnect";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -419,6 +420,16 @@ public class QueryContexts
     }
 
     return overridden;
+  }
+
+  public static <T> boolean retryOnDisconnect(Query<T> query, boolean defaultValue)
+  {
+    return query.getContextBoolean(RETRY_ON_DISCONNECT, defaultValue);
+  }
+
+  public static String getBrokerServiceName(Map<String, Object> queryContext)
+  {
+    return queryContext == null ? null : (String) queryContext.get(BROKER_SERVICE_NAME);
   }
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)

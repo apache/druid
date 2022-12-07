@@ -67,7 +67,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       ObjectMapper jsonMapper
   )
   {
-    this(baseRunner, retryRunnerCreateFn, config, jsonMapper, () -> {});
+    this(baseRunner, retryRunnerCreateFn, config, jsonMapper, () -> {
+    });
   }
 
   /**
@@ -177,7 +178,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
    * A lazy iterator populating a {@link Sequence} by retrying the query. The first returned sequence is always the base
    * sequence from the baseQueryRunner. Subsequent sequences are created dynamically whenever it retries the query. All
    * the sequences populated by this iterator will be merged (not combined) with the base sequence.
-   *
+   * <p>
    * The design of this iterator depends on how {@link MergeSequence} works; the MergeSequence pops an item from
    * each underlying sequence and pushes them to a {@link java.util.PriorityQueue}. Whenever it pops from the queue,
    * it pushes a new item from the sequence where the returned item was originally from. Since the first returned
@@ -217,10 +218,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       } else {
         final QueryContext queryContext = queryPlus.getQuery().context();
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
-        final int maxNumRetries = queryContext.getNumRetriesOnMissingSegments(
-            config.getNumTries()
-        );
-        if (missingSegments.isEmpty()) {
+        boolean retryEntireQuery = QueryContexts.retryOnDisconnect(queryPlus.getQuery(), false)
+                                   && context.didNodeDisconnect();
+        final int maxNumRetries = queryContext.getNumRetriesOnMissingSegments(config.getNumTries());
+        if (missingSegments.isEmpty() && !retryEntireQuery) {
           return false;
         } else if (retryCount >= maxNumRetries) {
           if (!queryContext.allowReturnPartialResults(config.isReturnPartialResults())) {
@@ -230,14 +231,20 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           }
         } else {
           retryCount++;
-          LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), retryCount);
-
-          context.initializeMissingSegments();
-          final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
-              Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
-          );
-          sequence = retryRunnerCreateFn.apply(retryQueryPlus.getQuery(), missingSegments).run(retryQueryPlus, context);
-          return true;
+          if (retryEntireQuery) {
+            LOG.info("Node disconnect happened. Retry attempt [%,d]", retryCount);
+            sequence = baseRunner.run(queryPlus, context);
+            return true;
+          } else {
+            LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), retryCount);
+            context.initializeMissingSegments();
+            final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(
+                Queries.withSpecificSegments(queryPlus.getQuery(), missingSegments)
+            );
+            sequence = retryRunnerCreateFn.apply(retryQueryPlus.getQuery(), missingSegments)
+                                          .run(retryQueryPlus, context);
+            return true;
+          }
         }
       }
     }

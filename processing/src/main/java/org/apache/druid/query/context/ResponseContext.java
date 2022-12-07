@@ -431,6 +431,11 @@ public abstract class ResponseContext
         false);
 
     /**
+     * When a client has a channel disconnect.
+     */
+    public static final Key NODE_DISCONNECT = new BooleanKey("nodeDisconnect", false);
+
+    /**
      * The total CPU time for threads related to Sequence processing of the query.
      * Resulting value on a Broker is a sum of downstream values from historicals / realtime nodes.
      * For additional information see {@link org.apache.druid.query.CPUTimeMetricQueryRunner}
@@ -708,6 +713,17 @@ public abstract class ResponseContext
   public void addMissingSegments(List<SegmentDescriptor> descriptors)
   {
     addValue(Keys.MISSING_SEGMENTS, descriptors);
+  }
+
+  public void setDisconnect()
+  {
+    addValue(Keys.NODE_DISCONNECT, true);
+  }
+
+  public boolean didNodeDisconnect()
+  {
+    Object result = get(Keys.NODE_DISCONNECT);
+    return result != null && (boolean) result;
   }
 
   public void addRowScanCount(long count)
