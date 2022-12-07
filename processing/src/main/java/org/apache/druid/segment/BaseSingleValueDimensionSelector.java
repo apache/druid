@@ -50,7 +50,6 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   @Override
   public String lookupName(int id)
   {
-    assert id == 0;
     return getValue();
   }
 
