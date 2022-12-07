@@ -23,8 +23,8 @@ title: "DataSketches HLL Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregator to produce a union of sketch columns in the same row.
-You can use the HLL sketch aggregator on columns of any identifiers. It will return estimated cardinality of the column.
+This module provides Apache Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregators to produce a union of sketch columns in the same row.
+You can use the HLL sketch aggregator on columns of any identifiers. It will return the estimated cardinality of the column.
 
 To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
 
@@ -32,21 +32,22 @@ To use this aggregator, make sure you [include](../../development/extensions.md#
 druid.extensions.loadList=["druid-datasketches"]
 ```
 
-### Aggregators
+## Aggregators
 
-|property|description|required?|
+|Property|Description|Required?|
 |--------|-----------|---------|
-|`type`|This String should be [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator)|yes|
-|`name`|A String for the output (result) name of the calculation.|yes|
-|`fieldName`|A String for the name of the input field.|yes|
+|`type`|This string should be [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator).|yes|
+|`name`|A string for the output (result) name of the calculation.|yes|
+|`fieldName`|A string for the name of the input field.|yes|
 |`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be between 4 and 21 inclusively.|no, defaults to `12`|
 |`tgtHllType`|The type of the target HLL sketch. Must be `HLL_4`, `HLL_6` or `HLL_8` |no, defaults to `HLL_4`|
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
+|`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 
 
 > The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.
 
-#### HLLSketchBuild Aggregator
+### HLLSketchBuild aggregator
 
 ```
 {
@@ -79,7 +80,7 @@ When applied at query time on an existing dimension, you can use the resulting c
 > ```
 >
 
-#### HLLSketchMerge Aggregator
+### HLLSketchMerge aggregator
 
 ```
 {
@@ -94,9 +95,9 @@ When applied at query time on an existing dimension, you can use the resulting c
 
 You can use the `HLLSketchMerge` aggregator to ingest pre-generated sketches from an input dataset. For example, you can set up a batch processing job to generate the sketches before sending the data to Druid. You must serialize the sketches in the input dataset to Base64-encoded bytes. Then, specify `HLLSketchMerge` for the input column in the native ingestion `metricsSpec`.
 
-### Post Aggregators
+## Post aggregators
 
-#### Estimate
+### Estimate
 
 Returns the distinct count estimate as a double.
 
@@ -109,7 +110,7 @@ Returns the distinct count estimate as a double.
 }
 ```
 
-#### Estimate with bounds
+### Estimate with bounds
 
 Returns a distinct count estimate and error bounds from an HLL sketch.
 The result will be an array containing three double values: estimate, lower bound and upper bound.
@@ -125,7 +126,7 @@ This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%,
 }
 ```
 
-#### Union
+### Union
 
 ```
 {
@@ -137,7 +138,7 @@ This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%,
 }
 ```
 
-#### Sketch to string
+### Sketch to string
 
 Human-readable sketch summary for debugging.
 
