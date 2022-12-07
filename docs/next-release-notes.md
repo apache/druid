@@ -52,6 +52,12 @@ https://github.com/apache/druid/pull/13156
 
 ## Behavior changes
 
+### Memory estimates
+
+The task context flag `useMaxMemoryEstimates` is now set to false by default to improve memory usage estimation.
+
+https://github.com/apache/druid/pull/13178
+
 ### HLL and quantiles sketches
 
 The aggregation functions for HLL and quantiles sketches returned sketches or numbers when they are finalized depending on where they were in the native query plan. 
@@ -190,9 +196,14 @@ https://github.com/apache/druid/pull/13133
 
 ### Added new configuration keys to query context security model
 
-Added the following configuration keys that refine the query context security model controlled by `druid.auth.authorizeQueryContextParams`:
-* `druid.auth.unsecuredContextKeys`: The set of query context keys that do not require a security check.
-* `druid.auth.securedContextKeys`: The set of query context keys that do require a security check.
+Added the following configuration properties that refine the query context security model controlled by `druid.auth.authorizeQueryContextParams`:
+
+* `druid.auth.unsecuredContextKeys`: A JSON list of query context keys that do not require a security check.
+* `druid.auth.securedContextKeys`: A JSON list of query context keys that do require a security check.
+
+If both are set, `unsecuredContextKeys` acts as exceptions to `securedContextKeys`..
+
+https://github.com/apache/druid/pull/13071
 
 ## Metrics
 
@@ -252,6 +263,8 @@ https://github.com/apache/druid/pull/13333
 
 Improved `NestedDataColumnSerializer` to no longer explicitly write null values to the field writers for the missing values of every row. Instead, passing the row counter is moved to the field writers so that they can backfill null values in bulk.
 
+https://github.com/apache/druid/pull/13101
+
 ### Support for more formats
 
 Druid nested columns and the associated JSON transform functions now support Avro, ORC, and Parquet.
@@ -260,7 +273,7 @@ https://github.com/apache/druid/pull/13325
 
 https://github.com/apache/druid/pull/13375 
 
-### Refactored a data source before unnest 
+### Refactored a datasource before unnest 
 
 When data requires "flattening" during processing, the operator now takes in an array and then flattens the array into N (N=number of elements in the array) rows where each row has one of the values from the array.
 
@@ -300,7 +313,7 @@ https://github.com/apache/druid/pull/13144
 
 ### Kafka Consumer improvement
 
-Allowed Kafka Consumer's custom deserializer to be configured after its instantiation.
+You can now configure the Kafka Consumer's custom deserializer after its instantiation.
 
 https://github.com/apache/druid/pull/13097
 
@@ -380,8 +393,6 @@ To configure the idle behavior, use the following properties:
 
 https://github.com/apache/druid/pull/13311
 
-https://github.com/apache/druid/pull/13321
-
 ### Improved supervisor termination
 
 Fixed issues with delayed supervisor termination during certain transient states.
@@ -458,24 +469,11 @@ Use only `druid.coordinator.loadqueuepeon.http.repeatDelay` to configure repeat 
 
 https://github.com/apache/druid/pull/13391
 
-
-
 #### Segment replication
 
 Improved the process of checking server inventory to prevent over-replication of segments during segment balancing.
 
 https://github.com/apache/druid/pull/13114
-
-### Memory estimates
-
-The task context flag `useMaxMemoryEstimates` is now set to false by default to improve memory usage estimation.
-
-https://github.com/apache/druid/pull/13178
-
-
-
-
-https://github.com/apache/druid/pull/13101
 
 ### Provided service specific log4j overrides in containerized deployments
 
@@ -512,7 +510,7 @@ https://github.com/apache/druid/pull/13207
 
 ### Improved the run time of the MarkAsUnusedOvershadowedSegments duty
 
-Improved the run time of the MarkAsUnusedOvershadowedSegments duty by iterating over all overshadowed segments and marking segments as unused in batches.
+Improved the run time of the `MarkAsUnusedOvershadowedSegments` duty by iterating over all overshadowed segments and marking segments as unused in batches.
 
 https://github.com/apache/druid/pull/13287
 
