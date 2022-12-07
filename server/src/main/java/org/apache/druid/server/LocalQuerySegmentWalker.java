@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
@@ -47,7 +48,7 @@ import java.util.stream.StreamSupport;
  * Processor that computes Druid queries, single-threaded.
  *
  * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
- * {@link org.apache.druid.query.DataSource#isGlobal()}. Its base datasource must also be handleable by the provided
+ * {@link DataSource#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
  *
  * Mainly designed to be used by {@link ClientQuerySegmentWalker}.
@@ -79,10 +80,11 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysisForDataSource();
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysisForDataSource();
 
-    if (!analysis.isConcreteBased() || !query.getDataSource().isGlobal()) {
-      throw new IAE("Cannot query dataSource locally: %s", query.getDataSource());
+    if (!analysis.isConcreteBased() || !dataSourceFromQuery.isGlobal()) {
+      throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
@@ -93,8 +95,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = query
-        .getDataSource()
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
         .createSegmentMapFunction(
             query,
             cpuAccumulator

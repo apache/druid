@@ -485,14 +485,8 @@ public class JoinDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysisForDataSource()
   {
-    return getAnalysisForDataSource(null);
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysisForDataSource(Query<?> query)
-  {
     final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
-    return new DataSourceAnalysis(flattened.first, query, flattened.second, flattened.third);
+    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
   }
 
   /**

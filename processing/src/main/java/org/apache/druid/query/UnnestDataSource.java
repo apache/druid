@@ -191,12 +191,6 @@ public class UnnestDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysisForDataSource()
   {
-    return getAnalysisForDataSource(null);
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysisForDataSource(Query<?> query)
-  {
     final DataSource current = this.getBase();
     return current.getAnalysisForDataSource();
   }

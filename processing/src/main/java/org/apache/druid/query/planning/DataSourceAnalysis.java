@@ -90,7 +90,7 @@ public class DataSourceAnalysis
     if (baseDataSource instanceof JoinDataSource) {
       // The base cannot be a join (this is a class invariant).
       // If it happens, it's a bug in the datasource analyzer.
-      throw new IAE("Base dataSource cannot be a join! ");
+      throw new IAE("Base dataSource cannot be a join! Original base datasource was: %s", baseDataSource);
     }
 
     this.baseDataSource = baseDataSource;
@@ -167,6 +167,11 @@ public class DataSourceAnalysis
   public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
   {
     return getBaseQuery().map(query -> ((BaseQuery<?>) query).getQuerySegmentSpec());
+  }
+
+  public DataSourceAnalysis withBaseQuery(Query<?> query)
+  {
+    return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
   }
 
   /**

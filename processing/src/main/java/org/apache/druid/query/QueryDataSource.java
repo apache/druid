@@ -116,12 +116,6 @@ public class QueryDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysisForDataSource()
   {
-    return getAnalysisForDataSource(null);
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysisForDataSource(Query<?> query)
-  {
     final Query<?> subQuery = this.getQuery();
     if (!(subQuery instanceof BaseQuery)) {
       // We must verify that the subQuery is a BaseQuery, because it is required to make "getBaseQuerySegmentSpec"
@@ -129,9 +123,14 @@ public class QueryDataSource implements DataSource
       throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
     }
     final DataSource current = subQuery.getDataSource();
-    return current.getAnalysisForDataSource(subQuery);
+    DataSourceAnalysis currentAnalysis = current.getAnalysisForDataSource();
+    // check if the baseQuery is already present while moving up
+    // if not add the current query as the baseQuery to the analysis
+    if (!currentAnalysis.getBaseQuery().isPresent()) {
+      return currentAnalysis.withBaseQuery(subQuery);
+    }
+    return currentAnalysis;
   }
-
 
   @Override
   public String toString()

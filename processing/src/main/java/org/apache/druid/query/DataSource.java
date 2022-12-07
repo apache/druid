@@ -124,7 +124,10 @@ public interface DataSource
    */
   byte[] getCacheKey();
 
+  /**
+   * Get the analysis for a data source
+   *
+   * @return The {@link DataSourceAnalysis} object for the callee data source
+   */
   DataSourceAnalysis getAnalysisForDataSource();
-
-  DataSourceAnalysis getAnalysisForDataSource(Query<?> query);
 }

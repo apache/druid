@@ -121,13 +121,7 @@ public class TableDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysisForDataSource()
   {
-    return getAnalysisForDataSource(null);
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysisForDataSource(Query<?> query)
-  {
-    return new DataSourceAnalysis(this, query, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
   @Override
