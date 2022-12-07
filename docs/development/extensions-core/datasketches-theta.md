@@ -23,8 +23,11 @@ title: "DataSketches Theta Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on Theta sketch from [Apache DataSketches](https://datasketches.apache.org/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc.
-At ingestion time, this aggregator creates the Theta sketch objects which get stored in Druid segments. Logically speaking, a Theta sketch object can be thought of as a Set data structure. At query time, sketches are read and aggregated (set unioned) together. In the end, by default, you receive the estimate of the number of unique entries in the sketch object. Also, you can use post aggregators to do union, intersection or difference on sketch columns in the same row.
+This module provides Apache Druid aggregators based on Theta sketch from [Apache DataSketches](https://datasketches.apache.org/) library.
+Sketch algorithms are approximate. For more information, see [Accuracy](https://datasketches.apache.org/docs/Theta/ThetaAccuracy.html) in the DataSketches documentation.
+
+At ingestion time, the Theta sketch aggregator creates Theta sketch objects which are stored in Druid segments. Logically speaking, a Theta sketch object can be thought of as a Set data structure. At query time, sketches are read and aggregated (set unioned) together. In the end, by default, you receive the estimate of the number of unique entries in the sketch object. You can use post aggregators to do union, intersection or difference on sketch columns in the same row.
+
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using the same. It will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 
 To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
@@ -33,7 +36,9 @@ To use this aggregator, make sure you [include](../../development/extensions.md#
 druid.extensions.loadList=["druid-datasketches"]
 ```
 
-### Aggregators
+For additional sketch types supported in Druid, see [DataSketches extension](datasketches-extension.md).
+
+## Aggregator
 
 ```json
 {
@@ -45,17 +50,18 @@ druid.extensions.loadList=["druid-datasketches"]
  }
 ```
 
-|property|description|required?|
+|Property|Description|Required?|
 |--------|-----------|---------|
-|type|This String should always be "thetaSketch"|yes|
-|name|A String for the output (result) name of the calculation.|yes|
-|fieldName|A String for the name of the aggregator used at ingestion time.|yes|
-|isInputThetaSketch|This should only be used at indexing time if your input data contains theta sketch objects. This would be the case if you use datasketches library outside of Druid, say with Pig/Hive, to produce the data that you are ingesting into Druid |no, defaults to false|
-|size|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.apache.org/docs/Theta/ThetaSize) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
+|`type`|This string should always be "thetaSketch"|yes|
+|`name`|A string for the output (result) name of the calculation.|yes|
+|`fieldName`|A string for the name of the aggregator used at ingestion time.|yes|
+|`isInputThetaSketch`|This should only be used at indexing time if your input data contains theta sketch objects. This would be the case if you use datasketches library outside of Druid, say with Pig/Hive, to produce the data that you are ingesting into Druid |no, defaults to false|
+|`size`|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.apache.org/docs/Theta/ThetaSize) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
+|`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 
-### Post Aggregators
+## Post aggregators
 
-#### Sketch Estimator
+### Sketch estimator
 
 ```json
 {
@@ -65,7 +71,7 @@ druid.extensions.loadList=["druid-datasketches"]
 }
 ```
 
-#### Sketch Operations
+### Sketch operations
 
 ```json
 {
@@ -77,7 +83,7 @@ druid.extensions.loadList=["druid-datasketches"]
 }
 ```
 
-#### Sketch Summary
+### Sketch summary
 
 This returns a summary of the sketch that can be used for debugging. This is the result of calling toString() method.
 
@@ -89,7 +95,7 @@ This returns a summary of the sketch that can be used for debugging. This is the
 }
 ```
 
-### Examples
+## Examples
 
 Assuming, you have a dataset containing (timestamp, product, user_id). You want to answer questions like
 
@@ -185,7 +191,7 @@ sample query for, How many unique users visited both product A and B?
 }
 ```
 
-#### Retention Analysis Example
+### Retention analysis example
 
 Suppose you want to answer a question like, "How many unique users performed a specific action in a particular time period and also performed another specific action in a different time period?"
 
