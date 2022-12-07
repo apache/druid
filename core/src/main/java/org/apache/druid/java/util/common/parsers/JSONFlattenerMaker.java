@@ -54,9 +54,9 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
+  private static final CharsetEncoder ENC = StandardCharsets.UTF_8.newEncoder();
   private final boolean keepNullValues;
 
-  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
   public JSONFlattenerMaker(boolean keepNullValues)
   {
@@ -143,7 +143,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Nullable
-  private Object convertJsonNode(JsonNode val)
+  public static Object convertJsonNode(JsonNode val)
   {
     if (val == null || val.isNull()) {
       return null;
@@ -175,7 +175,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
         if (!entry.isNull()) {
-          newList.add(finalizeConversionForMap(entry));
+          newList.add(convertJsonNode(entry));
         }
       }
       return newList;
@@ -185,7 +185,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       Map<String, Object> newMap = new LinkedHashMap<>();
       for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
-        newMap.put(entry.getKey(), finalizeConversionForMap(entry.getValue()));
+        newMap.put(entry.getKey(), convertJsonNode(entry.getValue()));
       }
       return newMap;
     }
@@ -197,9 +197,9 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Nullable
-  private String charsetFix(String s)
+  private static String charsetFix(String s)
   {
-    if (s != null && !enc.canEncode(s)) {
+    if (s != null && !ENC.canEncode(s)) {
       // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
       // by new String(...) but will not encode into the same character. This dance here will replace these
       // characters with something more sane.
@@ -209,7 +209,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
   }
 
-  private boolean isFlatList(JsonNode list)
+  private static boolean isFlatList(JsonNode list)
   {
     for (JsonNode obj : list) {
       if (obj.isObject() || obj.isArray()) {

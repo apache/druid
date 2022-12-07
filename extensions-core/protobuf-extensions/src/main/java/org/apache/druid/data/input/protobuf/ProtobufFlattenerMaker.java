@@ -28,6 +28,7 @@ import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import net.thisptr.jackson.jq.JsonQuery;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
+import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
@@ -96,7 +97,7 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
     }
     return map -> {
       try {
-        return jsonQuery.apply((JsonNode) OBJECT_MAPPER.valueToTree(map)).get(0);
+        return JSONFlattenerMaker.convertJsonNode(jsonQuery.apply((JsonNode) OBJECT_MAPPER.valueToTree(map)).get(0));
       }
       catch (JsonQueryException e) {
         throw new RuntimeException(e);

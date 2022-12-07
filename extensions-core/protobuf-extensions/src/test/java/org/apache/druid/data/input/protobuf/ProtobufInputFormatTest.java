@@ -158,6 +158,37 @@ public class ProtobufInputFormatTest
   }
 
   @Test
+  public void testParseFlattenDataJq() throws Exception
+  {
+    //configure parser with desc file
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        new JSONPathSpec(
+            true,
+            Lists.newArrayList(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "eventType", "eventType"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "foobar", ".foo.bar"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "bar0", ".bar[0].bar")
+            )
+        ),
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    ).read().next();
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+  }
+
+  @Test
   public void testParseNestedData() throws Exception
   {
     ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
