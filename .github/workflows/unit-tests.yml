@@ -61,8 +61,8 @@ jobs:
 
       - name: setup variables
         run: |
-          export branch=${{ github.head_ref }}
-          echo "GIT_BRANCH=${branch}" >> $GITHUB_ENV
+          export ref=${{ github.ref }}
+          echo "GIT_BRANCH=${ref}" >> $GITHUB_ENV
           export druid_use_default_value_for_null=${{ matrix.DRUID_USE_DEFAULT_VALUE_FOR_NULL }}
           echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=${druid_use_default_value_for_null}" >> $GITHUB_ENV
 

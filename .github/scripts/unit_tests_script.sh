@@ -32,26 +32,7 @@ unset _JAVA_OPTIONS
 echo "GIT_BRANCH=${GIT_BRANCH}"  # for debugging
 if [[ ! ${GIT_BRANCH} =~ ^refs\/tags\/.* ]]
 then
-  git ls-remote origin -h refs/heads/migrate_uts_to_gha
-  echo "*********************************"
-  git ls-remote --heads
-  echo "*********************************"
-  git ls-remote
-  echo "*********************************"
-  git branch -r | cat
-  echo "*********************************"
-  echo "adding merge target branch to determine diff"
-  git remote set-branches --add origin ${GIT_BRANCH}
-  echo "done"
-  git ls-remote origin -h refs/heads/migrate_uts_to_gha
-  echo "*********************************"
-  git ls-remote --heads
-  echo "*********************************"
-  git ls-remote
-  echo "*********************************"
-  git branch -r | cat
-  echo "*********************************"
-  git fetch
+  git remote set-branches --add origin ${GIT_BRANCH} && git fetch
 fi
 
 # Determine the modified files that match the maven projects being tested. We use maven project lists that
