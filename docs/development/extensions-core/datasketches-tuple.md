@@ -46,14 +46,14 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
  }
 ```
 
-|property|description|required?|
+|Property|Description|Required?|
 |--------|-----------|---------|
-|type|This String should always be "arrayOfDoublesSketch"|yes|
-|name|A String for the output (result) name of the calculation.|yes|
-|fieldName|A String for the name of the input field.|yes|
-|nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
-|numberOfValues|Number of values associated with each distinct key. |no, defaults to 1|
-|metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
+|`type`|This String should always be "arrayOfDoublesSketch"|yes|
+|`name`|A String for the output (result) name of the calculation.|yes|
+|`fieldName`|A String for the name of the input field.|yes|
+|`nominalEntries`|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
+|`numberOfValues`|Number of values associated with each distinct key. |no, defaults to 1|
+|`metricColumns`|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
 
 ## Post aggregators
 
