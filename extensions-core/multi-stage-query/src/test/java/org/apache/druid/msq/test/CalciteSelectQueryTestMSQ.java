@@ -19,11 +19,16 @@
 
 package org.apache.druid.msq.test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.GuiceInjectors;
@@ -32,7 +37,9 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -44,31 +51,59 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
+
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
 {
@@ -136,7 +171,8 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
       ));
       binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
       binder.bind(DataSegmentProvider.class)
-            .toInstance(new Dumm));
+            .toInstance((dataSegment, channelCounters) ->
+                            new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
     });
 
     builder.addModule(new IndexingServiceTuningConfigModule());
@@ -170,13 +206,136 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }
 
+  Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
+  {
+    final QueryableIndex index;
+    try {
+      switch (segmentId.getDataSource()) {
+        case DATASOURCE1:
+          IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
+              .withMetrics(
+                  new CountAggregatorFactory("cnt"),
+                  new FloatSumAggregatorFactory("m1", "m1"),
+                  new DoubleSumAggregatorFactory("m2", "m2"),
+                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+              )
+              .withRollup(false)
+              .build();
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(temporaryFolder.newFolder(), "1"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(foo1Schema)
+              .rows(ROWS1)
+              .buildMMappedIndex();
+          break;
+        case DATASOURCE2:
+          final IncrementalIndexSchema indexSchemaDifferentDim3M1Types = new IncrementalIndexSchema.Builder()
+              .withDimensionsSpec(
+                  new DimensionsSpec(
+                      ImmutableList.of(
+                          new StringDimensionSchema("dim1"),
+                          new StringDimensionSchema("dim2"),
+                          new LongDimensionSchema("dim3")
+                      )
+                  )
+              )
+              .withMetrics(
+                  new CountAggregatorFactory("cnt"),
+                  new LongSumAggregatorFactory("m1", "m1"),
+                  new DoubleSumAggregatorFactory("m2", "m2"),
+                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+              )
+              .withRollup(false)
+              .build();
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(temporaryFolder.newFolder(), "1"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(indexSchemaDifferentDim3M1Types)
+              .rows(ROWS2)
+              .buildMMappedIndex();
+          break;
+        default:
+          throw new ISE("Cannot query segment %s in test runner", segmentId);
+
+      }
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Unable to load index for segment %s", segmentId);
+    }
+    Segment segment = new Segment()
+    {
+      @Override
+      public SegmentId getId()
+      {
+        return segmentId;
+      }
+
+      @Override
+      public Interval getDataInterval()
+      {
+        return segmentId.getInterval();
+      }
+
+      @Nullable
+      @Override
+      public QueryableIndex asQueryableIndex()
+      {
+        return index;
+      }
+
+      @Override
+      public StorageAdapter asStorageAdapter()
+      {
+        return new QueryableIndexStorageAdapter(index);
+      }
+
+      @Override
+      public void close()
+      {
+      }
+    };
+    return new Supplier<Pair<Segment, Closeable>>()
+    {
+      @Override
+      public Pair<Segment, Closeable> get()
+      {
+        return new Pair<>(segment, Closer.create());
+      }
+    };
+  }
+
+  protected Map<String, Object> defaultScanQueryContext(final RowSignature signature)
+  {
+    try {
+      return ImmutableMap.<String, Object>builder()
+                         .putAll(MSQTestBase.DEFAULT_MSQ_CONTEXT)
+                         .put(
+                             DruidQuery.CTX_SCAN_SIGNATURE,
+                             queryFramework().queryJsonMapper().writeValueAsString(signature)
+                         )
+                         .build();
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+
+
   @Test
   public void testOrderThenLimitThenFilter()
   {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
     testQueryWithMSQ(
         "SELECT dim1 FROM "
         + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
         + "WHERE dim1 IN ('abc', 'def')",
+//        "select dim3 from foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -188,7 +347,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
                             .limit(4)
                             .order(ScanQuery.Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                            .context(QUERY_CONTEXT_DEFAULT)
+                            .context(defaultScanQueryContext(resultSignature))
                             .build()
                     )
                 )
@@ -196,7 +355,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("dim1"))
                 .filters(in("dim1", Arrays.asList("abc", "def"), null))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(defaultScanQueryContext(resultSignature))
                 .build()
         ),
         ImmutableList.of(
