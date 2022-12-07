@@ -29,6 +29,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -68,12 +69,16 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEvent;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -105,6 +110,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -534,6 +540,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
+      emitUnparseableEvents(toolbox);
       toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
@@ -543,6 +550,41 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     finally {
       toolbox.getChatHandlerProvider().unregister(getId());
+    }
+  }
+
+  private void emitUnparseableEvents(TaskToolbox toolbox)
+  {
+    String taskId = getId();
+    for(Map.Entry<String, Object> unparseableEvents : getTaskCompletionUnparseableEvents().entrySet()) {
+      if (unparseableEvents.getValue() instanceof List) {
+        List<Object> buildSegments = (List) unparseableEvents.getValue();
+        for (Object buildSegment : buildSegments) {
+          if (buildSegment instanceof Map) {
+            Map<String, Object> unparseableEventDetails = (Map) buildSegment;
+            if ("unparseable".equals(unparseableEventDetails.get("errorType"))) {
+              Object input = unparseableEventDetails.get("input");
+              Object details = unparseableEventDetails.get("details");
+              Long timeOfExceptionMillis = (Long) unparseableEventDetails.get("timeOfExceptionMillis");
+              DateTime dateTime = new DateTime(timeOfExceptionMillis);
+              String service = toolbox.getTaskExecutorNode().getServiceName();
+              String host = toolbox.getTaskExecutorNode().getHost();
+              int port = toolbox.getTaskExecutorNode().getPlaintextPort();
+              String dataSource = this.getDataSource();
+              String groupId = getGroupId();
+              Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
+                  .put("supervisorId", dataSource)
+                  .put("dataSource", dataSource)
+                  .put("groupId", groupId)
+                  .put("input", input)
+                  .put("details", details)
+                  .build();
+              Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
+              toolbox.getEmitter().emit(event);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1003,6 +1045,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
+        emitUnparseableEvents(toolbox);
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
@@ -1026,6 +1069,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
+        // collect all unparseable errors here and emit them
+        emitUnparseableEvents(toolbox);
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       }

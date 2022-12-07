@@ -62,6 +62,11 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
@@ -556,7 +561,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   /**
    * Returns true if this task can run in the parallel mode with the given inputSource and tuningConfig.
-   * This method should be synchronized with CompactSegments.isParallelMode(ClientCompactionTaskQueryTuningConfig).
+   * This method should bParallelIndexSupervisorTaske synchronized with CompactSegments.isParallelMode(ClientCompactionTaskQueryTuningConfig).
    */
   public static boolean isParallelMode(InputSource inputSource, @Nullable ParallelIndexTuningConfig tuningConfig)
   {
@@ -632,6 +637,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
+
+    emitUnparseableEvents(toolbox);
+
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
@@ -801,12 +809,48 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       );
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
-
+    emitUnparseableEvents(toolbox);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
     );
     return taskStatus;
+  }
+
+  private void emitUnparseableEvents(TaskToolbox toolbox)
+  {
+    String taskId = getId();
+    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEvents(taskId, true);
+    for(Entry<String, Object> unparseableEvents : rowStatsAndUnparseableEvents.rhs.entrySet()) {
+      if (unparseableEvents.getValue() instanceof List) {
+        List<Object> buildSegments = (List) unparseableEvents.getValue();
+        for (Object buildSegment : buildSegments) {
+          if (buildSegment instanceof Map) {
+            Map<String, Object> unparseableEventDetails = (Map) buildSegment;
+            if ("unparseable".equals(unparseableEventDetails.get("errorType"))) {
+              Object input = unparseableEventDetails.get("input");
+              Object details = unparseableEventDetails.get("details");
+              Long timeOfExceptionMillis = (Long) unparseableEventDetails.get("timeOfExceptionMillis");
+              DateTime dateTime = new DateTime(timeOfExceptionMillis);
+              String service = toolbox.getTaskExecutorNode().getServiceName();
+              String host = toolbox.getTaskExecutorNode().getHost();
+              int port = toolbox.getTaskExecutorNode().getPlaintextPort();
+              String dataSource = this.getDataSource();
+              String groupId = getGroupId();
+              Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
+                          .put("supervisorId", dataSource)
+                          .put("dataSource", dataSource)
+                          .put("groupId", groupId)
+                          .put("input", input)
+                          .put("details", details)
+                          .build();
+              Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
+              toolbox.getEmitter().emit(event);
+            }
+          }
+        }
+      }
+    }
   }
 
   @VisibleForTesting
@@ -902,6 +946,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
+    emitUnparseableEvents(toolbox);
     toolbox.getTaskReportFileWriter().write(
         getId(),
         getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
