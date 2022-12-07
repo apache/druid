@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
@@ -112,15 +113,16 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+    final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysisForDataSource();
 
     if (!analysis.isConcreteTableBased()) {
-      throw new ISE("Cannot handle datasource: %s", query.getDataSource());
+      throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
     final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
@@ -128,12 +130,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
     // Make sure this query type can handle the subquery, if present.
-    if ((query.getDataSource() instanceof QueryDataSource)
-        && !toolChest.canPerformSubquery(((QueryDataSource) query.getDataSource()).getQuery())) {
-      throw new ISE("Cannot handle subquery: %s", query.getDataSource());
+    if ((dataSourceFromQuery instanceof QueryDataSource)
+        && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = query.getDataSource().createSegmentMapFunction(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
         query,
         new AtomicLong()
     );

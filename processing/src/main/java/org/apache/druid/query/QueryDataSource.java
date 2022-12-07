@@ -124,13 +124,7 @@ public class QueryDataSource implements DataSource
       throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
     }
     final DataSource current = subQuery.getDataSource();
-    DataSourceAnalysis currentAnalysis = current.getAnalysisForDataSource();
-    // check if the baseQuery is already present while moving up
-    // if not add the current query as the baseQuery to the analysis
-    if (!currentAnalysis.getBaseQuery().isPresent()) {
-      return currentAnalysis.withBaseQuery(subQuery);
-    }
-    return currentAnalysis;
+    return current.getAnalysisForDataSource().maybeWithBaseQuery(subQuery);
   }
 
   @Override

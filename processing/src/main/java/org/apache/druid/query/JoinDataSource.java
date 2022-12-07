@@ -121,7 +121,7 @@ public class JoinDataSource implements DataSource
     );
     this.leftFilter = leftFilter;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
-    this.analysis = this.getAnalysisForDataSource();
+    this.analysis = this.getAnalysis();
   }
 
   /**
@@ -482,11 +482,16 @@ public class JoinDataSource implements DataSource
     return keyBuilder.build();
   }
 
-  @Override
-  public DataSourceAnalysis getAnalysisForDataSource()
+  private DataSourceAnalysis getAnalysis()
   {
     final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
     return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysisForDataSource()
+  {
+    return analysis;
   }
 
   /**
