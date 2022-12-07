@@ -35,8 +35,7 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
   }
 
   @Nonnull
-  public static Function<MapOfColumnsRowsAndColumns, ArrayListRowsAndColumns<Object[]>> MAKER = input ->
-  {
+  public static Function<MapOfColumnsRowsAndColumns, ArrayListRowsAndColumns<Object[]>> MAKER = input -> {
     ArrayList<Object[]> rows = new ArrayList<>(input.numRows());
 
     ArrayList<String> cols = new ArrayList<>(input.getColumnNames());

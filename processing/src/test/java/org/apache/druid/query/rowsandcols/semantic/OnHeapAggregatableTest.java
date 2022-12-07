@@ -69,6 +69,4 @@ public class OnHeapAggregatableTest extends SemanticTestBase
     Assert.assertEquals(82L, results.get(1));
     Assert.assertEquals(-90L, results.get(2));
   }
-
-
 }
