@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
 {
@@ -175,7 +176,9 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public void close()
   {
-    fileMapper.close();
+    if (fileMapper != null) {
+      fileMapper.close();
+    }
   }
 
   @Override

@@ -48,6 +48,10 @@ public class DruidMetrics
   public static final String DUTY = "duty";
   public static final String DUTY_GROUP = "dutyGroup";
 
+  public static final String STREAM = "stream";
+
+  public static final String PARTITION = "partition";
+
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
     int retVal = 0;

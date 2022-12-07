@@ -283,6 +283,11 @@ public class CalciteTests
     return QueryFrameworkUtils.createExprMacroTable(INJECTOR);
   }
 
+  public static JoinableFactoryWrapper createJoinableFactoryWrapper()
+  {
+    return new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(INJECTOR));
+  }
+
   public static DruidOperatorTable createOperatorTable()
   {
     return QueryFrameworkUtils.createOperatorTable(INJECTOR);

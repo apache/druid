@@ -17,7 +17,7 @@
  */
 
 import axios, { AxiosResponse } from 'axios';
-import { SqlRef } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
@@ -309,6 +309,6 @@ export interface QueryExplanation {
 
 export function formatSignature(queryExplanation: QueryExplanation): string {
   return queryExplanation.signature
-    .map(({ name, type }) => `${SqlRef.column(name)}::${type}`)
+    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
     .join(', ');
 }

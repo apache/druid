@@ -63,7 +63,8 @@ public class ThreadingTaskRunnerTest
             false,
             false,
             TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
+            null,
+            false
         ),
         new WorkerConfig(),
         new NoopTaskLogs(),
@@ -93,7 +94,7 @@ public class ThreadingTaskRunnerTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         throw new RuntimeException("Task failure test");
       }

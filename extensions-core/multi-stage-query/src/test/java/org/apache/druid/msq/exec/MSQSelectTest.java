@@ -31,9 +31,13 @@ import org.apache.druid.msq.indexing.ColumnMapping;
 import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
+import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -61,6 +65,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -439,6 +445,122 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testBroadcastJoin()
+  {
+    final RowSignature resultSignature = RowSignature.builder()
+                                                     .add("dim2", ColumnType.STRING)
+                                                     .add("EXPR$1", ColumnType.DOUBLE)
+                                                     .build();
+
+    final ImmutableList<Object[]> expectedResults;
+
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 4.0},
+          new Object[]{"", 3.0},
+          new Object[]{"a", 2.5},
+          new Object[]{"abc", 5.0}
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{null, 3.6666666666666665},
+          new Object[]{"a", 2.5},
+          new Object[]{"abc", 5.0}
+      );
+    }
+
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new QueryDataSource(
+                                newScanQueryBuilder()
+                                    .dataSource(CalciteTests.DATASOURCE1)
+                                    .intervals(querySegmentSpec(Filtration.eternity()))
+                                    .columns("dim2", "m1", "m2")
+                                    .context(
+                                        defaultScanQueryContext(
+                                            RowSignature.builder()
+                                                        .add("dim2", ColumnType.STRING)
+                                                        .add("m1", ColumnType.FLOAT)
+                                                        .add("m2", ColumnType.DOUBLE)
+                                                        .build()
+                                        )
+                                    )
+                                    .limit(10)
+                                    .build()
+                            ),
+                            "j0.",
+                            equalsCondition(
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
+                                DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
+                            ),
+                            JoinType.INNER
+                        )
+                    )
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setDimensions(new DefaultDimensionSpec("j0.dim2", "d0", ColumnType.STRING))
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        useDefault
+                        ? aggregators(
+                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
+                            new CountAggregatorFactory("a0:count")
+                        )
+                        : aggregators(
+                            new DoubleSumAggregatorFactory("a0:sum", "j0.m2"),
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0:count"),
+                                not(selector("j0.m2", null, null)),
+
+                                // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
+                                // May be due to JSON serialization: name is set on the serialized aggregator even
+                                // if it was originally created with no name.
+                                NullHandling.sqlCompatible() ? "a0:count" : null
+                            )
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        ImmutableList.of(
+                            new ArithmeticPostAggregator(
+                                "a0",
+                                "quotient",
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator(null, "a0:sum"),
+                                    new FieldAccessPostAggregator(null, "a0:count")
+                                )
+                            )
+
+                        )
+                    )
+                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .build();
+
+    testSelectQuery()
+        .setSql(
+            "SELECT t1.dim2, AVG(t1.m2) FROM "
+            + "foo "
+            + "INNER JOIN (SELECT * FROM foo LIMIT 10) AS t1 "
+            + "ON t1.m1 = foo.m1 "
+            + "GROUP BY t1.dim2"
+        )
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(query)
+                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                       new ColumnMapping("d0", "dim2"),
+                       new ColumnMapping("a0", "EXPR$1")
+                   )))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(expectedResults)
+        .verifyResults();
+  }
+
+  @Test
   public void testGroupByOrderByAggregation()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -612,7 +734,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testExternSelect1() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -1083,6 +1205,111 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{978480000000L, 0L}
             )
         )
+        .verifyResults();
+  }
+
+  @Test
+  public void testGroupByOnFooWithDurableStoragePathAssertions() throws IOException
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+    testSelectQuery()
+        .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration
+                                                                                        .eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(dimensions(
+                                                          new DefaultDimensionSpec(
+                                                              "cnt",
+                                                              "d0",
+                                                              ColumnType.LONG
+                                                          )
+                                                      ))
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
+                                                          "a0")))
+                                                      .setContext(DEFAULT_MSQ_CONTEXT)
+                                                      .build())
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cnt"),
+                                           new ColumnMapping("a0", "cnt1")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .verifyResults();
+    File successFile = new File(
+        localFileStorageDir,
+        DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
+    );
+
+    Mockito.verify(localFileStorageConnector, Mockito.times(2))
+               .write(ArgumentMatchers.endsWith("__success"));
+  }
+
+  @Test
+  public void testMultiValueStringWithIncorrectType() throws IOException
+  {
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable-mv-string-array.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("language", ColumnType.STRING_ARRAY)
+                                            .build();
+
+    final GroupByQuery expectedQuery =
+        GroupByQuery.builder()
+                    .setDataSource(CalciteTests.DATASOURCE1)
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(dimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
+                    .build();
+
+
+    testSelectQuery()
+        .setSql("WITH\n"
+                + "kttm_data AS (\n"
+                + "SELECT * FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\":\"json\"}',\n"
+                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"agent_category\",\"type\":\"string\"},{\"name\":\"agent_type\",\"type\":\"string\"},{\"name\":\"browser\",\"type\":\"string\"},{\"name\":\"browser_version\",\"type\":\"string\"},{\"name\":\"city\",\"type\":\"string\"},{\"name\":\"continent\",\"type\":\"string\"},{\"name\":\"country\",\"type\":\"string\"},{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"event_type\",\"type\":\"string\"},{\"name\":\"event_subtype\",\"type\":\"string\"},{\"name\":\"loaded_image\",\"type\":\"string\"},{\"name\":\"adblock_list\",\"type\":\"string\"},{\"name\":\"forwarded_for\",\"type\":\"string\"},{\"name\":\"language\",\"type\":\"string\"},{\"name\":\"number\",\"type\":\"long\"},{\"name\":\"os\",\"type\":\"string\"},{\"name\":\"path\",\"type\":\"string\"},{\"name\":\"platform\",\"type\":\"string\"},{\"name\":\"referrer\",\"type\":\"string\"},{\"name\":\"referrer_host\",\"type\":\"string\"},{\"name\":\"region\",\"type\":\"string\"},{\"name\":\"remote_address\",\"type\":\"string\"},{\"name\":\"screen\",\"type\":\"string\"},{\"name\":\"session\",\"type\":\"string\"},{\"name\":\"session_length\",\"type\":\"long\"},{\"name\":\"timezone\",\"type\":\"string\"},{\"name\":\"timezone_offset\",\"type\":\"long\"},{\"name\":\"window\",\"type\":\"string\"}]'\n"
+                + "  )\n"
+                + "))\n"
+                + "\n"
+                + "SELECT\n"
+                + "  FLOOR(TIME_PARSE(\"timestamp\") TO MINUTE) AS __time,\n"
+                + "  MV_TO_ARRAY(\"language\") AS \"language\"\n"
+                + "FROM kttm_data")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1566691200000L, ImmutableList.of("en")},
+            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-MX")},
+            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-US")}
+        ))
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("d0", "__time"),
+                        new ColumnMapping("a0", "cnt")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setExpectedMSQFault(new CannotParseExternalDataFault(
+            "Unable to add the row to the frame. Type conversion might be required."))
         .verifyResults();
   }
 

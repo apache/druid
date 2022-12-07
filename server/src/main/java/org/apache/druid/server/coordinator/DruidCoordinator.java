@@ -394,6 +394,13 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
+  public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
+  {
+    log.debug("Marking [%d] segments of datasource [%s] as unused: %s", segmentIds.size(), datasource, segmentIds);
+    int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
+    log.info("Successfully marked [%d] segments of datasource [%s] as unused", updatedCount, datasource);
+  }
+
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.debug("Marking segment[%s] as unused", segment.getId());
@@ -986,10 +993,19 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
+      final RoundRobinServerSelector roundRobinServerSelector;
+      if (params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()) {
+        roundRobinServerSelector = new RoundRobinServerSelector(cluster);
+        log.info("Using round-robin segment assignment.");
+      } else {
+        roundRobinServerSelector = null;
+      }
+
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
+                   .withRoundRobinServerSelector(roundRobinServerSelector)
                    .build();
     }
 
@@ -1037,7 +1053,8 @@ public class DruidCoordinator
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue()
             )
         );
       }

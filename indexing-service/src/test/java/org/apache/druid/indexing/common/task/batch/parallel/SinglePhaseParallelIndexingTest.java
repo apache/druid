@@ -50,7 +50,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -241,7 +241,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         : getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", inputInterval, Segments.ONLY_VISIBLE);
     Assert.assertFalse(newSegments.isEmpty());
     allSegments.addAll(newSegments);
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
 
     final Interval timelineInterval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(
@@ -606,7 +606,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final Collection<DataSegment> newSegments =
         getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(newSegments.containsAll(oldSegments));
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
@@ -663,8 +663,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final Collection<DataSegment> afterAppendSegments =
         getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(afterAppendSegments.containsAll(beforeAppendSegments));
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline
-        .forSegments(afterAppendSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(afterAppendSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(afterAppendSegments), visibles);
   }

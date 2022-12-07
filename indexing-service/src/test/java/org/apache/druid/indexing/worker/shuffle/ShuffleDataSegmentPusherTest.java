@@ -111,7 +111,8 @@ public class ShuffleDataSegmentPusherTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     final OverlordClient overlordClient = new NoopOverlordClient();
     if (LOCAL.equals(intermediateDataStore)) {

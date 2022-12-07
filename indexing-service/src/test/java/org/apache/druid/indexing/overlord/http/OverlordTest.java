@@ -40,6 +40,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -190,8 +191,24 @@ public class OverlordTest
     taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
 
-    TaskRunnerFactory taskRunnerFactory = (TaskRunnerFactory<MockTaskRunner>) () ->
-        new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<MockTaskRunner>()
+    {
+      private MockTaskRunner runner;
+
+      @Override
+      public MockTaskRunner build()
+      {
+        runner = new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+        return runner;
+      }
+
+      @Override
+      public MockTaskRunner get()
+      {
+        return runner;
+      }
+    };
+
 
     taskRunnerFactory.build().run(badTask);
     taskRunnerFactory.build().run(goodTask);
@@ -210,7 +227,8 @@ public class OverlordTest
         serviceEmitter,
         supervisorManager,
         EasyMock.createNiceMock(OverlordHelperManager.class),
-        new TestDruidLeaderSelector()
+        new TestDruidLeaderSelector(),
+        EasyMock.createNiceMock(SegmentAllocationQueue.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }

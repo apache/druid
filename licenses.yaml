@@ -722,7 +722,7 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.9
+version: 1.10.0
 libraries:
   - org.apache.commons: commons-text
 notices:
@@ -894,6 +894,16 @@ license_name: Apache License version 2.0
 version: 11.0.1
 libraries:
   - io.kubernetes: client-java-extended
+
+---
+
+name: kubernetes fabric java client
+license_category: binary
+module: extensions-contrib/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 5.12.2
+libraries:
+  - io.fabric8: kubernetes-client
 
 ---
 
@@ -1669,7 +1679,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.0
+version: 5.4.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -5673,7 +5683,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.15.3
+version: 0.17.2
 
 ---
 

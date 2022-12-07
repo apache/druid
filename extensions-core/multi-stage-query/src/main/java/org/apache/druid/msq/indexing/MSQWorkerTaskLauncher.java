@@ -93,8 +93,13 @@ public class MSQWorkerTaskLauncher
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
   private final AtomicBoolean cancelTasksOnStop = new AtomicBoolean();
 
+  // Set by launchTasksIfNeeded.
   @GuardedBy("taskIds")
   private int desiredTaskCount = 0;
+
+  // Set by the main loop when it acknowledges a new desiredTaskCount.
+  @GuardedBy("taskIds")
+  private int acknowledgedDesiredTaskCount = 0;
 
   // Worker number -> task ID.
   @GuardedBy("taskIds")
@@ -208,6 +213,7 @@ public class MSQWorkerTaskLauncher
     synchronized (taskIds) {
       if (taskCount > desiredTaskCount) {
         desiredTaskCount = taskCount;
+        taskIds.notifyAll();
       }
 
       while (taskIds.size() < taskCount || !IntStream.range(0, taskCount).allMatch(fullyStartedTasks::contains)) {
@@ -325,6 +331,7 @@ public class MSQWorkerTaskLauncher
     synchronized (taskIds) {
       firstTask = taskIds.size();
       taskCount = desiredTaskCount;
+      acknowledgedDesiredTaskCount = desiredTaskCount;
     }
 
     for (int i = firstTask; i < taskCount; i++) {
@@ -342,6 +349,19 @@ public class MSQWorkerTaskLauncher
         taskIds.add(task.getId());
         taskIds.notifyAll();
       }
+    }
+  }
+
+  /**
+   * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
+   * not yet fully started as left and right respectively.
+   */
+  public WorkerCount getWorkerTaskCount()
+  {
+    synchronized (taskIds) {
+      int runningTasks = fullyStartedTasks.size();
+      int pendingTasks = desiredTaskCount - runningTasks;
+      return new WorkerCount(runningTasks, pendingTasks);
     }
   }
 
@@ -447,7 +467,11 @@ public class MSQWorkerTaskLauncher
       } else {
         // wait on taskIds so we can wake up early if needed.
         synchronized (taskIds) {
-          taskIds.wait(sleepMillis);
+          // desiredTaskCount is set by launchTasksIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
+          // it acknowledges a new target. If these are not equal, do another run immediately and launch more tasks.
+          if (acknowledgedDesiredTaskCount == desiredTaskCount) {
+            taskIds.wait(sleepMillis);
+          }
         }
       }
     } else {

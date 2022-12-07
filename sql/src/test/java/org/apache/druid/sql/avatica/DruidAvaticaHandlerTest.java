@@ -54,6 +54,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
@@ -64,6 +65,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -289,6 +291,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.install(new SqlModule.SqlStatementFactoryModule());
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+            binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
           }
          )
         .build();
@@ -556,6 +559,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
         ),
         getRows(
@@ -628,6 +637,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.USERVISITDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", "wikipedia"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -984,7 +999,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             CalciteTests.getJsonMapper(),
             CalciteTests.DRUID_SCHEMA_NAME,
-            new CalciteRulesManager(ImmutableSet.of())
+            new CalciteRulesManager(ImmutableSet.of()),
+            CalciteTests.createJoinableFactoryWrapper()
         )
     );
   }
@@ -999,6 +1015,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         config,
@@ -1058,6 +1075,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final List<Meta.Frame> frames = new ArrayList<>();
     final ScheduledExecutorService exec = Execs.scheduledSingleThreaded("testMaxRowsPerFrame");
+
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
         config,
@@ -1562,7 +1580,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final String query = "SELECT * FROM " + CalciteTests.FORBIDDEN_DATASOURCE;
     final String expectedError = "Error 2 (00002) : Error while executing SQL \"" +
-            query + "\": Remote driver error: Unauthorized";
+            query + "\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
     try (Statement statement = client.createStatement()) {
       statement.executeQuery(query);
     }

@@ -18,7 +18,7 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlRef } from 'druid-query-toolkit';
+import { C, SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
@@ -135,7 +135,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
       return {
         column,
-        timeExpression: formatSql.fillPlaceholders([SqlRef.column(column)]),
+        timeExpression: formatSql.fillPlaceholders([C(column)]),
       };
     })[0];
   }

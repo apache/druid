@@ -207,10 +207,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
         sqlToolbox.engine,
         queryPlus.sql(),
         queryContext,
-        // Context keys for authorization. Use the user-provided keys,
-        // NOT the keys from the query context which, by this point,
-        // will have been extended with internally-defined values.
-        queryPlus.context().keySet())) {
+        hook
+    )) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -313,5 +311,12 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       super.closeWithError(e);
       state = State.CLOSED;
     }
+  }
+
+  @Override
+  public void closeQuietly()
+  {
+    sqlToolbox.sqlLifecycleManager.remove(sqlQueryId(), this);
+    super.closeQuietly();
   }
 }

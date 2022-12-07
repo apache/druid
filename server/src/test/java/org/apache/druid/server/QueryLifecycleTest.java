@@ -164,7 +164,7 @@ public class QueryLifecycleTest
   public void testRunSimpleUnauthorized()
   {
     expectedException.expect(ISE.class);
-    expectedException.expectMessage("Unauthorized");
+    expectedException.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();

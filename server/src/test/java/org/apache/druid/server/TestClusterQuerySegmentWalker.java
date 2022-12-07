@@ -45,8 +45,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -72,20 +70,17 @@ import java.util.function.Function;
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
     this.timelines = timelines;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }
@@ -138,11 +133,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        new AtomicLong(),
-        analysis.getBaseQuery().orElse(query)
+    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis.getDataSource().createSegmentMapFunction(
+        query,
+        new AtomicLong()
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

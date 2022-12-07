@@ -110,6 +110,24 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Override
+  public Function<JsonNode, Object> makeJsonTreeExtractor(final List<String> nodes)
+  {
+    // create a defensive copy
+    final String[] keyNames = nodes.toArray(new String[0]);
+
+    return jsonNode -> {
+      JsonNode targetNode = jsonNode;
+      for (String keyName : keyNames) {
+        if (targetNode == null) {
+          return null;
+        }
+        targetNode = targetNode.get(keyName);
+      }
+      return finalizeConversionForMap(targetNode);
+    };
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return JSON_PROVIDER;

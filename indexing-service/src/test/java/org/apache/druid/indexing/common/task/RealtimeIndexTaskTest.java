@@ -899,7 +899,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
     try {
@@ -914,7 +915,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new DefaultObjectMapper()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1009,7 +1011,9 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
 
     return toolboxFactory.build(task);

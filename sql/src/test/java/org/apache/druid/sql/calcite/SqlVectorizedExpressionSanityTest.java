@@ -37,6 +37,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -140,6 +141,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
@@ -149,7 +151,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper
     );
   }
 

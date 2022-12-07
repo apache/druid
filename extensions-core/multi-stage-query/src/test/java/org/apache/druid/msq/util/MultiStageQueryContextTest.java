@@ -19,15 +19,23 @@
 
 package org.apache.druid.msq.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +81,10 @@ public class MultiStageQueryContextTest
   @Test
   public void getAssignmentStrategy_noParameterSetReturnsDefaultValue()
   {
-    Assert.assertEquals(WorkerAssignmentStrategy.MAX, MultiStageQueryContext.getAssignmentStrategy(QueryContext.empty()));
+    Assert.assertEquals(
+        WorkerAssignmentStrategy.MAX,
+        MultiStageQueryContext.getAssignmentStrategy(QueryContext.empty())
+    );
   }
 
   @Test
@@ -156,20 +167,53 @@ public class MultiStageQueryContextTest
     Assert.assertEquals(ImmutableList.of(), decodeSortOrder(""));
     Assert.assertEquals(ImmutableList.of(), decodeSortOrder(null));
 
-    Assert.assertThrows(IllegalArgumentException.class, () -> decodeSortOrder("[["));
+    Assert.assertThrows(BadQueryContextException.class, () -> decodeSortOrder("[["));
+  }
+
+  @Test
+  public void testGetIndexSpec()
+  {
+    Assert.assertNull(decodeIndexSpec(null));
+
+    Assert.assertEquals(new IndexSpec(), decodeIndexSpec("{}"));
+    Assert.assertEquals(new IndexSpec(), decodeIndexSpec(Collections.emptyMap()));
+
+    Assert.assertEquals(
+        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        decodeIndexSpec("{\"stringDictionaryEncoding\":{\"type\":\"frontCoded\"}}")
+    );
+
+    Assert.assertEquals(
+        new IndexSpec(null, null, new StringEncodingStrategy.FrontCoded(null), null, null, null, null),
+        decodeIndexSpec(ImmutableMap.of("stringDictionaryEncoding", ImmutableMap.of("type", "frontCoded")))
+    );
+
+    final BadQueryContextException e = Assert.assertThrows(
+        BadQueryContextException.class,
+        () -> decodeIndexSpec("{")
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
+            "Expected key [indexSpec] to be an indexSpec, but got [{]"))
+    );
   }
 
   @Test
   public void getSortOrderNoParameterSetReturnsDefaultValue()
   {
-    Assert.assertNull(MultiStageQueryContext.getSortOrder(QueryContext.empty()));
+    Assert.assertEquals(Collections.emptyList(), MultiStageQueryContext.getSortOrder(QueryContext.empty()));
   }
 
   @Test
   public void getSortOrderParameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_SORT_ORDER, "a, b,\"c,d\"");
-    Assert.assertEquals("a, b,\"c,d\"", MultiStageQueryContext.getSortOrder(QueryContext.of(propertyMap)));
+    Assert.assertEquals(
+        ImmutableList.of("a", "b", "c,d"),
+        MultiStageQueryContext.getSortOrder(QueryContext.of(propertyMap))
+    );
   }
 
   @Test
@@ -188,5 +232,10 @@ public class MultiStageQueryContextTest
   private static List<String> decodeSortOrder(@Nullable final String input)
   {
     return MultiStageQueryContext.decodeSortOrder(input);
+  }
+
+  private static IndexSpec decodeIndexSpec(@Nullable final Object inputSpecObject)
+  {
+    return MultiStageQueryContext.decodeIndexSpec(inputSpecObject, new ObjectMapper());
   }
 }

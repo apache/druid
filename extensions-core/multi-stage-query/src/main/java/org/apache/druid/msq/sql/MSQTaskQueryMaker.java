@@ -41,13 +41,14 @@ import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -62,14 +63,11 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
@@ -90,6 +88,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
+
 
   MSQTaskQueryMaker(
       @Nullable final String targetDataSource,
@@ -150,6 +149,8 @@ public class MSQTaskQueryMaker implements QueryMaker
         queryContext,
         DEFAULT_ROWS_IN_MEMORY
     );
+
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(queryContext, jsonMapper);
 
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
 
@@ -215,11 +216,9 @@ public class MSQTaskQueryMaker implements QueryMaker
         throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
-      final List<String> segmentSortOrder = MultiStageQueryContext.decodeSortOrder(
-          MultiStageQueryContext.getSortOrder(queryContext)
-      );
+      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(queryContext);
 
-      validateSegmentSortOrder(
+      MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
           fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
       );
@@ -249,13 +248,13 @@ public class MSQTaskQueryMaker implements QueryMaker
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(queryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment))
+               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         querySpec,
-        plannerContext.getSql(),
+        MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         sqlTypeNames,
         null
@@ -282,20 +281,4 @@ public class MSQTaskQueryMaker implements QueryMaker
     return retVal;
   }
 
-  static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
-  {
-    final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
-
-    for (final String column : sortOrder) {
-      if (!allOutputColumnsSet.contains(column)) {
-        throw new IAE("Column [%s] in segment sort order does not appear in the query output", column);
-      }
-    }
-
-    if (sortOrder.size() > 0
-        && allOutputColumns.contains(ColumnHolder.TIME_COLUMN_NAME)
-        && !ColumnHolder.TIME_COLUMN_NAME.equals(sortOrder.get(0))) {
-      throw new IAE("Segment sort order must begin with column [%s]", ColumnHolder.TIME_COLUMN_NAME);
-    }
-  }
 }

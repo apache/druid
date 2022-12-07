@@ -42,6 +42,7 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
@@ -95,14 +96,32 @@ public class TestHelper
   public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
-    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    final AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
 
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
+    );
+    return mapper;
+  }
+
+  public static ObjectMapper makeJsonMapperForJoinable(JoinableFactoryWrapper joinableFactoryWrapper)
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
+
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
+            .addValue(JoinableFactoryWrapper.class, joinableFactoryWrapper)
     );
     return mapper;
   }

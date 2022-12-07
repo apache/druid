@@ -46,18 +46,17 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
 |`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 
-
 > The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.
 
 ### HLLSketchBuild aggregator
 
 ```
 {
-  "type" : "HLLSketchBuild",
-  "name" : <output name>,
-  "fieldName" : <metric name>,
-  "lgK" : <size and accuracy parameter>,
-  "tgtHllType" : <target HLL type>,
+  "type": "HLLSketchBuild",
+  "name": <output name>,
+  "fieldName": <metric name>,
+  "lgK": <size and accuracy parameter>,
+  "tgtHllType": <target HLL type>,
   "round": <false | true>
  }
 ```
@@ -68,17 +67,15 @@ When applied at query time on an existing dimension, you can use the resulting c
 > It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/rollup.md) to create a [metric](../../ingestion/ingestion-spec.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations and improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
 >
 > ```
-> :
 > "metricsSpec": [
->  {
->    "type" : "HLLSketchBuild",
->    "name" : "userid_hll",
->    "fieldName" : "userid",
->    "lgK" : 12,
->    "tgtHllType" : "HLL_4"
->  }
+>   {
+>     "type": "HLLSketchBuild",
+>     "name": "userid_hll",
+>     "fieldName": "userid",
+>     "lgK": 12,
+>     "tgtHllType": "HLL_4"
+>   }
 > ]
-> :
 > ```
 >
 
@@ -86,13 +83,13 @@ When applied at query time on an existing dimension, you can use the resulting c
 
 ```
 {
-  "type" : "HLLSketchMerge",
-  "name" : <output name>,
-  "fieldName" : <metric name>,
-  "lgK" : <size and accuracy parameter>,
-  "tgtHllType" : <target HLL type>,
+  "type": "HLLSketchMerge",
+  "name": <output name>,
+  "fieldName": <metric name>,
+  "lgK": <size and accuracy parameter>,
+  "tgtHllType": <target HLL type>,
   "round": <false | true>
- }
+}
 ```
 
 You can use the `HLLSketchMerge` aggregator to ingest pre-generated sketches from an input dataset. For example, you can set up a batch processing job to generate the sketches before sending the data to Druid. You must serialize the sketches in the input dataset to Base64-encoded bytes. Then, specify `HLLSketchMerge` for the input column in the native ingestion `metricsSpec`.
@@ -105,10 +102,10 @@ Returns the distinct count estimate as a double.
 
 ```
 {
-  "type"  : "HLLSketchEstimate",
+  "type": "HLLSketchEstimate",
   "name": <output name>,
-  "field"  : <post aggregator that returns an HLL Sketch>,
-  "round" : <if true, round the estimate. Default is false>
+  "field": <post aggregator that returns an HLL Sketch>,
+  "round": <if true, round the estimate. Default is false>
 }
 ```
 
@@ -121,10 +118,10 @@ This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%,
 
 ```
 {
-  "type"  : "HLLSketchEstimateWithBounds",
+  "type": "HLLSketchEstimateWithBounds",
   "name": <output name>,
-  "field"  : <post aggregator that returns an HLL Sketch>,
-  "numStdDev" : <number of standard deviations: 1 (default), 2 or 3>
+  "field": <post aggregator that returns an HLL Sketch>,
+  "numStdDev": <number of standard deviations: 1 (default), 2 or 3>
 }
 ```
 
@@ -132,11 +129,11 @@ This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%,
 
 ```
 {
-  "type"  : "HLLSketchUnion",
+  "type": "HLLSketchUnion",
   "name": <output name>,
-  "fields"  : <array of post aggregators that return HLL sketches>,
+  "fields": <array of post aggregators that return HLL sketches>,
   "lgK": <log2 of K for the target sketch>,
-  "tgtHllType" : <target HLL type>
+  "tgtHllType": <target HLL type>
 }
 ```
 
@@ -146,8 +143,8 @@ Human-readable sketch summary for debugging.
 
 ```
 {
-  "type"  : "HLLSketchToString",
+  "type": "HLLSketchToString",
   "name": <output name>,
-  "field"  : <post aggregator that returns an HLL Sketch>
+  "field": <post aggregator that returns an HLL Sketch>
 }
 ```

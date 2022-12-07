@@ -28,6 +28,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -173,6 +174,10 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-nested-foo.bar2", ".foo.bar2"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree-simpleVal", null, Collections.singletonList("simpleVal")));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree-timestamp", null, Collections.singletonList("timestamp")));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree-nested-foo.bar2", null, Arrays.asList("foo", "bar2")));
+    fields.add(new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree-met-array", null, Arrays.asList("met", "a")));
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
@@ -180,6 +185,8 @@ public class JSONPathParserTest
     // Root fields
     Assert.assertEquals("text", jsonMap.get("simpleVal"));
     Assert.assertEquals("2999", jsonMap.get("timestamp"));
+    Assert.assertEquals("text", jsonMap.get("tree-simpleVal"));
+    Assert.assertEquals("2999", jsonMap.get("tree-timestamp"));
 
     // Nested fields
     Assert.assertEquals("bbb", jsonMap.get("nested-foo.bar2"));
@@ -188,6 +195,9 @@ public class JSONPathParserTest
     Assert.assertEquals("bbb", jsonMap.get("jq-nested-foo.bar2"));
     Assert.assertEquals("asdf", jsonMap.get("jq-heybarx0"));
     Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("jq-met-array"));
+
+    Assert.assertEquals(ImmutableList.of(7L, 8L, 9L), jsonMap.get("tree-met-array"));
+    Assert.assertEquals("bbb", jsonMap.get("tree-nested-foo.bar2"));
 
     // Fields that should not be discovered
     Assert.assertFalse(jsonMap.containsKey("newmet"));

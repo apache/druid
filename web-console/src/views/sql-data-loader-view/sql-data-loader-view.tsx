@@ -107,7 +107,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           onDone={async () => {
             const ingestDatasource = SqlQuery.parse(content.queryString)
               .getIngestTable()
-              ?.getTable();
+              ?.getName();
 
             if (!ingestDatasource) {
               AppToaster.show({ message: `Must have an ingest datasource`, intent: Intent.DANGER });
@@ -151,6 +151,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     { inputSource, inputFormat, signature },
                     isArrays,
                     timeExpression,
+                    undefined,
                   ),
                 ).toString(),
                 queryContext: {
@@ -167,6 +168,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
                     { inputSource, inputFormat, signature },
                     isArrays,
                     timeExpression,
+                    undefined,
                   ),
                 ).toString(),
               });

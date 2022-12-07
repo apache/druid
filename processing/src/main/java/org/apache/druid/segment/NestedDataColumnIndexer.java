@@ -31,6 +31,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
+import org.apache.druid.segment.nested.GlobalDictionarySortedCollector;
 import org.apache.druid.segment.nested.GlobalDimensionDictionary;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedLiteralTypeInfo;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -223,6 +225,23 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
   {
     throw new UnsupportedOperationException("Not supported");
   }
+
+
+  public void mergeFields(SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields)
+  {
+    for (Map.Entry<String, NestedDataColumnIndexer.LiteralFieldIndexer> entry : fieldIndexers.entrySet()) {
+      // skip adding the field if no types are in the set, meaning only null values have been processed
+      if (!entry.getValue().getTypes().isEmpty()) {
+        mergedFields.put(entry.getKey(), entry.getValue().getTypes());
+      }
+    }
+  }
+
+  public GlobalDictionarySortedCollector getSortedCollector()
+  {
+    return globalDictionary.getSortedCollector();
+  }
+
 
   static class LiteralFieldIndexer
   {

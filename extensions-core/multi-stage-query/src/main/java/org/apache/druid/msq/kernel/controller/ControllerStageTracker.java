@@ -28,6 +28,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -38,11 +39,12 @@ import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * Controller-side state machine for each stage. Used by {@link ControllerQueryKernel} to form the overall state
@@ -57,13 +59,13 @@ class ControllerStageTracker
   private final int workerCount;
 
   private final WorkerInputs workerInputs;
-  private final IntSet workersWithResultKeyStatistics = new IntAVLTreeSet();
+  private final IntSet workersWithReportedKeyStatistics = new IntAVLTreeSet();
   private final IntSet workersWithResultsComplete = new IntAVLTreeSet();
 
   private ControllerStagePhase phase = ControllerStagePhase.NEW;
 
   @Nullable
-  private final ClusterByStatisticsCollector resultKeyStatisticsCollector;
+  public final CompleteKeyStatisticsInformation completeKeyStatisticsInformation;
 
   // Result partitions and where they can be read from.
   @Nullable
@@ -89,10 +91,11 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
 
     if (stageDef.mustGatherResultKeyStatistics()) {
-      this.resultKeyStatisticsCollector = stageDef.createResultKeyStatisticsCollector();
+      this.completeKeyStatisticsInformation =
+          new CompleteKeyStatisticsInformation(new TreeMap<>(), false, 0);
     } else {
-      this.resultKeyStatisticsCollector = null;
-      generateResultPartitionsAndBoundaries();
+      this.completeKeyStatisticsInformation = null;
+      generateResultPartitionsAndBoundariesWithoutKeyStatistics();
     }
   }
 
@@ -172,18 +175,12 @@ class ControllerStageTracker
    */
   boolean collectorEncounteredAnyMultiValueField()
   {
-    if (resultKeyStatisticsCollector == null) {
+    if (completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
-    } else if (resultPartitions == null) {
+    } else if (workersWithReportedKeyStatistics.size() != workerCount) {
       throw new ISE("Result key statistics are not ready");
     } else {
-      for (int i = 0; i < resultKeyStatisticsCollector.getClusterBy().getColumns().size(); i++) {
-        if (resultKeyStatisticsCollector.hasMultipleValues(i)) {
-          return true;
-        }
-      }
-
-      return false;
+      return completeKeyStatisticsInformation.hasMultipleValues();
     }
   }
 
@@ -228,18 +225,30 @@ class ControllerStageTracker
   }
 
   /**
+   * Returns the merged key statistics.
+   */
+  @Nullable
+  public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation()
+  {
+    return completeKeyStatisticsInformation;
+  }
+
+  /**
    * Adds result key statistics for a particular worker number. If statistics have already been added for this worker,
    * then this call ignores the new ones and does nothing.
    *
    * @param workerNumber the worker
-   * @param snapshot     worker statistics
+   * @param partialKeyStatisticsInformation partial key statistics
    */
-  ControllerStagePhase addResultKeyStatisticsForWorker(
+  ControllerStagePhase addPartialKeyStatisticsForWorker(
       final int workerNumber,
-      final ClusterByStatisticsSnapshot snapshot
+      final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
-    if (resultKeyStatisticsCollector == null) {
+    if (phase != ControllerStagePhase.READING_INPUT) {
+      throw new ISE("Cannot add result key statistics from stage [%s]", phase);
+    }
+    if (!stageDef.mustGatherResultKeyStatistics() || !stageDef.doesShuffle() || completeKeyStatisticsInformation == null) {
       throw new ISE("Stage does not gather result key statistics");
     }
 
@@ -247,21 +256,22 @@ class ControllerStageTracker
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
-    if (phase != ControllerStagePhase.READING_INPUT) {
-      throw new ISE("Cannot add result key statistics from stage [%s]", phase);
-    }
-
     try {
-      if (workersWithResultKeyStatistics.add(workerNumber)) {
-        resultKeyStatisticsCollector.addAll(snapshot);
+      if (workersWithReportedKeyStatistics.add(workerNumber)) {
 
-        if (workersWithResultKeyStatistics.size() == workerCount) {
-          generateResultPartitionsAndBoundaries();
+        if (partialKeyStatisticsInformation.getTimeSegments().contains(null)) {
+          // Time should not contain null value
+          failForReason(InsertTimeNullFault.instance());
+          return getPhase();
+        }
 
-          // Phase can become FAILED after generateResultPartitionsAndBoundaries, if there were too many partitions.
-          if (phase != ControllerStagePhase.FAILED) {
-            transitionTo(ControllerStagePhase.POST_READING);
-          }
+        completeKeyStatisticsInformation.mergePartialInformation(workerNumber, partialKeyStatisticsInformation);
+
+        if (workersWithReportedKeyStatistics.size() == workerCount) {
+          // All workers have sent the partial key statistics information.
+          // Transition to MERGING_STATISTICS state to queue fetch clustering statistics from workers.
+          transitionTo(ControllerStagePhase.MERGING_STATISTICS);
+
         }
       }
     }
@@ -271,6 +281,33 @@ class ControllerStageTracker
       throw e;
     }
     return getPhase();
+  }
+
+  /**
+   * Sets the {@link #resultPartitions} and {@link #resultPartitionBoundaries} and transitions the phase to POST_READING.
+   */
+  void setClusterByPartitionBoundaries(ClusterByPartitions clusterByPartitions)
+  {
+    if (resultPartitions != null) {
+      throw new ISE("Result partitions have already been generated");
+    }
+
+    if (!stageDef.mustGatherResultKeyStatistics()) {
+      throw new ISE("Result partitions does not require key statistics, should not have set partition boundries here");
+    }
+
+    if (!ControllerStagePhase.MERGING_STATISTICS.equals(getPhase())) {
+      throw new ISE("Cannot set partition boundires from key statistics from stage [%s]", getPhase());
+    }
+
+    this.resultPartitionBoundaries = clusterByPartitions;
+    this.resultPartitions = ReadablePartitions.striped(
+        stageDef.getStageNumber(),
+        workerCount,
+        clusterByPartitions.size()
+    );
+
+    transitionTo(ControllerStagePhase.POST_READING);
   }
 
   /**
@@ -332,12 +369,11 @@ class ControllerStageTracker
   }
 
   /**
-   * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries}.
+   * Sets {@link #resultPartitions} (always) and {@link #resultPartitionBoundaries} without using key statistics.
    *
-   * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method cannot be called until after
-   * statistics have been provided to {@link #addResultKeyStatisticsForWorker} for all workers.
+   * If {@link StageDefinition#mustGatherResultKeyStatistics()} is true, this method should not be called.
    */
-  private void generateResultPartitionsAndBoundaries()
+  private void generateResultPartitionsAndBoundariesWithoutKeyStatistics()
   {
     if (resultPartitions != null) {
       throw new ISE("Result partitions have already been generated");
@@ -346,12 +382,12 @@ class ControllerStageTracker
     final int stageNumber = stageDef.getStageNumber();
 
     if (stageDef.doesShuffle()) {
-      if (stageDef.mustGatherResultKeyStatistics() && workersWithResultKeyStatistics.size() != workerCount) {
-        throw new ISE("Cannot generate result partitions without all worker statistics");
+      if (stageDef.mustGatherResultKeyStatistics()) {
+        throw new ISE("Cannot generate result partitions without key statistics");
       }
 
       final Either<Long, ClusterByPartitions> maybeResultPartitionBoundaries =
-          stageDef.generatePartitionsForShuffle(resultKeyStatisticsCollector);
+          stageDef.generatePartitionsForShuffle(null);
 
       if (maybeResultPartitionBoundaries.isError()) {
         failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
@@ -390,15 +426,11 @@ class ControllerStageTracker
    *
    * @param fault reason why this stage has failed
    */
-  private void failForReason(final MSQFault fault)
+  void failForReason(final MSQFault fault)
   {
     transitionTo(ControllerStagePhase.FAILED);
 
     this.failureReason = fault;
-
-    if (resultKeyStatisticsCollector != null) {
-      resultKeyStatisticsCollector.clear();
-    }
   }
 
   void transitionTo(final ControllerStagePhase newPhase)

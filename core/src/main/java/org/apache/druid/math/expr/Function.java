@@ -31,7 +31,6 @@ import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
 import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -39,7 +38,6 @@ import org.joda.time.format.DateTimeFormat;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -3681,78 +3679,6 @@ public interface Function extends NamedFunction
     protected HumanReadableBytes.UnitSystem getUnitSystem()
     {
       return HumanReadableBytes.UnitSystem.DECIMAL;
-    }
-  }
-
-  class ComplexDecodeBase64Function implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "complex_decode_base64";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      ExprEval arg0 = args.get(0).eval(bindings);
-      if (!arg0.type().is(ExprType.STRING)) {
-        throw validationFailed(
-            "first argument must be constant STRING expression containing a valid complex type name but got %s instead",
-            arg0.type()
-        );
-      }
-      ExpressionType type = ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
-      TypeStrategy strategy;
-      try {
-        strategy = type.getStrategy();
-      }
-      catch (IllegalArgumentException illegal) {
-        throw validationFailed(
-            "first argument must be a valid COMPLEX type name, got unknown COMPLEX type [%s]",
-            type.asTypeString()
-        );
-      }
-      ExprEval base64String = args.get(1).eval(bindings);
-      if (!base64String.type().is(ExprType.STRING)) {
-        throw validationFailed(
-            "second argument must be a base64 encoded STRING value but got %s instead",
-            base64String.type()
-        );
-      }
-      if (base64String.value() == null) {
-        return ExprEval.ofComplex(type, null);
-      }
-
-      final byte[] base64 = StringUtils.decodeBase64String(base64String.asString());
-      return ExprEval.ofComplex(type, strategy.read(ByteBuffer.wrap(base64)));
-    }
-
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      validationHelperCheckArgumentCount(args, 2);
-      if (!args.get(0).isLiteral() || args.get(0).isNullLiteral()) {
-        throw validationFailed(
-            "first argument must be constant STRING expression containing a valid COMPLEX type name"
-        );
-      }
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(
-        Expr.InputBindingInspector inspector,
-        List<Expr> args
-    )
-    {
-      ExpressionType arg0Type = args.get(0).getOutputType(inspector);
-      if (arg0Type == null || !arg0Type.is(ExprType.STRING)) {
-        throw validationFailed(
-            "first argument must be constant STRING expression containing a valid COMPLEX type name"
-        );
-      }
-      return ExpressionTypeFactory.getInstance().ofComplex((String) args.get(0).getLiteralValue());
     }
   }
 }

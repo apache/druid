@@ -925,11 +925,24 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testComplexDecodeBaseArg0Null()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage(
+        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got NULL instead"
+    );
+    assertExpr(
+        "complex_decode_base64(null, string)",
+        null
+    );
+  }
+
+  @Test
   public void testComplexDecodeBaseArg0BadType()
   {
     expectedException.expect(ExpressionValidationException.class);
     expectedException.expectMessage(
-        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got LONG instead"
+        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got '1' instead"
     );
     assertExpr(
         "complex_decode_base64(1, string)",

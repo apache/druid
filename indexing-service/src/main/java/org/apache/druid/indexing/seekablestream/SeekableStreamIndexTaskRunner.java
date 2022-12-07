@@ -769,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -897,7 +899,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
@@ -1311,14 +1312,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PAUSED;
         hasPaused.signalAll();
 
-        log.debug("Received pause command, pausing ingestion until resumed.");
+        long pauseTime = System.currentTimeMillis();
+        log.info("Received pause command, pausing ingestion until resumed.");
         while (pauseRequested) {
           shouldResume.await();
         }
 
         status = Status.READING;
         shouldResume.signalAll();
-        log.debug("Received resume command, resuming ingestion.");
+        log.info("Received resume command, resuming ingestion.");
+        task.emitMetric(toolbox.getEmitter(), "ingest/pause/time", System.currentTimeMillis() - pauseTime);
         return true;
       }
     }

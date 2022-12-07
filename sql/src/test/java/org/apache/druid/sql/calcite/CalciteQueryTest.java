@@ -218,6 +218,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -254,6 +255,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
@@ -3944,7 +3946,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           "(\"dim1\" == \"j0.ROW_VALUE\")",
                           JoinType.INNER,
                           null,
-                          ExprMacroTable.nil()
+                          ExprMacroTable.nil(),
+                          CalciteTests.createJoinableFactoryWrapper()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -13090,7 +13093,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    "(\"__time\" == \"j0.__time\")",
                                    JoinType.INNER,
                                    null,
-                                   ExprMacroTable.nil()
+                                   ExprMacroTable.nil(),
+                                   CalciteTests.createJoinableFactoryWrapper()
                                ))
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .granularity(Granularities.ALL)
@@ -14289,6 +14293,73 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testComplexDecode()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COMPLEX_DECODE_BASE64('hyperUnique',PARSE_JSON(TO_JSON_STRING(unique_dim1))) from druid.foo LIMIT 10",
+        ImmutableList.of(
+          Druids.newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "complex_decode_base64('hyperUnique',parse_json(to_json_string(\"unique_dim1\")))",
+                        ColumnType.ofComplex("hyperUnique")
+                    )
+                )
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .limit(10)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"\"AQAAAEAAAA==\""},
+            new Object[]{"\"AQAAAQAAAAHNBA==\""},
+            new Object[]{"\"AQAAAQAAAAOzAg==\""},
+            new Object[]{"\"AQAAAQAAAAFREA==\""},
+            new Object[]{"\"AQAAAQAAAACyEA==\""},
+            new Object[]{"\"AQAAAQAAAAEkAQ==\""}
+        )
+    );
+  }
+
+  @Test
+  public void testComplexDecodeAgg()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT APPROX_COUNT_DISTINCT_BUILTIN(COMPLEX_DECODE_BASE64('hyperUnique',PARSE_JSON(TO_JSON_STRING(unique_dim1)))) from druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "complex_decode_base64('hyperUnique',parse_json(to_json_string(\"unique_dim1\")))",
+                          ColumnType.ofComplex("hyperUnique")
+                      )
+                  )
+                  .aggregators(
+                      new HyperUniquesAggregatorFactory(
+                          "a0",
+                          "v0",
+                          false,
+                          true
+                      )
+                  )
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
     );
   }
 }

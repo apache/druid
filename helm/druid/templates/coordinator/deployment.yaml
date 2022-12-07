@@ -52,6 +52,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [ "coordinator" ]
           env:
+          - name: POD_NAME
+            valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+          - name: POD_NAMESPACE
+            valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
           {{- range $key, $val := .Values.coordinator.config }}
           - name: {{ $key }}
             value: {{ $val | quote }}

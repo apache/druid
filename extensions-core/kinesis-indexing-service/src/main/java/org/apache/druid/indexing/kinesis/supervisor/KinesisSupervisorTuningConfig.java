@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -34,6 +35,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
 {
   private final Integer workerThreads;
+  private final Boolean chatAsync;
   private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
@@ -41,7 +43,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration repartitionTransitionDuration;
   private final Duration offsetFetchPeriod;
   private final boolean useListShards;
-  private final boolean skipIgnorableShards;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
   {
@@ -99,6 +100,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
+      @JsonProperty("chatAsync") Boolean chatAsync,
       @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
@@ -114,8 +116,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("useListShards") Boolean useListShards,
-      @JsonProperty("skipIgnorableShards") Boolean skipIgnorableShards
+      @JsonProperty("useListShards") Boolean useListShards
   )
   {
     super(
@@ -147,6 +148,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     );
 
     this.workerThreads = workerThreads;
+    this.chatAsync = chatAsync;
     this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
     this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
@@ -163,7 +165,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         DEFAULT_OFFSET_FETCH_PERIOD
     );
     this.useListShards = (useListShards != null ? useListShards : false);
-    this.skipIgnorableShards = (skipIgnorableShards != null ? skipIgnorableShards : false);
   }
 
   @Override
@@ -171,6 +172,23 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public Integer getWorkerThreads()
   {
     return workerThreads;
+  }
+
+  @Override
+  public boolean getChatAsync()
+  {
+    if (chatAsync != null) {
+      return chatAsync;
+    } else {
+      return DEFAULT_ASYNC;
+    }
+  }
+
+  @JsonProperty("chatAsync")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  Boolean getChatAsyncConfigured()
+  {
+    return chatAsync;
   }
 
   @Override
@@ -220,12 +238,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     return useListShards;
   }
 
-  @JsonProperty
-  public boolean isSkipIgnorableShards()
-  {
-    return skipIgnorableShards;
-  }
-
   @Override
   public String toString()
   {
@@ -259,7 +271,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
-           ", skipIgnorableShards=" + isSkipIgnorableShards() +
            '}';
   }
 

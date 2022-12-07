@@ -157,7 +157,7 @@ describe('WorkbenchQuery', () => {
             '[{"name":"timestamp","type":"string"}]'
           )
         )
-        ORDER BY FLOOR(__time TO HOUR), browser, session
+        ORDER BY FLOOR("__time" TO HOUR), browser, session
       `);
     });
   });
@@ -465,7 +465,7 @@ describe('WorkbenchQuery', () => {
     it('works with INSERT (unparsable)', () => {
       const sql = sane`
         -- Some comment
-        INSERT INTO trips2
+        INSERT into trips2
         SELECT
           TIME_PARSE(pickup_datetime) AS __time,
           *

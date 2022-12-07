@@ -195,7 +195,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             condition.getExpression(),
             toDruidJoinType(joinRel.getJoinType()),
             getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getExprMacroTable()
+            getPlannerContext().getExprMacroTable(),
+            getPlannerContext().getJoinableFactoryWrapper()
         ),
         prefixSignaturePair.rhs,
         getPlannerContext(),

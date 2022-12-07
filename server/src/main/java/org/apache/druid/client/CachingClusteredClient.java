@@ -296,9 +296,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           query,
           strategy,
           useCache,
-          populateCache,
-          dataSourceAnalysis,
-          joinableFactoryWrapper
+          populateCache
       );
     }
 
@@ -405,12 +403,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
               QueryMetrics<?> queryMetrics = queryPlus.getQueryMetrics();
               if (queryMetrics != null) {
                 queryMetrics.parallelMergeParallelism(reportMetrics.getParallelism());
-                queryMetrics.reportParallelMergeParallelism(reportMetrics.getParallelism());
-                queryMetrics.reportParallelMergeInputSequences(reportMetrics.getInputSequences());
-                queryMetrics.reportParallelMergeInputRows(reportMetrics.getInputRows());
-                queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows());
-                queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount());
-                queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime());
+                queryMetrics.reportParallelMergeParallelism(reportMetrics.getParallelism()).emit(emitter);
+                queryMetrics.reportParallelMergeInputSequences(reportMetrics.getInputSequences()).emit(emitter);
+                queryMetrics.reportParallelMergeInputRows(reportMetrics.getInputRows()).emit(emitter);
+                queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows()).emit(emitter);
+                queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount()).emit(emitter);
+                queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime()).emit(emitter);
+                queryMetrics.reportParallelMergeTotalTime(reportMetrics.getTotalTime()).emit(emitter);
+                queryMetrics.reportParallelMergeSlowestPartitionTime(reportMetrics.getSlowestPartitionInitializedTime())
+                            .emit(emitter);
+                queryMetrics.reportParallelMergeFastestPartitionTime(reportMetrics.getFastestPartitionInitializedTime())
+                            .emit(emitter);
               }
             }
         );
@@ -761,24 +764,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
   {
     private final Query<T> query;
     private final CacheStrategy<T, Object, Query<T>> strategy;
-    private final DataSourceAnalysis dataSourceAnalysis;
-    private final JoinableFactoryWrapper joinableFactoryWrapper;
     private final boolean isSegmentLevelCachingEnable;
 
     CacheKeyManager(
         final Query<T> query,
         final CacheStrategy<T, Object, Query<T>> strategy,
         final boolean useCache,
-        final boolean populateCache,
-        final DataSourceAnalysis dataSourceAnalysis,
-        final JoinableFactoryWrapper joinableFactoryWrapper
+        final boolean populateCache
     )
     {
 
       this.query = query;
       this.strategy = strategy;
-      this.dataSourceAnalysis = dataSourceAnalysis;
-      this.joinableFactoryWrapper = joinableFactoryWrapper;
       this.isSegmentLevelCachingEnable = ((populateCache || useCache)
                                           && !query.context().isBySegment());   // explicit bySegment queries are never cached
 
@@ -840,15 +837,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private byte[] computeQueryCacheKeyWithJoin()
     {
       Preconditions.checkNotNull(strategy, "strategy cannot be null");
-      if (dataSourceAnalysis.isJoin()) {
-        byte[] joinDataSourceCacheKey = joinableFactoryWrapper.computeJoinDataSourceCacheKey(dataSourceAnalysis)
-                                                              .orElse(null);
-        if (null == joinDataSourceCacheKey) {
-          return null;    // A join operation that does not support caching
-        }
-        return Bytes.concat(joinDataSourceCacheKey, strategy.computeCacheKey(query));
+      byte[] dataSourceCacheKey = query.getDataSource().getCacheKey();
+      if (null == dataSourceCacheKey) {
+        return null;
+      } else if (dataSourceCacheKey.length > 0) {
+        return Bytes.concat(dataSourceCacheKey, strategy.computeCacheKey(query));
+      } else {
+        return strategy.computeCacheKey(query);
       }
-      return strategy.computeCacheKey(query);
     }
   }
 
@@ -893,7 +889,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return null;
       }
       return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
-
     }
   }
 }

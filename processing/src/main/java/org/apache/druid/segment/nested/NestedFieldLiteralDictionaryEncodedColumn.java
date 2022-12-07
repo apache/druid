@@ -27,6 +27,7 @@ import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -39,13 +40,14 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
@@ -65,9 +67,11 @@ import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
 
-public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
+public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends Indexed<ByteBuffer>>
+    implements DictionaryEncodedColumn<String>
 {
   private final NestedLiteralTypeInfo.TypeSet types;
   @Nullable
@@ -75,9 +79,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   private final ColumnarLongs longsColumn;
   private final ColumnarDoubles doublesColumn;
   private final ColumnarInts column;
-  private final GenericIndexed<String> globalDictionary;
+  private final TStringDictionary globalDictionary;
   private final FixedIndexed<Long> globalLongDictionary;
   private final FixedIndexed<Double> globalDoubleDictionary;
+
   private final FixedIndexed<Integer> dictionary;
   private final ImmutableBitmap nullBitmap;
 
@@ -89,7 +94,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
       ColumnarLongs longsColumn,
       ColumnarDoubles doublesColumn,
       ColumnarInts column,
-      GenericIndexed<String> globalDictionary,
+      TStringDictionary globalDictionary,
       FixedIndexed<Long> globalLongDictionary,
       FixedIndexed<Double> globalDoubleDictionary,
       FixedIndexed<Integer> dictionary,
@@ -140,7 +145,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   {
     final int globalId = dictionary.get(id);
     if (globalId < globalDictionary.size()) {
-      return globalDictionary.get(globalId);
+      return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
     } else if (globalId < adjustLongId + globalLongDictionary.size()) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
     } else {
@@ -160,6 +165,11 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
     return dictionary.size();
   }
 
+  public FixedIndexed<Integer> getDictionary()
+  {
+    return dictionary;
+  }
+
   private int getIdFromGlobalDictionary(@Nullable String val)
   {
     if (val == null) {
@@ -173,10 +183,10 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
         case DOUBLE:
           return globalDoubleDictionary.indexOf(Doubles.tryParse(val));
         default:
-          return globalDictionary.indexOf(val);
+          return globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       }
     } else {
-      int candidate = globalDictionary.indexOf(val);
+      int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
         candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
       }
@@ -222,7 +232,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0f;
         } else if (globalId < adjustLongId) {
           // try to convert string to float
-          Float f = Floats.tryParse(globalDictionary.get(globalId));
+          Float f = Floats.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return f == null ? 0f : f;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId).floatValue();
@@ -242,7 +252,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0.0;
         } else if (globalId < adjustLongId) {
           // try to convert string to double
-          Double d = Doubles.tryParse(globalDictionary.get(globalId));
+          Double d = Doubles.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return d == null ? 0.0 : d;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId).doubleValue();
@@ -262,7 +272,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
           return 0L;
         } else if (globalId < adjustLongId) {
           // try to convert string to long
-          Long l = GuavaUtils.tryParseLong(globalDictionary.get(globalId));
+          Long l = GuavaUtils.tryParseLong(StringUtils.fromUtf8(globalDictionary.get(globalId)));
           return l == null ? 0L : l;
         } else if (globalId < adjustDoubleId) {
           return globalLongDictionary.get(globalId - adjustLongId);
@@ -505,27 +515,11 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
   {
-    // also copied from StringDictionaryEncodedColumn
-    class QueryableSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector, IdLookup
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringSingleValueDimensionVectorSelector
     {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-      public int[] getRowVector()
+      public StringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return vector;
-        }
-
-        if (offset.isContiguous()) {
-          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-        }
-
-        id = offset.getId();
-        return vector;
+        super(column, offset);
       }
 
       @Override
@@ -541,39 +535,28 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
         return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
       }
 
-      @Override
-      public boolean nameLookupPossibleInAdvance()
-      {
-        return true;
-      }
-
       @Nullable
       @Override
-      public IdLookup idLookup()
+      public ByteBuffer lookupNameUtf8(int id)
       {
-        return this;
+        // only supported for single type string columns
+        return globalDictionary.get(dictionary.indexOf(id));
       }
 
       @Override
-      public int lookupId(@Nullable final String name)
+      public boolean supportsLookupNameUtf8()
+      {
+        return singleType != null && singleType.is(ValueType.STRING);
+      }
+
+      @Override
+      public int lookupId(@Nullable String name)
       {
         return NestedFieldLiteralDictionaryEncodedColumn.this.lookupId(name);
       }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
-      }
-
-      @Override
-      public int getMaxVectorSize()
-      {
-        return offset.getMaxVectorSize();
-      }
     }
 
-    return new QueryableSingleValueDimensionVectorSelector();
+    return new StringVectorSelector();
   }
 
   @Override
@@ -585,48 +568,22 @@ public class NestedFieldLiteralDictionaryEncodedColumn implements DictionaryEnco
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    // also copied from StringDictionaryEncodedColumn
-    class DictionaryEncodedStringSingleValueVectorObjectSelector implements VectorObjectSelector
+    final class StringVectorSelector extends StringDictionaryEncodedColumn.StringVectorObjectSelector
     {
-      private final int[] vector = new int[offset.getMaxVectorSize()];
-      private final String[] strings = new String[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
-
-      @Override
-
-      public Object[] getObjectVector()
+      public StringVectorSelector()
       {
-        if (id == offset.getId()) {
-          return strings;
-        }
-
-        if (offset.isContiguous()) {
-          column.get(vector, offset.getStartOffset(), offset.getCurrentVectorSize());
-        } else {
-          column.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
-        }
-        for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-          strings[i] = lookupName(vector[i]);
-        }
-        id = offset.getId();
-
-        return strings;
+        super(column, offset);
       }
 
+      @Nullable
       @Override
-      public int getMaxVectorSize()
+      public String lookupName(int id)
       {
-        return offset.getMaxVectorSize();
-      }
-
-      @Override
-      public int getCurrentVectorSize()
-      {
-        return offset.getCurrentVectorSize();
+        return NestedFieldLiteralDictionaryEncodedColumn.this.lookupName(id);
       }
     }
 
-    return new DictionaryEncodedStringSingleValueVectorObjectSelector();
+    return new StringVectorSelector();
   }
 
   @Override

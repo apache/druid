@@ -166,7 +166,8 @@ public class WorkerTaskMonitorTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
@@ -212,7 +213,9 @@ public class WorkerTaskMonitorTest
                 new NoopOverlordClient(),
                 null,
                 null,
-                null
+                null,
+                null,
+                "1"
             ),
             taskConfig,
             new NoopServiceEmitter(),

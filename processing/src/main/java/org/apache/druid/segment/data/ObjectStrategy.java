@@ -79,4 +79,31 @@ public interface ObjectStrategy<T> extends Comparator<T>
       out.write(bytes);
     }
   }
+
+  /**
+   * Convert values from their underlying byte representation, when the underlying bytes might be corrupted or
+   * maliciously constructed
+   *
+   * Implementations of this method <i>absolutely must never</i> perform any sun.misc.Unsafe based memory read or write
+   * operations from instructions contained in the data read from this buffer without first validating the data. If the
+   * data cannot be validated, all read and write operations from instructions in this data must be done directly with
+   * the {@link ByteBuffer} methods, or using {@link SafeWritableMemory} if
+   * {@link org.apache.datasketches.memory.Memory} is employed to materialize the value.
+   *
+   * Implementations of this method <i>may</i> change the given buffer's mark, or limit, and position.
+   *
+   * Implementations of this method <i>may not</i> store the given buffer in a field of the "deserialized" object,
+   * need to use {@link ByteBuffer#slice()}, {@link ByteBuffer#asReadOnlyBuffer()} or {@link ByteBuffer#duplicate()} in
+   * this case.
+   *
+   *
+   * @param buffer buffer to read value from
+   * @param numBytes number of bytes used to store the value, starting at buffer.position()
+   * @return an object created from the given byte buffer representation
+   */
+  @Nullable
+  default T fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  {
+    return fromByteBuffer(buffer, numBytes);
+  }
 }

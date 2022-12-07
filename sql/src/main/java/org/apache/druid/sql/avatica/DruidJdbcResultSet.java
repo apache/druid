@@ -411,7 +411,8 @@ public class DruidJdbcResultSet implements Closeable
       throw new RuntimeException(t);
     }
     finally {
-      // Closing the statement cause logs and metrics to be emitted.
+      // Closing the statement causes logs and metrics to be emitted, and causes the statement to be removed
+      // from the SqlLifecycleManager.
       stmt.close();
     }
   }

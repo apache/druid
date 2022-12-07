@@ -41,19 +41,52 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "nominalEntries": <number>,
-  "numberOfValues" : <number>,
-  "metricColumns" : <array of strings>
+  "metricColumns" : <array of strings>,
+  "numberOfValues" : <number>
  }
 ```
 
 |Property|Description|Required?|
 |--------|-----------|---------|
-|`type`|This String should always be "arrayOfDoublesSketch"|yes|
-|`name`|A String for the output (result) name of the calculation.|yes|
-|`fieldName`|A String for the name of the input field.|yes|
+|`type`|This string should always be "arrayOfDoublesSketch"|yes|
+|`name`|String representing the output column to store sketch values.|yes|
+|`fieldName`|A string for the name of the input field.|yes|
 |`nominalEntries`|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable) for details. |no, defaults to 16384|
-|`numberOfValues`|Number of values associated with each distinct key. |no, defaults to 1|
-|`metricColumns`|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
+|`metricColumns`|When building sketches from raw data, an array input column that contain numeric values to associate with each distinct key. If not provided, assumes `fieldName` is an `arrayOfDoublesSketch`|no, if not provided `fieldName` is assumed to be an arrayOfDoublesSketch|
+|`numberOfValues`|Number of values associated with each distinct key. |no, defaults to the length of `metricColumns` if provided and 1 otherwise|
+
+You can use the `arrayOfDoublesSketch` aggregator to:
+
+- Build a sketch from raw data. In this case, set `metricColumns` to an array.
+- Build a sketch from an existing `ArrayOfDoubles` sketch . In this case, leave `metricColumns` unset and set the `fieldName` to an `ArrayOfDoubles` sketch with `numberOfValues` doubles. At ingestion time, you must base64 encode `ArrayOfDoubles`  sketches at ingestion time.
+
+### Example on top of raw data
+
+Compute a theta of unique users. For each user store the `added` and `deleted` scores. The new sketch column will be called `users_theta`.
+
+```json
+{
+  "type": "arrayOfDoublesSketch",
+  "name": "users_theta",
+  "fieldName": "user",
+  "nominalEntries": 16384,
+  "metricColumns": ["added", "deleted"],
+}
+```
+
+### Example ingesting a precomputed sketch column
+
+Ingest a sketch column called `user_sketches` that has a base64 encoded value of two doubles in its array and store it in a column called `users_theta`.
+
+```json
+{
+  "type": "arrayOfDoublesSketch",
+  "name": "users_theta",
+  "fieldName": "user_sketches",
+  "nominalEntries": 16384,
+  "numberOfValues": 2,
+}
+```
 
 ## Post aggregators
 

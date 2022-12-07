@@ -81,7 +81,8 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
+        null,
+        false
     );
     final OverlordClient overlordClient = new NoopOverlordClient();
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);

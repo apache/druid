@@ -20,9 +20,13 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * A datasource that returns nothing. Only used to test un-registered datasources.
@@ -63,5 +67,26 @@ public class NoopDataSource implements DataSource
   public boolean isConcrete()
   {
     return false;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTime
+  )
+  {
+    return Function.identity();
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{};
   }
 }

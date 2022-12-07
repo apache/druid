@@ -17,7 +17,7 @@
  */
 
 import { AxiosResponse, CancelToken } from 'axios';
-import { SqlLiteral } from 'druid-query-toolkit';
+import { L } from 'druid-query-toolkit';
 
 import { Execution, QueryContext } from '../../druid-models';
 import { Api } from '../../singletons';
@@ -28,6 +28,7 @@ import {
   queryDruidSql,
   QueryManager,
 } from '../../utils';
+import { maybeGetClusterCapacity } from '../capacity';
 
 const WAIT_FOR_SEGMENTS_TIMEOUT = 180000; // 3 minutes to wait until segments appear
 
@@ -123,9 +124,14 @@ export async function reattachTaskExecution(
   option: ReattachTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
   const { id, cancelToken, preserveOnTermination } = option;
-  let execution = await getTaskExecution(id, undefined, cancelToken);
+  let execution: Execution;
 
-  execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  try {
+    execution = await getTaskExecution(id, undefined, cancelToken);
+    execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  } catch (e) {
+    throw new Error(`Reattaching to query failed due to: ${e.message}`);
+  }
 
   if (execution.isFullyComplete()) return execution;
 
@@ -176,8 +182,9 @@ export async function getTaskExecution(
   }
 
   if ((taskPayloadResp || taskPayloadOverride) && taskReportResp) {
+    let execution: Execution | undefined;
     try {
-      return Execution.fromTaskPayloadAndReport(
+      execution = Execution.fromTaskPayloadAndReport(
         taskPayloadResp ? taskPayloadResp.data : taskPayloadOverride,
         taskReportResp.data,
       );
@@ -188,6 +195,17 @@ export async function getTaskExecution(
         `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
       );
       console.log('Report response:', taskReportResp.data);
+    }
+
+    if (execution) {
+      if (execution?.hasPotentiallyStuckStage()) {
+        const capacityInfo = await maybeGetClusterCapacity();
+        if (capacityInfo) {
+          execution = execution.changeCapacityInfo(capacityInfo);
+        }
+      }
+
+      return execution;
     }
   }
 
@@ -214,7 +232,7 @@ export async function updateExecutionWithDatasourceExistsIfNeeded(
   COUNT(*) AS num_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0) AS loading_segments
 FROM sys.segments
-WHERE datasource = ${SqlLiteral.create(execution.destination.dataSource)} AND is_overshadowed = 0`,
+WHERE datasource = ${L(execution.destination.dataSource)} AND is_overshadowed = 0`,
   });
 
   const numSegments: number = deepGet(segmentCheck, '0.num_segments') || 0;

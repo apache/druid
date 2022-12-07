@@ -27,15 +27,17 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,17 +62,20 @@ public class QueryTestBuilder
 {
   /**
    * Implement to provide the execution framework that the tests require.
-   * The {@link #analyze(QueryTestBuilder)} method builds up the classes that
+   * The constructor builds up the classes that
    * will run the test, since some verification depends on context, such as that
    * provided by {@link BaseCalciteQueryTest}.
    */
   public interface QueryTestConfig
   {
-    QueryTestRunner analyze(QueryTestBuilder builder);
     QueryLogHook queryLogHook();
+
     ExpectedException expectedException();
+
     ObjectMapper jsonMapper();
-    SqlStatementFactory statementFactory(PlannerConfig plannerConfig, AuthConfig authConfig);
+
+    PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
+    ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
   }
 
   protected final QueryTestConfig config;
@@ -81,13 +86,18 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  protected @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
+  @Nullable
+  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
+  protected PlannerFixture plannerFixture;
+  protected String expectedLogicalPlan;
+  protected SqlSchema expectedSqlSchema;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -146,6 +156,23 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder addCustomVerification(
+      QueryTestRunner.QueryVerifyStepFactory factory
+  )
+  {
+    this.customVerifications.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomVerifications(
+      List<QueryTestRunner.QueryVerifyStepFactory> factories
+  )
+  {
+    this.customVerifications = new ArrayList<>();
+    this.customVerifications.addAll(factories);
+    return this;
+  }
+
   public QueryTestBuilder expectedSignature(
       final RowSignature expectedResultSignature
   )
@@ -200,13 +227,59 @@ public class QueryTestBuilder
     return this;
   }
 
+  /**
+   * By default, every test case creates its own planner based on the planner
+   * and auth config provided. If, however, a test wants to control setup, and
+   * run multiple test queries against the same setup, use this method to pass
+   * in the pre-built planner to use. If not set, the standard one is created
+   * per test.
+   */
+  public QueryTestBuilder plannerFixture(PlannerFixture plannerFixture)
+  {
+    this.plannerFixture = plannerFixture;
+    return this;
+  }
+
+  public QueryTestBuilder expectedLogicalPlan(String expectedLogicalPlan)
+  {
+    this.expectedLogicalPlan = expectedLogicalPlan;
+    return this;
+  }
+
+  public QueryTestBuilder expectedSqlSchema(SqlSchema querySchema)
+  {
+    this.expectedSqlSchema = querySchema;
+    return this;
+  }
+
   public QueryTestRunner build()
   {
-    return config.analyze(this);
+    return new QueryTestRunner(this);
+  }
+
+  /**
+   * Internal method to return the cached statement factory, or create a new one
+   * based on the configs provided. Note: does not cache the newly created
+   * config: doing so would confuse the "please use mine" vs. "create a new
+   * one each time" semantics.
+   */
+  protected SqlStatementFactory statementFactory()
+  {
+    if (plannerFixture != null) {
+      return plannerFixture.statementFactory();
+    } else {
+      return config.plannerFixture(plannerConfig, authConfig).statementFactory();
+    }
   }
 
   public void run()
   {
     build().run();
   }
+
+  public QueryResults results()
+  {
+    return build().resultsOnly();
+  }
+
 }

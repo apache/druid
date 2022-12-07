@@ -51,6 +51,7 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.VSizeColumnarInts;
@@ -67,14 +68,17 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
  * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
  */
-public final class CompressedNestedDataComplexColumn extends NestedDataComplexColumn
+public final class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
+    extends NestedDataComplexColumn
 {
   private final NestedDataColumnMetadata metadata;
   private final Closer closer;
@@ -85,9 +89,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   private final GenericIndexed<String> fields;
   private final NestedLiteralTypeInfo fieldInfo;
 
-  private final GenericIndexed<String> stringDictionary;
-  private final FixedIndexed<Long> longDictionary;
-  private final FixedIndexed<Double> doubleDictionary;
+  private final Supplier<TStringDictionary> stringDictionarySupplier;
+  private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
+  private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final SmooshedFileMapper fileMapper;
 
   private final ConcurrentHashMap<String, ColumnHolder> columns = new ConcurrentHashMap<>();
@@ -101,9 +105,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
       NestedLiteralTypeInfo fieldInfo,
-      GenericIndexed<String> stringDictionary,
-      FixedIndexed<Long> longDictionary,
-      FixedIndexed<Double> doubleDictionary,
+      Supplier<TStringDictionary> stringDictionary,
+      Supplier<FixedIndexed<Long>> longDictionarySupplier,
+      Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       SmooshedFileMapper fileMapper
   )
   {
@@ -111,9 +115,9 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     this.nullValues = nullValues;
     this.fields = fields;
     this.fieldInfo = fieldInfo;
-    this.stringDictionary = stringDictionary;
-    this.longDictionary = longDictionary;
-    this.doubleDictionary = doubleDictionary;
+    this.stringDictionarySupplier = stringDictionary;
+    this.longDictionarySupplier = longDictionarySupplier;
+    this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.fileMapper = fileMapper;
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
@@ -124,24 +128,39 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     return fields;
   }
 
+  @Override
+  public List<List<NestedPathPart>> getNestedFields()
+  {
+    List<List<NestedPathPart>> fieldParts = new ArrayList<>(fields.size());
+    for (int i = 0; i < fields.size(); i++) {
+      fieldParts.add(NestedPathFinder.parseJqPath(fields.get(i)));
+    }
+    return fieldParts;
+  }
+
   public NestedLiteralTypeInfo getFieldInfo()
   {
     return fieldInfo;
   }
 
-  public GenericIndexed<String> getStringDictionary()
+  public TStringDictionary getStringDictionary()
   {
-    return stringDictionary;
+    return stringDictionarySupplier.get();
   }
 
   public FixedIndexed<Long> getLongDictionary()
   {
-    return longDictionary;
+    return longDictionarySupplier.get();
   }
 
   public FixedIndexed<Double> getDoubleDictionary()
   {
-    return doubleDictionary;
+    return doubleDictionarySupplier.get();
+  }
+
+  public ImmutableBitmap getNullValues()
+  {
+    return nullValues;
   }
 
   @Nullable
@@ -262,7 +281,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
   @Override
   public int getLength()
   {
-    return 0;
+    return -1;
   }
 
   @Override
@@ -344,6 +363,27 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
     }
   }
 
+
+
+  @Nullable
+  @Override
+  public Set<ColumnType> getColumnTypes(List<NestedPathPart> path)
+  {
+    String field = getField(path);
+    int index = fields.indexOf(field);
+    if (index < 0) {
+      return null;
+    }
+    return NestedLiteralTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+  }
+
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(List<NestedPathPart> path)
+  {
+    return getColumnHolder(getField(path));
+  }
+
   @Nullable
   @Override
   public ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path)
@@ -404,7 +444,7 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
           )
       );
 
-      final FixedIndexed<Integer> localDictionary = FixedIndexed.read(
+      final Supplier<FixedIndexed<Integer>> localDictionarySupplier = FixedIndexed.read(
           dataBuffer,
           NestedDataColumnSerializer.INT_TYPE_STRATEGY,
           metadata.getByteOrder(),
@@ -434,20 +474,22 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
           metadata.getBitmapSerdeFactory().getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
-      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () ->
-          closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
-              types,
-              longs.get(),
-              doubles.get(),
-              ints.get(),
-              stringDictionary,
-              longDictionary,
-              doubleDictionary,
-              localDictionary,
-              localDictionary.get(0) == 0
-              ? rBitmaps.get(0)
-              : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
-          ));
+      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
+        FixedIndexed<Integer> localDict = localDictionarySupplier.get();
+        return closer.register(new NestedFieldLiteralDictionaryEncodedColumn(
+            types,
+            longs.get(),
+            doubles.get(),
+            ints.get(),
+            stringDictionarySupplier.get(),
+            longDictionarySupplier.get(),
+            doubleDictionarySupplier.get(),
+            localDict,
+            localDict.get(0) == 0
+            ? rBitmaps.get(0)
+            : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
+        ));
+      };
       columnBuilder.setHasMultipleValues(false)
                    .setHasNulls(true)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
@@ -456,10 +498,10 @@ public final class CompressedNestedDataComplexColumn extends NestedDataComplexCo
               types,
               metadata.getBitmapSerdeFactory().getBitmapFactory(),
               rBitmaps,
-              localDictionary,
-              stringDictionary,
-              longDictionary,
-              doubleDictionary
+              localDictionarySupplier,
+              stringDictionarySupplier,
+              longDictionarySupplier,
+              doubleDictionarySupplier
           ),
           true,
           false
