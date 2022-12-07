@@ -458,7 +458,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
      *
      * Pushing a null frame indicates no more frames are coming.
      *
-     * @param frame, or null indicating no more frames are coming
+     * @param frame frame, or null indicating no more frames are coming
      */
     public void push(final Frame frame)
     {
