@@ -37,7 +37,9 @@ To use this aggregator, make sure you [include](../../development/extensions.md#
 druid.extensions.loadList=["druid-datasketches"]
 ```
 
-### Aggregator
+For additional sketch types supported in Druid, see [DataSketches extension](datasketches-extension.md).
+
+## Aggregator
 
 The result of the aggregation is a KllFloatsSketch or KllDoublesSketch that is the union of all sketches either built from raw data or read from the segments.
 
@@ -58,9 +60,9 @@ The result of the aggregation is a KllFloatsSketch or KllDoublesSketch that is t
 |k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be from 8 to 65535. See [KLL Sketch Accuracy and Size](https://datasketches.apache.org/docs/KLL/KLLAccuracyAndSize.html).|no, defaults to 200|
 |maxStreamLength|This parameter defines the number of items that can be presented to each sketch before it may need to move from off-heap to on-heap memory. This is relevant to query types that use off-heap memory, including [TopN](../../querying/topnquery.md) and [GroupBy](../../querying/groupbyquery.md). Ideally, should be set high enough such that most sketches can stay off-heap.|no, defaults to 1000000000|
 
-### Post Aggregators
+## Post aggregators
 
-#### Quantile
+### Quantile
 
 This returns an approximation to the value that would be preceded by a given fraction of a hypothetical sorted version of the input stream.
 
@@ -73,7 +75,7 @@ This returns an approximation to the value that would be preceded by a given fra
 }
 ```
 
-#### Quantiles
+### Quantiles
 
 This returns an array of quantiles corresponding to a given array of fractions
 
@@ -86,7 +88,7 @@ This returns an array of quantiles corresponding to a given array of fractions
 }
 ```
 
-#### Histogram
+### Histogram
 
 This returns an approximation to the histogram given an array of split points that define the histogram bins or a number of bins (not both). An array of <i>m</i> unique, monotonically increasing split points divide the real number line into <i>m+1</i> consecutive disjoint intervals. The definition of an interval is inclusive of the left split point and exclusive of the right split point. If the number of bins is specified instead of split points, the interval between the minimum and maximum values is divided into the given number of equally-spaced bins.
 
@@ -100,7 +102,7 @@ This returns an approximation to the histogram given an array of split points th
 }
 ```
 
-#### Rank
+### Rank
 
 This returns an approximation to the rank of a given value that is the fraction of the distribution less than that value.
 
@@ -112,7 +114,7 @@ This returns an approximation to the rank of a given value that is the fraction 
   "value" : <value>
 }
 ```
-#### CDF
+### CDF
 
 This returns an approximation to the Cumulative Distribution Function given an array of split points that define the edges of the bins. An array of <i>m</i> unique, monotonically increasing split points divide the real number line into <i>m+1</i> consecutive disjoint intervals. The definition of an interval is inclusive of the left split point and exclusive of the right split point. The resulting array of fractions can be viewed as ranks of each split point with one additional rank that is always 1.
 
@@ -125,7 +127,7 @@ This returns an approximation to the Cumulative Distribution Function given an a
 }
 ```
 
-#### Sketch Summary
+### Sketch Summary
 
 This returns a summary of the sketch that can be used for debugging. This is the result of calling toString() method.
 

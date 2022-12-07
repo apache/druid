@@ -32,6 +32,8 @@ To use this aggregator, make sure you [include](../../development/extensions.md#
 druid.extensions.loadList=["druid-datasketches"]
 ```
 
+For additional sketch types supported in Druid, see [DataSketches extension](datasketches-extension.md).
+
 ## Aggregators
 
 |Property|Description|Required?|
