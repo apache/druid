@@ -139,8 +139,7 @@ public class ProtobufConverter
       case BYTES:
         return ((ByteString) value).toByteArray();
       case ENUM:
-        // Special-case google.protobuf.NullValue (it's an Enum).
-        if (field.getEnumType().getFullName().equals("google.protobuf.NullValue")) {
+        if ("google.protobuf.NullValue".equals(field.getEnumType().getFullName())) {
           return null;
         } else {
           return ((Descriptors.EnumValueDescriptor) value).getName();

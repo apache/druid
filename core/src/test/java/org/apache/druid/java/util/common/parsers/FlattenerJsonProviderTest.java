@@ -68,6 +68,15 @@ public class FlattenerJsonProviderTest
     jsonProvider.removeProperty(aMap, "key");
     Assert.assertEquals(ImmutableMap.of(), aMap);
     Assert.assertEquals(aMap, jsonProvider.unwrap(aMap));
+
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.setProperty(jsonProvider.createArray(), "key", "value")
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.removeProperty(jsonProvider.createArray(), "key")
+    );
   }
 
   @Test
@@ -90,6 +99,19 @@ public class FlattenerJsonProviderTest
     }
     Assert.assertFalse(expectedIter.hasNext());
     Assert.assertEquals(aList, jsonProvider.unwrap(aList));
+
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.getArrayIndex(jsonProvider.createMap(), 0)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.setArrayIndex(jsonProvider.createMap(), 0, "a")
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.toIterable(jsonProvider.createMap())
+    );
   }
 
   @Test
