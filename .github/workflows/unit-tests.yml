@@ -69,19 +69,19 @@ jobs:
       - name: "(openjdk8) processing module test"
         env:
           MAVEN_PROJECTS: processing
-        run: ./.github/scripts/test_script.sh
+        run: ./.github/scripts/unit_tests_script.sh
 
       - name: "(openjdk8) indexing modules test"
         env:
           MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
-        run: ./.github/scripts/test_script.sh
+        run: ./.github/scripts/unit_tests_script.sh
 
       - name: "(openjdk8) server module test"
         env:
           MAVEN_PROJECTS: server
-        run: ./.github/scripts/test_script.sh
+        run: ./.github/scripts/unit_tests_script.sh
 
       - name: "(openjdk8) other modules test"
         env:
           MAVEN_PROJECTS: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
-        run: ./.github/scripts/test_script.sh
+        run: ./.github/scripts/unit_tests_script.sh
