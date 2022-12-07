@@ -519,8 +519,6 @@ https://github.com/apache/druid/pull/13287
 
 ## Web console
 
-###
-
 ### Delete an interval
 
 You can now pick an interval to delete from a dropdown in the kill task dialog.  
