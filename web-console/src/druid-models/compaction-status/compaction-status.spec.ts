@@ -83,5 +83,24 @@ describe('compaction status', () => {
         },
       }),
     ).toEqual('Fully compacted');
+
+    expect(
+      formatCompactionInfo({
+        config: BASIC_CONFIG,
+        status: {
+          dataSource: 'tbl',
+          scheduleStatus: 'RUNNING',
+          bytesAwaitingCompaction: 0,
+          bytesCompacted: 0,
+          bytesSkipped: 3776979,
+          segmentCountAwaitingCompaction: 0,
+          segmentCountCompacted: 0,
+          segmentCountSkipped: 24,
+          intervalCountAwaitingCompaction: 0,
+          intervalCountCompacted: 0,
+          intervalCountSkipped: 24,
+        },
+      }),
+    ).toEqual('Fully compacted (except the last P1D of data, 24 segments skipped)');
   });
 });

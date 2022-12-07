@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { pluralIfNeeded } from '../../utils';
 import { CompactionConfig } from '../compaction-config/compaction-config';
 
 function capitalizeFirst(str: string): string {
@@ -59,8 +60,19 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
   const { config, status } = compaction;
   if (config) {
     if (status) {
-      if (status.bytesAwaitingCompaction === 0 && !zeroCompactionStatus(status)) {
-        return 'Fully compacted';
+      if (
+        status.bytesAwaitingCompaction === 0 &&
+        status.segmentCountAwaitingCompaction === 0 &&
+        status.intervalCountAwaitingCompaction === 0 &&
+        !zeroCompactionStatus(status)
+      ) {
+        if (status.segmentCountSkipped) {
+          return `Fully compacted (except the last ${
+            config.skipOffsetFromLatest || 'P1D'
+          } of data, ${pluralIfNeeded(status.segmentCountSkipped, 'segment')} skipped)`;
+        } else {
+          return 'Fully compacted';
+        }
       } else {
         return capitalizeFirst(status.scheduleStatus);
       }
