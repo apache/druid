@@ -117,7 +117,7 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (cursor == null) {
       readNextFrame(readableInputs);
