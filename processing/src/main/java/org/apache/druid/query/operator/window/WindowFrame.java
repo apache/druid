@@ -26,6 +26,7 @@ import java.util.Objects;
 
 public class WindowFrame
 {
+  @SuppressWarnings("unused")
   public enum PeerType
   {
     ROWS,
