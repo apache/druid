@@ -343,7 +343,7 @@ The following table lists query limits:
 | Number of cluster by columns that can appear in a stage | 1,500 | `TooManyClusteredByColumns` |
 | Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | `TooManyWorkers` |
 | Maximum memory occupied by broadcasted tables. Only relevant when `sqlJoinAlgorithm` is `broadcast` (the default). | 30% of each [processor memory bundle](concepts.md#memory-usage). | `BroadcastTablesTooLarge` |
-| Maximum memory occupied by buffered data during sort-mege join. Only relevant when `sqlJoinAlgorithm` is `sortMerge`. | 10 MB | `TooManyRowsWithSameKey` |
+| Maximum memory occupied by buffered data during sort-merge join. Only relevant when `sqlJoinAlgorithm` is `sortMerge`. | 10 MB | `TooManyRowsWithSameKey` |
 
 <a name="errors"></a>
 
