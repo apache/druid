@@ -118,16 +118,22 @@ public class FlattenerJsonProviderTest
   public void testNotImplementedOnPurpose()
   {
     Object aList = jsonProvider.createArray();
-    Throwable t = Assert.assertThrows(UnsupportedOperationException.class, () ->  jsonProvider.toJson(aList));
+    Throwable t = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.toJson(aList)
+    );
     Assert.assertEquals("Unused", t.getMessage());
 
-    t = Assert.assertThrows(UnsupportedOperationException.class, () ->  jsonProvider.parse("{}"));
+    t = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> jsonProvider.parse("{}")
+    );
     Assert.assertEquals("Unused", t.getMessage());
 
 
     t = Assert.assertThrows(
         UnsupportedOperationException.class,
-        () ->  jsonProvider.parse(new ByteArrayInputStream(StringUtils.toUtf8("{}")), "UTF-8")
+        () -> jsonProvider.parse(new ByteArrayInputStream(StringUtils.toUtf8("{}")), "UTF-8")
     );
     Assert.assertEquals("Unused", t.getMessage());
 

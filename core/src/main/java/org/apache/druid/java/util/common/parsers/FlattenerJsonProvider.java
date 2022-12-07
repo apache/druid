@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class FlattenerJsonProvider  implements JsonProvider
+public abstract class FlattenerJsonProvider implements JsonProvider
 {
   @Override
   public Object createArray()
