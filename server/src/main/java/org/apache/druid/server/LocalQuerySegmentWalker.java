@@ -100,7 +100,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
             query,
             cpuAccumulator
         );
-
+    
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

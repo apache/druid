@@ -33,6 +33,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -71,7 +72,7 @@ public class InlineDataSource implements DataSource
   private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
       @JsonProperty("columnTypes") List<ColumnType> columnTypes,
-      @JsonProperty("rows") List<Object[]> rows
+      @JsonProperty("rows") ArrayList<Object[]> rows
   )
   {
     Preconditions.checkNotNull(columnNames, "'columnNames' must be nonnull");
@@ -199,6 +200,11 @@ public class InlineDataSource implements DataSource
   public Iterable<Object[]> getRows()
   {
     return rows;
+  }
+
+  public boolean rowsAreArrayList()
+  {
+    return rows instanceof ArrayList;
   }
 
   @Override

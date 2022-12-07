@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.WindowSqlAggregate;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayAppendOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
@@ -135,6 +136,16 @@ public class DruidOperatorTable implements SqlOperatorTable
   // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAG))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LEAD))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.FIRST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.CUME_DIST))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.DENSE_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.NTILE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.PERCENT_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.ROW_NUMBER))
                    .add(new BuiltinApproxCountDistinctSqlAggregator())
                    .add(new AvgSqlAggregator())
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
