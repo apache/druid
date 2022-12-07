@@ -233,7 +233,8 @@ happens:
 The [`maxNumTasks`](./reference.md#context-parameters) query parameter determines the maximum number of tasks your
 query will use, including the one `query_controller` task. Generally, queries perform better with more workers. The
 lowest possible value of `maxNumTasks` is two (one worker and one controller). Do not set this higher than the number of
-free slots available in your cluster; doing so will result in a [TaskStartTimeout](reference.md#error-codes) error.
+free slots available in your cluster; doing so will result in a [TaskStartTimeout](reference.md#error_TaskStartTimeout)
+error.
 
 When [reading external data](#extern), EXTERN can read multiple files in parallel across
 different worker tasks. However, EXTERN does not split individual files across multiple worker tasks. If you have a
