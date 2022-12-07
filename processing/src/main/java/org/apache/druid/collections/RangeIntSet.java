@@ -59,6 +59,12 @@ public class RangeIntSet extends AbstractIntSortedSet
   }
 
   @Override
+  public boolean contains(int k)
+  {
+    return k >= start && k < end;
+  }
+
+  @Override
   public IntSortedSet subSet(int fromElement, int toElement)
   {
     if (fromElement < end && toElement > start) {
@@ -118,6 +124,33 @@ public class RangeIntSet extends AbstractIntSortedSet
   @Override
   public int size()
   {
-    return Math.max(0, end - start);
+    return end > start ? end - start : 0;
+  }
+
+  @Override
+  public boolean isEmpty()
+  {
+    return end <= start;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o instanceof RangeIntSet) {
+      final RangeIntSet other = (RangeIntSet) o;
+      return (other.start == start && other.end == end) || (other.isEmpty() && isEmpty());
+    } else {
+      return super.equals(o);
+    }
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return isEmpty() ? 0 : start + 31 * end;
   }
 }
