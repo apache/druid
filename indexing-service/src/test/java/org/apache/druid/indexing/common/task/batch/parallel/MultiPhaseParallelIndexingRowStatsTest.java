@@ -132,13 +132,13 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false
     );
 
-    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(200, 0, 0, 0);
+    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(200, 0, 0, 0, 0);
     final Map<String, Object> expectedReports =
         maxNumConcurrentSubTasks <= 1
         ? buildExpectedTaskReportSequential(
             task.getId(),
             ImmutableList.of(),
-            new RowIngestionMetersTotals(0, 0, 0, 0),
+            new RowIngestionMetersTotals(0, 0, 0, 0, 0),
             expectedTotals
         )
         : buildExpectedTaskReportParallel(
@@ -163,7 +163,6 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",
-        //new DimensionRangePartitionsSpec(targetRowsPerSegment, null, DIMS, false),
         new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
         10,
         false,
@@ -172,7 +171,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(200, 0, 0, 0)
+        new RowIngestionMetersTotals(200, 0, 0, 0, 0)
     );
     Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);

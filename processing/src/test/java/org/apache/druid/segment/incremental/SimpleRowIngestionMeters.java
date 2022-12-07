@@ -79,7 +79,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   @Override
   public RowIngestionMetersTotals getTotals()
   {
-    return new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable);
+    return new RowIngestionMetersTotals(processed, 0, processedWithError, thrownAway, unparseable);
   }
 
   @Override

@@ -19,22 +19,19 @@
 
 package org.apache.druid.segment.incremental;
 
-import java.util.Map;
+import org.apache.druid.data.input.InputStats;
 
-public class MutableRowIngestionMeters implements RowIngestionMeters
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class MutableRowIngestionMeters implements RowIngestionMeters, InputStats
 {
   private long processed;
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
-
-  public MutableRowIngestionMeters()
-  {
-    this.processed = 0;
-    this.processedWithError = 0;
-    this.unparseable = 0;
-    this.thrownAway = 0;
-  }
+  private final AtomicLong processedBytes = new AtomicLong(0);
 
   @Override
   public long getProcessed()
@@ -46,6 +43,18 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
   public void incrementProcessed()
   {
     processed++;
+  }
+
+  @Override
+  public void incrementProcessedBytes(long incrementByValue)
+  {
+    processedBytes.addAndGet(incrementByValue);
+  }
+
+  @Override
+  public long getProcessedBytes()
+  {
+    return processedBytes.get();
   }
 
   @Override
@@ -84,10 +93,23 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
     thrownAway++;
   }
 
+  @Nullable
+  @Override
+  public InputStats getInputStats()
+  {
+    return this;
+  }
+
   @Override
   public RowIngestionMetersTotals getTotals()
   {
-    return new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable);
+    return new RowIngestionMetersTotals(
+        processed,
+        processedBytes.get(),
+        processedWithError,
+        thrownAway,
+        unparseable
+    );
   }
 
   @Override
@@ -102,5 +124,6 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
     this.thrownAway += rowIngestionMetersTotals.getThrownAway();
+    this.processedBytes.addAndGet(rowIngestionMetersTotals.getProcessedBytes());
   }
 }

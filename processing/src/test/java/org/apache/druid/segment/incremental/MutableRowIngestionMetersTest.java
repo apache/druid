@@ -32,14 +32,14 @@ public class MutableRowIngestionMetersTest
     mutableRowIngestionMeters.incrementProcessedWithError();
     mutableRowIngestionMeters.incrementUnparseable();
     mutableRowIngestionMeters.incrementThrownAway();
-    Assert.assertEquals(mutableRowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 1, 1, 1));
+    Assert.assertEquals(mutableRowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 0, 1, 1, 1));
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
     MutableRowIngestionMeters mutableRowIngestionMeters = new MutableRowIngestionMeters();
-    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 1, 0, 1);
+    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
     mutableRowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     Assert.assertEquals(mutableRowIngestionMeters.getTotals(), rowIngestionMetersTotals);
   }

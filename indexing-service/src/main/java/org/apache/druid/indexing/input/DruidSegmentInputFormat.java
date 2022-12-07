@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -56,6 +57,10 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
+    if (source instanceof BytesCountingInputEntity) {
+      source = ((BytesCountingInputEntity) source).getBaseInputEntity();
+    }
+
     // this method handles the case when the entity comes from a tombstone or from a regular segment
     Preconditions.checkArgument(
         source instanceof DruidSegmentInputEntity,

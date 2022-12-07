@@ -256,7 +256,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
-
     resetNextCheckpointTime();
   }
 
@@ -621,6 +620,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
+            // TODO: update this
+            // the buffer's capacity is the array length of the bytes in the ByteEntity
+            final long processedBytes = record.getData().parallelStream()
+                                              .mapToLong(value -> value.getBuffer().capacity())
+                                              .reduce(0, Long::sum);
+            rowIngestionMeters.getInputStats().incrementProcessedBytes(processedBytes);
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(

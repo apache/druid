@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -134,6 +135,8 @@ public class ExternalInputSliceReader implements InputSliceReader
     if (!temporaryDirectory.exists() && !temporaryDirectory.mkdir()) {
       throw new ISE("Cannot create temporary directory at [%s]", temporaryDirectory);
     }
+    // TODO: is this right?
+    final InputStats inputStats = new InputStats();
     return Iterators.transform(
         inputSources.iterator(),
         inputSource -> {
@@ -159,7 +162,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                     public CloseableIterator<InputRow> make()
                     {
                       try {
-                        CloseableIterator<InputRow> baseIterator = reader.read();
+                        CloseableIterator<InputRow> baseIterator = reader.read(inputStats);
                         return new CloseableIterator<InputRow>()
                         {
                           private InputRow next = null;

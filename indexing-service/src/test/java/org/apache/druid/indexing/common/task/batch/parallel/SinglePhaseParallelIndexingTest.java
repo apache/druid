@@ -455,7 +455,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         ),
         new RowIngestionMetersTotals(
             10,
-            1,
+            0, 1,
             1,
             1)
     );
@@ -492,12 +492,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
     Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
 
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(
-        10,
-        1,
-        1,
-        1
-    );
+    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 0, 1, 1, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -518,7 +513,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),
           expectedUnparseableEvents,
-          new RowIngestionMetersTotals(0, 0, 0, 0),
+          new RowIngestionMetersTotals(0, 0, 0, 0, 0),
           expectedTotals
       );
     } else {

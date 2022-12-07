@@ -41,6 +41,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -291,7 +292,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       return new InputSourceReader()
       {
         @Override
-        public CloseableIterator<InputRow> read()
+        public CloseableIterator<InputRow> read(InputStats inputStats)
         {
           return new CloseableIterator<InputRow>()
           {
@@ -343,7 +344,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       return new InputSourceReader()
       {
         @Override
-        public CloseableIterator<InputRow> read()
+        public CloseableIterator<InputRow> read(InputStats inputStats)
         {
           final Iterator<InputRow> inputRowIterator = IDX_TASK_INPUT_ROWS.iterator();
           return CloseableIterators.withEmptyBaggage(inputRowIterator);
