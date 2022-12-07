@@ -19,10 +19,24 @@
 
 package org.apache.druid.frame.key;
 
+/**
+ * Ordering associated with a {@link KeyColumn}.
+ */
 public enum KeyOrder
 {
+  /**
+   * Not ordered. Possible if the key is used only for non-sorting purposes, such as hashing.
+   */
   NONE(false),
+
+  /**
+   * Ordered ascending.
+   */
   ASCENDING(true),
+
+  /**
+   * Ordered descending.
+   */
   DESCENDING(true);
 
   private final boolean sortable;
