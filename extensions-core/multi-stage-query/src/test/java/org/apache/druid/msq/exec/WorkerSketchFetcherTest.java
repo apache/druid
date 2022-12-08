@@ -23,13 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.Either;
-import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -40,22 +38,22 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -106,73 +104,21 @@ public class WorkerSketchFetcherTest
   public void tearDown() throws Exception
   {
     mocks.close();
-  }
-
-  @Test
-  public void test_submitFetcherTask_parallelFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
-  {
-    // Store futures in a queue
-    final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
-    final List<String> workerIds = ImmutableList.of("0", "1", "2", "3");
-    final CountDownLatch latch = new CountDownLatch(workerIds.size());
-
-    target = spy(new WorkerSketchFetcher(
-        Mockito.mock(WorkerClient.class),
-        Mockito.mock(MSQWorkerTaskLauncher.class),
-        true
-    ));
-
-    // When fetching snapshots, return a mock and add future to queue
-    doAnswer(invocation -> {
-      ListenableFuture<ClusterByStatisticsSnapshot> snapshotListenableFuture =
-          spy(Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class)));
-      futureQueue.add(snapshotListenableFuture);
-      latch.countDown();
-      latch.await();
-      return snapshotListenableFuture;
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
-
-    // Cause a worker to fail instead of returning the result
-    doAnswer(invocation -> {
-      latch.countDown();
-      latch.await();
-      return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(eq("2"), any(), anyInt());
-
-//    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.sequentialTimeChunkMerging(
-//        completeKeyStatisticsInformation,
-//        workerIds,
-//        stageDefinition
-//    );
-
-    // Assert that the final result is failed and all other task futures are also cancelled.
-    //Assert.assertThrows(CompletionException.class, eitherCompletableFuture::join);
-    Thread.sleep(1000);
-
-    //Assert.assertTrue(eitherCompletableFuture.isCompletedExceptionally());
-    // Verify that the statistics collector was cleared due to the error.
-    verify(mergedClusterByStatisticsCollector1, times(1)).clear();
-    // Verify that other task futures were requested to be cancelled.
-    Assert.assertFalse(futureQueue.isEmpty());
-    for (ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture : futureQueue) {
-      verify(snapshotFuture, times(1)).cancel(eq(true));
+    if (target != null) {
+      target.close();
     }
   }
 
   @Test
   public void test_submitFetcherTask_parallelFetch_mergePerformedCorrectly()
-      throws InterruptedException
+      throws ExecutionException, InterruptedException
   {
     // Store snapshots in a queue
     final Queue<ClusterByStatisticsSnapshot> snapshotQueue = new ConcurrentLinkedQueue<>();
     final List<String> workerIds = ImmutableList.of("0", "1", "2", "3", "4");
     final CountDownLatch latch = new CountDownLatch(workerIds.size());
 
-    target = spy(new WorkerSketchFetcher(
-        Mockito.mock(WorkerClient.class),
-        Mockito.mock(MSQWorkerTaskLauncher.class),
-        true
-    ));
+    target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.PARALLEL, 300_000_000));
 
     // When fetching snapshots, return a mock and add it to queue
     doAnswer(invocation -> {
@@ -182,103 +128,37 @@ public class WorkerSketchFetcherTest
       return Futures.immediateFuture(snapshot);
     }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
 
-//    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
-//        completeKeyStatisticsInformation,
-//        workerIds,
-//        stageDefinition
-//    );
+    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        workerIds,
+        stageDefinition
+    );
 
     // Assert that the final result is complete and all other sketches returned have been merged.
-    // eitherCompletableFuture.join();
+    eitherCompletableFuture.join();
     Thread.sleep(1000);
-    // Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
+    Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
     Assert.assertFalse(snapshotQueue.isEmpty());
     // Verify that all statistics were added to controller.
     for (ClusterByStatisticsSnapshot snapshot : snapshotQueue) {
       verify(mergedClusterByStatisticsCollector1, times(1)).addAll(eq(snapshot));
     }
     // Check that the partitions returned by the merged collector is returned by the final future.
-    //  Assert.assertEquals(expectedPartitions1, eitherCompletableFuture.get().valueOrThrow());
-  }
-
-  @Test
-  public void test_submitFetcherTask_sequentialFetch_workerThrowsException_shouldCancelOtherTasks() throws Exception
-  {
-    // Store futures in a queue
-    final Queue<ListenableFuture<ClusterByStatisticsSnapshot>> futureQueue = new ConcurrentLinkedQueue<>();
-
-    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(
-        1L,
-        ImmutableSet.of(0, 1, 2),
-        2L,
-        ImmutableSet.of(0, 1, 4)
-    );
-    doReturn(timeSegmentVsWorkerMap).when(completeKeyStatisticsInformation).getTimeSegmentVsWorkerMap();
-
-    final CyclicBarrier barrier = new CyclicBarrier(3);
-    target = spy(new WorkerSketchFetcher(
-        Mockito.mock(WorkerClient.class),
-        Mockito.mock(MSQWorkerTaskLauncher.class),
-        true
-    ));
-
-    // When fetching snapshots, return a mock and add future to queue
-    doAnswer(invocation -> {
-      ListenableFuture<ClusterByStatisticsSnapshot> snapshotListenableFuture =
-          spy(Futures.immediateFuture(mock(ClusterByStatisticsSnapshot.class)));
-      futureQueue.add(snapshotListenableFuture);
-      barrier.await();
-      return snapshotListenableFuture;
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(anyString(), anyString(), anyInt(), anyLong());
-
-    // Cause a worker in the second time chunk to fail instead of returning the result
-    doAnswer(invocation -> {
-      barrier.await();
-      return Futures.immediateFailedFuture(new InterruptedException("interrupted"));
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(eq("4"), any(), anyInt(), eq(2L));
-
-//    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
-//        completeKeyStatisticsInformation,
-//        ImmutableList.of("0", "1", "2", "3", "4"),
-//        stageDefinition
-//    );
-
-    // Assert that the final result is failed and all other task futures are also cancelled.
-    //Assert.assertThrows(CompletionException.class, eitherCompletableFuture::join);
-    Thread.sleep(1000);
-
-    //Assert.assertTrue(eitherCompletableFuture.isCompletedExceptionally());
-    // Verify that the correct statistics collector was cleared due to the error.
-    verify(mergedClusterByStatisticsCollector1, times(0)).clear();
-    verify(mergedClusterByStatisticsCollector2, times(1)).clear();
-    // Verify that other task futures were requested to be cancelled.
-    Assert.assertFalse(futureQueue.isEmpty());
-    for (ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture : futureQueue) {
-      verify(snapshotFuture, times(1)).cancel(eq(true));
-    }
+    Assert.assertEquals(expectedPartitions1, eitherCompletableFuture.get().valueOrThrow());
   }
 
   @Test
   public void test_submitFetcherTask_sequentialFetch_mergePerformedCorrectly()
-      throws InterruptedException
+      throws ExecutionException, InterruptedException
   {
     // Store snapshots in a queue
     final Queue<ClusterByStatisticsSnapshot> snapshotQueue = new ConcurrentLinkedQueue<>();
 
-    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(
-        1L,
-        ImmutableSet.of(0, 1, 2),
-        2L,
-        ImmutableSet.of(0, 1, 4)
-    );
+    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(1L, ImmutableSet.of(0, 1, 2), 2L, ImmutableSet.of(0, 1, 4));
     doReturn(timeSegmentVsWorkerMap).when(completeKeyStatisticsInformation).getTimeSegmentVsWorkerMap();
 
     final CyclicBarrier barrier = new CyclicBarrier(3);
-    target = spy(new WorkerSketchFetcher(
-        Mockito.mock(WorkerClient.class),
-        Mockito.mock(MSQWorkerTaskLauncher.class),
-        true
-    ));
+    target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.SEQUENTIAL, 300_000_000));
 
     // When fetching snapshots, return a mock and add it to queue
     doAnswer(invocation -> {
@@ -288,17 +168,17 @@ public class WorkerSketchFetcherTest
       return Futures.immediateFuture(snapshot);
     }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyInt(), anyLong());
 
-//    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
-//        completeKeyStatisticsInformation,
-//        ImmutableList.of("0", "1", "2", "3", "4"),
-//        stageDefinition
-//    );
+    CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        ImmutableList.of("0", "1", "2", "3", "4"),
+        stageDefinition
+    );
 
     // Assert that the final result is complete and all other sketches returned have been merged.
-    // eitherCompletableFuture.join();
+    eitherCompletableFuture.join();
     Thread.sleep(1000);
 
-//    Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
+    Assert.assertTrue(eitherCompletableFuture.isDone() && !eitherCompletableFuture.isCompletedExceptionally());
     Assert.assertFalse(snapshotQueue.isEmpty());
     // Verify that all statistics were added to controller.
     snapshotQueue.stream().limit(3).forEach(snapshot -> {
@@ -315,6 +195,6 @@ public class WorkerSketchFetcherTest
             )
         );
     // Check that the partitions returned by the merged collector is returned by the final future.
-    //Assert.assertEquals(expectedResult, eitherCompletableFuture.get().valueOrThrow());
+    Assert.assertEquals(expectedResult, eitherCompletableFuture.get().valueOrThrow());
   }
 }

@@ -609,6 +609,7 @@ public class ControllerImpl implements Controller
         workerTaskLauncher,
         isDurableStorageEnabled
     );
+    closer.register(workerSketchFetcher::close)
 
     return queryDef;
   }

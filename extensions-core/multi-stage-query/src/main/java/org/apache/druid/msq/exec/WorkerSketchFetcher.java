@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.function.TriConsumer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -40,7 +41,6 @@ import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
  */
-public class WorkerSketchFetcher
+public class WorkerSketchFetcher implements AutoCloseable
 {
   private static final Logger log = new Logger(WorkerSketchFetcher.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
@@ -73,7 +73,7 @@ public class WorkerSketchFetcher
   )
   {
     this.workerClient = workerClient;
-    this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
     this.workerTaskLauncher = workerTaskLauncher;
     this.retryEnabled = retryEnabled;
   }
@@ -240,5 +240,11 @@ public class WorkerSketchFetcher
         }
       }
     });
+  }
+
+  @Override
+  public void close()
+  {
+    executorService.shutdownNow();
   }
 }

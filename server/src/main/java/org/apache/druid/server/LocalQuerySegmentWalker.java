@@ -93,12 +93,10 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = analysis
-        .getDataSource()
-        .createSegmentMapFunction(
-            query,
-            cpuAccumulator
-        );
+    final Function<SegmentReference, SegmentReference> segmentMapFn =
+        analysis
+            .getDataSource()
+            .createSegmentMapFunction(query, cpuAccumulator);
 
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);

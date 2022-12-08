@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
-import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
@@ -381,29 +380,6 @@ public class MSQInsertTest extends MSQTestBase
                      ))
                      .verifyResults();
 
-  }
-
-  @Test
-  public void testInsertNullTimestamp()
-  {
-    final RowSignature rowSignature =
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("dim1", ColumnType.STRING)
-                    .build();
-
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO foo1\n"
-            + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
-            + "FROM foo\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
-        .setExpectedMSQFault(InsertTimeNullFault.instance())
-        .verifyResults();
   }
 
   @Test
