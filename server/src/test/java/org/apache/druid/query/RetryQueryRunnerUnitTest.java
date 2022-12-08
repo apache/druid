@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -69,7 +70,7 @@ public class RetryQueryRunnerUnitTest
         config, new DefaultObjectMapper()
     );
 
-    Query<Result<TimeseriesResultValue>> query = timeseriesQuery(new Interval(0, 100));
+    Query<Result<TimeseriesResultValue>> query = timeseriesQuery(Intervals.utc(0, 100));
     QueryPlus<Result<TimeseriesResultValue>> plus = QueryPlus.wrap(query).withIdentity("foo");
     ResponseContext context = new DefaultResponseContext();
     ResponseContext spyContext = spy(context);
