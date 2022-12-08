@@ -22,12 +22,21 @@ title: "Python Installation"
   ~ under the License.
   -->
 
-Apache Druid startup script requires a python interpreter.
+Apache Druid startup script requires Python2 or Python3 interpreter. 
+Since Python2 is deprecated, this document has instructions to install Python3 interpreter.
 
-## Python interpreter installation instructions
+## Python3 interpreter installation instructions
+
+### Linux
+
+#### Debian or Ubuntu
+    - `sudo apt update`
+    - `sudo apt install -y python3-pip`
+#### RHEL
+    - `sudo yum install -y epel-release`
+    - `sudo yum install -y python3-pip`
 
 ### MacOS
-MacOS comes with a version of Python2, which has been deprecated. Python2 and Python3 can coexist on the same machine without problems.
 
 #### Install the official Python release
 * Browse to the [Python Downloads Page](https://www.python.org/downloads/) and download the latest version (3.x.x)
@@ -35,12 +44,3 @@ MacOS comes with a version of Python2, which has been deprecated. Python2 and Py
 
 #### Install with Homebrew
 Refer [Installing Python 3 on Mac OS X](https://docs.python-guide.org/starting/install3/osx/)
-
-### Linux
-
-#### Debian
-    - `sudo apt update`
-    - `sudo apt install -y python3-pip`
-#### RHEL 
-    - `sudo yum install -y epel-release`
-    - `sudo yum install -y python3-pip`
