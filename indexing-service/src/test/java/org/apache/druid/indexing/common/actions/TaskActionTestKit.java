@@ -112,7 +112,7 @@ public class TaskActionTestKit extends ExternalResource
       }
 
       @Override
-      public long getBatchAllocationMaxWaitTime()
+      public long getBatchAllocationWaitTime()
       {
         return 10L;
       }
