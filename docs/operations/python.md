@@ -38,9 +38,12 @@ Since Python2 is deprecated, this document has instructions to install Python3 i
 
 ### MacOS
 
-#### Install the official Python release
-* Browse to the [Python Downloads Page](https://www.python.org/downloads/) and download the latest version (3.x.x)
-* Verify if Python3 and Pip3 (python package manager) is installed by issuing `python3` and `pip3 -V` commands. 
-
 #### Install with Homebrew
 Refer [Installing Python 3 on Mac OS X](https://docs.python-guide.org/starting/install3/osx/)
+
+#### Install the official Python release
+* Browse to the [Python Downloads Page](https://www.python.org/downloads/) and download the latest version (3.x.x)
+
+Verify if Python3 is installed by issuing `python3` command.
+
+
