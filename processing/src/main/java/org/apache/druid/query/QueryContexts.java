@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -420,16 +419,6 @@ public class QueryContexts
     }
 
     return overridden;
-  }
-
-  public static <T> boolean retryOnDisconnect(Query<T> query, boolean defaultValue)
-  {
-    return query.getContextBoolean(RETRY_ON_DISCONNECT, defaultValue);
-  }
-
-  public static String getBrokerServiceName(Map<String, Object> queryContext)
-  {
-    return queryContext == null ? null : (String) queryContext.get(BROKER_SERVICE_NAME);
   }
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)

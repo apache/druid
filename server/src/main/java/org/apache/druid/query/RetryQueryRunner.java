@@ -218,8 +218,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       } else {
         final QueryContext queryContext = queryPlus.getQuery().context();
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
-        boolean retryEntireQuery = QueryContexts.retryOnDisconnect(queryPlus.getQuery(), false)
-                                   && context.didNodeDisconnect();
+        boolean retryEntireQuery = queryContext.retryOnDisconnect() && context.didNodeDisconnect();
         final int maxNumRetries = queryContext.getNumRetriesOnMissingSegments(config.getNumTries());
         if (missingSegments.isEmpty() && !retryEntireQuery) {
           return false;

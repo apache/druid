@@ -479,6 +479,7 @@ public abstract class ResponseContext
           NUM_SCANNED_ROWS,
           CPU_CONSUMED_NANOS,
           TRUNCATED,
+          NODE_DISCONNECT
       });
     }
 

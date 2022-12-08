@@ -577,6 +577,11 @@ public class QueryContext
     return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
+  public boolean retryOnDisconnect()
+  {
+    return getBoolean(QueryContexts.RETRY_ON_DISCONNECT, false);
+  }
+
   @Override
   public boolean equals(Object o)
   {

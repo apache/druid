@@ -179,6 +179,15 @@ public class ResponseContextTest
   }
 
   @Test
+  public void retryOnDisconnect()
+  {
+    final ResponseContext ctx = ResponseContext.createEmpty();
+    Assert.assertEquals(false, ctx.didNodeDisconnect());
+    ctx.add(Keys.NODE_DISCONNECT, true);
+    Assert.assertEquals(true, ctx.didNodeDisconnect());
+  }
+
+  @Test
   public void mergeResponseContextTest()
   {
     final ResponseContext ctx1 = ResponseContext.createEmpty();

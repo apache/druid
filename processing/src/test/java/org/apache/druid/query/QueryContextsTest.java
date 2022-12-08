@@ -201,6 +201,14 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testRetryOnDisconnect()
+  {
+    Map<String, Object> queryContext = new HashMap<>();
+    queryContext.put(QueryContexts.RETRY_ON_DISCONNECT, true);
+    Assert.assertTrue(QueryContext.of(queryContext).retryOnDisconnect());
+  }
+
+  @Test
   public void testGetAs()
   {
     Assert.assertNull(QueryContexts.getAsString("foo", null, null));
