@@ -44,6 +44,6 @@ Refer [Installing Python 3 on Mac OS X](https://docs.python-guide.org/starting/i
 #### Install the official Python release
 * Browse to the [Python Downloads Page](https://www.python.org/downloads/) and download the latest version (3.x.x)
 
-Verify if Python3 is installed by issuing `python3` command.
+Verify if Python3 is installed by issuing `python3 --version` command.
 
 
