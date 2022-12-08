@@ -123,6 +123,11 @@ spec:
         ports:
         - containerPort: {{ .Values.middleManager.port }}
           name: http
+        {{- if .Values.prometheus.enabled}}
+        - name: prometheus
+          containerPort: {{ .Values.prometheus.port }}
+          protocol: TCP
+        {{- end }}
         volumeMounts:
         - mountPath: /opt/druid/var/druid/
           name: data

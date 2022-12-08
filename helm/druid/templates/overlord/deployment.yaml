@@ -67,6 +67,11 @@ spec:
             - name: http
               containerPort: {{ .Values.overlord.port }}
               protocol: TCP
+            {{- if .Values.prometheus.enabled }}
+            - name: prometheus
+              containerPort: {{ .Values.prometheus.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             initialDelaySeconds: 60
             httpGet:
