@@ -760,7 +760,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     this.queryHelper.testQueriesFromString(querySpec);
 
     // All data written to stream within 10 secs.
-    // Each task duration is 30 secs. Hence, one round of tasks will be able to consume all data from the stream.
+    // Each task duration is 120 secs. Hence, one round of tasks will be able to consume all data from the stream.
     // numPrevCompletedTasks -> number of tasks completed in previous rounds
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
