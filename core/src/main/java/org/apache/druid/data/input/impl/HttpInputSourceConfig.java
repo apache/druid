@@ -76,7 +76,7 @@ public class HttpInputSourceConfig
   public String toString()
   {
     return "HttpInputSourceConfig{" +
-           ", allowedProtocols=" + allowedProtocols +
+           "allowedProtocols=" + allowedProtocols +
            '}';
   }
 }

@@ -32,7 +32,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
@@ -331,7 +331,11 @@ public class TaskToolbox
         DataSegment::getInterval
     );
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
-      getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
+      getTaskActionClient().submit(
+          SegmentTransactionalInsertAction.appendAction(
+              ImmutableSet.copyOf(segmentCollection), null, null
+          )
+      );
     }
   }
 
