@@ -56,6 +56,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 
 public class ProtobufInputFormatTest
 {
@@ -154,6 +155,16 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .build(),
+        row.getDimensions()
+    );
+
     ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
   }
 
@@ -184,6 +195,54 @@ public class ProtobufInputFormatTest
         entity,
         null
     ).read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .build(),
+        row.getDimensions()
+    );
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+  }
+
+  @Test
+  public void testParseFlattenDataDiscover() throws Exception
+  {
+    //configure parser with desc file
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, decoder);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, new DimensionsSpec(Collections.emptyList()), null),
+        entity,
+        null
+    ).read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("eventType")
+                     .add("foobar")
+                     .add("bar0")
+                     .add("someOtherId")
+                     .add("someIntColumn")
+                     .add("isValid")
+                     .add("description")
+                     .add("someLongColumn")
+                     .add("someFloatColumn")
+                     .add("id")
+                     .add("timestamp")
+                     .build(),
+        row.getDimensions()
+    );
 
     ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
   }
@@ -236,6 +295,19 @@ public class ProtobufInputFormatTest
 
 
     InputRow row = transformingReader.read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .add("eventType")
+                     .add("foo")
+                     .add("bar")
+                     .build(),
+        row.getDimensions()
+    );
 
     Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
     Assert.assertEquals(
