@@ -132,7 +132,7 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public DataSourceAnalysis getAnalysisForDataSource()
+  public DataSourceAnalysis getAnalysis()
   {
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }

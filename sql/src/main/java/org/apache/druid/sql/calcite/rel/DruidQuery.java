@@ -841,7 +841,7 @@ public class DruidQuery
       return true;
     }
 
-    if (dataSource.getAnalysisForDataSource().isConcreteTableBased()) {
+    if (dataSource.getAnalysis().isConcreteTableBased()) {
       // Always OK: queries on concrete tables (regular Druid datasources) use segment-based storage adapters
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
       // intervals safer. They do not have special checks for granularity and interval safety.

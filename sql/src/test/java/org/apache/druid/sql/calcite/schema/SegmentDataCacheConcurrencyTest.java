@@ -216,7 +216,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(
-          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysisForDataSource())
+          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
                           .isPresent()
       ).get(100, TimeUnit.MILLISECONDS);
       Assert.assertTrue(hasTimeline);

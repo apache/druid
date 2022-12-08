@@ -124,7 +124,7 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
         segmentManager.getTimeline(analysis);
@@ -179,7 +179,7 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;

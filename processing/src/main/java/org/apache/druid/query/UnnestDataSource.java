@@ -189,10 +189,10 @@ public class UnnestDataSource implements DataSource
   }
 
   @Override
-  public DataSourceAnalysis getAnalysisForDataSource()
+  public DataSourceAnalysis getAnalysis()
   {
     final DataSource current = this.getBase();
-    return current.getAnalysisForDataSource();
+    return current.getAnalysis();
   }
 
   @Override

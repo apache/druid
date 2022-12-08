@@ -240,7 +240,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // 1) Must be based on a concrete datasource that is not a table.
@@ -259,7 +259,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).

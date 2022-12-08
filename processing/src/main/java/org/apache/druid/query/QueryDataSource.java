@@ -114,7 +114,7 @@ public class QueryDataSource implements DataSource
   }
 
   @Override
-  public DataSourceAnalysis getAnalysisForDataSource()
+  public DataSourceAnalysis getAnalysis()
   {
     final Query<?> subQuery = this.getQuery();
     if (!(subQuery instanceof BaseQuery)) {
@@ -124,7 +124,7 @@ public class QueryDataSource implements DataSource
       throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
     }
     final DataSource current = subQuery.getDataSource();
-    return current.getAnalysisForDataSource().maybeWithBaseQuery(subQuery);
+    return current.getAnalysis().maybeWithBaseQuery(subQuery);
   }
 
   @Override

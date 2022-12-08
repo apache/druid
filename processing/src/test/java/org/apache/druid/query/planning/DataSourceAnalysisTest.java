@@ -62,7 +62,7 @@ public class DataSourceAnalysisTest
   @Test
   public void testTable()
   {
-    final DataSourceAnalysis analysis = TABLE_FOO.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = TABLE_FOO.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -79,7 +79,7 @@ public class DataSourceAnalysisTest
   public void testUnion()
   {
     final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
-    final DataSourceAnalysis analysis = unionDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = unionDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -96,7 +96,7 @@ public class DataSourceAnalysisTest
   public void testQueryOnTable()
   {
     final QueryDataSource queryDataSource = subquery(TABLE_FOO);
-    final DataSourceAnalysis analysis = queryDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = queryDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -117,7 +117,7 @@ public class DataSourceAnalysisTest
   {
     final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
     final QueryDataSource queryDataSource = subquery(unionDataSource);
-    final DataSourceAnalysis analysis = queryDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = queryDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -136,7 +136,7 @@ public class DataSourceAnalysisTest
   @Test
   public void testLookup()
   {
-    final DataSourceAnalysis analysis = LOOKUP_LOOKYLOO.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = LOOKUP_LOOKYLOO.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
@@ -153,7 +153,7 @@ public class DataSourceAnalysisTest
   public void testQueryOnLookup()
   {
     final QueryDataSource queryDataSource = subquery(LOOKUP_LOOKYLOO);
-    final DataSourceAnalysis analysis = queryDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = queryDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
@@ -172,7 +172,7 @@ public class DataSourceAnalysisTest
   @Test
   public void testInline()
   {
-    final DataSourceAnalysis analysis = INLINE.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = INLINE.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
@@ -209,7 +209,7 @@ public class DataSourceAnalysisTest
             JoinType.FULL
         );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -253,7 +253,7 @@ public class DataSourceAnalysisTest
             JoinType.FULL
         );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -304,7 +304,7 @@ public class DataSourceAnalysisTest
             JoinType.RIGHT
         );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -348,7 +348,7 @@ public class DataSourceAnalysisTest
             TrueDimFilter.instance()
         );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -378,7 +378,7 @@ public class DataSourceAnalysisTest
         TrueDimFilter.instance()
     );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertFalse(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
@@ -406,7 +406,7 @@ public class DataSourceAnalysisTest
         JoinType.INNER
     );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -441,7 +441,7 @@ public class DataSourceAnalysisTest
             )
         );
 
-    final DataSourceAnalysis analysis = queryDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = queryDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertTrue(analysis.isConcreteTableBased());
@@ -486,7 +486,7 @@ public class DataSourceAnalysisTest
         JoinType.INNER
     );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
@@ -515,7 +515,7 @@ public class DataSourceAnalysisTest
         JoinType.INNER
     );
 
-    final DataSourceAnalysis analysis = joinDataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = joinDataSource.getAnalysis();
 
     Assert.assertFalse(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());

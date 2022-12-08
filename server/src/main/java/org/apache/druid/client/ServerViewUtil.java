@@ -57,7 +57,7 @@ public class ServerViewUtil
       int numCandidates
   )
   {
-    final DataSourceAnalysis analysis = datasource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = datasource.getAnalysis();
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(analysis);
     if (!maybeTimeline.isPresent()) {
       return Collections.emptyList();

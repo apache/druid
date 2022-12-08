@@ -123,7 +123,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
   {
     DataSource queryDataSource = query.getDataSource();
-    return queryDataSource.getAnalysisForDataSource()
+    return queryDataSource.getAnalysis()
                              .getBaseQuerySegmentSpec()
                              .orElseGet(query::getQuerySegmentSpec);
   }

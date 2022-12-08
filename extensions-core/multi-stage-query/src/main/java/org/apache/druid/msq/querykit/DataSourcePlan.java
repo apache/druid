@@ -275,7 +275,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
-    final DataSourceAnalysis analysis = dataSource.getAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSource.getAnalysis();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKit,

@@ -155,7 +155,7 @@ public class ClientInfoResource
     }
 
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline =
-        timelineServerView.getTimeline((new TableDataSource(dataSourceName)).getAnalysisForDataSource());
+        timelineServerView.getTimeline((new TableDataSource(dataSourceName)).getAnalysis());
     final Optional<Iterable<TimelineObjectHolder<String, ServerSelector>>> maybeServersLookup =
         maybeTimeline.map(timeline -> timeline.lookup(theInterval));
     if (!maybeServersLookup.isPresent() || Iterables.isEmpty(maybeServersLookup.get())) {

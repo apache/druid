@@ -129,5 +129,5 @@ public interface DataSource
    *
    * @return The {@link DataSourceAnalysis} object for the callee data source
    */
-  DataSourceAnalysis getAnalysisForDataSource();
+  DataSourceAnalysis getAnalysis();
 }

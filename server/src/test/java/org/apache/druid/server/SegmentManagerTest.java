@@ -385,7 +385,7 @@ public class SegmentManagerTest
   {
     Assert.assertEquals(
         Optional.empty(),
-        segmentManager.getTimeline((new TableDataSource("nonExisting")).getAnalysisForDataSource())
+        segmentManager.getTimeline((new TableDataSource("nonExisting")).getAnalysis())
     );
   }
 

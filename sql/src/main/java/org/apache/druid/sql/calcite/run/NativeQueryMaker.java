@@ -166,7 +166,7 @@ public class NativeQueryMaker implements QueryMaker
 
   private List<Interval> findBaseDataSourceIntervals(Query<?> query)
   {
-    return query.getDataSource().getAnalysisForDataSource()
+    return query.getDataSource().getAnalysis()
                 .getBaseQuerySegmentSpec()
                 .map(QuerySegmentSpec::getIntervals)
                 .orElseGet(query::getIntervals);
