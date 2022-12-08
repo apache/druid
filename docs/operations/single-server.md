@@ -49,17 +49,14 @@ While example configurations are provided for very large single machines, at hig
 
 ## Druid auto start
 
-Setting up a new Druid cluster can sometimes be complicated as there are several runtime properties required by each service. Each process must also be given the appropriate jvm arguments so that the system can perform optimally.
+Druid includes a launch script, `bin/start-druid` that automatically sets various memory-related parameters based on available processors and memory. It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
 
 `start-druid` is a generic launch script capable of starting any set of Druid services on a server.
 It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
-All other reference configurations (e.g. `micro`, `small`, `xlarge`) can be obtained by passing the
-correct memory to this script.
-Druid services will use all processors and upto 80% memory on the system.
+Druid services will use all processors and up to 80% memory on the system.
 For details about possible arguments, run `bin/start-druid --help`.
 
 The corresponding launch scripts (e.g. `start-micro-quickstart`) are now deprecated.
-
 
 
 ## Single server reference configurations
