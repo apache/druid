@@ -87,11 +87,21 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public File getBaseDir()
   {
     return baseDir;
+  }
+
+  @Nullable
+  @JsonProperty("baseDir")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String getBaseDirForSerialization()
+  {
+    if (baseDir == null) {
+      return null;
+    } else {
+      return baseDir.getPath();
+    }
   }
 
   @Nullable
@@ -102,11 +112,21 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     return filter;
   }
 
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<File> getFiles()
   {
     return files;
+  }
+
+  /**
+   * Returns a list of file paths for serialization. This is better than returning {@link File} directly, because
+   * Jackson serializes {@link File} using {@link File#getAbsolutePath()}, and we'd prefer to not force relative
+   * path resolution as part of serialization.
+   */
+  @JsonProperty("files")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  private List<String> getFilesForSerialization()
+  {
+    return getFiles().stream().map(File::getPath).collect(Collectors.toList());
   }
 
   @Override
@@ -233,9 +253,9 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   public String toString()
   {
     return "LocalInputSource{" +
-        "baseDir=\"" + baseDir +
-        "\", filter=" + filter +
-        ", files=" + files +
-        "}";
+           "baseDir=\"" + baseDir +
+           "\", filter=" + filter +
+           ", files=" + files +
+           "}";
   }
 }
