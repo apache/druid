@@ -42,10 +42,15 @@ spec:
         app: {{ template "druid.name" . }}
         component: {{ .Values.middleManager.name }}
         release: {{ .Release.Name }}
-        {{- if .Values.middleManager.podAnnotations }}
       annotations:
-{{ toYaml .Values.middleManager.podAnnotations | indent 8 }}
-        {{- end }}
+      {{- with .Values.middleManager.podAnnotations }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- if .Values.prometheus.enabled }}
+      {{- with .Values.prometheus.annotation }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
       {{- if or .Values.middleManager.antiAffinity .Values.middleManager.nodeAffinity }}
       affinity:
