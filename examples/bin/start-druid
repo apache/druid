@@ -28,5 +28,5 @@ elif [ -x "$(command -v python2)" ]
 then
   exec python2 "$WHEREAMI/start-druid-main.py" "$@"
 else
-  exec "$WHEREAMI/start-druid-main.py" "$@"
+  exec python "$WHEREAMI/start-druid-main.py" "$@"
 fi
