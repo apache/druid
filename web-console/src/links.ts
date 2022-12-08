@@ -84,7 +84,7 @@ export function getLink(linkName: LinkNames): string {
     case 'DOCS_API':
       return `${links.docsHref}/operations/api-reference.html`;
     case 'DOCS_MSQ_ERROR':
-      return `${links.docsHref}/multi-stage-query/concepts.html#error-codes`;
+      return `${links.docsHref}/multi-stage-query/reference.html`;
     case 'COMMUNITY':
       return links.communityHref;
     case 'SLACK':
