@@ -245,7 +245,7 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Returns true if all the stages comprising the query definition have been sucessful in producing their results
+   * Returns true if all the stages comprising the query definition have been successful in producing their results
    */
   public boolean isSuccess()
   {

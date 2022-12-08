@@ -46,7 +46,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
@@ -211,36 +210,44 @@ public class WorkerSketchFetcher implements AutoCloseable
     if (!completeKeyStatisticsInformation.isComplete()) {
       throw new ISE("All worker partial key information not received for stage[%d]", stageId.getStageNumber());
     }
-    Set<Integer> workers = tasks.stream().map(MSQTasks::workerFromTaskId).collect(Collectors.toSet());
+
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
       for (String taskId : tasks) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
-        if (workers.contains(workerNumber)) {
-          executorService.submit(() -> {
-            fetchStatsFromWorker(
-                kernelActions,
-                () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
-                    taskId,
-                    stageId.getQueryId(),
-                    stageId.getStageNumber(),
-                    timeChunk
-                ),
-                taskId,
-                (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(
-                    stageId,
-                    workerNumber,
-                    timeChunk,
-                    snapshot
-                ),
-                retryOperation
-            );
+        executorService.submit(() -> {
+          fetchStatsFromWorker(
+              kernelActions,
+              () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
+                  taskId,
+                  stageId.getQueryId(),
+                  stageId.getStageNumber(),
+                  timeChunk
+              ),
+              taskId,
+              (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(
+                  stageId,
+                  workerNumber,
+                  timeChunk,
+                  snapshot
+              ),
+              retryOperation
+          );
 
-          });
-        }
+        });
       }
     });
   }
+
+
+  /**
+   * Returns {@link Throwable} if error, else null
+   */
+  public Throwable getError()
+  {
+    return isError.get();
+  }
+
 
   @Override
   public void close()

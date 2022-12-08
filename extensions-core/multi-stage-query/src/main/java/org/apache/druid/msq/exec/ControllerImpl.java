@@ -609,7 +609,7 @@ public class ControllerImpl implements Controller
         workerTaskLauncher,
         isDurableStorageEnabled
     );
-    closer.register(workerSketchFetcher::close)
+    closer.register(workerSketchFetcher::close);
 
     return queryDef;
   }
@@ -2142,6 +2142,7 @@ public class ControllerImpl implements Controller
         updateLiveReportMaps();
         cleanUpEffectivelyFinishedStages();
         retryFailedTasks();
+        checkForErrorsInSketchFetcher();
         runKernelCommands();
       }
 
@@ -2151,6 +2152,14 @@ public class ControllerImpl implements Controller
 
       cleanUpEffectivelyFinishedStages();
       return Pair.of(queryKernel, workerTaskLauncherFuture);
+    }
+
+    private void checkForErrorsInSketchFetcher()
+    {
+      Throwable throwable = workerSketchFetcher.getError();
+      if (throwable != null) {
+        throw new ISE(throwable, "worker sketch fetch failed");
+      }
     }
 
 
