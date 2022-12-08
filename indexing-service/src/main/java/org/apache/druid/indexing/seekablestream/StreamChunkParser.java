@@ -55,7 +55,6 @@ class StreamChunkParser<RecordType extends ByteEntity>
   private final SettableByteEntityReader<RecordType> byteEntityReader;
   private final Predicate<InputRow> rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
-  private final InputStats inputStats;
   private final ParseExceptionHandler parseExceptionHandler;
 
   /**
@@ -89,7 +88,6 @@ class StreamChunkParser<RecordType extends ByteEntity>
     }
     this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
-    this.inputStats = rowIngestionMeters.getInputStats();
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
@@ -130,7 +128,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
 
   private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
   {
-    inputStats.incrementProcessedBytes(recordByteBuffer.remaining());
+    rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
     return recordByteBuffer;
   }
 
@@ -141,7 +139,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   {
     final List<InputRow> rows = new ArrayList<>();
     for (ByteEntity valueBytes : valueBytess) {
-      inputStats.incrementProcessedBytes(valueBytes.getBuffer().remaining());
+      rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
       byteEntityReader.setEntity(valueBytes);
       try (FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
           byteEntityReader.read(),

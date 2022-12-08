@@ -44,6 +44,8 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
@@ -176,7 +178,9 @@ public class SqlInputSourceTest
     final File tempDir = createFirehoseTmpDir("testMultipleSplit");
     SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
-    CloseableIterator<InputRow> resultIterator = sqlReader.read();
+
+    RowIngestionMeters meters = new MutableRowIngestionMeters();
+    CloseableIterator<InputRow> resultIterator = sqlReader.read(meters);
     final List<Row> rows = new ArrayList<>();
     while (resultIterator.hasNext()) {
       rows.add(resultIterator.next());

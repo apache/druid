@@ -57,21 +57,24 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
+    final InputEntity baseInputEntity;
     if (source instanceof BytesCountingInputEntity) {
-      source = ((BytesCountingInputEntity) source).getBaseInputEntity();
+      baseInputEntity = ((BytesCountingInputEntity) source).getBaseInputEntity();
+    } else {
+      baseInputEntity = source;
     }
 
     // this method handles the case when the entity comes from a tombstone or from a regular segment
     Preconditions.checkArgument(
-        source instanceof DruidSegmentInputEntity,
+        baseInputEntity instanceof DruidSegmentInputEntity,
         DruidSegmentInputEntity.class.getName() + " required, but "
-        + source.getClass().getName() + " provided."
+        + baseInputEntity.getClass().getName() + " provided."
     );
 
     final InputEntityReader retVal;
     // Cast is safe here because of the precondition above passed
-    if (((DruidSegmentInputEntity) source).isFromTombstone()) {
-      retVal = new DruidTombstoneSegmentReader(source);
+    if (((DruidSegmentInputEntity) baseInputEntity).isFromTombstone()) {
+      retVal = new DruidTombstoneSegmentReader(baseInputEntity);
     } else {
       retVal = new DruidSegmentReader(
           source,

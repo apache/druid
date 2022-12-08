@@ -19,19 +19,15 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.data.input.InputStats;
-
-import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class MutableRowIngestionMeters implements RowIngestionMeters, InputStats
+public class MutableRowIngestionMeters implements RowIngestionMeters
 {
   private long processed;
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
-  private final AtomicLong processedBytes = new AtomicLong(0);
+  private long processedBytes;
 
   @Override
   public long getProcessed()
@@ -46,15 +42,15 @@ public class MutableRowIngestionMeters implements RowIngestionMeters, InputStats
   }
 
   @Override
-  public void incrementProcessedBytes(long incrementByValue)
+  public void incrementProcessedBytes(long increment)
   {
-    processedBytes.addAndGet(incrementByValue);
+    processedBytes += increment;
   }
 
   @Override
   public long getProcessedBytes()
   {
-    return processedBytes.get();
+    return processedBytes;
   }
 
   @Override
@@ -93,19 +89,12 @@ public class MutableRowIngestionMeters implements RowIngestionMeters, InputStats
     thrownAway++;
   }
 
-  @Nullable
-  @Override
-  public InputStats getInputStats()
-  {
-    return this;
-  }
-
   @Override
   public RowIngestionMetersTotals getTotals()
   {
     return new RowIngestionMetersTotals(
         processed,
-        processedBytes.get(),
+        processedBytes,
         processedWithError,
         thrownAway,
         unparseable
@@ -124,6 +113,6 @@ public class MutableRowIngestionMeters implements RowIngestionMeters, InputStats
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
     this.thrownAway += rowIngestionMetersTotals.getThrownAway();
-    this.processedBytes.addAndGet(rowIngestionMetersTotals.getProcessedBytes());
+    this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
   }
 }

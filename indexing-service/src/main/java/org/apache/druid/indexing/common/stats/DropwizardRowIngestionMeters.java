@@ -21,15 +21,13 @@ package org.apache.druid.indexing.common.stats;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import org.apache.druid.data.input.InputStats;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DropwizardRowIngestionMeters implements RowIngestionMeters, InputStats
+public class DropwizardRowIngestionMeters implements RowIngestionMeters
 {
   private static final String ONE_MINUTE_NAME = "1m";
   private static final String FIVE_MINUTE_NAME = "5m";
@@ -109,13 +107,6 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters, InputSt
   public void incrementThrownAway()
   {
     thrownAway.mark();
-  }
-
-  @Nullable
-  @Override
-  public InputStats getInputStats()
-  {
-    return this;
   }
 
   @Override

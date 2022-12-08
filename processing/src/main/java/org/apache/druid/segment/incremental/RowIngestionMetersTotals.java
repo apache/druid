@@ -89,6 +89,7 @@ public class RowIngestionMetersTotals
     }
     RowIngestionMetersTotals that = (RowIngestionMetersTotals) o;
     return processed == that.processed
+           && processedBytes == that.processedBytes
            && processedWithError == that.processedWithError
            && thrownAway == that.thrownAway
            && unparseable == that.unparseable;
@@ -97,7 +98,7 @@ public class RowIngestionMetersTotals
   @Override
   public int hashCode()
   {
-    return Objects.hash(processed, processedWithError, thrownAway, unparseable);
+    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable);
   }
 
   @Override
