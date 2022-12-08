@@ -517,7 +517,7 @@ public class WorkerImpl implements Worker
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
 
-    // Dont add to queue if workerOrder already present.
+    // Do not add to queue if workerOrder already present.
     kernelManipulationQueue.add(
         kernelHolder ->
             kernelHolder.getStageKernelMap().putIfAbsent(

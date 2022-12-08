@@ -214,12 +214,12 @@ reading rows from the datasource. These statistics must be transferred to the co
 
 `PARALLEL` mode fetches the key statistics for all time chunks from all workers together and the controller then downsamples
 the sketch if it does not fit in memory. This is faster than `SEQUENTIAL` mode as there is less over head in fetching sketches
-for all time chunks together. This is good for small sketches which won't be downsampled even if merged together or if
+for all time chunks together. This is good for small sketches which won't be down sampled even if merged together or if
 accuracy in segment sizing for the ingestion is not very important.
 
 `SEQUENTIAL` mode fetches the sketches in ascending order of time and generates the partition boundaries for one time
 chunk at a time. This gives more working memory to the controller for merging sketches, which results in less
-downsampling and thus, more accuracy. There is, however, a time overhead on fetching sketches in sequential order. This is
+down sampling and thus, more accuracy. There is, however, a time overhead on fetching sketches in sequential order. This is
 good for cases where accuracy is important.
 
 `AUTO` mode tries to find the best approach based on number of workers and size of input rows. If there are more

@@ -59,16 +59,24 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
@@ -92,50 +100,249 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+  @Test
+  public void testWorkerFailedBeforeAnyPartialKeyInfoReceived()
+  {
+
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
 
 
   @Test
-  public void testWorkerFailedBeforeAnyResultsStatsArrive()
+  public void testWorkerFailedBeforeAllPartialKeyInfoReceived()
+  {
+
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+
+  @Test
+  public void testWorkerFailedBeforeAnyPartialKeyStatsFetchingFinishes()
+  {
+
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+
+  @Test
+  public void testWorkerFailedBeforeAllPartialKeyStatsFetchingFinishes()
+  {
+
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
+    controllerQueryKernelTester.init();
+
+    controllerQueryKernelTester.createAndGetNewStageNumbers();
+    controllerQueryKernelTester.startStage(0);
+
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+
+    controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+
+  }
+
+
+  @Test
+  public void testWorkerFailedBeforeAnyStatsAreMerged()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
-    // workorders sent for both stage
+    // work orders sent for both stage
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
 
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1, 0);
+
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -144,37 +351,46 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
 
   @Test
-  public void testWorkerFailedBeforeAllResultsStatsArrive()
+  public void testWorkerFailedBeforeAllStatsAreMerged()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
-    // workorders sent for both stage
+    // work orders sent for both stage
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
 
-    // fail one worker
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -187,14 +403,10 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
-    // workorders sent for both stage
-    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    // work orders sent for both stage
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.MERGING_STATISTICS);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     // fail one worker
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
@@ -203,20 +415,21 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.sendPartitionBoundariesForStage(0);
+
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -228,15 +441,10 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
 
-    // workorders sent for both stage
-    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    // work orders sent for both stage
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.MERGING_STATISTICS);
     controllerQueryKernelTester.init();
-
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 1);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     // fail one worker
 
@@ -246,7 +454,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
@@ -255,12 +463,12 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -268,7 +476,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
 
   @Test
-  public void testWorkerFailedBeforeAnyResultsRecieved()
+  public void testWorkerFailedBeforeAnyResultsReceived()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.POST_READING);
@@ -280,9 +488,9 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
@@ -296,7 +504,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -306,12 +514,12 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
 
   @Test
-  public void testWorkerFailedBeforeAllResultsRecieved()
+  public void testWorkerFailedBeforeAllResultsReceived()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.init();
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
 
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
 
@@ -321,7 +529,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
@@ -335,7 +543,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -415,14 +623,18 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
   }
 
@@ -451,21 +663,24 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 2);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
   }
 
   @Test
-  public void testMultipleWorkersFailedBeforeAnyResultsStatsArrive()
+  public void testMultipleWorkersFailedBeforeAnyPartialKeyInfoReceived()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
 
@@ -485,36 +700,34 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1, 0, 2);
-
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1, 0, 2);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1, 0, 2);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 1, 0, 2);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
 
   }
 
   @Test
-  public void testMultipleWorkersFailedBeforeAllResultsStatsArrive()
+  public void testMultipleWorkersFailedBeforeAllPartialKeyInfoReceived()
   {
-
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
-
 
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 2);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-
 
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
@@ -525,18 +738,182 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1, 0);
-
-    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
-
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+
+  }
+
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAnyPartialKeyStatsFetchingFinishes()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1, 2);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+
+  }
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAllPartialKeyStatsFetchingFinishes()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1, 2);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 2);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 1);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 2);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+
+  }
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAnyStatsAreMerged()
+  {
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1, 2);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 2);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+
+  }
+
+  @Test
+  public void testMultipleWorkersFailedBeforeAllStatsAreMerged()
+  {
+
+
+    ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
+
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.init();
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1, 2);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 2);
+
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
+    controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
 
@@ -549,34 +926,31 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
 
 
-    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.MERGING_STATISTICS);
     controllerQueryKernelTester.init();
-
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1, 2);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
 
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
-
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1, 0);
 
-    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
@@ -589,11 +963,8 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
 
 
-    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.setupStage(0, ControllerStagePhase.MERGING_STATISTICS);
     controllerQueryKernelTester.init();
-
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1, 2);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 2);
 
 
@@ -606,24 +977,26 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1, 0);
-
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
 
   @Test
-  public void testMultipleWorkersFailedBeforeAnyResultsRecieved()
+  public void testMultipleWorkersFailedBeforeAnyResultsReceived()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
 
@@ -638,7 +1011,9 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
@@ -649,21 +1024,21 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 1, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
 
   @Test
-  public void testMultipleWorkersFailedBeforeAllResultsRecieved()
+  public void testMultipleWorkersFailedBeforeAllResultsReceived()
   {
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
 
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 2);
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(1, 0);
 
@@ -672,8 +1047,11 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
 
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0, 1);
@@ -684,7 +1062,7 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);

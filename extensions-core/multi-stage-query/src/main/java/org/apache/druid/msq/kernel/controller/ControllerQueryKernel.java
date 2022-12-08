@@ -50,6 +50,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
@@ -127,13 +128,23 @@ public class ControllerQueryKernel
   /**
    * {@link MSQFault#getErrorCode()} which are retried.
    */
-  private static final Set<String> retriableErrorCodes = ImmutableSet.of(CanceledFault.CODE, UnknownFault.CODE,
-                                                                         WorkerRpcFailedFault.CODE
+  private static final Set<String> RETRIABLE_ERROR_CODES = ImmutableSet.of(
+      CanceledFault.CODE,
+      UnknownFault.CODE,
+      WorkerRpcFailedFault.CODE
   );
+  private final int maxRetainedPartitionSketchBytes;
+  private final boolean faultToleranceEnabled;
 
-  public ControllerQueryKernel(final QueryDefinition queryDef)
+  public ControllerQueryKernel(
+      final QueryDefinition queryDef,
+      int maxRetainedPartitionSketchBytes,
+      boolean faultToleranceEnabled
+  )
   {
     this.queryDef = queryDef;
+    this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
+    this.faultToleranceEnabled = faultToleranceEnabled;
     this.inflowMap = ImmutableMap.copyOf(computeStageInflowMap(queryDef));
     this.outflowMap = ImmutableMap.copyOf(computeStageOutflowMap(queryDef));
 
@@ -291,7 +302,8 @@ public class ControllerQueryKernel
           stageDef,
           stageWorkerCountMap,
           slicer,
-          assignmentStrategy
+          assignmentStrategy,
+          maxRetainedPartitionSketchBytes
       );
       stageTracker.put(nextStage, stageKernel);
     }
@@ -351,11 +363,11 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#getWorkersToSendParitionBoundaries()}
+   * Delegates call to {@link ControllerStageTracker#getWorkersToSendPartitionBoundaries()}
    */
   public IntSet getWorkersToSendPartitionBoundaries(final StageId stageId)
   {
-    return getStageKernelOrThrow(stageId).getWorkersToSendParitionBoundaries();
+    return getStageKernelOrThrow(stageId).getWorkersToSendPartitionBoundaries();
   }
 
   /**
@@ -388,14 +400,6 @@ public class ControllerQueryKernel
   public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation(final StageId stageId)
   {
     return getStageKernelOrThrow(stageId).getCompleteKeyStatisticsInformation();
-  }
-
-  /**
-   * Delegates call to {@link ControllerStageTracker#setClusterByPartitionBoundaries(ClusterByPartitions)} ()}
-   */
-  public void setClusterByPartitionBoundaries(final StageId stageId, ClusterByPartitions clusterByPartitions)
-  {
-    getStageKernelOrThrow(stageId).setClusterByPartitionBoundaries(clusterByPartitions);
   }
 
   /**
@@ -458,7 +462,7 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#addPartialKeyStatisticsForWorker(int, PartialKeyStatisticsInformation)}.
+   * Delegates call to {@link ControllerStageTracker#addPartialKeyInformationForWorker(int, PartialKeyStatisticsInformation)}.
    * If calling this causes transition for the stage kernel, then this gets registered in this query kernel
    */
   public void addPartialKeyStatisticsForStageAndWorker(
@@ -468,7 +472,7 @@ public class ControllerQueryKernel
   )
   {
     ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
-    ControllerStagePhase newPhase = stageKernel.addPartialKeyStatisticsForWorker(
+    ControllerStagePhase newPhase = stageKernel.addPartialKeyInformationForWorker(
         workerNumber,
         partialKeyStatisticsInformation
     );
@@ -552,7 +556,7 @@ public class ControllerQueryKernel
    * Whenever a stage kernel changes its phase, the change must be "registered" by calling this method with the stageId
    * and the new phase
    */
-  private void transitionStageKernel(StageId stageId, ControllerStagePhase newPhase)
+  public void transitionStageKernel(StageId stageId, ControllerStagePhase newPhase)
   {
     Preconditions.checkArgument(
         stageTracker.containsKey(stageId),
@@ -575,8 +579,13 @@ public class ControllerQueryKernel
       }
     }
 
-    // might need to change this
     if (ControllerStagePhase.isPostReadingPhase(newPhase)) {
+
+      // when fault tolerance is enabled, we cannot delete the input data eagerly as we need the input stage for retry until
+      // results for the current stage are ready.
+      if (faultToleranceEnabled && newPhase == ControllerStagePhase.POST_READING) {
+        return;
+      }
       // Once the stage has consumed all the data/input from its dependent stages, we remove it from all the stages
       // whose input it was dependent on
       for (StageId inputStage : inflowMap.get(stageId)) {
@@ -650,7 +659,7 @@ public class ControllerQueryKernel
    * @param msqFault
    * @return List of {@link WorkOrder} that needs to be retried.
    */
-  public List<WorkOrder> getWorkInCaseWorkerEligibileForRetryElseThrow(int workerNumber, MSQFault msqFault)
+  public List<WorkOrder> getWorkInCaseWorkerEligibleForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
 
     final String errorCode;
@@ -662,9 +671,8 @@ public class ControllerQueryKernel
 
     log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
 
-    if (retriableErrorCodes.contains(errorCode)) {
-      return getWorkInCaseWorkerEligibileForRetry(workerNumber);
-
+    if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
+      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
     } else {
       throw new MSQException(msqFault);
     }
@@ -680,7 +688,7 @@ public class ControllerQueryKernel
    * @param worker
    * @return List of {@link WorkOrder} that needs to be retried.
    */
-  private List<WorkOrder> getWorkInCaseWorkerEligibileForRetry(int worker)
+  private List<WorkOrder> getWorkInCaseWorkerEligibleForRetry(int worker)
   {
     List<StageId> trackedSet = new ArrayList<>(getActiveStages());
     trackedSet.removeAll(getEffectivelyFinishedStageIds());
@@ -692,11 +700,81 @@ public class ControllerQueryKernel
       if (ControllerStagePhase.RETRYING.canTransitionFrom(controllerStageTracker.getPhase())
           && controllerStageTracker.retryIfNeeded(worker)) {
         workOrders.add(getWorkOrder(worker, stageId));
-        // should be a no-op. Calling for code patterns.
+        // should be a no-op.
         transitionStageKernel(stageId, ControllerStagePhase.RETRYING);
       }
     }
     return workOrders;
   }
 
+  /**
+   * For each stage, fetches the workers who are ready with their {@link ClusterByStatisticsSnapshot}
+   */
+  public Map<StageId, Set<Integer>> getStagesAndWorkersToFetchClusterStats()
+  {
+    List<StageId> trackedSet = new ArrayList<>(getActiveStages());
+    trackedSet.removeAll(getEffectivelyFinishedStageIds());
+
+    Map<StageId, Set<Integer>> stageToWorkers = new HashMap<>();
+
+    for (StageId stageId : trackedSet) {
+      ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
+      stageToWorkers.put(stageId, controllerStageTracker.getWorkersToFetchClusterStatisticsFrom());
+    }
+    return stageToWorkers;
+  }
+
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#startFetchingStatsFromWorker(int)} for each worker
+   */
+  public void startFetchingStatsFromWorker(StageId stageId, Set<Integer> workers)
+  {
+    ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
+
+    for (int worker : workers) {
+      controllerStageTracker.startFetchingStatsFromWorker(worker);
+    }
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#mergeClusterByStatisticsCollectorForAllTimeChunks(int, ClusterByStatisticsSnapshot)}
+   */
+  public void mergeClusterByStatisticsCollectorForAllTimeChunks(
+      StageId stageId,
+      int workerNumber,
+      ClusterByStatisticsSnapshot clusterByStatsSnapshot
+  )
+  {
+    getStageKernelOrThrow(stageId).mergeClusterByStatisticsCollectorForAllTimeChunks(
+        workerNumber,
+        clusterByStatsSnapshot
+    );
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#mergeClusterByStatisticsCollectorForTimeChunk(int, Long, ClusterByStatisticsSnapshot)}
+   */
+
+  public void mergeClusterByStatisticsCollectorForTimeChunk(
+      StageId stageId,
+      int workerNumber,
+      Long timeChunk,
+      ClusterByStatisticsSnapshot clusterByStatsSnapshot
+  )
+  {
+    getStageKernelOrThrow(stageId).mergeClusterByStatisticsCollectorForTimeChunk(
+        workerNumber,
+        timeChunk,
+        clusterByStatsSnapshot
+    );
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#allPartialKeyInformationFetched()}
+   */
+  public boolean allPartialKeyInformationPresent(StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).allPartialKeyInformationFetched();
+  }
 }

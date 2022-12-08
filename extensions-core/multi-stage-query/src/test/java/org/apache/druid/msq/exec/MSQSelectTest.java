@@ -996,7 +996,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testGroupByWithMultiValueWithoutGroupByEnable()
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .putAll(MSQ_CONTEXT_WITHOUT_DURABLE_STORAGE)
                                               .put("groupByEnableMultiValueUnnesting", false)
                                               .build();
 
@@ -1140,7 +1140,7 @@ public class MSQSelectTest extends MSQTestBase
   public void testGroupByWithMultiValueMvToArrayWithoutGroupByEnable()
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .putAll(MSQ_CONTEXT_WITHOUT_DURABLE_STORAGE)
                                               .put("groupByEnableMultiValueUnnesting", false)
                                               .build();
 
@@ -1258,7 +1258,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable-mv-string-array.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()

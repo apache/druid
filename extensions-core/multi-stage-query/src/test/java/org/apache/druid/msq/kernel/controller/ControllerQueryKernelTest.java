@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -151,10 +150,15 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(0);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
@@ -163,16 +167,24 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(1);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(1, 0);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(1, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(1, 0);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(1, 0);
+    controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(1, 0);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(1, 1);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(1, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(1, 1);
+    controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(1, 1);
+    controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(1, 1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.POST_READING);
+
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(1, 0);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(1, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(1, 0);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(1, 1);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(1, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(1, 1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.RESULTS_READY);
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
@@ -182,7 +194,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.startStage(2);
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(2, 0);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(2, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(2, 0);
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.finishStage(0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.FINISHED);
@@ -194,16 +206,20 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.startStage(3);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.startWorkOrder(3);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(3, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(3, 1);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(3, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(3, 0);
+    controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(3, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(3, 0, 1);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(3, 0);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(3, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(3, 0);
 
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.POST_READING);
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(3, 1);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(3, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(3, 1);
 
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.finishStage(1);
@@ -233,19 +249,23 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
     controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 1);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     controllerQueryKernelTester.finishStage(0, false);
@@ -270,7 +290,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
@@ -283,7 +303,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
             WorkerStagePhase.NEW
         ),
         ISE.class,
-        () -> controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0)
+        () -> controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0)
     );
 
   }
@@ -407,7 +427,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
   {
     queryKernelTester.startStage(stageNumber);
     queryKernelTester.startWorkOrder(stageNumber);
-    queryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(stageNumber, 0);
+    queryKernelTester.setResultsCompleteForStageAndWorkers(stageNumber, 0);
   }
 
 }

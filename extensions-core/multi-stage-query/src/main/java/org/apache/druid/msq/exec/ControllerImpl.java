@@ -68,7 +68,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -113,7 +112,6 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
-import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -157,7 +155,6 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
-import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
@@ -210,7 +207,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -285,6 +281,9 @@ public class ControllerImpl implements Controller
   private volatile WorkerClient netClient;
 
   private volatile FaultsExceededChecker faultsExceededChecker = null;
+
+  private Map<Integer, ClusterStatisticsMergeMode> stageToStatsMergingMode;
+  private WorkerMemoryParameters workerMemoryParameters;
 
   public ControllerImpl(
       final MSQControllerTask task,
@@ -526,7 +525,7 @@ public class ControllerImpl implements Controller
    * <p>
    * If the consumer throws an exception, the query fails.
    */
-  private void addToKernelManipulationQueue(Consumer<ControllerQueryKernel> kernelConsumer)
+  public void addToKernelManipulationQueue(Consumer<ControllerQueryKernel> kernelConsumer)
   {
     if (!kernelManipulationQueue.offer(kernelConsumer)) {
       final String message = "Controller kernel queue is full. Main controller loop may be delayed or stuck.";
@@ -541,15 +540,6 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
-    ClusterStatisticsMergeMode clusterStatisticsMergeMode =
-        MultiStageQueryContext.getClusterStatisticsMergeMode(task.getQuerySpec().getQuery().context());
-
-    log.debug("Query [%s] cluster statistics merge mode is set to %s.", id(), clusterStatisticsMergeMode);
-
-    int statisticsMaxRetainedBytes = WorkerMemoryParameters.createProductionInstanceForController(context.injector())
-                                                                    .getPartitionStatisticsMaxRetainedBytes();
-    this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode, statisticsMaxRetainedBytes);
-
     closer.register(netClient::close);
 
     final QueryDefinition queryDef = makeQueryDefinition(
@@ -598,6 +588,28 @@ public class ControllerImpl implements Controller
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
     );
 
+    stageToStatsMergingMode = new HashMap<>();
+    queryDef.getStageDefinitions().forEach(
+        stageDefinition ->
+            stageToStatsMergingMode.put(
+                stageDefinition.getId().getStageNumber(),
+                finalizeClusterStatisticsMergeMode(
+                    stageDefinition,
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(
+                        task.getQuerySpec()
+                            .getQuery()
+                            .context())
+                )
+            )
+    );
+    this.workerMemoryParameters = WorkerMemoryParameters.createProductionInstanceForController(context.injector());
+
+    this.workerSketchFetcher = new WorkerSketchFetcher(
+        netClient,
+        workerTaskLauncher,
+        isDurableStorageEnabled
+    );
+
     return queryDef;
   }
 
@@ -609,7 +621,7 @@ public class ControllerImpl implements Controller
    */
   private void addToRetryQueue(ControllerQueryKernel kernel, int worker, MSQFault fault)
   {
-    List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibileForRetryElseThrow(worker, fault);
+    List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibleForRetryElseThrow(worker, fault);
     if (retriableWorkOrders.size() != 0) {
       log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
       workerTaskLauncher.submitForRelaunch(worker);
@@ -635,7 +647,11 @@ public class ControllerImpl implements Controller
    * partiton boundaries. This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
   @Override
-  public void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject)
+  public void updatePartialKeyStatisticsInformation(
+      int stageNumber,
+      int workerNumber,
+      Object partialKeyStatisticsInformationObject
+  )
   {
     addToKernelManipulationQueue(
         queryKernel -> {
@@ -651,7 +667,10 @@ public class ControllerImpl implements Controller
 
           final PartialKeyStatisticsInformation partialKeyStatisticsInformation;
           try {
-            partialKeyStatisticsInformation = mapper.convertValue(partialKeyStatisticsInformationObject, PartialKeyStatisticsInformation.class);
+            partialKeyStatisticsInformation = mapper.convertValue(
+                partialKeyStatisticsInformationObject,
+                PartialKeyStatisticsInformation.class
+            );
           }
           catch (IllegalArgumentException e) {
             throw new IAE(
@@ -663,38 +682,10 @@ public class ControllerImpl implements Controller
           }
 
           queryKernel.addPartialKeyStatisticsForStageAndWorker(stageId, workerNumber, partialKeyStatisticsInformation);
-
-          if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
-            List<String> workerTaskIds = workerTaskLauncher.getTaskList();
-            CompleteKeyStatisticsInformation completeKeyStatisticsInformation =
-                queryKernel.getCompleteKeyStatisticsInformation(stageId);
-
-            // Queue the sketch fetching task into the worker sketch fetcher.
-            CompletableFuture<Either<Long, ClusterByPartitions>> clusterByPartitionsCompletableFuture =
-                workerSketchFetcher.submitFetcherTask(
-                    completeKeyStatisticsInformation,
-                    workerTaskIds,
-                    stageDef
-                );
-
-            // Add the listener to handle completion.
-            clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
-              addToKernelManipulationQueue(holder -> {
-                if (throwable != null) {
-                  holder.failStageForReason(stageId, UnknownFault.forException(throwable));
-                } else if (clusterByPartitionsEither.isError()) {
-                  holder.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
-                } else {
-                  log.debug("Query [%s] Partition boundaries generated for stage %s", id(), stageId);
-                  holder.setClusterByPartitionBoundaries(stageId, clusterByPartitionsEither.valueOrThrow());
-                }
-                holder.transitionStageKernel(stageId, queryKernel.getStagePhase(stageId));
-              });
-            });
-          }
         }
     );
   }
+
 
   @Override
   public void workerError(MSQErrorReport errorReport)
@@ -2129,7 +2120,11 @@ public class ControllerImpl implements Controller
       this.queryDef = queryDef;
       this.inputSpecSlicerFactory = inputSpecSlicerFactory;
       this.closer = closer;
-      this.queryKernel = new ControllerQueryKernel(queryDef);
+      this.queryKernel = new ControllerQueryKernel(
+          queryDef,
+          workerMemoryParameters.getPartitionStatisticsMaxRetainedBytes(),
+          isDurableStorageEnabled
+      );
     }
 
     /**
@@ -2141,6 +2136,7 @@ public class ControllerImpl implements Controller
 
       while (!queryKernel.isDone()) {
         startStages();
+        fetchStatsFromWorkers();
         sendPartitionBoundaries();
         updateLiveReportMaps();
         cleanUpEffectivelyFinishedStages();
@@ -2257,6 +2253,66 @@ public class ControllerImpl implements Controller
               }),
           Execs.directExecutor()
       );
+    }
+
+    /**
+     * Enqueues the fetching {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}
+     * from each worker via {@link WorkerSketchFetcher}
+     */
+    private void fetchStatsFromWorkers()
+    {
+
+      for (Map.Entry<StageId, Set<Integer>> stageToWorker : queryKernel.getStagesAndWorkersToFetchClusterStats()
+                                                                       .entrySet()) {
+        List<String> allTasks = workerTaskLauncher.getActiveTasks();
+        Set<String> tasks = stageToWorker.getValue().stream().map(allTasks::get).collect(Collectors.toSet());
+
+        ClusterStatisticsMergeMode clusterStatisticsMergeMode = stageToStatsMergingMode.get(stageToWorker.getKey()
+                                                                                                         .getStageNumber());
+        switch (clusterStatisticsMergeMode) {
+          case SEQUENTIAL:
+            submitSequentialMergeFetchRequests(stageToWorker.getKey(), tasks);
+            break;
+          case PARALLEL:
+            submitParallelMergeRequests(stageToWorker.getKey(), tasks);
+            break;
+          default:
+            throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
+        }
+      }
+    }
+
+    private void submitParallelMergeRequests(StageId stageId, Set<String> tasks)
+    {
+
+      // eagerly change state of workers whose state is being fetched so that we do not keep on queuing fetch requests.
+      queryKernel.startFetchingStatsFromWorker(
+          stageId,
+          tasks.stream().map(MSQTasks::workerFromTaskId).collect(Collectors.toSet())
+      );
+      workerSketchFetcher.inMemoryFullSketchMerging(ControllerImpl.this::addToKernelManipulationQueue,
+                                                    stageId, tasks,
+                                                    ControllerImpl.this::addToRetryQueue
+      );
+    }
+
+    private void submitSequentialMergeFetchRequests(StageId stageId, Set<String> tasks)
+    {
+      if (queryKernel.allPartialKeyInformationPresent(stageId)) {
+        // eagerly change state of workers whose state is being fetched so that we do not keep on queuing fetch requests.
+        queryKernel.startFetchingStatsFromWorker(
+            stageId,
+            tasks.stream()
+                 .map(MSQTasks::workerFromTaskId)
+                 .collect(Collectors.toSet())
+        );
+        workerSketchFetcher.sequentialTimeChunkMerging(
+            ControllerImpl.this::addToKernelManipulationQueue,
+            queryKernel.getCompleteKeyStatisticsInformation(stageId),
+            stageId, tasks,
+            ControllerImpl.this::addToRetryQueue
+        );
+      }
     }
 
     /**
@@ -2455,6 +2511,31 @@ public class ControllerImpl implements Controller
         }
       }
     }
+  }
+
+  static ClusterStatisticsMergeMode finalizeClusterStatisticsMergeMode(
+      StageDefinition stageDef,
+      ClusterStatisticsMergeMode initialMode
+  )
+  {
+    ClusterStatisticsMergeMode mergeMode = initialMode;
+    if (initialMode == ClusterStatisticsMergeMode.AUTO) {
+      ClusterBy clusterBy = stageDef.getClusterBy();
+      if (clusterBy.getBucketByCount() == 0) {
+        // If there is no time clustering, there is no scope for sequential merge
+        mergeMode = ClusterStatisticsMergeMode.PARALLEL;
+      } else if (stageDef.getMaxWorkerCount() > WorkerSketchFetcher.WORKER_THRESHOLD) {
+        mergeMode = ClusterStatisticsMergeMode.SEQUENTIAL;
+      } else {
+        mergeMode = ClusterStatisticsMergeMode.PARALLEL;
+      }
+      log.info(
+          "Stage [%d] AUTO mode: chose %s mode to merge key statistics",
+          stageDef.getStageNumber(),
+          mergeMode
+      );
+    }
+    return mergeMode;
   }
 
   /**

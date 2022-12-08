@@ -48,24 +48,24 @@ import java.util.function.Supplier;
 
 /**
  * Definition of a stage in a multi-stage {@link QueryDefinition}.
- *
+ * <p>
  * Each stage has a list of {@link InputSpec} describing its inputs. The position of each spec within the list is
  * its "input number". Some inputs are broadcast to all workers (see {@link #getBroadcastInputNumbers()}). Other,
  * non-broadcast inputs are split up across workers.
- *
+ * <p>
  * The number of workers in a stage is at most {@link #getMaxWorkerCount()}. It may be less, depending on the
  * {@link WorkerAssignmentStrategy} in play and depending on the number of distinct inputs available. (For example:
  * if there is only one input file, then there can be only one worker.)
- *
+ * <p>
  * Each stage has a {@link FrameProcessorFactory} describing the work it does. Output frames written by these
  * processors have the signature given by {@link #getSignature()}.
- *
+ * <p>
  * Each stage has a {@link ShuffleSpec} describing the shuffle that occurs as part of the stage. The shuffle spec is
  * optional: if none is provided, then the {@link FrameProcessorFactory} directly writes to output partitions. If a
  * shuffle spec is provided, then the {@link FrameProcessorFactory} is expected to sort each output frame individually
  * according to {@link ShuffleSpec#getClusterBy()}. The execution system handles the rest, including sorting data across
  * frames and producing the appropriate output partitions.
- *
+ * <p>
  * The rarely-used parameter {@link #getShuffleCheckHasMultipleValues()} controls whether the execution system
  * checks, while shuffling, if the key used for shuffling has any multi-value fields. When this is true, the method
  * {@link ClusterByStatisticsCollector#hasMultipleValues} is enabled on collectors
@@ -282,11 +282,11 @@ public class StageDefinition
   )
   {
     if (shuffleSpec == null) {
-      throw new ISE("No shuffle");
+      throw new ISE("No shuffle for stage[%d]", getStageNumber());
     } else if (mustGatherResultKeyStatistics() && collector == null) {
-      throw new ISE("Statistics required, but not gathered");
+      throw new ISE("Statistics required, but not gathered for stage[%d]", getStageNumber());
     } else if (!mustGatherResultKeyStatistics() && collector != null) {
-      throw new ISE("Statistics gathered, but not required");
+      throw new ISE("Statistics gathered, but not required for stage[%d]", getStageNumber());
     } else {
       return shuffleSpec.generatePartitions(collector, MAX_PARTITIONS);
     }

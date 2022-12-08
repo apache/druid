@@ -59,9 +59,9 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
 
@@ -83,9 +83,9 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
@@ -109,12 +109,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -132,7 +132,7 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     // fail one worker
@@ -144,7 +144,7 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -213,9 +213,9 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
@@ -240,9 +240,9 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
   }
@@ -270,12 +270,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
@@ -293,7 +293,7 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.init();
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
@@ -308,7 +308,7 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorkerAndWorkers(0, 0, 2);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
