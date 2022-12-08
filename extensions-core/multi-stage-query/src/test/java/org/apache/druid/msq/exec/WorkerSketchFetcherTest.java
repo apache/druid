@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.Futures;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.RowKey;
@@ -68,8 +67,7 @@ public class WorkerSketchFetcherTest
 
   @Mock
   private StageDefinition stageDefinition;
-  @Mock
-  private ClusterBy clusterBy;
+
   @Mock
   private ClusterByStatisticsCollector mergedClusterByStatisticsCollector1;
   @Mock
@@ -136,12 +134,10 @@ public class WorkerSketchFetcherTest
     }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
 
     target.inMemoryFullSketchMerging(
-        (kernelConsumer) ->
-        {
+        (kernelConsumer) -> {
           kernelConsumer.accept(kernel);
           latch.countDown();
-        }
-        ,
+        },
         stageDefinition.getId(),
         ImmutableSet.copyOf(taskIds),
         ((queryKernel, integer, msqFault) -> {})
@@ -167,13 +163,11 @@ public class WorkerSketchFetcherTest
     }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyInt(), anyLong());
 
     target.sequentialTimeChunkMerging(
-        (kernelConsumer) ->
-        {
+        (kernelConsumer) -> {
           kernelConsumer.accept(kernel);
           latch.countDown();
         },
-        completeKeyStatisticsInformation
-        ,
+        completeKeyStatisticsInformation,
         stageDefinition.getId(),
         ImmutableSet.copyOf(taskIds),
         ((queryKernel, integer, msqFault) -> {})
