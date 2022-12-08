@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -122,12 +121,11 @@ public class TaskConfig
   @JsonProperty
   private final boolean encapsulatedTask;
 
-  @JsonProperty
-  private final String baseTaskDir;
+  @JsonProperty("baseTaskDir")
+  private final String baseTaskDirPath;
 
   // Use multiple base files for tasks instead of a single one
   @JsonProperty
-  @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
   private final List<String> baseTaskDirPaths;
 
   private int taskDirIndex = 0;
@@ -139,7 +137,7 @@ public class TaskConfig
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
-      @Deprecated @JsonProperty("baseTaskDir") String baseTaskDir,
+      @Deprecated @JsonProperty("baseTaskDir") String baseTaskDirPath,
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
       @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
@@ -198,9 +196,9 @@ public class TaskConfig
     log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
     this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
 
-    this.baseTaskDir = baseTaskDir;
+    this.baseTaskDirPath = baseTaskDirPath;
     if (CollectionUtils.isNullOrEmpty(baseTaskDirPaths)) {
-      String baseTaskFile = defaultDir(baseTaskDir, "persistent/task");
+      String baseTaskFile = defaultDir(baseTaskDirPath, "persistent/task");
       baseTaskDirPaths = Collections.singletonList(baseTaskFile);
     }
     this.baseTaskDirPaths = ImmutableList.copyOf(baseTaskDirPaths);
@@ -215,10 +213,10 @@ public class TaskConfig
     return baseDir;
   }
 
-  @JsonProperty
-  public String getBaseTaskDir()
+  @JsonProperty("getBaseTaskDir")
+  public String getBaseTaskDirPath()
   {
-    return baseTaskDir;
+    return baseTaskDirPath;
   }
 
   @JsonProperty
@@ -232,10 +230,10 @@ public class TaskConfig
     return baseTaskDirs;
   }
 
-  public synchronized File getTaskBaseDir(String taskId)
+  public synchronized File getOrSelectTaskDir(String taskId)
   {
     if (!taskToTempDirMap.containsKey(taskId)) {
-      taskToTempDirMap.put(taskId, baseTaskDirs.get(taskDirIndex));
+      addTask(taskId, baseTaskDirs.get(taskDirIndex));
       taskDirIndex = (taskDirIndex + 1) % baseTaskDirPaths.size();
     }
 
@@ -244,7 +242,7 @@ public class TaskConfig
 
   public File getTaskDir(String taskId)
   {
-    return new File(getTaskBaseDir(taskId), taskId);
+    return new File(getOrSelectTaskDir(taskId), taskId);
   }
 
   public File getTaskWorkDir(String taskId)

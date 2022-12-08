@@ -103,13 +103,17 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
           }
 
           if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
-            LOG.info("Restoring task[%s].", task.getId());
+            LOG.info("Restoring task[%s] from location[%s].", task.getId(), baseDir);
             taskConfig.addTask(taskId, baseDir);
             retVal.add(Pair.of(task, run(task)));
+          } else {
+            taskConfig.removeTask(taskId);
           }
         }
         catch (Exception e) {
-          LOG.warn(e, "Failed to restore task[%s]. Trying to restore other tasks.", taskId);
+          LOG.warn(e, "Failed to restore task[%s] from path[%s]. Trying to restore other tasks.",
+                   taskId, baseDir);
+          taskConfig.removeTask(taskId);
         }
       }
     }
@@ -202,7 +206,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
 
   private File getRestoreFile(String taskId)
   {
-    return new File(taskConfig.getTaskBaseDir(taskId), TASK_RESTORE_FILENAME);
+    return new File(taskConfig.getOrSelectTaskDir(taskId), TASK_RESTORE_FILENAME);
   }
 
   protected static class TaskRestoreInfo
