@@ -17,23 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model;
+package org.apache.druid.sql.calcite.external;
 
-import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
-import org.apache.druid.catalog.model.table.ExternalTableSpec;
+import com.google.inject.Inject;
+import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.table.HttpTableDefn;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * Defines a parameter for a catalog entry. A parameter is an item that can appear
- * in a SQL table function as a named SQL argument. Example, for a local file,
- * the file name list could be a parameter to allow using the same definition for
- * a variety of local files (that is, to name <i>today's</i> update which is
- * different from yesterday's update.)
- */
-public interface ParameterizedDefn
+public class HttpOperatorConversion extends CatalogExternalTableOperatorConversion
 {
-  List<PropertyDefn<?>> parameters();
-  ExternalTableSpec applyParameters(ResolvedTable table, Map<String, Object> parameters);
+  public static final String FUNCTION_NAME = "http";
+
+  @Inject
+  public HttpOperatorConversion(
+      final TableDefnRegistry registry
+  )
+  {
+    super(FUNCTION_NAME, registry, HttpTableDefn.TABLE_TYPE, registry.jsonMapper());
+  }
 }
