@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.protobuf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Iterators;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -78,7 +77,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
   }
 
   @Override
-  protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException, JsonProcessingException
+  protected List<InputRow> parseInputRows(DynamicMessage intermediateRow) throws ParseException
   {
     final Map<String, Object> record;
     final Map<String, Object> plainJava = convertMessage(intermediateRow);
