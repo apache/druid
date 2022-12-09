@@ -199,7 +199,7 @@ usage() unless GetOptions(
   'command=s@'
 );
 
-usage() unless (($opt{'conf'} || @{$opt{'command'}}) && $opt{'vardir'});
+usage() unless (($opt{'command'} && @{$opt{'command'}}) || $opt{'conf'}) && $opt{'vardir'};
 
 my @config_lines;
 
