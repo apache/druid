@@ -36,7 +36,7 @@ Druid supports a variety of ingestion options. Once you're done with this tutori
 
 You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
 
-Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#Druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
+Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
 
 In addition, Druid includes several [bundled non-automatic profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4GiB RAM) to x-large (64 CPU, 512GiB RAM). 
 We won't use those here, but for more information, see [Single server deployment](../operations/single-server.md). For additional information on deploying Druid services across clustered machines, see [Clustered deployment](./cluster.md).
