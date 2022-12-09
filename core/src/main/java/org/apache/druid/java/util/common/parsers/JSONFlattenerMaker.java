@@ -54,9 +54,9 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
+  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
   private final boolean keepNullValues;
 
-  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
   public JSONFlattenerMaker(boolean keepNullValues)
   {
@@ -66,7 +66,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
   {
-    return FluentIterable.from(() -> obj.fields())
+    return FluentIterable.from(obj::fields)
                          .filter(
                              entry -> {
                                final JsonNode val = entry.getValue();
@@ -137,13 +137,13 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   public Object finalizeConversionForMap(Object o)
   {
     if (o instanceof JsonNode) {
-      return convertJsonNode((JsonNode) o);
+      return convertJsonNode((JsonNode) o, enc);
     }
     return o;
   }
 
   @Nullable
-  private Object convertJsonNode(JsonNode val)
+  public static Object convertJsonNode(JsonNode val, CharsetEncoder enc)
   {
     if (val == null || val.isNull()) {
       return null;
@@ -158,7 +158,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
 
     if (val.isTextual()) {
-      return charsetFix(val.asText());
+      return charsetFix(val.asText(), enc);
     }
 
     if (val.isBoolean()) {
@@ -175,7 +175,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
         if (!entry.isNull()) {
-          newList.add(finalizeConversionForMap(entry));
+          newList.add(convertJsonNode(entry, enc));
         }
       }
       return newList;
@@ -185,7 +185,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       Map<String, Object> newMap = new LinkedHashMap<>();
       for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
-        newMap.put(entry.getKey(), finalizeConversionForMap(entry.getValue()));
+        newMap.put(entry.getKey(), convertJsonNode(entry.getValue(), enc));
       }
       return newMap;
     }
@@ -197,7 +197,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Nullable
-  private String charsetFix(String s)
+  private static String charsetFix(String s, CharsetEncoder enc)
   {
     if (s != null && !enc.canEncode(s)) {
       // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
@@ -209,7 +209,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
   }
 
-  private boolean isFlatList(JsonNode list)
+  private static boolean isFlatList(JsonNode list)
   {
     for (JsonNode obj : list) {
       if (obj.isObject() || obj.isArray()) {
