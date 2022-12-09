@@ -43,7 +43,7 @@ You need a Druid cluster, such as the [micro-quickstart](./index.md). The cluste
 The data you're ingesting contains a handful of rows that resemble the following:
 
 ```
-t:2000-01-01,m1:1.0,m2:1.0,dim1:,dim2:[a],dim3:[a,b]},
+t:2000-01-01,m1:1.0,m2:1.0,dim1:,dim2:[a],dim3:[a,b]
 ```
 
 The focus of this tutorial is on the nested array of values in `dim3`.
@@ -212,7 +212,7 @@ You can also implement filters. For example, you can add the following to the Sc
 
 ### groupBy query
 
-The following query returns an unnested version of the column `dim3` as the column `unnest-dim3`, which is the `groupBy` dimension for the query too. The results are sorted in descending order. 
+The following query returns an unnested version of the column `dim3` as the column `unnest-dim3` and groups the data by that dimension . The results are sorted in descending order. 
 
 <details><summary>Show the query</summary>
 
