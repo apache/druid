@@ -281,15 +281,14 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       return;
     }
 
-    const effectiveQuery = preview ? query.makePreview() : query;
-
     const capacityInfo = await maybeGetClusterCapacity();
 
+    const effectiveQuery = preview
+      ? query.makePreview()
+      : query.setMaxNumTasksIfUnset(capacityInfo?.availableTaskSlots);
+
     const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
-    if (
-      capacityInfo &&
-      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
-    ) {
+    if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
       setAlertElement(
         <CapacityAlert
           maxNumTasks={effectiveMaxNumTasks}

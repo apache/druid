@@ -61,9 +61,9 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
             <MenuDivider title="Maximum number of tasks to launch" />
             <MenuItem
               icon={tickIcon(typeof maxNumTasks === 'undefined')}
-              text="Auto"
+              text="auto"
               label="Assign based on capacity"
-              onClick={() => setCustomMaxNumTasksDialogOpen(true)}
+              onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
             />
             {MAX_NUM_TASK_OPTIONS.map(m => (
               <MenuItem
@@ -94,7 +94,11 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
           </Menu>
         }
       >
-        <Button {...rest} text={`Max tasks: ${maxNumTasks}`} rightIcon={IconNames.CARET_DOWN} />
+        <Button
+          {...rest}
+          text={`Max tasks: ${maxNumTasks ?? 'auto'}`}
+          rightIcon={IconNames.CARET_DOWN}
+        />
       </Popover2>
       {customMaxNumTasksDialogOpen && (
         <NumericInputDialog
