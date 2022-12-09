@@ -122,7 +122,7 @@ public class ITMultiStageQueryHA
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(
         queryLocal,
         ImmutableMap.of(
-            MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
+            MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
             "true",
             MultiStageQueryContext.CTX_MAX_NUM_TASKS,
             3

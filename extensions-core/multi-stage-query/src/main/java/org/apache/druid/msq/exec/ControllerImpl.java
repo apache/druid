@@ -162,6 +162,7 @@ import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -224,8 +225,6 @@ public class ControllerImpl implements Controller
   private final MSQControllerTask task;
   private final ControllerContext context;
 
-  private final boolean isDurableStorageEnabled;
-
   /**
    * Queue of "commands" to run on the {@link ControllerQueryKernel}. Various threads insert into the queue
    * using {@link #addToKernelManipulationQueue}. The main thread running {@link RunQueryUntilDone#run()} reads
@@ -284,6 +283,8 @@ public class ControllerImpl implements Controller
 
   private Map<Integer, ClusterStatisticsMergeMode> stageToStatsMergingMode;
   private WorkerMemoryParameters workerMemoryParameters;
+  private boolean isDurableStorageEnabled;
+  private boolean isFaultToleranceEnabled;
 
   public ControllerImpl(
       final MSQControllerTask task,
@@ -292,11 +293,6 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
-    this.isDurableStorageEnabled =
-        MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec()
-                                                           .getQuery()
-                                                           .context());
-
   }
 
   @Override
@@ -536,6 +532,36 @@ public class ControllerImpl implements Controller
 
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
+    final QueryContext queryContext = task.getQuerySpec().getQuery().context();
+    isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(queryContext);
+
+    if (isFaultToleranceEnabled) {
+      if (!queryContext.containsKey(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE)) {
+        // if context key not set, enable durableStorage automatically.
+        isDurableStorageEnabled = true;
+      } else {
+        // if context key is set, and durableStorage is turned on.
+        if (MultiStageQueryContext.isDurableStorageEnabled(queryContext)) {
+          isDurableStorageEnabled = true;
+        } else {
+          throw new MSQException(
+              UnknownFault.forMessage(
+                  StringUtils.format(
+                      "Context param[%s] cannot be explicitly set to false when context param[%s] is"
+                      + " set to true. Either remove the context param[%s] or explicitly set it to true.",
+                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+                      MultiStageQueryContext.CTX_FAULT_TOLERANCE,
+                      MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE
+                  )));
+        }
+      }
+    } else {
+      isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(queryContext);
+    }
+
+    log.debug("Task [%s] durable storage mode is set to %s.", task.getId(), isDurableStorageEnabled);
+    log.debug("Task [%s] fault tolerance mode is set to %s.", task.getId(), isFaultToleranceEnabled);
+
     this.selfDruidNode = context.selfNode();
     context.registerController(this, closer);
 
@@ -552,9 +578,6 @@ public class ControllerImpl implements Controller
     QueryValidator.validateQueryDef(queryDef);
     queryDefRef.set(queryDef);
 
-    log.debug("Query [%s] durable storage mode is set to %s.", queryDef.getQueryId(), isDurableStorageEnabled);
-
-
     long maxParseExceptions = -1;
 
     if (task.getSqlQueryContext() != null) {
@@ -564,14 +587,13 @@ public class ControllerImpl implements Controller
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
 
-
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
         context,
         (failedTask, fault) -> {
           addToKernelManipulationQueue((kernel) -> {
-            if (isDurableStorageEnabled) {
+            if (isFaultToleranceEnabled) {
               addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
             } else {
               throw new MSQException(fault);
@@ -595,19 +617,15 @@ public class ControllerImpl implements Controller
                 stageDefinition.getId().getStageNumber(),
                 finalizeClusterStatisticsMergeMode(
                     stageDefinition,
-                    MultiStageQueryContext.getClusterStatisticsMergeMode(
-                        task.getQuerySpec()
-                            .getQuery()
-                            .context())
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(queryContext)
                 )
             )
     );
     this.workerMemoryParameters = WorkerMemoryParameters.createProductionInstanceForController(context.injector());
-
     this.workerSketchFetcher = new WorkerSketchFetcher(
         netClient,
         workerTaskLauncher,
-        isDurableStorageEnabled
+        isFaultToleranceEnabled
     );
     closer.register(workerSketchFetcher::close);
 
@@ -693,7 +711,7 @@ public class ControllerImpl implements Controller
   {
     // move inside kernel
     if (workerTaskLauncher.isTaskCanceledByController(errorReport.getTaskId()) ||
-        workerTaskLauncher.isTaskRetried(errorReport.getTaskId())) {
+        !workerTaskLauncher.isTaskLatest(errorReport.getTaskId())) {
       log.info("Ignoring task %s", errorReport.getTaskId());
     } else {
       workerErrorRef.compareAndSet(null, errorReport);
@@ -1179,7 +1197,7 @@ public class ControllerImpl implements Controller
         (netClient, taskId, workerNumber) -> (
             netClient.postWorkOrder(taskId, workOrders.get(workerNumber))), workOrders.keySet(),
         (taskId) -> queryKernel.workOrdersSentForWorker(stageId, MSQTasks.workerFromTaskId(taskId)),
-        isDurableStorageEnabled
+        isFaultToleranceEnabled
     );
   }
 
@@ -1202,7 +1220,7 @@ public class ControllerImpl implements Controller
         ),
         workers,
         (taskId) -> queryKernel.partitionBoundariesSentForWorker(stageId, MSQTasks.workerFromTaskId(taskId)),
-        isDurableStorageEnabled
+        isFaultToleranceEnabled
     );
   }
 
@@ -2124,7 +2142,7 @@ public class ControllerImpl implements Controller
       this.queryKernel = new ControllerQueryKernel(
           queryDef,
           workerMemoryParameters.getPartitionStatisticsMaxRetainedBytes(),
-          isDurableStorageEnabled
+          isFaultToleranceEnabled
       );
     }
 
@@ -2220,7 +2238,7 @@ public class ControllerImpl implements Controller
                 return workOrderSet;
               });
             },
-            isDurableStorageEnabled
+            isFaultToleranceEnabled
         );
       }
     }
@@ -2534,7 +2552,7 @@ public class ControllerImpl implements Controller
       if (clusterBy.getBucketByCount() == 0) {
         // If there is no time clustering, there is no scope for sequential merge
         mergeMode = ClusterStatisticsMergeMode.PARALLEL;
-      } else if (stageDef.getMaxWorkerCount() > WorkerSketchFetcher.WORKER_THRESHOLD) {
+      } else if (stageDef.getMaxWorkerCount() > Limits.MAX_WORKERS_FOR_PARALLEL_MERGE) {
         mergeMode = ClusterStatisticsMergeMode.SEQUENTIAL;
       } else {
         mergeMode = ClusterStatisticsMergeMode.PARALLEL;

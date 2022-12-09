@@ -156,7 +156,7 @@ public class ControllerImplTest
     doReturn(ClusterBy.none()).when(stageDefinition).getClusterBy();
 
     // Worker count above threshold
-    doReturn((int) WorkerSketchFetcher.WORKER_THRESHOLD + 1).when(stageDefinition).getMaxWorkerCount();
+    doReturn((int) Limits.MAX_WORKERS_FOR_PARALLEL_MERGE + 1).when(stageDefinition).getMaxWorkerCount();
 
     Assert.assertEquals(
         ClusterStatisticsMergeMode.PARALLEL,
@@ -169,13 +169,13 @@ public class ControllerImplTest
   }
 
   @Test
-  public void test_wokersAboveThreshold_shouldBeSequential()
+  public void test_numWorkersAboveThreshold_shouldBeSequential()
   {
     // Cluster by bucket count not 0
     doReturn(1).when(clusterBy).getBucketByCount();
 
     // Worker count above threshold
-    doReturn((int) WorkerSketchFetcher.WORKER_THRESHOLD + 1).when(stageDefinition).getMaxWorkerCount();
+    doReturn((int) Limits.MAX_WORKERS_FOR_PARALLEL_MERGE + 1).when(stageDefinition).getMaxWorkerCount();
 
     Assert.assertEquals(
         ClusterStatisticsMergeMode.SEQUENTIAL,

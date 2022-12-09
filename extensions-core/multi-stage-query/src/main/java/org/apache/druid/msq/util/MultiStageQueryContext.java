@@ -58,10 +58,14 @@ public class MultiStageQueryContext
   public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
-  public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
+  public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
+  private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
+
+  public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
+  public static final boolean DEFAULT_FAULT_TOLERANCE = false;
+
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.PARALLEL.toString();
-  private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
@@ -91,8 +95,16 @@ public class MultiStageQueryContext
   public static boolean isDurableStorageEnabled(final QueryContext queryContext)
   {
     return queryContext.getBoolean(
-        CTX_ENABLE_DURABLE_SHUFFLE_STORAGE,
-        DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE
+        CTX_DURABLE_SHUFFLE_STORAGE,
+        DEFAULT_DURABLE_SHUFFLE_STORAGE
+    );
+  }
+
+  public static boolean isFaultToleranceEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_FAULT_TOLERANCE,
+        DEFAULT_FAULT_TOLERANCE
     );
   }
 

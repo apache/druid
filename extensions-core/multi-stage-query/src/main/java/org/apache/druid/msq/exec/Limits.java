@@ -78,4 +78,10 @@ public class Limits
    * Maximum relaunches per worker. Initial run is not a relaunch. The worker will be spawned 1 + workerRelaunchLimit times before erroring out.
    */
   public static final int PER_WORKER_RELAUNCH_LIMIT = 2;
+
+  /**
+   * Max number of workers for {@link ClusterStatisticsMergeMode#PARALLEL}. If the number of workers is more than this,
+   * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
+   */
+  public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
 }

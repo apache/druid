@@ -170,7 +170,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -213,7 +212,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true)
+                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
                   .build();
@@ -229,7 +228,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
-                  .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, false)
+                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, false)
                   .build();
 
 

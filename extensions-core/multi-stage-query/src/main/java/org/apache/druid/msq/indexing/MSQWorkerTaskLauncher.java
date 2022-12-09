@@ -290,9 +290,12 @@ public class MSQWorkerTaskLauncher
   }
 
 
-  public boolean isTaskRetried(String taskId)
+  public boolean isTaskLatest(String taskId)
   {
-    return tasksToCleanup.contains(taskId) || workersToRelaunch.contains(MSQTasks.workerFromTaskId(taskId));
+    int worker = MSQTasks.workerFromTaskId(taskId);
+    synchronized (taskIds) {
+      return taskId.equals(taskIds.get(worker));
+    }
   }
 
   private void mainLoop()
@@ -376,7 +379,7 @@ public class MSQWorkerTaskLauncher
     final Map<String, Object> taskContext = new HashMap<>();
 
     if (durableStageStorageEnabled) {
-      taskContext.put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true);
+      taskContext.put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true);
     }
 
     if (maxParseExceptions != null) {
@@ -550,7 +553,7 @@ public class MSQWorkerTaskLauncher
         tasksToCleanup.add(latestTaskId);
         taskTrackers.remove(latestTaskId);
         log.info(
-            "Relauching worker[%d] with new task id[%s] with worker relaunch count[%d] and job relaunch count[%d]",
+            "Relaunching worker[%d] with new task id[%s] with worker relaunch count[%d] and job relaunch count[%d]",
             relaunchedTask.getWorkerNumber(),
             relaunchedTask.getId(),
             toRelaunch.getRetryCount(),

@@ -54,16 +54,15 @@ public class WorkerSketchFetcher implements AutoCloseable
 {
   private static final Logger log = new Logger(WorkerSketchFetcher.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
-  // If the combined size of worker sketches is more than this threshold, SEQUENTIAL merging mode is used.
-  public static final long WORKER_THRESHOLD = 100;
 
   private final WorkerClient workerClient;
-  private final ExecutorService executorService;
   private final MSQWorkerTaskLauncher workerTaskLauncher;
 
   private final boolean retryEnabled;
 
-  AtomicReference<Throwable> isError = new AtomicReference<>();
+  private AtomicReference<Throwable> isError = new AtomicReference<>();
+  final ExecutorService executorService;
+
 
   public WorkerSketchFetcher(
       WorkerClient workerClient,
@@ -76,14 +75,6 @@ public class WorkerSketchFetcher implements AutoCloseable
     this.workerTaskLauncher = workerTaskLauncher;
     this.retryEnabled = retryEnabled;
   }
-
-  /**
-   * Submits a request to fetch and generate partitions for the given worker statistics and returns a future for it. It
-   * decides based on the statistics if it should fetch sketches one by one or together.
-   * The future can successfully return a null signaling that partition statistics from all the workers have not been fetched yet.
-   *
-   */
-
 
   /**
    * Fetches the full {@link ClusterByStatisticsCollector} from all workers and generates partition boundaries from them.
@@ -142,12 +133,23 @@ public class WorkerSketchFetcher implements AutoCloseable
       executorService.shutdownNow();
       return;
     }
+    int worker = MSQTasks.workerFromTaskId(taskId);
     try {
-      workerTaskLauncher.waitUntilWorkersReady(ImmutableSet.of(MSQTasks.workerFromTaskId(taskId)));
+      workerTaskLauncher.waitUntilWorkersReady(ImmutableSet.of(worker));
     }
     catch (InterruptedException interruptedException) {
       isError.compareAndSet(null, interruptedException);
       executorService.shutdownNow();
+      return;
+    }
+
+    // if task is not the latest task. It must have retried.
+    if (!workerTaskLauncher.isTaskLatest(taskId)) {
+      log.info(
+          "Task[%s] is no longer the latest task for worker[%d], hence ignoring fetching stats from this worker",
+          taskId,
+          worker
+      );
       return;
     }
 
@@ -160,38 +162,69 @@ public class WorkerSketchFetcher implements AutoCloseable
       @Override
       public void onSuccess(@Nullable ClusterByStatisticsSnapshot result)
       {
-        kernelActions.accept((queryKernel) -> {
-          successKernelOperation.accept(queryKernel, result);
-          // we do not want to have too many key collector sketches in the event queue as that cause memory issues
-          // blocking the executor service thread until the kernel operation is finished.
-          // so we would have utmost DEFAULT_THREAD_COUNT number of sketches in the queue.
-          kernelActionFuture.set(true);
-        });
+        try {
+          kernelActions.accept((queryKernel) -> {
+            try {
+              successKernelOperation.accept(queryKernel, result);
+              // we do not want to have too many key collector sketches in the event queue as that cause memory issues
+              // blocking the executor service thread until the kernel operation is finished.
+              // so we would have utmost DEFAULT_THREAD_COUNT number of sketches in the queue.
+              kernelActionFuture.set(true);
+            }
+            catch (Exception e) {
+              failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+            }
+          });
+        }
+        catch (Exception e) {
+          failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+        }
 
       }
 
       @Override
       public void onFailure(Throwable t)
       {
+
         if (retryEnabled) {
           //add to retry queue
-          kernelActions.accept((kernel) -> {
-            retryOperation.accept(kernel, MSQTasks.workerFromTaskId(taskId), new WorkerRpcFailedFault(taskId));
-            kernelActionFuture.set(false);
-          });
-          kernelActionFuture.set(false);
+          try {
+            kernelActions.accept((kernel) -> {
+              try {
+                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId));
+                kernelActionFuture.set(false);
 
-        } else {
-          if (isError.compareAndSet(null, t)) {
-            log.error(t, "Failed while fetching stats from task[%s]", taskId);
+              }
+              catch (Exception e) {
+                failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+              }
+            });
+            kernelActionFuture.set(false);
           }
-          executorService.shutdownNow();
-          kernelActionFuture.setException(t);
+          catch (Exception e) {
+            failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+          }
+        } else {
+          failFutureAndShutDownExecutorService(t, taskId, kernelActionFuture);
         }
+
       }
     });
 
     FutureUtils.getUnchecked(kernelActionFuture, true);
+  }
+
+  private void failFutureAndShutDownExecutorService(
+      Throwable t,
+      String taskId,
+      SettableFuture<Boolean> kernelActionFuture
+  )
+  {
+    if (isError.compareAndSet(null, t)) {
+      log.error(t, "Failed while fetching stats from task[%s]", taskId);
+    }
+    executorService.shutdownNow();
+    kernelActionFuture.setException(t);
   }
 
   /**
@@ -215,26 +248,28 @@ public class WorkerSketchFetcher implements AutoCloseable
 
       for (String taskId : tasks) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
-        executorService.submit(() -> {
-          fetchStatsFromWorker(
-              kernelActions,
-              () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
-                  taskId,
-                  stageId.getQueryId(),
-                  stageId.getStageNumber(),
-                  timeChunk
-              ),
-              taskId,
-              (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(
-                  stageId,
-                  workerNumber,
-                  timeChunk,
-                  snapshot
-              ),
-              retryOperation
-          );
+        if (wks.contains(workerNumber)) {
+          executorService.submit(() -> {
+            fetchStatsFromWorker(
+                kernelActions,
+                () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
+                    taskId,
+                    stageId.getQueryId(),
+                    stageId.getStageNumber(),
+                    timeChunk
+                ),
+                taskId,
+                (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(
+                    stageId,
+                    workerNumber,
+                    timeChunk,
+                    snapshot
+                ),
+                retryOperation
+            );
 
-        });
+          });
+        }
       }
     });
   }
