@@ -52,6 +52,9 @@ druid.storage.type=local
 druid.storage.storageDirectory=/tmp/druid/localStorage
 ```
 
+The `druid.storage.storageDirectory` must be set to a different path than `druid.segmentCache.locations` or
+`druid.segmentCache.infoDir`.
+
 ## Amazon S3 or S3-compatible
 
 See [`druid-s3-extensions`](../development/extensions-core/s3.md).
