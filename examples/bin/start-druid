@@ -27,6 +27,10 @@ then
 elif [ -x "$(command -v python2)" ]
 then
   exec python2 "$WHEREAMI/start-druid-main.py" "$@"
-else
+elif [ -x "$(command -v python)" ]
+then
   exec python "$WHEREAMI/start-druid-main.py" "$@"
+else
+then
+  echo "python interepreter not found"
 fi
