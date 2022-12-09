@@ -740,6 +740,7 @@ druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
 Minio
+multi-server
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
