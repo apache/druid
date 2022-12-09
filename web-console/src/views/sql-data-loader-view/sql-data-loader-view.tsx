@@ -132,6 +132,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           }}
           extraCallout={
             <MaxTasksButton
+              clusterCapacity={2}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
               minimal

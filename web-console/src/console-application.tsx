@@ -25,8 +25,9 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar, Loader } from './components';
 import { DruidEngine, QueryWithContext } from './druid-models';
+import { Capabilities } from './helpers';
 import { AppToaster } from './singletons';
-import { Capabilities, QueryManager } from './utils';
+import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
 import {
   DatasourcesView,
   HomeView,
@@ -89,9 +90,16 @@ export class ConsoleApplication extends React.PureComponent<
 
     this.capabilitiesQueryManager = new QueryManager({
       processQuery: async () => {
-        const capabilities = await Capabilities.detectCapabilities();
-        if (!capabilities) ConsoleApplication.shownServiceNotification();
-        return capabilities || Capabilities.FULL;
+        const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
+        const capabilities = capabilitiesOverride
+          ? new Capabilities(capabilitiesOverride)
+          : await Capabilities.detectCapabilities();
+        if (!capabilities) {
+          ConsoleApplication.shownServiceNotification();
+          return Capabilities.FULL;
+        }
+
+        return await Capabilities.detectCapacity(capabilities);
       },
       onStateChange: ({ data, loading }) => {
         this.setState({
@@ -259,6 +267,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'workbench',
       <WorkbenchView
+        capabilities={capabilities}
         tabId={p.match.params.tabId}
         onTabChange={newTabId => {
           location.hash = `#workbench/${newTabId}`;

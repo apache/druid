@@ -493,9 +493,9 @@ export class WorkbenchQuery {
 
   public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
     const { queryContext } = this;
-    if (typeof queryContext.maxNumTasks === 'number') return this;
+    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
 
-    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks || 0, 2) });
+    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

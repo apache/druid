@@ -31,7 +31,7 @@ import {
 } from '../../../druid-models';
 import { formatInteger, tickIcon } from '../../../utils';
 
-const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65];
+const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
 const TASK_ASSIGNMENT_OPTIONS = ['max', 'auto'];
 
 const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
@@ -40,17 +40,22 @@ const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
 };
 
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
+  clusterCapacity: number | undefined;
   queryContext: QueryContext;
   changeQueryContext(queryContext: QueryContext): void;
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
-  const { queryContext, changeQueryContext, ...rest } = props;
+  const { clusterCapacity, queryContext, changeQueryContext, ...rest } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
 
   const maxNumTasks = getMaxNumTasks(queryContext);
   const taskAssigment = getTaskAssigment(queryContext);
 
+  const fullClusterCapacity = `${clusterCapacity} (full cluster capacity)`;
+  const shownMaxNumTaskOptions = clusterCapacity
+    ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)
+    : MAX_NUM_TASK_OPTIONS;
   return (
     <>
       <Popover2
@@ -59,13 +64,14 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
         content={
           <Menu>
             <MenuDivider title="Maximum number of tasks to launch" />
-            <MenuItem
-              icon={tickIcon(typeof maxNumTasks === 'undefined')}
-              text="auto"
-              label="Assign based on capacity"
-              onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
-            />
-            {MAX_NUM_TASK_OPTIONS.map(m => (
+            {Boolean(clusterCapacity) && (
+              <MenuItem
+                icon={tickIcon(typeof maxNumTasks === 'undefined')}
+                text={fullClusterCapacity}
+                onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
+              />
+            )}
+            {shownMaxNumTaskOptions.map(m => (
               <MenuItem
                 key={String(m)}
                 icon={tickIcon(m === maxNumTasks)}
@@ -75,7 +81,10 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               />
             ))}
             <MenuItem
-              icon={tickIcon(!MAX_NUM_TASK_OPTIONS.includes(maxNumTasks || 2))}
+              icon={
+                typeof maxNumTasks === 'number' &&
+                tickIcon(!shownMaxNumTaskOptions.includes(maxNumTasks))
+              }
               text="Custom"
               onClick={() => setCustomMaxNumTasksDialogOpen(true)}
             />
@@ -96,7 +105,13 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
       >
         <Button
           {...rest}
-          text={`Max tasks: ${maxNumTasks ?? 'auto'}`}
+          text={`Max tasks: ${
+            typeof maxNumTasks === 'undefined'
+              ? clusterCapacity
+                ? fullClusterCapacity
+                : 2
+              : maxNumTasks
+          }`}
           rightIcon={IconNames.CARET_DOWN}
         />
       </Popover2>

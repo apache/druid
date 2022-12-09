@@ -87,6 +87,7 @@ export interface QueryTabProps {
   onDetails(id: string, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
+  clusterCapacity: number | undefined;
   goToIngestion(taskId: string): void;
 }
 
@@ -100,6 +101,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     onDetails,
     queryEngines,
     runMoreMenu,
+    clusterCapacity,
     goToIngestion,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
@@ -281,11 +283,11 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       return;
     }
 
-    const capacityInfo = await maybeGetClusterCapacity();
-
     const effectiveQuery = preview
       ? query.makePreview()
-      : query.setMaxNumTasksIfUnset(capacityInfo?.availableTaskSlots);
+      : query.setMaxNumTasksIfUnset(clusterCapacity);
+
+    const capacityInfo = await maybeGetClusterCapacity();
 
     const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
     if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
@@ -343,6 +345,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 }}
                 onDetails={onDetails}
                 queryEngines={queryEngines}
+                clusterCapacity={clusterCapacity}
                 goToIngestion={goToIngestion}
               />
             ))}
@@ -403,6 +406,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               onRun={handleRun}
               loading={executionState.loading}
               queryEngines={queryEngines}
+              clusterCapacity={clusterCapacity}
               moreMenu={runMoreMenu}
             />
             {executionState.isLoading() && (

@@ -51,11 +51,10 @@ import {
   QueryWithContext,
   zeroCompactionStatus,
 } from '../../druid-models';
+import { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
-  Capabilities,
-  CapabilitiesMode,
   compact,
   countBy,
   deepGet,

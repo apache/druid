@@ -91,11 +91,13 @@ export interface RunPanelProps {
   small?: boolean;
   onRun(preview: boolean): void;
   queryEngines: DruidEngine[];
+  clusterCapacity: number | undefined;
   moreMenu?: JSX.Element;
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines } = props;
+  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
+    props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
   const [indexSpecDialogSpec, setIndexSpecDialogSpec] = useState<IndexSpec | undefined>();
@@ -375,7 +377,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
             />
           </Popover2>
           {effectiveEngine === 'sql-msq-task' && (
-            <MaxTasksButton queryContext={queryContext} changeQueryContext={changeQueryContext} />
+            <MaxTasksButton
+              clusterCapacity={clusterCapacity}
+              queryContext={queryContext}
+              changeQueryContext={changeQueryContext}
+            />
           )}
         </ButtonGroup>
       )}

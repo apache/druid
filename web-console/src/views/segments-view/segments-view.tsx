@@ -42,6 +42,7 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { QueryWithContext } from '../../druid-models';
+import { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
@@ -52,8 +53,6 @@ import {
 } from '../../react-table';
 import { Api } from '../../singletons';
 import {
-  Capabilities,
-  CapabilitiesMode,
   compact,
   deepGet,
   filterMap,
