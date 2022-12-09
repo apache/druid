@@ -372,7 +372,7 @@ always be correct.
 - Join conditions on a column containing a multi-value dimension.
 
 ### `unnest`
-
+> The unnest datasource is currently only available as part of a native query.
 Use the `unnest` datasource to unnest a column with multiple values in an array. 
 For example, you have a source column that looks like this:
 

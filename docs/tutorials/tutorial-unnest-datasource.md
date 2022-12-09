@@ -25,6 +25,8 @@ title: "Tutorial: Unnest data in a column"
 
 > If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
 
+> The unnest datasource is currently only available as part of a native query.
+
 This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
 
 - Unnesting data can dramatically increase the total number of rows. 
@@ -241,7 +243,7 @@ The following query returns an unnested version of the column `dim3` as the colu
 
 ### topN query
 
-The example TopN query does the following unnests `dim3` into the column `unnest-dim3` and sorts the records numerically in ascending order based on the column `a0`.
+The example TopN query unnests `dim3` into the column `unnest-dim3` and sorts the records numerically in ascending order based on the column `a0`.
 
 <details><summary>Show the query</summary>
 
