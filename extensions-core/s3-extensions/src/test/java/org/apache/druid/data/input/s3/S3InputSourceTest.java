@@ -53,6 +53,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -66,6 +67,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3Utils;
@@ -942,8 +944,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new MutableRowIngestionMeters();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
+    Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
       Assert.assertEquals(NOW, nextRow.getTimestamp());
@@ -1036,8 +1040,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new MutableRowIngestionMeters();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
+    Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
       Assert.assertEquals(NOW, nextRow.getTimestamp());

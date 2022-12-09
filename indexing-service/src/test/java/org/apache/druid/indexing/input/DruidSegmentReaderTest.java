@@ -24,9 +24,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.common.config.NullHandlingTest;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -54,6 +56,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -127,8 +130,9 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   @Test
   public void testReader() throws IOException
   {
+    final InputStats inputStats = new MutableRowIngestionMeters();
     final DruidSegmentReader reader = new DruidSegmentReader(
-        makeInputEntity(Intervals.of("2000/P1D")),
+        new BytesCountingInputEntity(makeInputEntity(Intervals.of("2000/P1D")), inputStats),
         indexIO,
         new TimestampSpec("__time", "millis", DateTimes.of("1971")),
         new DimensionsSpec(
@@ -169,6 +173,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(1592, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -219,8 +224,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
     createTestSetup();
 
+    final InputStats inputStats = new MutableRowIngestionMeters();
     final DruidSegmentReader reader = new DruidSegmentReader(
-        makeInputEntityWithParams(Intervals.of("2022-10-30/2022-10-31"), columnNames, null),
+        new BytesCountingInputEntity(
+            makeInputEntityWithParams(Intervals.of("2022-10-30/2022-10-31"), columnNames, null),
+            inputStats
+        ),
         indexIO,
         new TimestampSpec("__time", "iso", null),
         dimensionsSpec,
@@ -237,6 +246,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     expectedRows.add(rows.get(2));
     expectedRows.add(rows.get(1));
     Assert.assertEquals(expectedRows, readRows(reader));
+    Assert.assertEquals(1508, inputStats.getProcessedBytes());
   }
 
   @Test

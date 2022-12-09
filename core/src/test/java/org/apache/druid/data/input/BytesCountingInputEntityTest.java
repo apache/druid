@@ -47,8 +47,7 @@ public class BytesCountingInputEntityTest
   @Before
   public void setUp()
   {
-    // TODO: fix this
-    inputStats = null;
+    inputStats = new InputStatsImpl();
     bytes = new byte[numBytes];
   }
 
@@ -90,5 +89,22 @@ public class BytesCountingInputEntityTest
     countableInputEntity = new BytesCountingInputEntity(byteEntity1, inputStats);
     countableInputEntity.fetch(folder.newFolder(), smallIntermediateBuffer);
     Assert.assertEquals(numBytes + numBytes, inputStats.getProcessedBytes());
+  }
+
+  private static class InputStatsImpl implements InputStats
+  {
+    private long processedBytes;
+
+    @Override
+    public void incrementProcessedBytes(long incrementByValue)
+    {
+      processedBytes += incrementByValue;
+    }
+
+    @Override
+    public long getProcessedBytes()
+    {
+      return processedBytes;
+    }
   }
 }

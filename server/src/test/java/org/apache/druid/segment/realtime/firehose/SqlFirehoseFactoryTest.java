@@ -136,7 +136,7 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
+    testUtils.createTableWithRows(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
             SQLLIST1,
@@ -168,7 +168,7 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
+    testUtils.createTableWithRows(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
             SQLLIST1,
@@ -201,8 +201,8 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
-    testUtils.createAndUpdateTable(TABLE_NAME_2, 10);
+    testUtils.createTableWithRows(TABLE_NAME_1, 10);
+    testUtils.createTableWithRows(TABLE_NAME_2, 10);
 
     final SqlFirehoseFactory factory = new
         SqlFirehoseFactory(

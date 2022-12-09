@@ -45,6 +45,18 @@ public interface RowIngestionMeters extends InputStats
   long getProcessed();
   void incrementProcessed();
 
+  @Override
+  default void incrementProcessedBytes(long incrementByValue)
+  {
+
+  }
+
+  @Override
+  default long getProcessedBytes()
+  {
+    return 0;
+  }
+
   long getProcessedWithError();
   void incrementProcessedWithError();
 

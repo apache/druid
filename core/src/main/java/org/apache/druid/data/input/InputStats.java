@@ -24,13 +24,7 @@ package org.apache.druid.data.input;
  */
 public interface InputStats
 {
-  default void incrementProcessedBytes(long incrementByValue)
-  {
+  void incrementProcessedBytes(long incrementByValue);
 
-  }
-
-  default long getProcessedBytes()
-  {
-    return 0;
-  }
+  long getProcessedBytes();
 }
