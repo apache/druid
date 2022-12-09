@@ -21,11 +21,11 @@ unset _JAVA_OPTIONS
 
 # Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
 # resolving the SIGAR dependency.
-#MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS} \
-#${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
-#sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
-#free -m
-#${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS} \
+${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
+sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
+free -m
+${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
 
 # Add merge target branch to determine diff.
 # This is not needed for build triggered by tags, since there will be no code diff.
