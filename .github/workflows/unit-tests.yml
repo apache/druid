@@ -33,6 +33,7 @@ env:
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
   MAVEN_OPTS: -Xmx3000m
+  FORCE_COLOR: 2
 
 jobs:
   unit-tests:
@@ -61,19 +62,24 @@ jobs:
 
       - name: setup variables
         run: |
-          export base_ref=${{ github.base_ref }}
-          echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
           export druid_use_default_value_for_null=${{ matrix.DRUID_USE_DEFAULT_VALUE_FOR_NULL }}
           echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=${druid_use_default_value_for_null}" >> $GITHUB_ENV
 
-      - name: "(openjdk8) processing module test"
-        env:
-          MAVEN_PROJECTS: processing
-        run: ./.github/scripts/unit_tests_script.sh
+      - name: fetch base branch for test coverage
+        if: ${{ github.base_ref != '' }}
+        run: |
+          # Add merge target branch to determine diff.
+          # This is not needed for build triggered by tags, since there will be no code diff.
+          git remote set-branches --add origin ${{ github.base_ref }} && git fetch
 
       - name: "(openjdk8) indexing modules test"
         env:
           MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
+        run: ./.github/scripts/unit_tests_script.sh
+
+      - name: "(openjdk8) processing module test"
+        env:
+          MAVEN_PROJECTS: processing
         run: ./.github/scripts/unit_tests_script.sh
 
       - name: "(openjdk8) server module test"

@@ -27,14 +27,6 @@ sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit
 free -m
 ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
 
-# Add merge target branch to determine diff.
-# This is not needed for build triggered by tags, since there will be no code diff.
-echo "GITHUB_BASE_REF=${GITHUB_BASE_REF}"  # for debugging
-if [[ -n "${GITHUB_BASE_REF}" ]]
-then
-  git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
-fi
-
 # Determine the modified files that match the maven projects being tested. We use maven project lists that
 # either exclude (starts with "!") or include (does not start with "!"), so both cases need to be handled.
 # If the build is triggered by a tag, an error will be printed, but `all_files` will be correctly set to empty
@@ -76,8 +68,7 @@ then
   --log-template "coverage-lines-complete" \
   --log-template "coverage-files-complete" \
   --log-template "totals-complete" \
-  --log-template "errors" \
-  -- ||
+  --log-template "errors" ||
   { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && false; }
 fi
 
