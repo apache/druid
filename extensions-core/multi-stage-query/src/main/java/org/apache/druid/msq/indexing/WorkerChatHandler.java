@@ -236,7 +236,7 @@ public class WorkerChatHandler implements ChatHandler
     }
     catch (Exception e) {
       String errorMessage = StringUtils.format(
-          "Invalid request for key statistics for query[%s] and stage[%d] and timeChunk[%d]",
+          "Invalid request for key statistics for query[%s], stage[%d] and timeChunk[%d]",
           queryId,
           stageNumber,
           timeChunk
