@@ -167,6 +167,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${aws.sdk.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-s3-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-hdfs-storage</artifactId>
             <version>${project.parent.version}</version>
@@ -326,6 +338,15 @@
             </activation>
             <properties>
                 <it.category>Catalog</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-S3DeepStorage</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>S3DeepStorage</it.category>
             </properties>
         </profile>
         <profile>
