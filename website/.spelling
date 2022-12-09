@@ -2302,13 +2302,8 @@ Czechia
 Zeelund
  - ../docs/tutorials/docker.md
  nano
-- ../docs/operations/python.md
+ - ../docs/operations/python.md
 MacOS
-pip3
-Pip3
 RHEL
 psutil
 pathlib
-- ../docs/operatons/single-server.md
-jvm
-upto

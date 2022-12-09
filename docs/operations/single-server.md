@@ -49,10 +49,10 @@ While example configurations are provided for very large single machines, at hig
 
 ## Druid auto start
 
-Druid includes a launch script, `bin/start-druid` that automatically sets various memory-related parameters based on available processors and memory. It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
+Druid includes a launch script, `bin/start-druid` that automatically sets various memory-related parameters based on available processors and memory. It accepts optional arguments such as list of services, total memory and a config directory to override default JVM arguments and service-specific runtime properties.
 
 `start-druid` is a generic launch script capable of starting any set of Druid services on a server.
-It accepts optional arguments such as list of services, total memory and a config directory to override default jvm arguments and service-specific runtime properties.
+It accepts optional arguments such as list of services, total memory and a config directory to override default JVM arguments and service-specific runtime properties.
 Druid services will use all processors and up to 80% memory on the system.
 For details about possible arguments, run `bin/start-druid --help`.
 
