@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,8 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
                                                            .mappingProvider(new NotImplementedMappingProvider())
                                                            .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                                            .build();
+
+  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
   @Override
   public JsonProvider getJsonProvider()
@@ -97,7 +101,10 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
     }
     return map -> {
       try {
-        return JSONFlattenerMaker.convertJsonNode(jsonQuery.apply((JsonNode) OBJECT_MAPPER.valueToTree(map)).get(0));
+        return JSONFlattenerMaker.convertJsonNode(
+            jsonQuery.apply((JsonNode) OBJECT_MAPPER.valueToTree(map)).get(0),
+            enc
+        );
       }
       catch (JsonQueryException e) {
         throw new RuntimeException(e);
