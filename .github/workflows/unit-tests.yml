@@ -62,6 +62,8 @@ jobs:
 
       - name: setup variables
         run: |
+          export base_ref=${{ github.base_ref }}
+          echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
           export druid_use_default_value_for_null=${{ matrix.DRUID_USE_DEFAULT_VALUE_FOR_NULL }}
           echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=${druid_use_default_value_for_null}" >> $GITHUB_ENV
 
@@ -70,7 +72,7 @@ jobs:
         run: |
           # Add merge target branch to determine diff.
           # This is not needed for build triggered by tags, since there will be no code diff.
-          git remote set-branches --add origin ${{ github.base_ref }} && git fetch
+          git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
 
       - name: "(openjdk8) indexing modules test"
         env:
