@@ -3376,13 +3376,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       idle = false;
     }
 
-    previousSequencesFromStream.clear();
-    previousSequencesFromStream.putAll(latestSequencesFromStream);
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
     } else if (!stateManager.isIdle() && idleTime > idleConfig.getInactiveAfterMillis()) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     }
+    previousSequencesFromStream.clear();
+    previousSequencesFromStream.putAll(latestSequencesFromStream);
   }
 
   private long computeTotalLag()
