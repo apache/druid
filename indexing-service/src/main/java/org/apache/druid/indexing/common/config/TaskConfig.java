@@ -213,7 +213,7 @@ public class TaskConfig
     return baseDir;
   }
 
-  @JsonProperty("getBaseTaskDir")
+  @JsonProperty("baseTaskDir")
   public String getBaseTaskDirPath()
   {
     return baseTaskDirPath;

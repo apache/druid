@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +96,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       final TaskRestoreInfo taskRestoreInfo = entry.getValue();
       for (final String taskId : taskRestoreInfo.getRunningTasks()) {
         try {
+          taskConfig.addTask(taskId, baseDir);
           final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
           final Task task = jsonMapper.readValue(taskFile, Task.class);
 
@@ -104,7 +106,6 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
 
           if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
             LOG.info("Restoring task[%s] from location[%s].", task.getId(), baseDir);
-            taskConfig.addTask(taskId, baseDir);
             retVal.add(Pair.of(task, run(task)));
           } else {
             taskConfig.removeTask(taskId);
@@ -197,6 +198,8 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       try {
         Files.createParentDirs(restoreFile);
         jsonMapper.writeValue(restoreFile, taskRestoreInfo);
+        LOG.info("Save restore file at [%s] for tasks [%s]",
+                 restoreFile.getAbsoluteFile(), Arrays.toString(theTasks.get(restoreFile).toArray()));
       }
       catch (Exception e) {
         LOG.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
