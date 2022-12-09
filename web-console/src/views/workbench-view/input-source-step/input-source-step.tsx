@@ -71,7 +71,11 @@ const ROWS_TO_SAMPLE = 50;
 export interface InputSourceStepProps {
   initInputSource: Partial<InputSource> | undefined;
   mode: 'sampler' | 'msq';
-  onSet(inputSource: InputSource, inputFormat: InputFormat): void;
+  onSet(
+    inputSource: InputSource,
+    inputFormat: InputFormat,
+    partitionedByHint: string | undefined,
+  ): void;
 }
 
 export const InputSourceStep = React.memo(function InputSourceStep(props: InputSourceStepProps) {
@@ -169,7 +173,11 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
   useEffect(() => {
     const guessedInputFormat = guessedInputFormatState.data;
     if (!guessedInputFormat) return;
-    onSet(exampleInput?.inputSource || (inputSource as any), guessedInputFormat);
+    onSet(
+      exampleInput?.inputSource || (inputSource as any),
+      guessedInputFormat,
+      exampleInput?.partitionedByHint,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guessedInputFormatState]);
 

@@ -21,7 +21,6 @@ package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Provides;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
@@ -33,10 +32,12 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Module for providing the {@code EXTERN} operator.
@@ -44,9 +45,6 @@ import java.util.Properties;
 @LoadScope(roles = NodeRole.BROKER_JSON_NAME)
 public class MSQSqlModule implements DruidModule
 {
-  @Inject
-  Properties properties = null;
-
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -64,8 +62,10 @@ public class MSQSqlModule implements DruidModule
 
     // Set up the EXTERN macro.
     SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
   }
-
 
   @Provides
   @MSQ
