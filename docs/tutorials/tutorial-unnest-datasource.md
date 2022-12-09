@@ -25,7 +25,7 @@ title: "Tutorial: Unnest data in a column"
 
 > If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
 
-This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this though, be mindful of the following: 
+This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
 
 - Unnesting data can dramatically increase the total number of rows. 
 - You cannot unnest an array within an array. 
@@ -38,7 +38,7 @@ You need a Druid cluster, such as the [micro-quickstart](./index.md). The cluste
 
 ## Load data with nested values
 
-You can load this data by running a query for SQL-based ingestion or submitting a JSON-based ingestion spec. The example loads data into a table named `nested_data`
+You can load this data by running a query for SQL-based ingestion or submitting a JSON-based ingestion spec. The example loads data into a table named `nested_data`:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -127,10 +127,10 @@ PARTITIONED BY YEAR
 Now that the data is loaded, run the following query:
 
 ```sql
-select * FROM nested_data
+SELECT * FROM nested_data
 ```
 
-In the results, notice that the column named `dim3` has nested values like `["a","b"]`.  The example queries that follow unnest `dim3`  and run queries, such as scan. 
+In the results, notice that the column named `dim3` has nested values like `["a","b"]`.  The example queries that follow unnest `dim3`  and run queries, such as Scan. 
 
 ## Unnest a single column
 
@@ -138,7 +138,7 @@ The following section shows examples of how you can use the unnest datasource in
 
 ### Scan query 
 
-The following native Scan query  also unnests the values in the `dim3` column by using the `unnest` datasource type:
+The following native Scan query returns the rows of the datasource and unnests the values in the `dim3` column by using the `unnest` datasource type:
 
 <details><summary>Show the query</summary>
 
@@ -181,14 +181,13 @@ The following native Scan query  also unnests the values in the `dim3` column by
   }
 }
 ```
-s
 </details>
 
-In the results, you'll notice that there are now more rows than before and an additional column named `unnest-dim3`. The values of `unnest-dim3` are the same as the `dim3` column except the nested values have are no longer nested and are each a separate record. 
+In the results, notice that there are more rows than before and an additional column named `unnest-dim3`. The values of `unnest-dim3` are the same as the `dim3` column except the nested values are no longer nested and are each a separate record.
 
-With the `dataSource.allowList` parameter, you can unnest a subset of a column. Now, set the value of `allowList` to `["a","b"]` and run the query again. Only a subset of rows are returned based on the values you allowed.
+With the `dataSource.allowList` parameter, you can unnest a subset of a column. Set the value of `allowList` to `["a","b"]` and run the query again. Only a subset of rows are returned based on the values you allowed.
 
-You can also implement filters. For example, you can add the following to the SCAN query to filter it:
+You can also implement filters. For example, you can add the following to the Scan query to filter it:
 
 ```json
   "filter": {
@@ -201,7 +200,7 @@ You can also implement filters. For example, you can add the following to the SC
   },
 ```
 
-### Group by query
+### groupBy query
 
 The following query returns an unnested version of the column `dim3` as the column `unnest-dim3`, which is the `groupBy` dimension for the query too. The results are sorted in descending order. 
 
@@ -404,7 +403,7 @@ This query joins the `nested_data` table with itself and outputs the unnested da
 
 You can use a single unnest datasource to unnest multiple columns. Be careful when doing this though because it can lead to a very large number of new rows.
 
-### Load data with 2 columns of nested values
+### Load data with two columns of nested values
 
 Ingest this new data into a table called `nested_data2`:
 
@@ -428,9 +427,7 @@ FROM TABLE(
     '[{"name":"t","type":"string"},{"name":"dim1","type":"string"},{"name":"dim2","type":"string"},{"name":"dim3","type":"string"},{"name":"m1","type":"float"},{"name":"m2","type":"double"}]'
   )
 )
-
 PARTITIONED BY YEAR
-
 ```
 
 <!--Ingestion spec-->
@@ -498,7 +495,7 @@ PARTITIONED BY YEAR
 
 The following query performs two unnests. It unnests `dim3` into a column named `unnest-dim3`. It also performs an unnest on `dim2` and outputs the results to `unnest-dim2`. You can then treat the combination of `unnest-dim3` and `unnest-dim2` as Cartesian products.
 
-When you run the query, pay special attention to how the total number of rows has grown drastically. The source data has 2 rows. The unnested data has 12, (2 x 2 ) + (2 x 4).
+When you run the query, pay special attention to how the total number of rows has grown drastically. The source data has 2 rows. The unnested data has 12 rows, (2 x 2) + (2 x 4).
 
 <details><summary>Show the query</summary>
 
