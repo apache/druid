@@ -92,6 +92,11 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     return baseDir;
   }
 
+  /**
+   * Returns the base directory for serialization. This is better than returning {@link File} directly, because
+   * Jackson serializes {@link File} using {@link File#getAbsolutePath()}, and we'd prefer to not force relative
+   * path resolution as part of serialization.
+   */
   @Nullable
   @JsonProperty("baseDir")
   @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -118,7 +123,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   }
 
   /**
-   * Returns a list of file paths for serialization. This is better than returning {@link File} directly, because
+   * Returns the list of file paths for serialization. This is better than returning {@link File} directly, because
    * Jackson serializes {@link File} using {@link File#getAbsolutePath()}, and we'd prefer to not force relative
    * path resolution as part of serialization.
    */
