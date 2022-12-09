@@ -36,6 +36,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -131,7 +132,7 @@ public class SqlInputSourceTest
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     final List<InputRow> expectedRows = testUtils.createTableWithRows(TABLE_1, 10);
     final File tempDir = createFirehoseTmpDir("testSingleSplit");
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
 
     SqlInputSource sqlInputSource = new SqlInputSource(
         selectFrom(TABLE_1),

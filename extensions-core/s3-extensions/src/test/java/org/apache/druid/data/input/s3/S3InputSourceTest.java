@@ -58,6 +58,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -67,7 +68,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.S3Utils;
@@ -944,7 +944,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
     CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());
@@ -1040,7 +1040,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
     CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());

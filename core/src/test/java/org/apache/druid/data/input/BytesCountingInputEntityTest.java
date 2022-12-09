@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.FileEntity;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -91,20 +92,4 @@ public class BytesCountingInputEntityTest
     Assert.assertEquals(numBytes + numBytes, inputStats.getProcessedBytes());
   }
 
-  private static class InputStatsImpl implements InputStats
-  {
-    private long processedBytes;
-
-    @Override
-    public void incrementProcessedBytes(long incrementByValue)
-    {
-      processedBytes += incrementByValue;
-    }
-
-    @Override
-    public long getProcessedBytes()
-    {
-      return processedBytes;
-    }
-  }
 }

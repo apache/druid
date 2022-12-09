@@ -33,6 +33,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FileEntity;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -56,7 +57,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -130,7 +130,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   @Test
   public void testReader() throws IOException
   {
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
     final DruidSegmentReader reader = new DruidSegmentReader(
         new BytesCountingInputEntity(makeInputEntity(Intervals.of("2000/P1D")), inputStats),
         indexIO,
@@ -224,7 +224,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
 
     createTestSetup();
 
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
     final DruidSegmentReader reader = new DruidSegmentReader(
         new BytesCountingInputEntity(
             makeInputEntityWithParams(Intervals.of("2022-10-30/2022-10-31"), columnNames, null),
