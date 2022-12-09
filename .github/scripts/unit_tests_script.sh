@@ -66,7 +66,7 @@ done
 if [ -n "${project_files}" ]
 then
   { for i in 1 2 3; do npm install @connectis/diff-test-coverage@1.5.3 && break || sleep 15; done }
-  git diff origin/${GIT_BRANCH}...HEAD -- ${project_files} |
+  git diff origin/${GITHUB_BASE_REF}...HEAD -- ${project_files} |
   node_modules/.bin/diff-test-coverage \
   --coverage "**/target/site/jacoco/jacoco.xml" \
   --type jacoco \
