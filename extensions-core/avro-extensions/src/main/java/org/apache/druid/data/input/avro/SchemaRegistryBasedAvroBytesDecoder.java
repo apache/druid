@@ -140,17 +140,17 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
     catch (IOException | RestClientException ex) {
-      throw new ParseException(null, "Failed to get Avro schema: %s", id);
+      throw new ParseException(null, ex, "Failed to fetch Avro schema from registry: %s", id);
     }
     if (schema == null) {
-      throw new ParseException(null, "Failed to find Avro schema: %s", id);
+      throw new ParseException(null, "No Avro schema in registry: %s", id);
     }
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schema);
     try {
       return reader.read(null, DecoderFactory.get().binaryDecoder(bytes.array(), offset, length, null));
     }
     catch (Exception e) {
-      throw new ParseException(null, e, "Fail to decode Avro message for schema: %s!", id);
+      throw new ParseException(null, e, "Failed to decode Avro message for schema: %s", id);
     }
   }
 

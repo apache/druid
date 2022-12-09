@@ -1036,7 +1036,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
             task.emitMetric(
                 toolbox.getEmitter(),
-                "ingest/segment/count",
+                "ingest/segments/count",
                 segmentCount
             );
           }

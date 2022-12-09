@@ -357,7 +357,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public int compare(T o1, T o2)
+    public int compare(Object o1, Object o2)
     {
       return delegate.compare(o1, o2);
     }

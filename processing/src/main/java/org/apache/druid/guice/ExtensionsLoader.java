@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
  * any kind of extension that may be needed in the future.
  * The extensions are cached so that they can be reported by various REST APIs.
  */
+@LazySingleton
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
