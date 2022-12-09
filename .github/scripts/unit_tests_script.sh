@@ -29,17 +29,17 @@ unset _JAVA_OPTIONS
 
 # Add merge target branch to determine diff.
 # This is not needed for build triggered by tags, since there will be no code diff.
-echo "GIT_BRANCH=${GIT_BRANCH}"  # for debugging
-if [[ ! ${GIT_BRANCH} =~ ^refs\/tags\/.* ]]
+echo "GITHUB_BASE_REF=${GITHUB_BASE_REF}"  # for debugging
+if [[ -n "${GITHUB_BASE_REF}" ]]
 then
-  git remote set-branches --add origin ${GIT_BRANCH} && git fetch
+  git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
 fi
 
 # Determine the modified files that match the maven projects being tested. We use maven project lists that
 # either exclude (starts with "!") or include (does not start with "!"), so both cases need to be handled.
 # If the build is triggered by a tag, an error will be printed, but `all_files` will be correctly set to empty
 # so that the coverage check is skipped.
-all_files="$(git diff --name-only origin/${GIT_BRANCH}...HEAD | grep "\.java$" || [[ $? == 1 ]])"
+all_files="$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep "\.java$" || [[ $? == 1 ]])"
 
 for f in ${all_files}
 do
