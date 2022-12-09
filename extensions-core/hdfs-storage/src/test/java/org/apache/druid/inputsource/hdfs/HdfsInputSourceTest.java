@@ -335,7 +335,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
 
       Assert.assertEquals(timestampToValue, actualTimestampToValue);
 
-      long totalFileSize = fileContents.stream().mapToLong(contents -> contents.getBytes().length).sum();
+      long totalFileSize = fileContents.stream().mapToLong(String::length).sum();
       Assert.assertEquals(totalFileSize, inputStats.getProcessedBytes());
     }
 
