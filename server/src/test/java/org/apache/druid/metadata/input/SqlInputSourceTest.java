@@ -39,6 +39,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
@@ -239,7 +240,7 @@ public class SqlInputSourceTest
   {
     final List<String> sqls = new ArrayList<>();
     for (String tableName : tableNames) {
-      sqls.add(String.format("SELECT timestamp, a, b FROM %s", tableName));
+      sqls.add(StringUtils.format("SELECT timestamp, a, b FROM %s", tableName));
     }
     return sqls;
   }
