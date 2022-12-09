@@ -26,6 +26,7 @@ import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.HttpTableDefn;
 import org.apache.druid.catalog.model.table.InlineTableDefn;
 import org.apache.druid.catalog.model.table.LocalTableDefn;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.inject.Inject;
@@ -79,7 +80,7 @@ public class TableDefnRegistry
 
   @Inject
   public TableDefnRegistry(
-      final ObjectMapper jsonMapper
+      @Json ObjectMapper jsonMapper
   )
   {
     this(TABLE_DEFNS, jsonMapper);

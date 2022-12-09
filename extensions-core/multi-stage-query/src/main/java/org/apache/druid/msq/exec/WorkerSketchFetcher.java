@@ -59,7 +59,11 @@ public class WorkerSketchFetcher implements AutoCloseable
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode, int statisticsMaxRetainedBytes)
+  public WorkerSketchFetcher(
+      WorkerClient workerClient,
+      ClusterStatisticsMergeMode clusterStatisticsMergeMode,
+      int statisticsMaxRetainedBytes
+  )
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
@@ -86,14 +90,14 @@ public class WorkerSketchFetcher implements AutoCloseable
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
-          log.debug("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+          log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
           // If there is no time clustering, there is no scope for sequential merge
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
         } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
-          log.debug("Query [%s] AUTO mode: chose SEQUENTIAL mode to merge key statistics", stageDefinition.getId().getQueryId());
+          log.info("Query [%s] AUTO mode: chose SEQUENTIAL mode to merge key statistics", stageDefinition.getId().getQueryId());
           return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
         }
-        log.debug("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+        log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       default:
         throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
@@ -128,12 +132,6 @@ public class WorkerSketchFetcher implements AutoCloseable
                 stageDefinition.getId().getQueryId(),
                 stageDefinition.getStageNumber()
             );
-        partitionFuture.whenComplete((result, exception) -> {
-          if (exception != null || (result != null && result.isError())) {
-            snapshotFuture.cancel(true);
-          }
-        });
-
         try {
           ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
           if (clusterByStatisticsSnapshot == null) {
@@ -151,12 +149,15 @@ public class WorkerSketchFetcher implements AutoCloseable
         }
         catch (Exception e) {
           synchronized (mergedStatisticsCollector) {
-            partitionFuture.completeExceptionally(e);
-            mergedStatisticsCollector.clear();
+            if (!partitionFuture.isDone()) {
+              partitionFuture.completeExceptionally(e);
+              mergedStatisticsCollector.clear();
+            }
           }
         }
       });
     });
+
     return partitionFuture;
   }
 
@@ -247,11 +248,6 @@ public class WorkerSketchFetcher implements AutoCloseable
                     stageDefinition.getStageNumber(),
                     timeChunk
                 );
-            partitionFuture.whenComplete((result, exception) -> {
-              if (exception != null || (result != null && result.isError())) {
-                snapshotFuture.cancel(true);
-              }
-            });
 
             try {
               ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
@@ -289,8 +285,10 @@ public class WorkerSketchFetcher implements AutoCloseable
             }
             catch (Exception e) {
               synchronized (mergedStatisticsCollector) {
-                partitionFuture.completeExceptionally(e);
-                mergedStatisticsCollector.clear();
+                if (!partitionFuture.isDone()) {
+                  partitionFuture.completeExceptionally(e);
+                  mergedStatisticsCollector.clear();
+                }
               }
             }
           });

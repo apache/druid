@@ -70,6 +70,7 @@ public class SegmentAllocationQueue
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
 
   private static final int MAX_QUEUE_SIZE = 2000;
+  private static final int MAX_BATCH_SIZE = 500;
 
   private final long maxWaitTimeMillis;
 
@@ -94,7 +95,7 @@ public class SegmentAllocationQueue
     this.emitter = emitter;
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
-    this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationMaxWaitTime();
+    this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
 
     this.executor = taskLockConfig.isBatchSegmentAllocation()
                     ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
@@ -173,7 +174,7 @@ public class SegmentAllocationQueue
       throw new ISE("Batched segment allocation is disabled.");
     }
 
-    final AllocateRequestKey requestKey = new AllocateRequestKey(request, maxWaitTimeMillis);
+    final AllocateRequestKey requestKey = getKeyForAvailableBatch(request);
     final AtomicReference<Future<SegmentIdWithShardSpec>> futureReference = new AtomicReference<>();
 
     // Possible race condition:
@@ -196,6 +197,24 @@ public class SegmentAllocationQueue
     });
 
     return futureReference.get();
+  }
+
+  /**
+   * Returns the key for a batch that is not added to the queue yet and/or has
+   * available space. Throws an exception if the queue is already full and no
+   * batch has available capacity.
+   */
+  private AllocateRequestKey getKeyForAvailableBatch(SegmentAllocateRequest request)
+  {
+    for (int batchIncrementalId = 0; batchIncrementalId < MAX_QUEUE_SIZE; ++batchIncrementalId) {
+      AllocateRequestKey nextKey = new AllocateRequestKey(request, maxWaitTimeMillis, batchIncrementalId);
+      AllocateRequestBatch nextBatch = keyToBatch.get(nextKey);
+      if (nextBatch == null || nextBatch.size() < MAX_BATCH_SIZE) {
+        return nextKey;
+      }
+    }
+
+    throw new ISE("Allocation queue is at capacity, all batches are full.");
   }
 
   /**
@@ -616,6 +635,11 @@ public class SegmentAllocationQueue
    */
   private static class AllocateRequestKey
   {
+    /**
+     * ID to distinguish between two batches for the same datasource, groupId, etc.
+     */
+    private final int batchIncrementalId;
+
     private long queueTimeMillis;
     private final long maxWaitTimeMillis;
 
@@ -635,11 +659,12 @@ public class SegmentAllocationQueue
      * Creates a new key for the given request. The batch for a unique key will
      * always contain a single request.
      */
-    AllocateRequestKey(SegmentAllocateRequest request, long maxWaitTimeMillis)
+    AllocateRequestKey(SegmentAllocateRequest request, long maxWaitTimeMillis, int batchIncrementalId)
     {
       final SegmentAllocateAction action = request.getAction();
       final Task task = request.getTask();
 
+      this.batchIncrementalId = batchIncrementalId;
       this.dataSource = action.getDataSource();
       this.groupId = task.getGroupId();
       this.skipSegmentLineageCheck = action.isSkipSegmentLineageCheck();
@@ -651,10 +676,11 @@ public class SegmentAllocationQueue
                                                .bucket(action.getTimestamp());
 
       this.hash = Objects.hash(
-          skipSegmentLineageCheck,
-          useNonRootGenPartitionSpace,
           dataSource,
           groupId,
+          batchIncrementalId,
+          skipSegmentLineageCheck,
+          useNonRootGenPartitionSpace,
           preferredAllocationInterval,
           lockGranularity
       );
@@ -687,10 +713,11 @@ public class SegmentAllocationQueue
         return false;
       }
       AllocateRequestKey that = (AllocateRequestKey) o;
-      return skipSegmentLineageCheck == that.skipSegmentLineageCheck
-             && useNonRootGenPartitionSpace == that.useNonRootGenPartitionSpace
-             && dataSource.equals(that.dataSource)
+      return dataSource.equals(that.dataSource)
              && groupId.equals(that.groupId)
+             && batchIncrementalId == that.batchIncrementalId
+             && skipSegmentLineageCheck == that.skipSegmentLineageCheck
+             && useNonRootGenPartitionSpace == that.useNonRootGenPartitionSpace
              && preferredAllocationInterval.equals(that.preferredAllocationInterval)
              && lockGranularity == that.lockGranularity;
     }
@@ -707,6 +734,7 @@ public class SegmentAllocationQueue
       return "{" +
              "ds='" + dataSource + '\'' +
              ", gr='" + groupId + '\'' +
+             ", incId=" + batchIncrementalId +
              ", lock=" + lockGranularity +
              ", invl=" + preferredAllocationInterval +
              ", slc=" + skipSegmentLineageCheck +

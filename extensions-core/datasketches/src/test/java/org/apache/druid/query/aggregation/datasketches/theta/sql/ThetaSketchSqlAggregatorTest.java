@@ -1014,4 +1014,12 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{"a", 0L, 0L, "0.0", "0.0"})
     );
   }
+
+  @Test
+  public void testThetaSketchIntersectOnScalarExpression()
+  {
+    assertQueryIsUnplannable("SELECT THETA_SKETCH_INTERSECT(NULL, NULL) FROM foo",
+        "Possible error: THETA_SKETCH_INTERSECT can only be used on aggregates. " +
+            "It cannot be used directly on a column or on a scalar expression.");
+  }
 }

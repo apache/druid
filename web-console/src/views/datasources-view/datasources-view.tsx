@@ -1324,7 +1324,7 @@ ORDER BY 1`;
             id: 'compactionStatus',
             accessor: row => Boolean(row.compaction?.status),
             filterable: false,
-            width: 150,
+            width: 180,
             Cell: ({ original }) => {
               const { datasource, compaction } = original as Datasource;
               return (
