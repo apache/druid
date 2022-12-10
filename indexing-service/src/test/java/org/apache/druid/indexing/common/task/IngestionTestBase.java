@@ -221,6 +221,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getIndexMergerV9Factory();
   }
 
+
+
   public class TestLocalTaskActionClientFactory implements TaskActionClientFactory
   {
     @Override

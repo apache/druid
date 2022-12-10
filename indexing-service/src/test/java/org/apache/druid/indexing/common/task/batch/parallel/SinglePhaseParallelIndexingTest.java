@@ -437,6 +437,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList()
     );
     Map<String, Object> actualReports = task.doGetLiveReports("full");
+    final long processedBytes = useInputFormatApi ? 335 : 0;
     Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
@@ -453,11 +454,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(
-            10,
-            0, 1,
-            1,
-            1)
+        new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1)
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -492,7 +489,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
     Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
 
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 0, 1, 1, 1);
+    final long processedBytes = useInputFormatApi ? 335 : 0;
+    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -527,7 +525,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     }
 
     compareTaskReports(expectedReports, actualReports);
-    System.out.println(actualReports);
   }
 
   @Test
@@ -879,17 +876,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       Granularity segmentGranularity,
       boolean appendToExisting,
       boolean splittableInputSource
-  )
-  {
-    return newTask(interval, segmentGranularity, appendToExisting, splittableInputSource, false);
-  }
-
-  private ParallelIndexSupervisorTask newTask(
-      @Nullable Interval interval,
-      Granularity segmentGranularity,
-      boolean appendToExisting,
-      boolean splittableInputSource,
-      boolean isReplace
   )
   {
     return newTask(

@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
+import org.apache.druid.indexing.common.task.ParseExceptionReport;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -106,6 +107,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -140,7 +142,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -152,7 +153,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 
 @SuppressWarnings("unchecked")
@@ -378,10 +378,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -570,11 +567,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -646,10 +639,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
-    // Check metrics
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(176).totalProcessed(2));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -750,10 +740,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    // Check metrics
-    Assert.assertEquals(8, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(830).unparseable(4).totalProcessed(8));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -891,10 +878,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    // Check metrics
-    Assert.assertEquals(6, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(750).errors(1).unparseable(4).totalProcessed(6));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -965,10 +949,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -1035,10 +1016,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1115,10 +1093,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(4).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());
@@ -1182,10 +1157,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(88).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2010/P1D", 0)), publishedDescriptors());
@@ -1239,10 +1211,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1309,10 +1278,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1382,10 +1348,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(377).unparseable(1).totalProcessed(3));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1446,10 +1409,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertNull(status.getErrorMsg());
 
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
+    verifyTaskMetrics(task, RowMeters.with().bytes(763).errors(3).unparseable(4).totalProcessed(4));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -1469,6 +1429,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.PROCESSED_BYTES, 763,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -1476,9 +1437,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse value[notanumber] for field[met1]",
@@ -1489,10 +1449,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse row [unparseable] (Record: 1)",
         "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}",
@@ -1503,10 +1460,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "unparseable",
         "{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
 
@@ -1561,11 +1515,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(388).unparseable(3).totalProcessed(3));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1577,6 +1527,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 3,
+            RowIngestionMeters.PROCESSED_BYTES, 388,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -1584,28 +1535,20 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "",
         "unparseable"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
 
@@ -1678,13 +1621,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(264).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -1772,13 +1710,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.FAILED, future2.get().getStatusCode());
 
     verifyAll();
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(264).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(390).unparseable(4).totalProcessed(3));
 
     // Check published segments & metadata, should all be from the first task
     assertEqualsExceptVersion(
@@ -1871,13 +1804,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(264).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(390).unparseable(4).totalProcessed(3));
 
     // Check published segments & metadata
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
@@ -1941,10 +1869,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(5, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).totalProcessed(5));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2032,13 +1957,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(2, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(264).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(176).totalProcessed(2));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2161,13 +2081,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(2, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(176).totalProcessed(2));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(201).unparseable(1).totalProcessed(1));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2310,13 +2225,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(5, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(2, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(440).totalProcessed(5));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(176).totalProcessed(2));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2420,10 +2330,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2501,11 +2408,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2649,10 +2552,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(2, checkpointRequestsHash.size());
 
-    // Check metrics
-    Assert.assertEquals(10, normalReplica.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(normalReplica, RowMeters.with().bytes(880).totalProcessed(10));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -2808,10 +2708,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyAll();
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(264).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2884,10 +2781,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
-    // Check metrics
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().totalProcessed(0));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(Collections.emptyList(), publishedDescriptors());

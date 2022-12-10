@@ -106,6 +106,7 @@ public class RowIngestionMetersTotals
   {
     return "RowIngestionMetersTotals{" +
            "processed=" + processed +
+           ", processedBytes=" + processedBytes +
            ", processedWithError=" + processedWithError +
            ", thrownAway=" + thrownAway +
            ", unparseable=" + unparseable +

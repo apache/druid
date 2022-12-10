@@ -77,6 +77,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
@@ -492,6 +493,14 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     taskStorage = null;
     taskLockbox = null;
     metadataStorageCoordinator = null;
+  }
+
+  protected void verifyTaskMetrics(
+      SeekableStreamIndexTask<?, ?, ?> task,
+      RowIngestionMetersTotals expectedTotals
+  )
+  {
+    Assert.assertEquals(expectedTotals, task.getRunner().getRowIngestionMeters().getTotals());
   }
 
   protected class SegmentDescriptorAndExpectedDim1Values

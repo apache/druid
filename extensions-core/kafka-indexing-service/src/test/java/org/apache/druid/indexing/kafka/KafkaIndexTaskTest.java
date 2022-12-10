@@ -73,6 +73,7 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
+import org.apache.druid.indexing.common.task.ParseExceptionReport;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -135,6 +136,7 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
@@ -174,7 +176,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -186,7 +187,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unchecked")
@@ -1106,13 +1106,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
 
-    Assert.assertEquals(9, normalReplica.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getThrownAway());
-
-    Assert.assertEquals(9, staleReplica.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, staleReplica.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, staleReplica.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(normalReplica, RowMeters.with().bytes(792).totalProcessed(9));
+    verifyTaskMetrics(staleReplica, RowMeters.with().bytes(792).totalProcessed(9));
   }
 
   @Test(timeout = 60_000L)
@@ -1147,11 +1142,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1199,11 +1190,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1260,11 +1247,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1673,6 +1656,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.PROCESSED_BYTES, 761,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1
@@ -1680,9 +1664,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse value[notanumber] for field[met1]",
@@ -1692,10 +1675,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse row [unparseable] (Record: 1)",
         "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}",
@@ -1705,10 +1685,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "unparseable",
         "{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test(timeout = 60_000L)
@@ -1745,12 +1722,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(388).unparseable(3).totalProcessed(3));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1762,6 +1734,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 3,
+            RowIngestionMeters.PROCESSED_BYTES, 388,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -1769,28 +1742,20 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "",
         "unparseable"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test(timeout = 60_000L)
