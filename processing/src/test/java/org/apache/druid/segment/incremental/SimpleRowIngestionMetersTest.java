@@ -22,26 +22,26 @@ package org.apache.druid.segment.incremental;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class MutableRowIngestionMetersTest
+public class SimpleRowIngestionMetersTest
 {
   @Test
   public void testIncrement()
   {
-    MutableRowIngestionMeters mutableRowIngestionMeters = new MutableRowIngestionMeters();
-    mutableRowIngestionMeters.incrementProcessed();
-    mutableRowIngestionMeters.incrementProcessedBytes(5);
-    mutableRowIngestionMeters.incrementProcessedWithError();
-    mutableRowIngestionMeters.incrementUnparseable();
-    mutableRowIngestionMeters.incrementThrownAway();
-    Assert.assertEquals(mutableRowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1));
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    rowIngestionMeters.incrementProcessed();
+    rowIngestionMeters.incrementProcessedBytes(5);
+    rowIngestionMeters.incrementProcessedWithError();
+    rowIngestionMeters.incrementUnparseable();
+    rowIngestionMeters.incrementThrownAway();
+    Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1));
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
-    MutableRowIngestionMeters mutableRowIngestionMeters = new MutableRowIngestionMeters();
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
-    mutableRowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
-    Assert.assertEquals(mutableRowIngestionMeters.getTotals(), rowIngestionMetersTotals);
+    rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
+    Assert.assertEquals(rowIngestionMeters.getTotals(), rowIngestionMetersTotals);
   }
 }

@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.RowMeters;
 import org.joda.time.Interval;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -132,13 +133,13 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false
     );
 
-    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(200, 0, 0, 0, 0);
+    final RowIngestionMetersTotals expectedTotals = RowMeters.with().totalProcessed(200);
     final Map<String, Object> expectedReports =
         maxNumConcurrentSubTasks <= 1
         ? buildExpectedTaskReportSequential(
             task.getId(),
             ImmutableList.of(),
-            new RowIngestionMetersTotals(0, 0, 0, 0, 0),
+            RowMeters.with().totalProcessed(0),
             expectedTotals
         )
         : buildExpectedTaskReportParallel(

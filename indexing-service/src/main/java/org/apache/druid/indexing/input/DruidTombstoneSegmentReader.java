@@ -40,7 +40,7 @@ public class DruidTombstoneSegmentReader extends IntermediateRowParsingReader<Ma
   {
     Preconditions.checkArgument(
         source.isFromTombstone(),
-        "DruidSegmentInputEntity must be created from a tombstone but is not."
+        "DruidSegmentInputEntity must be created from a tombstone."
     );
   }
 

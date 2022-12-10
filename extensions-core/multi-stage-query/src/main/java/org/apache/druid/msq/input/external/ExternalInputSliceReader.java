@@ -53,7 +53,7 @@ import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
@@ -136,7 +136,7 @@ public class ExternalInputSliceReader implements InputSliceReader
     if (!temporaryDirectory.exists() && !temporaryDirectory.mkdir()) {
       throw new ISE("Cannot create temporary directory at [%s]", temporaryDirectory);
     }
-    final InputStats inputStats = new MutableRowIngestionMeters();
+    final InputStats inputStats = new SimpleRowIngestionMeters();
     return Iterators.transform(
         inputSources.iterator(),
         inputSource -> {

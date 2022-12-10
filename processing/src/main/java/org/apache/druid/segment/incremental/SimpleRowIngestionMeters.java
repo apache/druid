@@ -21,7 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import java.util.Map;
 
-public class MutableRowIngestionMeters implements RowIngestionMeters
+public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
   private long processed;
   private long processedWithError;
