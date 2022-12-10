@@ -71,12 +71,11 @@ public class DruidSegmentInputFormat implements InputFormat
         + baseInputEntity.getClass().getName() + " provided."
     );
 
-    final InputEntityReader retVal;
-    // Cast is safe here because of the precondition above passed
-    if (((DruidSegmentInputEntity) baseInputEntity).isFromTombstone()) {
-      retVal = new DruidTombstoneSegmentReader(baseInputEntity);
+    final DruidSegmentInputEntity druidSegmentEntity = (DruidSegmentInputEntity) baseInputEntity;
+    if (druidSegmentEntity.isFromTombstone()) {
+      return new DruidTombstoneSegmentReader(druidSegmentEntity);
     } else {
-      retVal = new DruidSegmentReader(
+      return new DruidSegmentReader(
           source,
           indexIO,
           inputRowSchema.getTimestampSpec(),
@@ -86,6 +85,5 @@ public class DruidSegmentInputFormat implements InputFormat
           temporaryDirectory
       );
     }
-    return retVal;
   }
 }

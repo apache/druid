@@ -20,8 +20,8 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.input.SqlTestUtils;
 import org.apache.druid.segment.TestHelper;
@@ -44,21 +43,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 public class SqlFirehoseFactoryTest
 {
   private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
   private static File TEST_DIR;
-  private final String TABLE_NAME_1 = "FOOS_TABLE_1";
-  private final String TABLE_NAME_2 = "FOOS_TABLE_2";
-
-  private final List<String> SQLLIST1 = ImmutableList.of("SELECT timestamp,a,b FROM FOOS_TABLE_1");
-  private final List<String> SQLLIST2 = ImmutableList.of(
-      "SELECT timestamp,a,b FROM FOOS_TABLE_1",
-      "SELECT timestamp,a,b FROM FOOS_TABLE_2"
-  );
+  private static final String TABLE_NAME_1 = "FOOS_TABLE_1";
+  private static final String TABLE_NAME_2 = "FOOS_TABLE_2";
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -93,25 +85,6 @@ public class SqlFirehoseFactoryTest
     }
   }
 
-  private void assertResult(List<Row> rows, List<String> sqls)
-  {
-    Assert.assertEquals(10 * sqls.size(), rows.size());
-    rows.sort(Comparator.comparing(Row::getTimestamp)
-                        .thenComparingInt(r -> Integer.valueOf(r.getDimension("a").get(0)))
-                        .thenComparingInt(r -> Integer.valueOf(r.getDimension("b").get(0))));
-    int rowCount = 0;
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < sqls.size(); j++) {
-        final Row row = rows.get(rowCount);
-        String timestampSt = StringUtils.format("2011-01-12T00:0%s:00.000Z", i);
-        Assert.assertEquals(timestampSt, row.getTimestamp().toString());
-        Assert.assertEquals(i, Integer.valueOf(row.getDimension("a").get(0)).intValue());
-        Assert.assertEquals(i, Integer.valueOf(row.getDimension("b").get(0)).intValue());
-        rowCount++;
-      }
-    }
-  }
-
   private void assertNumRemainingCacheFiles(File firehoseTmpDir, int expectedNumFiles)
   {
     final String[] files = firehoseTmpDir.list();
@@ -136,10 +109,10 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createTableWithRows(TABLE_NAME_1, 10);
+    final List<InputRow> expectedRows = testUtils.createTableWithRows(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
-            SQLLIST1,
+            SqlTestUtils.selectFrom(TABLE_NAME_1),
             0L,
             0L,
             0L,
@@ -157,7 +130,7 @@ public class SqlFirehoseFactoryTest
       }
     }
 
-    assertResult(rows, SQLLIST1);
+    Assert.assertEquals(expectedRows, rows);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
     testUtils.dropTable(TABLE_NAME_1);
   }
@@ -168,10 +141,10 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createTableWithRows(TABLE_NAME_1, 10);
+    final List<InputRow> expectedRows = testUtils.createTableWithRows(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
-            SQLLIST1,
+            SqlTestUtils.selectFrom(TABLE_NAME_1),
             0L,
             null,
             null,
@@ -190,7 +163,7 @@ public class SqlFirehoseFactoryTest
       }
     }
 
-    assertResult(rows, SQLLIST1);
+    Assert.assertEquals(expectedRows, rows);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
     testUtils.dropTable(TABLE_NAME_1);
   }
@@ -201,12 +174,12 @@ public class SqlFirehoseFactoryTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createTableWithRows(TABLE_NAME_1, 10);
-    testUtils.createTableWithRows(TABLE_NAME_2, 10);
+    final List<InputRow> expectedRowsTable1 = testUtils.createTableWithRows(TABLE_NAME_1, 10);
+    final List<InputRow> expectedRowsTable2 = testUtils.createTableWithRows(TABLE_NAME_2, 10);
 
     final SqlFirehoseFactory factory = new
         SqlFirehoseFactory(
-        SQLLIST2,
+        SqlTestUtils.selectFrom(TABLE_NAME_1, TABLE_NAME_2),
         null,
         null,
         0L,
@@ -224,7 +197,8 @@ public class SqlFirehoseFactoryTest
       }
     }
 
-    assertResult(rows, SQLLIST2);
+    Assert.assertEquals(expectedRowsTable1, rows.subList(0, 10));
+    Assert.assertEquals(expectedRowsTable2, rows.subList(10, 20));
     assertNumRemainingCacheFiles(firehoseTmpDir, 2);
     testUtils.dropTable(TABLE_NAME_1);
     testUtils.dropTable(TABLE_NAME_2);

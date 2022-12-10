@@ -39,14 +39,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
-import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
@@ -120,7 +117,7 @@ public class SqlInputSourceTest
     final SqlInputSourceTest.TestSerdeFirehoseConnector testSerdeFirehoseConnector = new SqlInputSourceTest.TestSerdeFirehoseConnector(
         new MetadataStorageConnectorConfig());
     final SqlInputSource sqlInputSource =
-        new SqlInputSource(selectFrom(TABLE_1), true, testSerdeFirehoseConnector, mapper);
+        new SqlInputSource(SqlTestUtils.selectFrom(TABLE_1), true, testSerdeFirehoseConnector, mapper);
     final String valueString = mapper.writeValueAsString(sqlInputSource);
     final SqlInputSource inputSourceFromJson = mapper.readValue(valueString, SqlInputSource.class);
     Assert.assertEquals(sqlInputSource, inputSourceFromJson);
@@ -136,7 +133,7 @@ public class SqlInputSourceTest
     final InputStats inputStats = new InputStatsImpl();
 
     SqlInputSource sqlInputSource = new SqlInputSource(
-        selectFrom(TABLE_1),
+        SqlTestUtils.selectFrom(TABLE_1),
         true,
         testUtils.getDerbyFirehoseConnector(),
         mapper
@@ -163,20 +160,20 @@ public class SqlInputSourceTest
     final List<InputRow> expectedRowsTable2 = testUtils.createTableWithRows(TABLE_2, 10);
     final File tempDir = createFirehoseTmpDir("testMultipleSplit");
     SqlInputSource sqlInputSource = new SqlInputSource(
-        selectFrom(TABLE_1, TABLE_2),
+        SqlTestUtils.selectFrom(TABLE_1, TABLE_2),
         true,
         testUtils.getDerbyFirehoseConnector(),
         mapper
     );
 
-    final RowIngestionMeters meters = new MutableRowIngestionMeters();
+    final InputStats inputStats = new InputStatsImpl();
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
-    CloseableIterator<InputRow> resultIterator = sqlReader.read(meters);
+    CloseableIterator<InputRow> resultIterator = sqlReader.read(inputStats);
     final List<InputRow> rows = Lists.newArrayList(resultIterator);
 
     Assert.assertEquals(expectedRowsTable1, rows.subList(0, 10));
     Assert.assertEquals(expectedRowsTable2, rows.subList(10, 20));
-    Assert.assertEquals(1202, meters.getProcessedBytes());
+    Assert.assertEquals(1202, inputStats.getProcessedBytes());
 
     testUtils.dropTable(TABLE_1);
     testUtils.dropTable(TABLE_2);
@@ -187,7 +184,7 @@ public class SqlInputSourceTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    final List<String> sqls = selectFrom(TABLE_1, TABLE_2);
+    final List<String> sqls = SqlTestUtils.selectFrom(TABLE_1, TABLE_2);
     SqlInputSource sqlInputSource =
         new SqlInputSource(sqls, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputFormat inputFormat = EasyMock.createMock(InputFormat.class);
@@ -205,7 +202,7 @@ public class SqlInputSourceTest
     try {
       final File tempDir = createFirehoseTmpDir("testSingleSplit");
       SqlInputSource sqlInputSource =
-          new SqlInputSource(selectFrom(TABLE_1), true, testUtils.getDerbyFirehoseConnector(), mapper);
+          new SqlInputSource(SqlTestUtils.selectFrom(TABLE_1), true, testUtils.getDerbyFirehoseConnector(), mapper);
       InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
       CloseableIterator<InputRowListPlusRawValues> resultIterator = sqlReader.sample();
       final List<InputRow> rows = new ArrayList<>();
@@ -234,15 +231,6 @@ public class SqlInputSourceTest
                   .withNonnullFields("sqls", "sqlFirehoseDatabaseConnector")
                   .usingGetClass()
                   .verify();
-  }
-
-  private static List<String> selectFrom(String... tableNames)
-  {
-    final List<String> sqls = new ArrayList<>();
-    for (String tableName : tableNames) {
-      sqls.add(StringUtils.format("SELECT timestamp, a, b FROM %s", tableName));
-    }
-    return sqls;
   }
 
   @JsonTypeName("test")

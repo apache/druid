@@ -36,6 +36,7 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -153,5 +154,18 @@ public class SqlTestUtils
   public TestDerbyFirehoseConnector getDerbyFirehoseConnector()
   {
     return derbyFirehoseConnector;
+  }
+
+  /**
+   * Builds a {@code SELECT timestamp, a, b FROM tableName} query for each of
+   * the given tables.
+   */
+  public static List<String> selectFrom(String... tableNames)
+  {
+    final List<String> selects = new ArrayList<>();
+    for (String tableName : tableNames) {
+      selects.add(StringUtils.format("SELECT timestamp, a, b FROM %s", tableName));
+    }
+    return selects;
   }
 }

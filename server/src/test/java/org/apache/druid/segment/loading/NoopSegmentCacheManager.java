@@ -19,31 +19,26 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
- *
+ * Test implementation of {@link SegmentCacheManager} which throws an
+ * {@link UnsupportedOperationException} on invocation of any method.
  */
-public class CacheTestSegmentCacheManager implements SegmentCacheManager
+public class NoopSegmentCacheManager implements SegmentCacheManager
 {
-  private final Set<DataSegment> segmentsInTrash = new HashSet<>();
 
   @Override
   public boolean isSegmentCached(DataSegment segment)
   {
-    Map<String, Object> loadSpec = segment.getLoadSpec();
-    return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public File getSegmentFiles(DataSegment segment)
+  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     throw new UnsupportedOperationException();
   }
@@ -63,12 +58,7 @@ public class CacheTestSegmentCacheManager implements SegmentCacheManager
   @Override
   public void cleanup(DataSegment segment)
   {
-    segmentsInTrash.add(segment);
-  }
-
-  public Set<DataSegment> getSegmentsInTrash()
-  {
-    return segmentsInTrash;
+    throw new UnsupportedOperationException();
   }
 
   @Override

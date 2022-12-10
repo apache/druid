@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -35,6 +37,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 public class SqlEntityTest
 {
@@ -47,10 +50,6 @@ public class SqlEntityTest
 
   String VALID_SQL = "SELECT timestamp,a,b FROM FOOS_TABLE";
   String INVALID_SQL = "DONT SELECT timestamp,a,b FROM FOOS_TABLE";
-  String resultJson = "[{\"a\":\"0\","
-                      + "\"b\":\"0\","
-                      + "\"timestamp\":\"2011-01-12T00:00:00.000Z\""
-                      + "}]";
 
   @Before
   public void setUp()
@@ -65,7 +64,7 @@ public class SqlEntityTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
-    testUtils.createTableWithRows(TABLE_NAME_1, 1);
+    final InputRow expectedRow = testUtils.createTableWithRows(TABLE_NAME_1, 1).get(0);
     File tmpFile = File.createTempFile("testQueryResults", "");
     InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
         VALID_SQL,
@@ -76,8 +75,10 @@ public class SqlEntityTest
     );
     InputStream queryInputStream = new FileInputStream(queryResult.file());
     String actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
-
-    Assert.assertEquals(actualJson, resultJson);
+    String expectedJson = mapper.writeValueAsString(
+        Collections.singletonList(((MapBasedInputRow) expectedRow).getEvent())
+    );
+    Assert.assertEquals(actualJson, expectedJson);
     testUtils.dropTable(TABLE_NAME_1);
   }
 
