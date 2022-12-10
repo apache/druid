@@ -76,7 +76,8 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
         break;
       }
       catch (ParseException e) {
-        parseExceptionHandler.handle(e);
+        parseExceptionHandler.handle(e, AbstractTask.taskMetadata);
+
       }
     }
     return next != null;

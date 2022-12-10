@@ -183,7 +183,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         buildSegmentsMeters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        toolbox.getEmitter()
     );
     final boolean useMaxMemoryEstimates = getContextValue(
         Tasks.USE_MAX_MEMORY_ESTIMATES,

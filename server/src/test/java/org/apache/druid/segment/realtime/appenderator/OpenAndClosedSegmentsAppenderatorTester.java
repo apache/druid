@@ -222,7 +222,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexIO,
           indexMerger,
           rowIngestionMeters,
-          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, null),
           true
       );
     } else {
@@ -236,7 +236,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexIO,
           indexMerger,
           rowIngestionMeters,
-          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, null),
           true
       );
     }

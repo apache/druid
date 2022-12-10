@@ -22,13 +22,19 @@ package org.apache.druid.segment.incremental;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.utils.CircularBuffer;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * A handler for {@link ParseException}s thrown during ingestion. Based on the given configuration, this handler can
@@ -48,12 +54,15 @@ public class ParseExceptionHandler
   private final int maxAllowedParseExceptions;
   @Nullable
   private final CircularBuffer<ParseExceptionReport> savedParseExceptionReports;
+  @Nullable
+  private final ServiceEmitter emitter;
 
   public ParseExceptionHandler(
       RowIngestionMeters rowIngestionMeters,
       boolean logParseExceptions,
       int maxAllowedParseExceptions,
-      int maxSavedParseExceptions
+      int maxSavedParseExceptions,
+      ServiceEmitter emitter
   )
   {
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
@@ -64,9 +73,10 @@ public class ParseExceptionHandler
     } else {
       this.savedParseExceptionReports = null;
     }
+    this.emitter = emitter;
   }
 
-  public void handle(@Nullable ParseException e)
+  public void handle(@Nullable ParseException e, @Nullable Map<String, Object> taskMetadata)
   {
     if (e == null) {
       return;
@@ -76,25 +86,49 @@ public class ParseExceptionHandler
       rowIngestionMeters.incrementProcessedWithError();
     } else {
       rowIngestionMeters.incrementUnparseable();
-    }
+      if (emitter != null) {
+        DateTime timeOfException = new DateTime(e.getTimeOfExceptionMillis());
 
-    logParseExceptionHelper(e);
+        ImmutableMap<String, Object> extraData = new ImmutableMap.Builder().putAll(taskMetadata)
+                                                                           .put("input", e.getInput())
+                                                                           .put("detailMessage", e.getMessage())
+                                                                           .build();
+        Event event = new AlertEvent(
+            timeOfException,
+            "peon",
+            "localhost",
+            AlertEvent.Severity.DEFAULT,
+            "unparseable Row at ingestion",
+            extraData
+        );
+        emitter.emit(event);
+      }
 
-    if (savedParseExceptionReports != null) {
-      ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
-          e.getInput(),
-          e.isFromPartiallyValidRow() ? "processedWithError" : "unparseable",
-          e.isFromPartiallyValidRow()
-          ? ((UnparseableColumnsParseException) e).getColumnExceptionMessages()
-          : ImmutableList.of(e.getMessage()),
-          e.getTimeOfExceptionMillis()
-      );
-      savedParseExceptionReports.add(parseExceptionReport);
-    }
+      logParseExceptionHelper(e);
 
-    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError() > maxAllowedParseExceptions) {
-      throw new RE("Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
+      if (savedParseExceptionReports != null) {
+        ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
+            e.getInput(),
+            e.isFromPartiallyValidRow() ? "processedWithError" : "unparseable",
+            e.isFromPartiallyValidRow()
+            ? ((UnparseableColumnsParseException) e).getColumnExceptionMessages()
+            : ImmutableList.of(e.getMessage()),
+            e.getTimeOfExceptionMillis()
+        );
+        savedParseExceptionReports.add(parseExceptionReport);
+      }
+
+
+      if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
+          > maxAllowedParseExceptions) {
+        throw new RE("Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
+      }
     }
+  }
+
+  public void handle(@Nullable ParseException e)
+  {
+    handle(e, null);
   }
 
   @Nullable

@@ -246,7 +246,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, null),
         true
     );
   }

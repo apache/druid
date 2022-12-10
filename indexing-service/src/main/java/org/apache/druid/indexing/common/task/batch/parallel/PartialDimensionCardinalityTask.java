@@ -167,7 +167,8 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         buildSegmentsMeters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        toolbox.getEmitter()
     );
     final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 

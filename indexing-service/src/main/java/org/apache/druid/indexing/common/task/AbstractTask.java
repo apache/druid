@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -96,6 +97,9 @@ public abstract class AbstractTask implements Task
   private final Map<String, Object> context;
   private File reportsFile;
 
+  @JsonIgnore
+  public static Map<String, Object> taskMetadata;
+
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
@@ -125,6 +129,10 @@ public abstract class AbstractTask implements Task
     this.context = context == null ? new HashMap<>() : new HashMap<>(context);
     this.ingestionMode = ingestionMode;
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    taskMetadata = new LinkedHashMap<String, Object>();
+    taskMetadata.put("dataSource", dataSource);
+    taskMetadata.put("id", id);
+    taskMetadata.put("groupId", groupId);
   }
 
   protected AbstractTask(

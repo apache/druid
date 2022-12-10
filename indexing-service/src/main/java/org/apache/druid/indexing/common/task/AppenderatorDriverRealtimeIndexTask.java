@@ -251,7 +251,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         rowIngestionMeters,
         spec.getTuningConfig().isLogParseExceptions(),
         spec.getTuningConfig().getMaxParseExceptions(),
-        spec.getTuningConfig().getMaxSavedParseExceptions()
+        spec.getTuningConfig().getMaxSavedParseExceptions(),
+        toolbox.getEmitter()
     );
 
     setupTimeoutAlert();

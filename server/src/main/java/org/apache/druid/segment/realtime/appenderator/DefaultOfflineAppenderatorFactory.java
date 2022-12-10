@@ -72,7 +72,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
             rowIngestionMeters,
             false,
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
-            0
+            0, null
         ),
         true
     );

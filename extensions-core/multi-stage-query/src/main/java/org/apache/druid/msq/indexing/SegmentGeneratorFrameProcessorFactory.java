@@ -128,7 +128,8 @@ public class SegmentGeneratorFrameProcessorFactory
         meters,
         TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS,
         TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS,
-        TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+        TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS,
+        null // just have this
     );
 
     // Expect a single input slice.

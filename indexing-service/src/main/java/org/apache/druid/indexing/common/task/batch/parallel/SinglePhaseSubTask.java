@@ -244,7 +244,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           rowIngestionMeters,
           ingestionSchema.getTuningConfig().isLogParseExceptions(),
           ingestionSchema.getTuningConfig().getMaxParseExceptions(),
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions(),
+          toolbox.getEmitter()
       );
 
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(

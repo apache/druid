@@ -68,7 +68,7 @@ public class FilteringCloseableInputRowIteratorTest
         rowIngestionMeters,
         true,
         Integer.MAX_VALUE,
-        1024 // do not use Integer.MAX_VALUE since it will create an object array of this length
+        1024, null // do not use Integer.MAX_VALUE since it will create an object array of this length
     ));
   }
 

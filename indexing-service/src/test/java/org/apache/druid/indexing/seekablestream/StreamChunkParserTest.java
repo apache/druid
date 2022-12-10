@@ -73,7 +73,7 @@ public class StreamChunkParserTest
       rowIngestionMeters,
       false,
       0,
-      0
+      0, null
   );
 
   @Test

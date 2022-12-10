@@ -256,7 +256,7 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0, null
               ),
               false
           );
@@ -279,7 +279,7 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0, null
               ),
               false
           );
@@ -303,7 +303,7 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0, null
               ),
               false
           );
