@@ -55,7 +55,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -354,7 +354,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           maxSizeInBytes,
           Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
           enablePushFailure,
-          rowIngestionMeters == null ? new MutableRowIngestionMeters() : rowIngestionMeters,
+          rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
           skipBytesInMemoryOverheadCheck
       );
     }

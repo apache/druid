@@ -28,7 +28,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -202,7 +202,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
             1024,
             null,
             true,
-            new MutableRowIngestionMeters(),
+            new SimpleRowIngestionMeters(),
             true
         )
     ) {
@@ -237,7 +237,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
             1024,
             null,
             true,
-            new MutableRowIngestionMeters(),
+            new SimpleRowIngestionMeters(),
             true
         )
     ) {
@@ -358,7 +358,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
             10,
             null,
             true,
-            new MutableRowIngestionMeters(),
+            new SimpleRowIngestionMeters(),
             true
         )
     ) {
@@ -810,7 +810,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test
   public void testVerifyRowIngestionMetrics() throws Exception
   {
-    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     try (final ClosedSegmensSinksBatchAppenderatorTester tester =
              new ClosedSegmensSinksBatchAppenderatorTester(5,
                                                            10000L,
@@ -833,7 +833,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test(timeout = 10000L)
   public void testPushContract() throws Exception
   {
-    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     try (final ClosedSegmensSinksBatchAppenderatorTester tester =
              new ClosedSegmensSinksBatchAppenderatorTester(1,
                                                            50000L,
@@ -882,7 +882,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
   @Test(timeout = 5000L)
   public void testCloseContract() throws Exception
   {
-    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     try (final ClosedSegmensSinksBatchAppenderatorTester tester =
              new ClosedSegmensSinksBatchAppenderatorTester(1,
                                                            50000L,
