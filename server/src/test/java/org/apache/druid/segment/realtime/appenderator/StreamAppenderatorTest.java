@@ -43,8 +43,8 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -930,7 +930,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testVerifyRowIngestionMetrics() throws Exception
   {
-    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
     try (
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(5)

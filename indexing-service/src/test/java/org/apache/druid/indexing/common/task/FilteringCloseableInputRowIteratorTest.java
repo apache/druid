@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,7 +63,7 @@ public class FilteringCloseableInputRowIteratorTest
   @Before
   public void setup()
   {
-    rowIngestionMeters = new SimpleRowIngestionMeters();
+    rowIngestionMeters = new MutableRowIngestionMeters();
     parseExceptionHandler = Mockito.spy(new ParseExceptionHandler(
         rowIngestionMeters,
         true,

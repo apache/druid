@@ -38,9 +38,9 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -96,7 +96,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         maxSizeInBytes,
         basePersistDirectory,
         enablePushFailure,
-        new SimpleRowIngestionMeters(),
+        new MutableRowIngestionMeters(),
         false,
         batchMemoryMappedIndex
     );

@@ -39,9 +39,9 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -115,13 +115,9 @@ public class AppenderatorsTest
     private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
 
-    public AppenderatorTester(
-        final String batchMode
-    )
+    public AppenderatorTester(final String batchMode)
     {
-      this(100, 100, null, false, new SimpleRowIngestionMeters(),
-           false, batchMode
-      );
+      this(100, 100, null, false, new MutableRowIngestionMeters(), false, batchMode);
     }
 
     public AppenderatorTester(

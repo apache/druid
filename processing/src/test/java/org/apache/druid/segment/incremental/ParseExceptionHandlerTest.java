@@ -44,7 +44,7 @@ public class ParseExceptionHandlerTest
   public void testMetricWhenAllConfigurationsAreTurnedOff()
   {
     final ParseException parseException = new ParseException(null, "test");
-    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
         false,
@@ -62,7 +62,7 @@ public class ParseExceptionHandlerTest
   public void testLogParseExceptions()
   {
     final ParseException parseException = new ParseException(null, "test");
-    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
         true,
@@ -81,7 +81,7 @@ public class ParseExceptionHandlerTest
   public void testGetSavedParseExceptionsReturnNullWhenMaxSavedParseExceptionsIsZero()
   {
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
-        new SimpleRowIngestionMeters(),
+        new MutableRowIngestionMeters(),
         false,
         Integer.MAX_VALUE,
         0
@@ -94,7 +94,7 @@ public class ParseExceptionHandlerTest
   {
     final ParseException parseException = new ParseException(null, "test");
     final int maxAllowedParseExceptions = 3;
-    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
         false,
@@ -120,7 +120,7 @@ public class ParseExceptionHandlerTest
   public void testGetSavedParseExceptionsReturnMostRecentParseExceptions()
   {
     final int maxSavedParseExceptions = 3;
-    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final RowIngestionMeters rowIngestionMeters = new MutableRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
         false,
