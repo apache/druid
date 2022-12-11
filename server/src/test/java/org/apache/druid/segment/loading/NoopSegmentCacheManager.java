@@ -38,7 +38,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  public File getSegmentFiles(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }

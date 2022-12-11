@@ -40,6 +40,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.BaseSequence.IteratorMaker;
@@ -71,6 +72,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -84,11 +86,11 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private File segmentDirectory;
+  private long segmentSize;
 
   private final IndexIO indexIO = TestHelper.getTestIndexIO();
   private DimensionsSpec dimensionsSpec;
   private List<AggregatorFactory> metrics;
-  private List<InputRow> rows;
 
   private InputStats inputStats;
 
@@ -106,7 +108,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new CountAggregatorFactory("cnt"),
         new HyperUniquesAggregatorFactory("met_s", "strCol")
     );
-    rows = ImmutableList.of(
+    final List<InputRow> rows = ImmutableList.of(
         new MapBasedInputRow(
             DateTimes.of("2000"),
             ImmutableList.of("strCol", "dblCol"),
@@ -126,7 +128,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
 
     inputStats = new InputStatsImpl();
-    createTestSetup();
+    persistSegment(rows);
   }
 
   @Test
@@ -174,7 +176,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
-    Assert.assertEquals(1592, inputStats.getProcessedBytes());
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -190,7 +192,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     metrics = ImmutableList.of();
 
     List<String> columnNames = ImmutableList.of("longCol", "a", "b");
-    rows = ImmutableList.of(
+    final List<InputRow> rows = ImmutableList.of(
         new MapBasedInputRow(
             DateTimes.utc(1667115726217L),
             columnNames,
@@ -223,7 +225,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         )
     );
 
-    createTestSetup();
+    persistSegment(rows);
 
     final InputStats inputStats = new InputStatsImpl();
     final DruidSegmentReader reader = new DruidSegmentReader(
@@ -243,11 +245,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    List<InputRow> expectedRows = new ArrayList<>();
-    expectedRows.add(rows.get(2));
-    expectedRows.add(rows.get(1));
-    Assert.assertEquals(expectedRows, readRows(reader));
-    Assert.assertEquals(1508, inputStats.getProcessedBytes());
+    Assert.assertEquals(Arrays.asList(rows.get(2), rows.get(1)), readRows(reader));
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -326,7 +325,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
-    Assert.assertEquals(1592, inputStats.getProcessedBytes());
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -369,6 +368,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -412,6 +412,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -453,6 +454,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -489,6 +491,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -536,6 +539,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -583,6 +587,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -630,6 +635,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -734,7 +740,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
   }
 
-
   private List<InputRow> readRows(DruidSegmentReader reader) throws IOException
   {
     final List<InputRow> rows = new ArrayList<>();
@@ -757,7 +762,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     return rows;
   }
 
-
   private static HyperLogLogCollector makeHLLC(final String... values)
   {
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
@@ -767,7 +771,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     return collector;
   }
 
-  private void createTestSetup() throws IOException
+  private void persistSegment(List<InputRow> rows) throws IOException
   {
     final IncrementalIndex incrementalIndex =
         IndexBuilder.create()
@@ -792,6 +796,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           new IndexSpec(),
           null
       );
+      segmentSize = FileUtils.getFileSize(segmentDirectory);
     }
     finally {
       incrementalIndex.close();

@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
 import com.google.common.io.CountingInputStream;
+import org.apache.druid.java.util.common.FileUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -65,31 +66,8 @@ public class BytesCountingInputEntity implements InputEntity
   public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
     final CleanableFile cleanableFile = baseInputEntity.fetch(temporaryDirectory, fetchBuffer);
-    inputStats.incrementProcessedBytes(getFileSize(cleanableFile.file()));
+    inputStats.incrementProcessedBytes(FileUtils.getFileSize(cleanableFile.file()));
     return cleanableFile;
-  }
-
-  /**
-   * Computes the size of the file. If it is a directory, computes the size up
-   * to a depth of 1.
-   */
-  private long getFileSize(File file)
-  {
-    if (file == null) {
-      return 0;
-    } else if (file.isDirectory()) {
-      File[] children = file.listFiles();
-      if (children == null) {
-        return 0;
-      }
-      long totalSize = 0;
-      for (File child : children) {
-        totalSize += child.length();
-      }
-      return totalSize;
-    } else {
-      return file.length();
-    }
   }
 
   @Override
