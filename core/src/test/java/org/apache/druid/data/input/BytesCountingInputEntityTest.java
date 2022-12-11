@@ -40,22 +40,97 @@ public class BytesCountingInputEntityTest
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
-  private BytesCountingInputEntity countableInputEntity;
   private InputStats inputStats;
-  private byte[] bytes;
-  private final int numBytes = 100;
 
   @Before
-  public void setUp()
+  public void setup()
   {
     inputStats = new InputStatsImpl();
-    bytes = new byte[numBytes];
   }
 
   @Test
-  public void testWithFileEntity() throws IOException
+  public void testFetch() throws IOException
   {
+    final int fileSize = 200;
     final File sourceFile = folder.newFile("testWithFileEntity");
+    writeBytesToFile(sourceFile, fileSize);
+
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceFile), inputStats);
+    inputEntity.fetch(folder.newFolder(), new byte[50]);
+    Assert.assertEquals(fileSize, inputStats.getProcessedBytes());
+  }
+
+  @Test
+  public void testFetchFromPartiallyReadFile() throws IOException
+  {
+    final int fileSize = 200;
+    final File sourceFile = folder.newFile("testWithFileEntity");
+    writeBytesToFile(sourceFile, fileSize);
+
+    final int bufferSize = 50;
+    final byte[] intermediateBuffer = new byte[bufferSize];
+
+    // Read the file partially
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceFile), inputStats);
+    inputEntity.open().read(intermediateBuffer);
+    Assert.assertEquals(bufferSize, inputStats.getProcessedBytes());
+
+    // Read the whole file again
+    inputEntity.fetch(folder.newFolder(), intermediateBuffer);
+    Assert.assertEquals(fileSize + bufferSize, inputStats.getProcessedBytes());
+  }
+
+  @Test
+  public void testFetchFromDirectory() throws IOException
+  {
+    final File sourceDir = folder.newFolder("testWithDirectory");
+
+    final int fileSize1 = 100;
+    final File sourceFile1 = new File(sourceDir, "file1");
+    writeBytesToFile(sourceFile1, fileSize1);
+
+    final int fileSize2 = 200;
+    final File sourceFile2 = new File(sourceDir, "file2");
+    writeBytesToFile(sourceFile2, fileSize2);
+
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceDir), inputStats);
+    inputEntity.fetch(folder.newFolder(), new byte[1000]);
+    Assert.assertEquals(fileSize1 + fileSize2, inputStats.getProcessedBytes());
+  }
+
+  @Test
+  public void testOpen() throws IOException
+  {
+    final int entitySize = 100;
+
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(
+        new ByteEntity(new byte[entitySize]),
+        inputStats
+    );
+    inputEntity.open().read(new byte[200]);
+    Assert.assertEquals(entitySize, inputStats.getProcessedBytes());
+  }
+
+  @Test
+  public void testOpenWithSmallBuffer() throws IOException
+  {
+    final int entitySize = 100;
+    final int bufferSize = 50;
+
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(
+        new ByteEntity(new byte[entitySize]),
+        inputStats
+    );
+    inputEntity.open().read(new byte[bufferSize]);
+    Assert.assertEquals(bufferSize, inputStats.getProcessedBytes());
+  }
+
+  private void writeBytesToFile(File sourceFile, int numBytes) throws IOException
+  {
+    if (!sourceFile.exists()) {
+      sourceFile.createNewFile();
+    }
+
     final OutputStreamWriter outputStreamWriter = new OutputStreamWriter(
         new FileOutputStream(sourceFile),
         StandardCharsets.UTF_8
@@ -65,31 +140,6 @@ public class BytesCountingInputEntityTest
     outputStreamWriter.write(chars);
     outputStreamWriter.flush();
     outputStreamWriter.close();
-    final FileEntity fileEntity = new FileEntity(sourceFile);
-    countableInputEntity = new BytesCountingInputEntity(fileEntity, inputStats);
-
-    final byte[] intermediateBuffer = new byte[numBytes / 2];
-    countableInputEntity.open().read(intermediateBuffer);
-    Assert.assertEquals(numBytes / 2, inputStats.getProcessedBytes());
-
-    countableInputEntity.fetch(folder.newFolder(), intermediateBuffer);
-    Assert.assertEquals((numBytes / 2) + numBytes, inputStats.getProcessedBytes());
-  }
-
-  @Test
-  public void testWithByteEntity() throws IOException
-  {
-    final byte[] intermediateBuffer = new byte[numBytes];
-    final ByteEntity byteEntity = new ByteEntity(bytes);
-    countableInputEntity = new BytesCountingInputEntity(byteEntity, inputStats);
-    countableInputEntity.open().read(intermediateBuffer);
-    Assert.assertEquals(numBytes, inputStats.getProcessedBytes());
-
-    final byte[] smallIntermediateBuffer = new byte[25];
-    final ByteEntity byteEntity1 = new ByteEntity(bytes);
-    countableInputEntity = new BytesCountingInputEntity(byteEntity1, inputStats);
-    countableInputEntity.fetch(folder.newFolder(), smallIntermediateBuffer);
-    Assert.assertEquals(numBytes + numBytes, inputStats.getProcessedBytes());
   }
 
 }

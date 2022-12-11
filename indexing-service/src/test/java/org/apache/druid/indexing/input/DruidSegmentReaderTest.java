@@ -276,7 +276,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         )
     );
     Assert.assertEquals(
-        "DruidSegmentInputEntity must be created from a tombstone but is not.",
+        "DruidSegmentInputEntity must be created from a tombstone.",
         exception.getMessage()
     );
   }

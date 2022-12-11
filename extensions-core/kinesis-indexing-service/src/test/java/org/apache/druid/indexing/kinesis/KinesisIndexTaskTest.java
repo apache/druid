@@ -1543,12 +1543,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse row [unparseable] (Record: 1)"
     );
     Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
-
-    List<String> expectedInputs = Arrays.asList(
-        "",
-        "unparseable"
-    );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assert.assertEquals(Arrays.asList("", "unparseable"), parseExceptionReport.getInputs());
   }
 
 
