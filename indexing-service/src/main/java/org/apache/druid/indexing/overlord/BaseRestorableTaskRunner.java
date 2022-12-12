@@ -209,7 +209,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
 
   private File getRestoreFile(String taskId)
   {
-    return new File(taskConfig.getOrSelectTaskDir(taskId), TASK_RESTORE_FILENAME);
+    return new File(taskConfig.getBaseTaskDir(taskId), TASK_RESTORE_FILENAME);
   }
 
   protected static class TaskRestoreInfo

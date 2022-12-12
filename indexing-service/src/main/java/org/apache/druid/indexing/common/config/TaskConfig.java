@@ -224,14 +224,14 @@ public class TaskConfig
     return tracker.getBaseTaskDirs();
   }
 
-  public synchronized File getOrSelectTaskDir(String taskId)
+  public synchronized File getBaseTaskDir(String taskId)
   {
     return tracker.getOrSelectTaskDir(taskId);
   }
 
   public File getTaskDir(String taskId)
   {
-    return new File(getOrSelectTaskDir(taskId), taskId);
+    return new File(getBaseTaskDir(taskId), taskId);
   }
 
   public File getTaskWorkDir(String taskId)

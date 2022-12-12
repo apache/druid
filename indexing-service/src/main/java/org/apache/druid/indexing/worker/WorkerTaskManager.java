@@ -314,7 +314,7 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir(String taskId)
   {
-    return new File(taskConfig.getOrSelectTaskDir(taskId), TEMP_WORKER);
+    return new File(taskConfig.getBaseTaskDir(taskId), TEMP_WORKER);
   }
 
   private void cleanupAndMakeTmpTaskDirs() throws IOException
@@ -343,7 +343,7 @@ public class WorkerTaskManager
 
   public File getAssignedTaskFile(String taskId)
   {
-    return new File(new File(taskConfig.getOrSelectTaskDir(taskId), ASSIGNED), taskId);
+    return new File(new File(taskConfig.getBaseTaskDir(taskId), ASSIGNED), taskId);
   }
 
   public List<File> getAssignedTaskDirs()
@@ -467,7 +467,7 @@ public class WorkerTaskManager
 
   public File getCompletedTaskFile(String taskId)
   {
-    return new File(new File(taskConfig.getOrSelectTaskDir(taskId), COMPLETED), taskId);
+    return new File(new File(taskConfig.getBaseTaskDir(taskId), COMPLETED), taskId);
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)

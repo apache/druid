@@ -58,16 +58,16 @@ public class TaskConfigTest
   public void testGetOrSelectTaskDir()
   {
     // Test round-robin allocation
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task0").getPath(), "A");
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task1").getPath(), "B");
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task2").getPath(), "C");
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task3").getPath(), "A");
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task4").getPath(), "B");
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task5").getPath(), "C");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task1").getPath(), "B");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task2").getPath(), "C");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task3").getPath(), "A");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task4").getPath(), "B");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task5").getPath(), "C");
 
     // Test that the result is always the same
     for (int i = 0; i < 10; i++) {
-      Assert.assertEquals(taskConfig.getOrSelectTaskDir("task0").getPath(), "A");
+      Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
     }
   }
 
@@ -75,20 +75,20 @@ public class TaskConfigTest
   public void testAddTask()
   {
     // Test add after get. task0 -> "A"
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
     taskConfig.addTask("task0", new File("A"));
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
 
     // Assign base path directly
     taskConfig.addTask("task1", new File("C"));
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task1").getPath(), "C");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task1").getPath(), "C");
   }
 
   @Test
   public void testAddTaskThrowsISE()
   {
     // Test add after get. task0 -> "A"
-    Assert.assertEquals(taskConfig.getOrSelectTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
     Assert.assertThrows(ISE.class, () -> taskConfig.addTask("task0", new File("B")));
   }
 }
