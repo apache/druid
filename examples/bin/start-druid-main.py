@@ -117,6 +117,8 @@ def configure_parser():
 sample usage:
     start-druid
             Start up all the services (including zk).
+            services config is read from conf/druid/auto.
+            zk config is always read from conf/zk.
     start-druid -m=100g
             Start up all the services (including zk)
             using a total memory of 100GB.
@@ -135,10 +137,10 @@ sample usage:
             from the given root directory. Calculates memory requirements for
             each service, if required, using upto 80% of the total system memory.
     start-druid -m=100g \\
-    -s=broker,router \\
+    -s=broker,router,zk \\
     -c=conf/druid/single-server/custom \\
-    --zk
             Starts broker, router and zookeeper.
+            broker and router config is read from given root directory.
             zookeeper config is read from conf/zk.
 """
     )
@@ -148,25 +150,22 @@ sample usage:
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
     parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
-                             '{broker, router, middleManager, historical, coordinator-overlord, indexer}. \n'
+                             '{broker, router, middleManager, historical, coordinator-overlord, indexer, zk}. \n'
                              'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
-                             'and zookeeper is started. e.g. -s=broker,historical')
+                             'and zk is started. e.g. -s=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
                         help='Relative path to the directory containing common and service \n'
                              'specific properties to be overridden. \n'
                              'This directory must contain \'_common\' directory with \n'
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
-                             'conf/druid/auto directory is used.\n')
+                             'conf/druid/auto directory is used.\n'
+                             'Note. zk config cannot be overriden.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
-    parser.add_argument('--zk', '-zk', action='store_true',
-                        help='Specification to run zookeeper, \n'
-                             'zk config is picked up from conf/zk.')
     parser.add_argument('--verbose', action='store_true', help='Log details')
 
-    parser.set_defaults(zk=False)
     parser.set_defaults(compute=False)
     parser.set_defaults(verbose=False)
 
@@ -210,8 +209,6 @@ def parse_arguments(args):
 
     if args.compute:
         compute = True
-    if args.zk:
-        zk = True
     if args.config is not None:
         config = resolve_path(os.path.join(os.getcwd(), args.config))
         if is_dir(config) is False:
