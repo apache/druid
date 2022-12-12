@@ -32,4 +32,5 @@ then
   exec python "$WHEREAMI/start-druid-main.py" "$@"
 else
   echo "python interepreter not found"
+  echo ""
 fi
