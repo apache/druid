@@ -251,7 +251,7 @@ The following query returns an unnested version of the column `dim3` as the colu
 
 ### topN query
 
-The example topN query unnests `dim3` into the column `unnest-dim3` and sorts the records numerically in ascending order based on the column `a0`.
+The example topN query unnests `dim3` into the column `unnest-dim3`. The query uses the unnested column as the dimension for the topN query. The results are outputted to a column named `topN-unnest-d3` and are sorted numerically in ascending order based on the column `a0`, an aggregate value representing the minimum of `m1`.
 
 <details><summary>Show the query</summary>
 
@@ -270,8 +270,8 @@ The example topN query unnests `dim3` into the column `unnest-dim3` and sorts th
   },
   "dimension": {
     "type": "default",
-    "dimension": "dim2",
-    "outputName": "d0",
+    "dimension": "unnest-dim3",
+    "outputName": "topN-unnest-d3",
     "outputType": "STRING"
   },
   "metric": {
