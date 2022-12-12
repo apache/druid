@@ -128,11 +128,7 @@ public class TaskConfig
   @JsonProperty
   private final List<String> baseTaskDirPaths;
 
-  private int taskDirIndex = 0;
-
-  private final List<File> baseTaskDirs = new ArrayList<>();
-
-  private final Map<String, File> taskToTempDirMap = new HashMap<>();
+  private final TaskStorageDirTracker tracker;
 
   @JsonCreator
   public TaskConfig(
@@ -202,9 +198,7 @@ public class TaskConfig
       baseTaskDirPaths = Collections.singletonList(baseTaskFile);
     }
     this.baseTaskDirPaths = ImmutableList.copyOf(baseTaskDirPaths);
-    for (String path : baseTaskDirPaths) {
-      baseTaskDirs.add(new File(path));
-    }
+    this.tracker = new TaskStorageDirTracker(baseTaskDirPaths);
   }
 
   @JsonProperty
@@ -227,17 +221,12 @@ public class TaskConfig
 
   public List<File> getBaseTaskDirs()
   {
-    return baseTaskDirs;
+    return tracker.getBaseTaskDirs();
   }
 
   public synchronized File getOrSelectTaskDir(String taskId)
   {
-    if (!taskToTempDirMap.containsKey(taskId)) {
-      addTask(taskId, baseTaskDirs.get(taskDirIndex));
-      taskDirIndex = (taskDirIndex + 1) % baseTaskDirPaths.size();
-    }
-
-    return taskToTempDirMap.get(taskId);
+    return tracker.getOrSelectTaskDir(taskId);
   }
 
   public File getTaskDir(String taskId)
@@ -333,17 +322,12 @@ public class TaskConfig
 
   public synchronized void addTask(final String taskId, final File taskDir)
   {
-    final File existingTaskDir = taskToTempDirMap.get(taskId);
-    if (existingTaskDir != null && !existingTaskDir.equals(taskDir)) {
-      throw new ISE("Task [%s] is already assigned to worker path[%s]", taskId, existingTaskDir.getPath());
-    }
-
-    taskToTempDirMap.put(taskId, taskDir);
+    tracker.addTask(taskId, taskDir);
   }
 
   public synchronized void removeTask(final String taskId)
   {
-    taskToTempDirMap.remove(taskId);
+    tracker.removeTask(taskId);
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
@@ -353,5 +337,51 @@ public class TaskConfig
     }
 
     return configParameter;
+  }
+
+  private static class TaskStorageDirTracker
+  {
+    private int taskDirIndex = 0;
+
+    private final List<File> baseTaskDirs = new ArrayList<>();
+
+    private final Map<String, File> taskToTempDirMap = new HashMap<>();
+
+    TaskStorageDirTracker(final List<String> baseTaskDirPaths)
+    {
+      for (String baseTaskDirPath : baseTaskDirPaths) {
+        baseTaskDirs.add(new File(baseTaskDirPath));
+      }
+    }
+
+    List<File> getBaseTaskDirs()
+    {
+      return baseTaskDirs;
+    }
+
+    synchronized File getOrSelectTaskDir(final String taskId)
+    {
+      if (!taskToTempDirMap.containsKey(taskId)) {
+        addTask(taskId, baseTaskDirs.get(taskDirIndex));
+        taskDirIndex = (taskDirIndex + 1) % baseTaskDirs.size();
+      }
+
+      return taskToTempDirMap.get(taskId);
+    }
+
+    synchronized void addTask(final String taskId, final File taskDir)
+    {
+      final File existingTaskDir = taskToTempDirMap.get(taskId);
+      if (existingTaskDir != null && !existingTaskDir.equals(taskDir)) {
+        throw new ISE("Task [%s] is already assigned to worker path[%s]", taskId, existingTaskDir.getPath());
+      }
+
+      taskToTempDirMap.put(taskId, taskDir);
+    }
+
+    synchronized void removeTask(final String taskId)
+    {
+      taskToTempDirMap.remove(taskId);
+    }
   }
 }
