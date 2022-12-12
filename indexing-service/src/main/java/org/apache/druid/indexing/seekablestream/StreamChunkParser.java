@@ -125,6 +125,10 @@ class StreamChunkParser<RecordType extends ByteEntity>
     return Lists.newArrayList(rowIterator);
   }
 
+  /**
+   * Increments the processed bytes with the number of bytes remaining in the
+   * given buffer. This method must be called before reading the buffer.
+   */
   private ByteBuffer incrementProcessedBytes(final ByteBuffer recordByteBuffer)
   {
     rowIngestionMeters.incrementProcessedBytes(recordByteBuffer.remaining());
