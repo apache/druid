@@ -125,7 +125,7 @@ public class InlineDataSource implements DataSource
         final Object[] rowA = listA.get(i);
         final Object[] rowB = listB.get(i);
 
-        if (!Arrays.equals(rowA, rowB)) {
+        if (!Arrays.deepEquals(rowA, rowB)) {
           return false;
         }
       }

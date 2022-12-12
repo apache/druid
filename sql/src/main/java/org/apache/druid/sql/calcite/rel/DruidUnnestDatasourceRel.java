@@ -1,0 +1,140 @@
+package org.apache.druid.sql.calcite.rel;
+
+import org.apache.calcite.rel.core.Uncollect;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.RowSignatures;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Set;
+
+public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
+{
+  public Uncollect getUncollect()
+  {
+    return uncollect;
+  }
+
+  public LogicalProject getUnnestProject()
+  {
+    return unnestProject;
+  }
+
+  private final Uncollect uncollect;
+  private final DruidQueryRel druidQueryRel;
+
+  private final LogicalProject unnestProject;
+
+  public DruidUnnestDatasourceRel(
+      Uncollect uncollect,
+      DruidQueryRel queryRel,
+      LogicalProject unnestProject,
+      PlannerContext plannerContext
+  )
+  {
+    super(uncollect.getCluster(), uncollect.getTraitSet(), plannerContext);
+    this.uncollect = uncollect;
+    this.druidQueryRel = queryRel;
+    this.unnestProject = unnestProject;
+  }
+
+  @Nullable
+  @Override
+  public PartialDruidQuery getPartialDruidQuery()
+  {
+    return druidQueryRel.getPartialDruidQuery();
+  }
+
+  @Override
+  public DruidUnnestDatasourceRel withPartialQuery(PartialDruidQuery newQueryBuilder)
+  {
+    return new DruidUnnestDatasourceRel(
+        uncollect,
+        druidQueryRel.withPartialQuery(newQueryBuilder),
+        unnestProject,
+        getPlannerContext()
+    );
+  }
+
+  @Override
+  public DruidQuery toDruidQuery(boolean finalizeAggregations)
+  {
+    VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
+        druidQueryRel.getDruidTable().getRowSignature(),
+        getPlannerContext().getExprMacroTable(),
+        getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
+    );
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
+
+    final DruidExpression expression = Expressions.toDruidExpression(
+        getPlannerContext(),
+        druidQueryRel.getDruidTable().getRowSignature(),
+        unnestProject.getProjects().get(0)
+    );
+    if (expression == null) {
+      return null;
+    }
+    Expr parsed = expression.parse(getPlannerContext().getExprMacroTable());
+    ExprEval eval = parsed.eval(InputBindings.nilBindings());
+    UnnestDataSource dataSource = UnnestDataSource.create(
+        InlineDataSource.fromIterable(
+            Collections.singletonList(new Object[]{eval.value()}),
+            RowSignature.builder().add("inline", ExpressionType.toColumnType(eval.type())).build()
+        ),
+        "inline",
+        druidQueryRel.getRowType().getFieldNames().get(0),
+        null
+    );
+
+    DruidQuery query = druidQueryRel.getPartialDruidQuery().build(
+        dataSource,
+        RowSignatures.fromRelDataType(uncollect.getRowType().getFieldNames(), uncollect.getRowType()),
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        finalizeAggregations,
+        virtualColumnRegistry
+    );
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(null);
+    return query;
+  }
+
+  @Override
+  public DruidQuery toDruidQueryForExplaining()
+  {
+    return toDruidQuery(false);
+  }
+
+  @Override
+  public DruidUnnestDatasourceRel asDruidConvention()
+  {
+    return new DruidUnnestDatasourceRel(
+        new Uncollect(getCluster(), traitSet.replace(DruidConvention.instance()), uncollect.getInput(), false),
+        druidQueryRel.asDruidConvention(),
+        unnestProject,
+        getPlannerContext()
+    );
+  }
+
+  @Override
+  public Set<String> getDataSourceNames()
+  {
+    return druidQueryRel.getDruidTable().getDataSource().getTableNames();
+  }
+
+  @Override
+  protected RelDataType deriveRowType()
+  {
+    return uncollect.getRowType();
+  }
+}

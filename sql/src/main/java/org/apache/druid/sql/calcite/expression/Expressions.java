@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -214,10 +215,28 @@ public class Expressions
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
       return literalToDruidExpression(plannerContext, rexNode);
+    } else if (kind == SqlKind.FIELD_ACCESS) {
+      return fieldAccessToDruidExpression(rowSignature, rexNode);
     } else {
       // Can't translate.
       return null;
     }
+  }
+
+  private static DruidExpression fieldAccessToDruidExpression(
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    // Translate field references.
+    final RexFieldAccess ref = (RexFieldAccess) rexNode;
+    final String columnName = rowSignature.getColumnName(ref.getField().getIndex());
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getField().getIndex());
+    if (columnName == null) {
+      throw new ISE("Expression referred to nonexistent index[%d]", ref.getField().getIndex());
+    }
+
+    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
   }
 
   private static DruidExpression inputRefToDruidExpression(

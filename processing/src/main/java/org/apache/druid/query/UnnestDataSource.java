@@ -207,6 +207,18 @@ public class UnnestDataSource implements DataSource
   {
     return Objects.hash(base, column, outputName);
   }
+
+  @Override
+  public String toString()
+  {
+    return "UnnestDataSource{" +
+           "base=" + base +
+           ", column='" + column + '\'' +
+           ", outputName='" + outputName + '\'' +
+           ", allowList=" + allowList +
+           '}';
+  }
+
 }
 
 
