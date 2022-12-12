@@ -50,6 +50,7 @@ HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
 TASKS = "tasks"
 INDEXER = "indexer"
+ZK = "zk"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -65,7 +66,8 @@ SUPPORTED_SERVICES = [
     COORDINATOR,
     HISTORICAL,
     MIDDLE_MANAGER,
-    INDEXER
+    INDEXER,
+    ZK
 ]
 
 SERVICE_MEMORY_RATIO = {
@@ -221,15 +223,20 @@ def parse_arguments(args):
 
         for service in services:
             if service not in SUPPORTED_SERVICES:
-                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, DEFAULT_SERVICES))
+                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, SUPPORTED_SERVICES))
 
             if service in service_list:
                 raise ValueError('{0} is specified multiple times'.format(service))
+
+            if service == ZK:
+                zk = True
+                continue
 
             service_list.append(service)
 
         if INDEXER in services and MIDDLE_MANAGER in services:
             raise ValueError('one of indexer and middleManager can run')
+
 
     if len(service_list) == 0:
         # start all services
