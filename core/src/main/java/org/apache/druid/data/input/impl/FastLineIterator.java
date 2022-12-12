@@ -33,7 +33,8 @@ import java.util.NoSuchElementException;
  */
 public class FastLineIterator implements CloseableIterator<String>
 {
-  private static final ThreadLocal<byte[]> BUFFER_LOCAL = ThreadLocal.withInitial(() -> new byte[512]);
+  static final int BUFFER_SIZE = 512;
+  private static final ThreadLocal<byte[]> BUFFER_LOCAL = ThreadLocal.withInitial(() -> new byte[BUFFER_SIZE]);
 
   static final byte CR = (byte) '\r';
   static final byte LF = (byte) '\n';
