@@ -218,7 +218,7 @@ public class WorkerChatHandler implements ChatHandler
   @Path("/keyStatisticsForTimeChunk/{queryId}/{stageNumber}/{timeChunk}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response httpSketch(
+  public Response httpFetchKeyStatisticsWithSnapshot(
       @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("timeChunk") final long timeChunk,
