@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -203,6 +204,76 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                  .limit(3)
                  .legacy(legacy);
   }
+
+  private Druids.ScanQueryBuilder newTestUnnestQuery()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(UnnestDataSource.create(
+                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+                     "placementish",
+                     "unp",
+                     null
+                 ))
+                 .columns(Collections.emptyList())
+                 .eternityInterval()
+                 .limit(3)
+                 .legacy(legacy);
+  }
+
+  @Test
+  public void testUnnestRunner()
+  {
+
+    ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns("unp")
+        .limit(3)
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        "placementish",
+        "unp",
+        null
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          "unp"
+      };
+    } else {
+      columnNames = new String[]{
+          "unp"
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy ? Lists.newArrayList(getTimestampName(), "unp") : Lists.newArrayList("unp"),
+        0,
+        3
+    );
+    verify(expectedResults, results);
+  }
+
 
   @Test
   public void testFullOnSelect()
