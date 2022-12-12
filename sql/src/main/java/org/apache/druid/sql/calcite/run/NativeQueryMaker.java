@@ -240,9 +240,8 @@ public class NativeQueryMaker implements QueryMaker
       mapping[i] = idx;
     }
 
-    //noinspection unchecked
     final Sequence<Object[]> sequence = toolChest.resultsAsArrays(query, results.getResults());
-    return new QueryResponse(
+    return new QueryResponse<>(
         Sequences.map(
             sequence,
             array -> {

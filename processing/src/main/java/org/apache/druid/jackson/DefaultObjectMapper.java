@@ -42,6 +42,8 @@ import java.io.IOException;
  */
 public class DefaultObjectMapper extends ObjectMapper
 {
+  public static final DefaultObjectMapper INSTANCE = new DefaultObjectMapper();
+
   public DefaultObjectMapper()
   {
     this((JsonFactory) null, null);

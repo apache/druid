@@ -76,6 +76,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final BinaryOperator<T> combineFn;
   private final int queueSize;
   private final boolean hasTimeout;
+  private final long startTimeNanos;
   private final long timeoutAtNanos;
   private final int yieldAfter;
   private final int batchSize;
@@ -105,12 +106,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     this.orderingFn = orderingFn;
     this.combineFn = combineFn;
     this.hasTimeout = hasTimeout;
-    this.timeoutAtNanos = System.nanoTime() + TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
+    this.startTimeNanos = System.nanoTime();
+    this.timeoutAtNanos = startTimeNanos + TimeUnit.NANOSECONDS.convert(timeoutMillis, TimeUnit.MILLISECONDS);
     this.parallelism = parallelism;
     this.yieldAfter = yieldAfter;
     this.batchSize = batchSize;
     this.targetTimeNanos = TimeUnit.NANOSECONDS.convert(targetTimeMillis, TimeUnit.MILLISECONDS);
-    this.queueSize = 4 * (yieldAfter / batchSize);
+    this.queueSize = (1 << 15) / batchSize; // each queue can by default hold ~32k rows
     this.metricsReporter = reporter;
     this.cancellationGizmo = new CancellationGizmo();
   }
@@ -121,8 +123,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     if (inputSequences.isEmpty()) {
       return Sequences.<T>empty().toYielder(initValue, accumulator);
     }
-
-    final BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
+    // we make final output queue larger than the merging queues so if downstream readers are slower to read there is
+    // less chance of blocking the merge
+    final BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(4 * queueSize);
     final MergeCombineMetricsAccumulator metricsAccumulator = new MergeCombineMetricsAccumulator(inputSequences.size());
     MergeCombinePartitioningAction<T> mergeCombineAction = new MergeCombinePartitioningAction<>(
         inputSequences,
@@ -147,6 +150,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         cancellationGizmo
     ).withBaggage(() -> {
       if (metricsReporter != null) {
+        metricsAccumulator.setTotalWallTime(System.nanoTime() - startTimeNanos);
         metricsReporter.accept(metricsAccumulator.build());
       }
     });
@@ -698,6 +702,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final MergeCombineActionMetricsAccumulator metricsAccumulator;
     private final CancellationGizmo cancellationGizmo;
 
+    private final long startTime;
+
     private PrepareMergeCombineInputsAction(
         List<BatchedResultsCursor<T>> partition,
         QueuePusher<ResultBatch<T>> outputQueue,
@@ -719,6 +725,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.targetTimeNanos = targetTimeNanos;
       this.metricsAccumulator = metricsAccumulator;
       this.cancellationGizmo = cancellationGizmo;
+      this.startTime = System.nanoTime();
     }
 
     @SuppressWarnings("unchecked")
@@ -736,7 +743,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             cursor.close();
           }
         }
-
         if (cursors.size() > 0) {
           getPool().execute(new MergeCombineAction<T>(
               cursors,
@@ -753,6 +759,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         } else {
           outputQueue.offer(ResultBatch.TERMINAL);
         }
+        metricsAccumulator.setPartitionInitializedTime(System.nanoTime() - startTime);
       }
       catch (Throwable t) {
         closeAllCursors(partition);
@@ -1195,6 +1202,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final long outputRows;
     private final long taskCount;
     private final long totalCpuTime;
+    private final long totalWallTime;
+    private final long fastestPartitionInitializedTime;
+    private final long slowestPartitionInitializedTime;
 
     MergeCombineMetrics(
         int parallelism,
@@ -1202,7 +1212,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         long inputRows,
         long outputRows,
         long taskCount,
-        long totalCpuTime
+        long totalCpuTime,
+        long totalWallTime,
+        long fastestPartitionInitializedTime,
+        long slowestPartitionInitializedTime
     )
     {
       this.parallelism = parallelism;
@@ -1211,6 +1224,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.outputRows = outputRows;
       this.taskCount = taskCount;
       this.totalCpuTime = totalCpuTime;
+      this.totalWallTime = totalWallTime;
+      this.fastestPartitionInitializedTime = fastestPartitionInitializedTime;
+      this.slowestPartitionInitializedTime = slowestPartitionInitializedTime;
     }
 
     /**
@@ -1263,6 +1279,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       return totalCpuTime;
     }
+
+    public long getTotalTime()
+    {
+      return totalWallTime;
+    }
+
+    public long getFastestPartitionInitializedTime()
+    {
+      return fastestPartitionInitializedTime;
+    }
+
+    public long getSlowestPartitionInitializedTime()
+    {
+      return slowestPartitionInitializedTime;
+    }
   }
 
   /**
@@ -1274,6 +1305,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     List<MergeCombineActionMetricsAccumulator> partitionMetrics;
     MergeCombineActionMetricsAccumulator mergeMetrics;
+
+    private long totalWallTime;
+
     private final int inputSequences;
 
     MergeCombineMetricsAccumulator(int inputSequences)
@@ -1291,6 +1325,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       this.partitionMetrics = partitionMetrics;
     }
 
+    void setTotalWallTime(long time)
+    {
+      this.totalWallTime = time;
+    }
+
     MergeCombineMetrics build()
     {
       long numInputRows = 0;
@@ -1299,11 +1338,20 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // partition
       long totalPoolTasks = 1 + 1 + partitionMetrics.size();
 
+      long fastestPartInitialized = partitionMetrics.size() > 0 ? Long.MAX_VALUE : mergeMetrics.getPartitionInitializedtime();
+      long slowestPartInitialied = partitionMetrics.size() > 0 ? Long.MIN_VALUE : mergeMetrics.getPartitionInitializedtime();
+
       // accumulate input row count, cpu time, and total number of tasks from each partition
       for (MergeCombineActionMetricsAccumulator partition : partitionMetrics) {
         numInputRows += partition.getInputRows();
         cpuTimeNanos += partition.getTotalCpuTimeNanos();
         totalPoolTasks += partition.getTaskCount();
+        if (partition.getPartitionInitializedtime() < fastestPartInitialized) {
+          fastestPartInitialized = partition.getPartitionInitializedtime();
+        }
+        if (partition.getPartitionInitializedtime() > slowestPartInitialied) {
+          slowestPartInitialied = partition.getPartitionInitializedtime();
+        }
       }
       // if serial merge done, only mergeMetrics is populated, get input rows from there instead. otherwise, ignore the
       // value as it is only the number of intermediary input rows to the layer 2 task
@@ -1322,7 +1370,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           numInputRows,
           numOutputRows,
           totalPoolTasks,
-          cpuTimeNanos
+          cpuTimeNanos,
+          totalWallTime,
+          fastestPartInitialized,
+          slowestPartInitialied
       );
     }
   }
@@ -1336,6 +1387,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private long inputRows = 0;
     private long outputRows = 0;
     private long totalCpuTimeNanos = 0;
+
+    private long partitionInitializedtime = 0L;
 
     void incrementTaskCount()
     {
@@ -1357,6 +1410,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       totalCpuTimeNanos += nanos;
     }
 
+    void setPartitionInitializedTime(long nanos)
+    {
+      partitionInitializedtime = nanos;
+    }
+
     long getTaskCount()
     {
       return taskCount;
@@ -1375,6 +1433,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     long getTotalCpuTimeNanos()
     {
       return totalCpuTimeNanos;
+    }
+
+    long getPartitionInitializedtime()
+    {
+      return partitionInitializedtime;
     }
   }
 

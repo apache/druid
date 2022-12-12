@@ -100,7 +100,8 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
             allocatorHolder
         )),
         runningCountForLimit,
-        frameContext.memoryParameters().getBroadcastJoinMemory()
+        frameContext.memoryParameters().getBroadcastJoinMemory(),
+        frameContext.jsonMapper()
     );
   }
 }

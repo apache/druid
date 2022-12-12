@@ -19,12 +19,11 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -61,13 +60,11 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
+import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
@@ -78,22 +75,34 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;
 
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void gatherProperties(Properties properties)
   {
-    return Iterables.concat(super.getJacksonModules(), new HllSketchModule().getJacksonModules());
+    super.gatherProperties(properties);
+
+    // Use APPROX_COUNT_DISTINCT_DS_HLL as APPROX_COUNT_DISTINCT impl for these tests.
+    properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, HllSketchApproxCountDistinctSqlAggregator.NAME);
+  }
+
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+    builder.addModule(new HllSketchModule());
   }
 
   @SuppressWarnings("resource")
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
   ) throws IOException
   {
     HllSketchModule.registerSerde();
@@ -129,30 +138,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                    .size(0)
                    .build(),
         index
-    );
-  }
-
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    final HllSketchApproxCountDistinctSqlAggregator approxCountDistinctSqlAggregator =
-        new HllSketchApproxCountDistinctSqlAggregator();
-
-    return new DruidOperatorTable(
-        ImmutableSet.of(
-            approxCountDistinctSqlAggregator,
-            new HllSketchObjectSqlAggregator(),
-
-            // Use APPROX_COUNT_DISTINCT_DS_HLL as APPROX_COUNT_DISTINCT impl for these tests.
-            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)),
-            new ApproxCountDistinctSqlAggregator(approxCountDistinctSqlAggregator)
-        ),
-        ImmutableSet.of(
-            new HllSketchSetUnionOperatorConversion(),
-            new HllSketchEstimateOperatorConversion(),
-            new HllSketchToStringOperatorConversion(),
-            new HllSketchEstimateWithErrorBoundsOperatorConversion()
-        )
     );
   }
 

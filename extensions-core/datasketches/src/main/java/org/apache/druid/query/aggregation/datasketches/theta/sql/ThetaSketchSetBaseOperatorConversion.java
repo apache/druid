@@ -63,6 +63,8 @@ public abstract class ThetaSketchSetBaseOperatorConversion implements SqlOperato
       RexNode rexNode
   )
   {
+    plannerContext.setPlanningError("%s can only be used on aggregates. " +
+        "It cannot be used directly on a column or on a scalar expression.", getFunctionName());
     return null;
   }
 
