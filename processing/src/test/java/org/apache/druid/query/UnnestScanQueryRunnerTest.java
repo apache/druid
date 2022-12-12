@@ -290,6 +290,63 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(ascendingExpectedResults, results);
   }
 
+  @Test
+  public void testUnnestRunnerNonNullAllowSet()
+  {
+    List<String> allowList = Arrays.asList("a", "b", "c");
+    LinkedHashSet allowSet = new LinkedHashSet(allowList);
+    ScanQuery query = newTestUnnestQueryWithAllowSet()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        allowSet
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tb",
+          "2011-01-13T00:00:00.000Z\ta"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "b",
+          "a"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    ScanQueryRunnerTest.verify(expectedResults, results);
+  }
+
   private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
   {
     return toEvents(
@@ -439,62 +496,5 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       expected.add(new ScanResultValue(QueryRunnerTestHelper.SEGMENT_ID.toString(), columns, events));
     }
     return expected;
-  }
-
-  @Test
-  public void testUnnestRunnerNonNullAllowSet()
-  {
-    List<String> allowList = Arrays.asList("a", "b", "c");
-    LinkedHashSet allowSet = new LinkedHashSet(allowList);
-    ScanQuery query = newTestUnnestQueryWithAllowSet()
-        .intervals(I_0112_0114)
-        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        .limit(3)
-        .build();
-
-    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
-        FACTORY,
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-        allowSet
-    );
-
-    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
-    String[] columnNames;
-    if (legacy) {
-      columnNames = new String[]{
-          getTimestampName() + ":TIME",
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
-      };
-    } else {
-      columnNames = new String[]{
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
-      };
-    }
-    String[] values;
-    if (legacy) {
-      values = new String[]{
-          "2011-01-12T00:00:00.000Z\ta",
-          "2011-01-12T00:00:00.000Z\tb",
-          "2011-01-13T00:00:00.000Z\ta"
-      };
-    } else {
-      values = new String[]{
-          "a",
-          "b",
-          "a"
-      };
-    }
-
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
-    List<ScanResultValue> expectedResults = toExpected(
-        events,
-        legacy
-        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
-        0,
-        3
-    );
-    ScanQueryRunnerTest.verify(expectedResults, results);
   }
 }
