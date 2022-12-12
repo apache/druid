@@ -197,7 +197,7 @@ In the results, notice that there are more rows than before and an additional co
 
 With the `dataSource.allowList` parameter, you can unnest a subset of a column. Set the value of `allowList` to `["a","b"]` and run the query again. Only a subset of rows are returned based on the values you allowed.
 
-You can also implement filters. For example, you can add the following to the Scan query to filter it:
+You can also implement filters. For example, you can add the following to the Scan query to filter results to only rows that have the values `"a"` or `"abc"` in `"dim2"`:
 
 ```json
   "filter": {
@@ -212,7 +212,7 @@ You can also implement filters. For example, you can add the following to the Sc
 
 ### groupBy query
 
-The following query returns an unnested version of the column `dim3` as the column `unnest-dim3` and groups the data by that dimension . The results are sorted in descending order. 
+The following query returns an unnested version of the column `dim3` as the column `unnest-dim3` sorted in descending order.
 
 <details><summary>Show the query</summary>
 
@@ -251,7 +251,7 @@ The following query returns an unnested version of the column `dim3` as the colu
 
 ### topN query
 
-The example TopN query unnests `dim3` into the column `unnest-dim3` and sorts the records numerically in ascending order based on the column `a0`.
+The example topN query unnests `dim3` into the column `unnest-dim3` and sorts the records numerically in ascending order based on the column `a0`.
 
 <details><summary>Show the query</summary>
 
