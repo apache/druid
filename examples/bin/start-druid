@@ -33,4 +33,6 @@ then
 else
   echo "python interepreter not found"
   echo ""
+  echo "For more information on installing Python visit:"
+  echo "https://druid.apache.org/docs/latest/operations/python.html"
 fi
