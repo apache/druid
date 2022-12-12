@@ -108,7 +108,7 @@ public class ExecutorLifecycle
     // pod twice, no need to lock.
     if (taskExecutorConfig.isParentStreamDefined()) {
       // Avoid running the same task twice on the same machine by locking the task base directory.
-      final File taskLockFile = Preconditions.checkNotNull(taskExecutorConfig.getLockFile(), "lockFile");
+      final File taskLockFile = Preconditions.checkNotNull(taskExecutorConfig.getLockFile(), "lockfile is null");
       try {
         synchronized (this) {
           if (taskLockChannel == null && taskLockFileLock == null) {
