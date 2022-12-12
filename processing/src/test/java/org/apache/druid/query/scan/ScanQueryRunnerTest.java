@@ -75,6 +75,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -210,8 +211,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return Druids.newScanQueryBuilder()
                  .dataSource(UnnestDataSource.create(
                      new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                     "placementish",
-                     "unp",
+                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                      null
                  ))
                  .columns(Collections.emptyList())
@@ -220,60 +221,22 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                  .legacy(legacy);
   }
 
-  @Test
-  public void testUnnestRunner()
+  private Druids.ScanQueryBuilder newTestUnnestQueryWithAllowSet()
   {
-
-    ScanQuery query = newTestUnnestQuery()
-        .intervals(I_0112_0114)
-        .columns("unp")
-        .limit(3)
-        .build();
-
-    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
-        FACTORY,
-        "placementish",
-        "unp",
-        null
-    );
-
-    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
-    String[] columnNames;
-    if (legacy) {
-      columnNames = new String[]{
-          getTimestampName() + ":TIME",
-          "unp"
-      };
-    } else {
-      columnNames = new String[]{
-          "unp"
-      };
-    }
-    String[] values;
-    if (legacy) {
-      values = new String[]{
-          "2011-01-12T00:00:00.000Z\ta",
-          "2011-01-12T00:00:00.000Z\tpreferred",
-          "2011-01-12T00:00:00.000Z\tb"
-      };
-    } else {
-      values = new String[]{
-          "a",
-          "preferred",
-          "b"
-      };
-    }
-
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
-    List<ScanResultValue> expectedResults = toExpected(
-        events,
-        legacy ? Lists.newArrayList(getTimestampName(), "unp") : Lists.newArrayList("unp"),
-        0,
-        3
-    );
-    verify(expectedResults, results);
+    List<String> allowList = Arrays.asList("a", "b", "c");
+    LinkedHashSet allowSet = new LinkedHashSet(allowList);
+    return Druids.newScanQueryBuilder()
+                 .dataSource(UnnestDataSource.create(
+                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                     allowSet
+                 ))
+                 .columns(Collections.emptyList())
+                 .eternityInterval()
+                 .limit(3)
+                 .legacy(legacy);
   }
-
 
   @Test
   public void testFullOnSelect()
@@ -1051,6 +1014,245 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         3
     );
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
+  @Test
+  public void testUnnestRunner()
+  {
+    ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    verify(expectedResults, results);
+  }
+
+  @Test
+  public void testUnnestRunnerNonNullAllowSet()
+  {
+    List<String> allowList = Arrays.asList("a", "b", "c");
+    LinkedHashSet allowSet = new LinkedHashSet(allowList);
+    ScanQuery query = newTestUnnestQueryWithAllowSet()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        allowSet
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tb",
+          "2011-01-13T00:00:00.000Z\ta"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "b",
+          "a"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    verify(expectedResults, results);
+  }
+
+  @Test
+  public void testUnnestRunnerWithFilter()
+  {
+    ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .filters(new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null))
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    verify(expectedResults, results);
+  }
+
+  @Test
+  public void testUnnestRunnerWithOrdering()
+  {
+    ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.TIME_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .filters(new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null))
+        .order(ScanQuery.Order.ASCENDING)
+        .build();
+
+    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+        FACTORY,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null
+    );
+
+    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          ColumnHolder.TIME_COLUMN_NAME,
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    values = new String[]{
+        "2011-01-12T00:00:00.000Z\ta",
+        "2011-01-12T00:00:00.000Z\tpreferred",
+        "2011-01-12T00:00:00.000Z\tb"
+    };
+
+    final List<List<Map<String, Object>>> ascendingEvents = toEvents(columnNames, values);
+    if (legacy) {
+      for (List<Map<String, Object>> batch : ascendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
+        }
+      }
+    } else {
+      for (List<Map<String, Object>> batch : ascendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
+        }
+      }
+    }
+    List<ScanResultValue> ascendingExpectedResults = toExpected(
+        ascendingEvents,
+        legacy ?
+        Lists.newArrayList(
+            QueryRunnerTestHelper.TIME_DIMENSION,
+            getTimestampName(),
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+        ) :
+        Lists.newArrayList(
+            QueryRunnerTestHelper.TIME_DIMENSION,
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+        ),
+        0,
+        3
+    );
+
+    verify(ascendingExpectedResults, results);
   }
 
   private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)

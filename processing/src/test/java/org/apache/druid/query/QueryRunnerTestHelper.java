@@ -110,6 +110,7 @@ public class QueryRunnerTestHelper
   public static final String PLACEMENT_DIMENSION = "placement";
   public static final String PLACEMENTISH_DIMENSION = "placementish";
   public static final String PARTIAL_NULL_DIMENSION = "partial_null_column";
+  public static final String PLACEMENTISH_DIMENSION_UNNEST = "placementish_unnest";
 
   public static final List<String> DIMENSIONS = Lists.newArrayList(
       MARKET_DIMENSION,
