@@ -160,7 +160,7 @@ sample usage:
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
                              'conf/druid/auto directory is used.\n'
-                             'Note. zk config cannot be overriden.\n')
+                             'Note. zookeeper config cannot be overriden.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
