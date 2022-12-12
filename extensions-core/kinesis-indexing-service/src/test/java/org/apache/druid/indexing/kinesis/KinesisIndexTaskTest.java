@@ -187,14 +187,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private final Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
 
-  private final Set<Integer> checkpointRequestsHash = new HashSet<>();
-
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
-
   @BeforeClass
   public static void setupClass()
   {
@@ -2883,7 +2875,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  private QueryRunnerFactoryConglomerate makeTimeseriesOnlyConglomerate()
+  @Override
+  protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
     return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
@@ -2911,150 +2904,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     for (Module module : new KinesisIndexingServiceModule().getJacksonModules()) {
       objectMapper.registerModule(module);
     }
-    final TaskConfig taskConfig = new TaskConfig(
-        new File(directory, "baseDir").getPath(),
-        new File(directory, "baseTaskDir").getPath(),
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
-    final TestDerbyConnector derbyConnector = derby.getConnector();
-    derbyConnector.createDataSourceTable();
-    derbyConnector.createPendingSegmentsTable();
-    derbyConnector.createSegmentTable();
-    derbyConnector.createRulesTable();
-    derbyConnector.createConfigTable();
-    derbyConnector.createTaskTables();
-    derbyConnector.createAuditTable();
-    taskStorage = new MetadataTaskStorage(
-        derbyConnector,
-        new TaskStorageConfig(null),
-        new DerbyMetadataStorageActionHandlerFactory(
-            derbyConnector,
-            derby.metadataTablesConfigSupplier().get(),
-            objectMapper
-        )
-    );
-    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        testUtils.getTestObjectMapper(),
-        derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
-    );
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
-        taskLockbox,
-        taskStorage,
-        metadataStorageCoordinator,
-        emitter,
-        new SupervisorManager(null)
-        {
-          @Override
-          public boolean checkPointDataSourceMetadata(
-              String supervisorId,
-              int taskGroupId,
-              @Nullable DataSourceMetadata checkpointMetadata
-          )
-          {
-            LOG.info("Adding checkpoint hash to the set");
-            checkpointRequestsHash.add(
-                Objects.hash(
-                    supervisorId,
-                    taskGroupId,
-                    checkpointMetadata
-                )
-            );
-            return true;
-          }
-        },
-        objectMapper
-    );
-    final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
-        taskStorage,
-        taskActionToolbox,
-        new TaskAuditLogConfig(false)
-    );
-
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
-    {
-      @Override
-      public boolean registerSegmentHandoffCallback(
-          SegmentDescriptor descriptor,
-          Executor exec,
-          Runnable handOffRunnable
-      )
-      {
-        if (doHandoff) {
-          // Simulate immediate handoff
-          exec.execute(handOffRunnable);
-        }
-        return true;
-      }
-
-      @Override
-      public void start()
-      {
-        //Noop
-      }
-
-      @Override
-      public void close()
-      {
-        //Noop
-      }
-    };
-    final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
-    dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
-
-    toolboxFactory = new TaskToolboxFactory(
-        taskConfig,
-        null, // taskExecutorNode
-        taskActionClientFactory,
-        emitter,
-        dataSegmentPusher,
-        new TestDataSegmentKiller(),
-        null, // DataSegmentMover
-        null, // DataSegmentArchiver
-        new TestDataSegmentAnnouncer(),
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        handoffNotifierFactory,
-        this::makeTimeseriesOnlyConglomerate,
-        DirectQueryProcessingPool.INSTANCE,
-        NoopJoinableFactory.INSTANCE,
-        () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
-        testUtils.getTestObjectMapper(),
-        testUtils.getTestIndexIO(),
-        MapCache.create(1024),
-        new CacheConfig(),
-        new CachePopulatorStats(),
-        testUtils.getIndexMergerV9Factory(),
-        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
-        EasyMock.createNiceMock(DruidNode.class),
-        new LookupNodeService("tier"),
-        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new SingleFileTaskReportFileWriter(reportsFile),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        testUtils.getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
-        new NoopOverlordClient(),
-        null,
-        null,
-        null,
-        null,
-        "1"
-    );
+    makeToolboxFactory(testUtils, emitter, doHandoff);
   }
 
   @JsonTypeName("index_kinesis")

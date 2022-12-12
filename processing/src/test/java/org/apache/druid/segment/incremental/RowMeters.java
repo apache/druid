@@ -29,6 +29,10 @@ public class RowMeters
   private long unparseable;
   private long thrownAway;
 
+  /**
+   * Creates a new {@link RowMeters}, that can be used to build an instance of
+   * {@link RowIngestionMetersTotals}.
+   */
   public static RowMeters with()
   {
     return new RowMeters();

@@ -254,7 +254,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private String topic;
   private List<ProducerRecord<byte[], byte[]>> records;
-  private final Set<Integer> checkpointRequestsHash = new HashSet<>();
 
   private static List<ProducerRecord<byte[], byte[]>> generateRecords(String topic)
   {
@@ -301,12 +300,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     return "topic" + topicPostfix++;
   }
-
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   public KafkaIndexTaskTest(LockGranularity lockGranularity)
   {
@@ -414,11 +407,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
     Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
@@ -472,6 +461,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     final Collection<DataSegment> segments = publishedSegments();
     for (DataSegment segment : segments) {
@@ -555,11 +545,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
     Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
@@ -608,11 +594,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
     Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
@@ -671,9 +653,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     runner.resume();
 
     // Check metrics
-    Assert.assertEquals(buildSegments.getProcessed(), task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(buildSegments.getUnparseable(), task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(buildSegments.getThrownAway(), task.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(buildSegments, task.getRunner().getRowIngestionMeters().getTotals());
 
     Assert.assertEquals(avg_1min.get("processed"), 0.0);
     Assert.assertEquals(avg_5min.get("processed"), 0.0);
@@ -751,10 +731,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    // Check metrics
-    Assert.assertEquals(8, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
+    long totalBytes = getTotalSizeOfRecords(0, 10) + getTotalSizeOfRecords(13, 15);
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAway(1).totalProcessed(8));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -886,10 +864,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    // Check metrics
-    Assert.assertEquals(8, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
+    long totalBytes = getTotalSizeOfRecords(0, 10) + getTotalSizeOfRecords(13, 15);
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAway(1).totalProcessed(8));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -984,10 +960,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    // Check metrics
-    Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 2)).totalProcessed(2));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1106,8 +1079,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
 
-    verifyTaskMetrics(normalReplica, RowMeters.with().bytes(792).totalProcessed(9));
-    verifyTaskMetrics(staleReplica, RowMeters.with().bytes(792).totalProcessed(9));
+    long totalBytes = getTotalSizeOfRecords(0, 9);
+    verifyTaskMetrics(normalReplica, RowMeters.with().bytes(totalBytes).totalProcessed(9));
+    verifyTaskMetrics(staleReplica, RowMeters.with().bytes(totalBytes).totalProcessed(9));
   }
 
   @Test(timeout = 60_000L)
@@ -1142,7 +1116,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1190,7 +1164,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(2).totalProcessed(3));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1247,7 +1221,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(440).thrownAway(4).totalProcessed(1));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1334,11 +1308,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 4)).totalProcessed(4));
   }
 
   @Test(timeout = 60_000L)
@@ -1399,7 +1369,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     List<Map<String, Object>> scanResultValues = scanData(task, interval);
     Assert.assertEquals(3, Iterables.size(scanResultValues));
 
-    int i = 0;
     for (Map<String, Object> event : scanResultValues) {
       Assert.assertEquals("application/json", event.get("kafka.testheader.encoding"));
       Assert.assertEquals("y", event.get("dim2"));
@@ -1410,11 +1379,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 4)).totalProcessed(4));
   }
 
   @Test(timeout = 60_000L)
@@ -1444,11 +1409,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().totalProcessed(0));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1483,11 +1444,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1533,11 +1490,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1588,11 +1541,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.FAILED, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 6)).unparseable(1).totalProcessed(3));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1633,12 +1582,11 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertNull(status.getErrorMsg());
-
-    // Check metrics
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
+    final long totalRecordBytes = getTotalSizeOfRecords(2, 13);
+    verifyTaskMetrics(task, RowMeters.with()
+                                     .bytes(totalRecordBytes)
+                                     .unparseable(3).errors(3)
+                                     .thrownAway(1).totalProcessed(4));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -1656,7 +1604,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 4,
-            RowIngestionMeters.PROCESSED_BYTES, 761,
+            RowIngestionMeters.PROCESSED_BYTES, (int) totalRecordBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1
@@ -1722,7 +1670,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
-    verifyTaskMetrics(task, RowMeters.with().bytes(388).unparseable(3).totalProcessed(3));
+
+    final long totalBytes = getTotalSizeOfRecords(2, 8);
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).totalProcessed(3));
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
@@ -1734,7 +1684,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 3,
-            RowIngestionMeters.PROCESSED_BYTES, 388,
+            RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -1751,10 +1701,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
-    List<String> expectedInputs = Arrays.asList(
-        "",
-        "unparseable"
-    );
+    List<String> expectedInputs = Arrays.asList("", "unparseable");
     Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
@@ -1804,13 +1751,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    final long totalBytes = getTotalSizeOfRecords(2, 5);
+    verifyTaskMetrics(task1, RowMeters.with().bytes(totalBytes).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(totalBytes).totalProcessed(3));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -1873,13 +1816,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
     Assert.assertEquals(TaskState.FAILED, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(3, 10))
+                                      .unparseable(3).thrownAway(1).totalProcessed(3));
 
     // Check published segments & metadata, should all be from the first task
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1949,13 +1888,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(3, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(3, 10))
+                                      .unparseable(3).thrownAway(1).totalProcessed(3));
 
     // Check published segments & metadata
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
@@ -1991,11 +1926,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for tasks to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(5, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    long totalBytes = getTotalSizeOfRecords(2, 5) + getTotalSizeOfRecords(13, 15);
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).totalProcessed(5));
 
     // Check published segments & metadata
     SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
@@ -2059,13 +1991,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(3, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(13, 14)).totalProcessed(1));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2107,19 +2034,11 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
 
     // Insert some data, but not enough for the task to finish
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 4)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.limit(records, 4));
 
     while (countEvents(task1) != 2) {
       Thread.sleep(25);
     }
-
     Assert.assertEquals(2, countEvents(task1));
 
     // Stop without publishing segment
@@ -2149,26 +2068,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
     // Insert remaining data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(records, 4)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.skip(records, 4));
 
     // Wait for task to exit
-
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(2, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 4)).totalProcessed(2));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(4, 5)).totalProcessed(1));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2218,14 +2124,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
 
     // Insert some data, but not enough for the task to finish
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 5)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.limit(records, 5));
 
     while (task1.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
@@ -2263,25 +2162,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for the task to start reading
 
     // Insert remaining data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(records, 5)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.skip(records, 5));
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
-    // Check metrics
-    Assert.assertEquals(5, task1.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).totalProcessed(5));
+    verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(6, 10)).totalProcessed(4));
 
     // Check published segments & metadata
     assertEqualsExceptVersion(
@@ -2325,20 +2212,11 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Insert some data, but not enough for the task to finish
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 4)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.flush();
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.limit(records, 4));
 
     while (countEvents(task) != 2) {
       Thread.sleep(25);
     }
-
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
@@ -2350,14 +2228,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
     // Insert remaining data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(records, 4)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.skip(records, 4));
 
     try {
       future.get(10, TimeUnit.SECONDS);
@@ -2373,11 +2244,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2502,11 +2369,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2587,14 +2450,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Insert 2 records initially
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.limit(records, 2)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(records.subList(0, 2));
 
     awaitConsumedOffsets(task, ImmutableMap.of(0, 1L)); // Consume two real messages
     Assert.assertEquals(2, countEvents(task));
@@ -2606,25 +2462,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(2, Iterables.size(scanResultValues));
 
     // Insert 3 more records and rollback
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(Iterables.limit(records, 5), 2)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.flush();
-      kafkaProducer.abortTransaction();
-    }
+    insertData(records.subList(2, 5), true);
 
     // Insert up through first 8 items
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(Iterables.limit(records, 8), 5)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(records.subList(5, 8));
 
     awaitConsumedOffsets(task, ImmutableMap.of(0, 9L)); // Consume 8 real messages + 2 txn controls
     Assert.assertEquals(2, countEvents(task));
@@ -2639,24 +2480,15 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(2, Iterables.size(scanResultValues1));
 
     // Insert all remaining messages. One will get picked up.
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
-      for (ProducerRecord<byte[], byte[]> record : Iterables.skip(records, 8)) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    insertData(Iterables.skip(records, 8));
 
     // Wait for task to exit and publish
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
 
-    // Check metrics
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessedWithError());
-    Assert.assertEquals(3, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getThrownAway());
+    long totalBytes = getTotalSizeOfRecords(0, 2) + getTotalSizeOfRecords(5, 11);
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes)
+                                     .unparseable(3).errors(1).thrownAway(1).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -2790,11 +2622,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().totalProcessed(0));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(Collections.emptyList(), publishedDescriptors());
@@ -2873,6 +2701,19 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                .toList();
   }
 
+  private long getRecordSize(ProducerRecord<byte[], byte[]> record)
+  {
+    return (record.key() == null ? 0L : record.key().length)
+           + (record.value() == null ? 0L : record.value().length);
+  }
+
+  private long getTotalSizeOfRecords(int startIndexInclusive, int endIndexExclusive)
+  {
+    return records.subList(startIndexInclusive, endIndexExclusive).stream()
+                  .mapToLong(this::getRecordSize)
+                  .sum();
+  }
+
   private void insertData() throws ExecutionException, InterruptedException
   {
     insertData(records);
@@ -2881,13 +2722,23 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private void insertData(Iterable<ProducerRecord<byte[], byte[]>> records)
       throws ExecutionException, InterruptedException
   {
+    insertData(records, false);
+  }
+
+  private void insertData(Iterable<ProducerRecord<byte[], byte[]>> records, boolean rollbackTransaction)
+      throws ExecutionException, InterruptedException
+  {
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
         kafkaProducer.send(record).get();
       }
-      kafkaProducer.commitTransaction();
+      if (rollbackTransaction) {
+        kafkaProducer.abortTransaction();
+      } else {
+        kafkaProducer.commitTransaction();
+      }
     }
   }
 
@@ -2982,7 +2833,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  private QueryRunnerFactoryConglomerate makeTimeseriesAndScanConglomerate()
+  @Override
+  protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
     return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
@@ -3015,157 +2867,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     directory = tempFolder.newFolder();
     final TestUtils testUtils = new TestUtils();
-    RowIngestionMetersFactory rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
 
     for (Module module : new KafkaIndexTaskModule().getJacksonModules()) {
       objectMapper.registerModule(module);
     }
     objectMapper.registerModule(TEST_MODULE);
-
-    final TaskConfig taskConfig = new TaskConfig(
-        new File(directory, "baseDir").getPath(),
-        new File(directory, "baseTaskDir").getPath(),
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
-    final TestDerbyConnector derbyConnector = derby.getConnector();
-    derbyConnector.createDataSourceTable();
-    derbyConnector.createPendingSegmentsTable();
-    derbyConnector.createSegmentTable();
-    derbyConnector.createRulesTable();
-    derbyConnector.createConfigTable();
-    derbyConnector.createTaskTables();
-    derbyConnector.createAuditTable();
-    taskStorage = new MetadataTaskStorage(
-        derbyConnector,
-        new TaskStorageConfig(null),
-        new DerbyMetadataStorageActionHandlerFactory(
-            derbyConnector,
-            derby.metadataTablesConfigSupplier().get(),
-            objectMapper
-        )
-    );
-    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        testUtils.getTestObjectMapper(),
-        derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
-    );
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
-        taskLockbox,
-        taskStorage,
-        metadataStorageCoordinator,
-        emitter,
-        new SupervisorManager(null)
-        {
-          @Override
-          public boolean checkPointDataSourceMetadata(
-              String supervisorId,
-              int taskGroupId,
-              @Nullable DataSourceMetadata previousDataSourceMetadata
-          )
-          {
-            log.info("Adding checkpoint hash to the set");
-            checkpointRequestsHash.add(
-                Objects.hash(
-                    supervisorId,
-                    taskGroupId,
-                    previousDataSourceMetadata
-                )
-            );
-            return true;
-          }
-        },
-        objectMapper
-    );
-    final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
-        taskStorage,
-        taskActionToolbox,
-        new TaskAuditLogConfig(false)
-    );
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
-    {
-      @Override
-      public boolean registerSegmentHandoffCallback(
-          SegmentDescriptor descriptor,
-          Executor exec,
-          Runnable handOffRunnable
-      )
-      {
-        if (doHandoff) {
-          // Simulate immediate handoff
-          exec.execute(handOffRunnable);
-        }
-        return true;
-      }
-
-      @Override
-      public void start()
-      {
-        //Noop
-      }
-
-      @Override
-      public void close()
-      {
-        //Noop
-      }
-    };
-    final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
-    dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
-
-    toolboxFactory = new TaskToolboxFactory(
-        taskConfig,
-        null, // taskExecutorNode
-        taskActionClientFactory,
-        emitter,
-        dataSegmentPusher,
-        new TestDataSegmentKiller(),
-        null, // DataSegmentMover
-        null, // DataSegmentArchiver
-        new TestDataSegmentAnnouncer(),
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        handoffNotifierFactory,
-        this::makeTimeseriesAndScanConglomerate,
-        DirectQueryProcessingPool.INSTANCE,
-        NoopJoinableFactory.INSTANCE,
-        () -> EasyMock.createMock(MonitorScheduler.class),
-        new SegmentCacheManagerFactory(testUtils.getTestObjectMapper()),
-        testUtils.getTestObjectMapper(),
-        testUtils.getTestIndexIO(),
-        MapCache.create(1024),
-        new CacheConfig(),
-        new CachePopulatorStats(),
-        testUtils.getIndexMergerV9Factory(),
-        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
-        EasyMock.createNiceMock(DruidNode.class),
-        new LookupNodeService("tier"),
-        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new SingleFileTaskReportFileWriter(reportsFile),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        testUtils.getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
-        new NoopOverlordClient(),
-        null,
-        null,
-        null,
-        null,
-        "1"
-    );
+    makeToolboxFactory(testUtils, emitter, doHandoff);
   }
 
   @Test(timeout = 60_000L)
@@ -3175,39 +2883,27 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     maxParseExceptions = 1000;
     maxSavedParseExceptions = 2;
 
-    // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      kafkaProducer.initTransactions();
-      kafkaProducer.beginTransaction();
+    // Prepare records and insert data
+    //multiple objects in one Kafka record will yield 2 rows in druid
+    String wellformed = toJsonString(true, "2049", "d2", "y", "10", "22.0", "2.0") +
+                        toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
 
-      //multiple objects in one Kafka record will yield 2 rows in druid
-      String wellformed = toJsonString(true, "2049", "d2", "y", "10", "22.0", "2.0") +
-                          toJsonString(true, "2049", "d3", "y", "10", "23.0", "3.0");
+    //multiple objects in one Kafka record but some objects are in ill-formed format
+    //as a result, the whole ProducerRecord will be discarded
+    String malformed =
+        "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }" +
+        "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }" +
+        "{\"timestamp\":2049, \"dim1\": \"d6\", \"dim2\":\"z\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"3.0\" }";
 
-      //multiple objects in one Kafka record but some objects are in ill-formed format
-      //as a result, the whole ProducerRecord will be discarded
-      String malformed =
-          "{\"timestamp\":2049, \"dim1\": \"d4\", \"dim2\":\"x\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"2.0\" }"
-          +
-          "{\"timestamp\":2049, \"dim1\": \"d5\", \"dim2\":\"y\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":invalidFormat }"
-          +
-          "{\"timestamp\":2049, \"dim1\": \"d6\", \"dim2\":\"z\", \"dimLong\": 10, \"dimFloat\":\"24.0\", \"met1\":\"3.0\" }";
-
-      ProducerRecord<byte[], byte[]>[] producerRecords = new ProducerRecord[]{
-          // pretty formatted
-          new ProducerRecord<>(topic, 0, null, jbb(true, "2049", "d1", "y", "10", "20.0", "1.0")),
-          //well-formed
-          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
-          //ill-formed
-          new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(malformed)),
-          //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
-          new ProducerRecord<>(topic, 0, null, jbb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
-      };
-      for (ProducerRecord<byte[], byte[]> record : producerRecords) {
-        kafkaProducer.send(record).get();
-      }
-      kafkaProducer.commitTransaction();
-    }
+    List<ProducerRecord<byte[], byte[]>> producerRecords = Arrays.asList(
+        new ProducerRecord<>(topic, 0, null, jbb(true, "2049", "d1", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(wellformed)),
+        new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(malformed)),
+        //a well-formed record after ill-formed to demonstrate that the ill-formed can be successfully skipped
+        new ProducerRecord<>(topic, 0, null, jbb(true, "2049", "d7", "y", "10", "20.0", "1.0"))
+    );
+    records = producerRecords;
+    insertData();
 
     final KafkaIndexTask task = createTask(
         null,
@@ -3230,12 +2926,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-
-    // Check metrics
-    // 4 records processed, 3 success, 1 failed
-    Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 4)).unparseable(1).totalProcessed(4));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -3277,7 +2968,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         @Override
         public CloseableIterator<InputRow> read() throws IOException
         {
-          KafkaRecordEntity recordEntity = (KafkaRecordEntity) settableByteEntity.getEntity();
+          KafkaRecordEntity recordEntity = settableByteEntity.getEntity();
           return delegate.read().map(
               r -> {
                 MapBasedInputRow row = (MapBasedInputRow) r;
