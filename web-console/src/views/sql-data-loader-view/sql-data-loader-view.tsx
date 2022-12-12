@@ -28,7 +28,7 @@ import {
   ingestQueryPatternToQuery,
   QueryWithContext,
 } from '../../druid-models';
-import { submitTaskQuery } from '../../helpers';
+import { Capabilities, submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';
@@ -47,6 +47,7 @@ interface LoaderContent extends QueryWithContext {
 }
 
 export interface SqlDataLoaderViewProps {
+  capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToIngestion(taskId: string): void;
 }
@@ -54,7 +55,7 @@ export interface SqlDataLoaderViewProps {
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { goToQuery, goToIngestion } = props;
+  const { capabilities, goToQuery, goToIngestion } = props;
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
     LocalStorageKeys.SQL_DATA_LOADER_CONTENT,
@@ -132,7 +133,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           }}
           extraCallout={
             <MaxTasksButton
-              clusterCapacity={2}
+              clusterCapacity={capabilities.getClusterCapacity()}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
               minimal

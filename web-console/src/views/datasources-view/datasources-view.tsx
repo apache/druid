@@ -288,37 +288,37 @@ export class DatasourcesView extends React.PureComponent<
       [
         visibleColumns.shown('Datasource name') && `datasource`,
         (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
-          `COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1) AS num_segments`,
         (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
           `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
-          `COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop`,
+          `COUNT(*) FILTER (WHERE is_available = 1 AND is_active = 0) AS num_segments_to_drop`,
         ],
         visibleColumns.shown('Total data size') &&
-          `SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS total_data_size`,
+          `SUM("size") FILTER (WHERE is_active = 1) AS total_data_size`,
         visibleColumns.shown('Segment rows') && [
-          `MIN("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_rows`,
-          `AVG("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_rows`,
-          `MAX("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_rows`,
+          `MIN("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS min_segment_rows`,
+          `AVG("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS avg_segment_rows`,
+          `MAX("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS max_segment_rows`,
         ],
         visibleColumns.shown('Segment size') && [
-          `MIN("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS min_segment_size`,
-          `AVG("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS avg_segment_size`,
-          `MAX("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS max_segment_size`,
+          `MIN("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS min_segment_size`,
+          `AVG("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS avg_segment_size`,
+          `MAX("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS max_segment_size`,
         ],
         visibleColumns.shown('Segment granularity') && [
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
-          `COUNT(*) FILTER (WHERE ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z') AS minute_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z') AS hour_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z') AS day_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z') AS month_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z') AS year_aligned_segments`,
+          `COUNT(*) FILTER (WHERE is_active = 1 AND "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z') AS all_granularity_segments`,
         ],
         visibleColumns.shown('Total rows') &&
-          `SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows`,
+          `SUM("num_rows") FILTER (WHERE is_active = 1) AS total_rows`,
         visibleColumns.shown('Avg. row size') &&
-          `CASE WHEN SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) <> 0 THEN (SUM("size") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) / SUM("num_rows") FILTER (WHERE is_published = 1 AND is_overshadowed = 0)) ELSE 0 END AS avg_row_size`,
+          `CASE WHEN SUM("num_rows") FILTER (WHERE is_active = 1) <> 0 THEN (SUM("size") FILTER (WHERE is_active = 1) / SUM("num_rows") FILTER (WHERE is_active = 1)) ELSE 0 END AS avg_row_size`,
         visibleColumns.shown('Replicated size') &&
-          `SUM("size" * "num_replicas") FILTER (WHERE is_published = 1 AND is_overshadowed = 0) AS replicated_size`,
+          `SUM("size" * "num_replicas") FILTER (WHERE is_active = 1) AS replicated_size`,
       ].flat(),
     );
 

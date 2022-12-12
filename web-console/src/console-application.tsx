@@ -284,9 +284,14 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedSqlDataLoaderView = () => {
+    const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'sql-data-loader',
-      <SqlDataLoaderView goToQuery={this.goToQuery} goToIngestion={this.goToIngestionWithTaskId} />,
+      <SqlDataLoaderView
+        capabilities={capabilities}
+        goToQuery={this.goToQuery}
+        goToIngestion={this.goToIngestionWithTaskId}
+      />,
     );
   };
 

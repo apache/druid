@@ -70,9 +70,9 @@ export function CapacityAlert(props: CapacityAlertProps) {
       >
         <p>
           The cluster does not currently have enough available task slots (current usage:{' '}
-          <Code>{`${formatInteger(usedTaskSlots)}/${formatInteger(totalTaskSlots)}`}</Code>) to run
-          this query which is set to use up to <Code>{formatInteger(maxNumTasks)}</Code> tasks. This
-          query might have to wait for task slots to free up before running.
+          <Code>{`${formatInteger(usedTaskSlots)} of ${formatInteger(totalTaskSlots)}`}</Code>) to
+          run this query which is set to use up to <Code>{formatInteger(maxNumTasks)}</Code> tasks.
+          This query might have to wait for task slots to free up before running.
         </p>
         <p>Are you sure you want to run it?</p>
       </Alert>
