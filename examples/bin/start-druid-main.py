@@ -50,7 +50,7 @@ HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
 TASKS = "tasks"
 INDEXER = "indexer"
-ZK = "zk"
+ZK = "zookeeper"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -137,11 +137,11 @@ sample usage:
             from the given root directory. Calculates memory requirements for
             each service, if required, using upto 80% of the total system memory.
     start-druid -m=100g \\
-    -s=broker,router,zk \\
+    -s=broker,router,zookeeper \\
     -c=conf/druid/single-server/custom \\
             Starts broker, router and zookeeper.
-            broker and router config is read from given root directory.
-            zookeeper config is read from conf/zk.
+            Configs for broker and router are read from the specified root directory.
+            Config for zookeeper is read from conf/zk.
 """
     )
     parser.add_argument('--memory', '-m', type=str, required=False,
@@ -150,9 +150,9 @@ sample usage:
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
     parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
-                             '{broker, router, middleManager, historical, coordinator-overlord, indexer, zk}. \n'
+                             '{broker, router, middleManager, historical, coordinator-overlord, indexer, zookeeper}. \n'
                              'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
-                             'and zk is started. e.g. -s=broker,historical')
+                             'and zookeeper is started. e.g. -s=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
                         help='Relative path to the directory containing common and service \n'
                              'specific properties to be overridden. \n'
