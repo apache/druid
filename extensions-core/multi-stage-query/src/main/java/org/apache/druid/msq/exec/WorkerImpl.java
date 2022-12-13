@@ -573,14 +573,14 @@ public class WorkerImpl implements Worker
   {
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
-    }
-    if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
           "Requested statistics snapshot is not generated yet for stageId[%s]",
           stageId
       );
+    } else {
+      return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
     }
-    return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
   }
 
   @Override
@@ -588,16 +588,16 @@ public class WorkerImpl implements Worker
   {
     if (stageKernelMap.get(stageId) == null) {
       throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
-    }
-    if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
       throw new ISE(
           "Requested statistics snapshot is not generated yet for stageId[%s]",
           stageId
       );
+    } else {
+      return stageKernelMap.get(stageId)
+                           .getResultKeyStatisticsSnapshot()
+                           .getSnapshotForTimeChunk(timeChunk);
     }
-    return stageKernelMap.get(stageId)
-                         .getResultKeyStatisticsSnapshot()
-                         .getSnapshotForTimeChunk(timeChunk);
 
   }
 

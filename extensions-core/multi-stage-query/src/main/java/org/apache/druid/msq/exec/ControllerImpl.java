@@ -619,7 +619,6 @@ public class ControllerImpl implements Controller
           queryKernel.addPartialKeyStatisticsForStageAndWorker(stageId, workerNumber, partialKeyStatisticsInformation);
 
           if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
-            // we only need tasks which are active for this stage.
             List<String> workerTaskIds = workerTaskLauncher.getTaskList();
             CompleteKeyStatisticsInformation completeKeyStatisticsInformation =
                 queryKernel.getCompleteKeyStatisticsInformation(stageId);
@@ -630,7 +629,7 @@ public class ControllerImpl implements Controller
                     completeKeyStatisticsInformation,
                     workerTaskIds,
                     stageDef,
-                    stageToWorkers.get(stageNumber)
+                    stageToWorkers.get(stageNumber) // we only need tasks which are active for this stage.
                 );
 
             // Add the listener to handle completion.
