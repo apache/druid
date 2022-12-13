@@ -445,6 +445,14 @@ public class ControllerQueryKernel
   }
 
   /**
+   * Delegates call to {@link ControllerStageTracker#getWorkerCount()}
+   */
+  public int getWorkerCountForStage(final StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).getWorkerCount();
+  }
+
+  /**
    * Delegates call to {@link ControllerStageTracker#getFailureReason()}
    */
   public MSQFault getFailureReasonForStage(final StageId stageId)

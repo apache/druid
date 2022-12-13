@@ -422,6 +422,14 @@ class ControllerStageTracker
   }
 
   /**
+   * Returns the worker count for this stage.
+   */
+  public int getWorkerCount()
+  {
+    return workerCount;
+  }
+
+  /**
    * Marks the stage as failed and sets the reason for the same.
    *
    * @param fault reason why this stage has failed

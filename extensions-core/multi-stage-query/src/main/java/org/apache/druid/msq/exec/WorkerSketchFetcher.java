@@ -144,7 +144,7 @@ public class WorkerSketchFetcher implements AutoCloseable
     );
 
     // Submit a task for each worker to fetch statistics
-    IntStream.range(0, stageDefinition.getMaxWorkerCount()).forEach(workerNo -> {
+    IntStream.range(0, workerCount).forEach(workerNo -> {
       executorService.submit(() -> {
         ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
             workerClient.fetchClusterByStatisticsSnapshot(
