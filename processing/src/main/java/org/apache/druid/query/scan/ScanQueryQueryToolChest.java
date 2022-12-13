@@ -92,7 +92,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       final Sequence<ScanResultValue> results;
 
-      if (!queryToRun.canPushSort()) {
+      if (!ScanQueries.canPushSort(queryToRun)) {
         results = new BaseSequence<>(
             new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
             {

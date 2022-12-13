@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -432,7 +431,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     );
   }
 
-  public List<Integer> getSortColumnIdxs()
+  public int[] getSortColumnIndexes()
   {
     List<String> allColumns;
     if (legacy && !getColumns().contains(ScanQueryEngine.LEGACY_TIMESTAMP_KEY)) {
@@ -443,13 +442,21 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
 
     allColumns.addAll(getColumns());
-    return getOrderBys()
+    List<Integer> idxList = getOrderBys()
         .stream()
         .map(orderBy -> allColumns.indexOf(orderBy.getColumnName()))
+        .filter(idx -> idx >= 0)
         .collect(Collectors.toList());
+
+    int[] idxArray = new int[idxList.size()];
+    for (int i = 0; i < idxList.size(); i++) {
+      idxArray[i] = idxList.get(i);
+    }
+
+    return idxArray;
   }
 
-  public Ordering<List<Object>> getOrderByNoneTimeResultOrdering()
+  public Ordering<List<Object>> getGenericResultOrdering()
   {
     List<String> orderByDirection = getOrderBys().stream()
                                                  .map(orderBy -> orderBy.getOrder().toString())
@@ -466,7 +473,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     Comparator<List<Object>> comparator = new Comparator<List<Object>>()
     {
 
-      List<Integer> sortColumnIdxs = getSortColumnIdxs();
+      int[] sortColumnIdxs = getSortColumnIndexes();
 
       @Override
       public int compare(
@@ -474,10 +481,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           List<Object> o2
       )
       {
-        for (int i = 0; i < sortColumnIdxs.size(); i++) {
+        for (int i = 0; i < sortColumnIdxs.length; i++) {
+          int idx = sortColumnIdxs[i];
           int compare = orderings[i].compare(
-              (Comparable) o1.get(sortColumnIdxs.get(i)),
-              (Comparable) o2.get(sortColumnIdxs.get(i))
+              (Comparable) o1.get(idx),
+              (Comparable) o2.get(idx)
           );
           if (compare != 0) {
             return compare;
@@ -539,30 +547,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   {
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
-
-  /**
-   * Report whether the sort can be pushed into the Cursor, or must be done as a
-   * separate sort step.
-   */
-  public boolean canPushSort()
-  {
-    // Can push non-existent sort.
-    if (orderBys.size() == 0) {
-      return true;
-    }
-    // Cursor can sort by only one column.
-    if (orderBys.size() > 1) {
-      return false;
-    }
-    // Inline datasources can't sort
-    if (getDataSource() instanceof InlineDataSource) {
-      return false;
-    }
-    // Cursor can't sort by the __time column
-    return ColumnHolder.TIME_COLUMN_NAME.equals(orderBys.get(0).getColumnName());
-  }
-
-
 
   @Override
   public boolean equals(Object o)

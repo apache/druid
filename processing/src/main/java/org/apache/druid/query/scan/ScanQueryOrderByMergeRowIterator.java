@@ -20,11 +20,9 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Ordering;
 import org.apache.druid.collections.QueueBasedSorter;
 import org.apache.druid.collections.Sorter;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
@@ -37,7 +35,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
 {
@@ -71,31 +68,7 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
       scanRowsLimit = Math.toIntExact(query.getScanRowsLimit());
     }
 
-    List<String> orderByDirection = query.getOrderBys()
-                                         .stream()
-                                         .map(orderBy -> orderBy.getOrder().toString())
-                                         .collect(Collectors.toList());
-    List<Integer> sortColumnIdxs = query.getSortColumnIdxs();
-
-    Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
-    for (int i = 0; i < orderByDirection.size(); i++) {
-      orderings[i] = ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))
-                     ? Comparators.naturalNullsFirst()
-                     : Comparators.<Comparable>naturalNullsFirst().reverse();
-    }
-
-    Comparator<List<Object>> comparator = (o1, o2) -> {
-      for (int i = 0; i < sortColumnIdxs.size(); i++) {
-        int compare = orderings[i].compare(
-            (Comparable) o1.get(sortColumnIdxs.get(i)),
-            (Comparable) o2.get(sortColumnIdxs.get(i))
-        );
-        if (compare != 0) {
-          return compare;
-        }
-      }
-      return 0;
-    };
+    Comparator<List<Object>> comparator = query.getGenericResultOrdering();
     Sorter<Object> sorter = new QueueBasedSorter<Object>(scanRowsLimit, comparator);
     List<String> columns = new ArrayList<>();
     while (!yielder.isDone()) {

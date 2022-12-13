@@ -95,7 +95,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final long timeoutAt = System.currentTimeMillis() + queryPlus.getQuery().context().getTimeout();
       responseContext.putTimeoutTime(timeoutAt);
 
-      if (!query.canPushSort()) {
+      if (!ScanQueries.canPushSort(query)) {
         return new ScanQueryOrderByRunner(queryProcessingPool, queryRunners).run(queryPlus, responseContext);
       }
 
