@@ -53,11 +53,14 @@ export class RuleUtil {
   ];
 
   static ruleToString(rule: Rule): string {
-    return [
-      rule.type,
-      rule.period ? `(${rule.period}${rule.includeFuture ? `+future` : ''})` : '',
-      rule.interval ? `(${rule.interval})` : '',
-    ].join('');
+    const params: string[] = [];
+
+    if (RuleUtil.hasPeriod(rule))
+      params.push(`${rule.period}${rule.includeFuture ? '+future' : ''}`);
+    if (RuleUtil.hasInterval(rule)) params.push(rule.interval || '?');
+    if (RuleUtil.hasTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
+
+    return `${rule.type}(${params.join(', ')})`;
   }
 
   static changeRuleType(rule: Rule, type: RuleType): Rule {
@@ -120,5 +123,18 @@ export class RuleUtil {
   static addTieredReplicant(rule: Rule, tier: string, replication: number): Rule {
     const newTieredReplicants = deepSet(rule.tieredReplicants || {}, tier, replication);
     return deepSet(rule, 'tieredReplicants', newTieredReplicants);
+  }
+
+  static totalReplicas(rule: Rule): number {
+    const tieredReplicants = rule.tieredReplicants || {};
+    let total = 0;
+    for (const k in tieredReplicants) {
+      total += tieredReplicants[k];
+    }
+    return total;
+  }
+
+  static coldRule(rule: Rule): boolean {
+    return RuleUtil.hasTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
   }
 }
