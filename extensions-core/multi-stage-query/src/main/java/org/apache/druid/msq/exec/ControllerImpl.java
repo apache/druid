@@ -631,7 +631,12 @@ public class ControllerImpl implements Controller
             clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
               addToKernelManipulationQueue(holder -> {
                 if (throwable != null) {
-                  holder.failStageForReason(stageId, UnknownFault.forException(throwable));
+                  log.error("Error while fetching stats for stageId[%s]", stageId);
+                  if (throwable instanceof MSQException) {
+                    holder.failStageForReason(stageId, ((MSQException) throwable).getFault());
+                  } else {
+                    holder.failStageForReason(stageId, UnknownFault.forException(throwable));
+                  }
                 } else if (clusterByPartitionsEither.isError()) {
                   holder.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
                 } else {

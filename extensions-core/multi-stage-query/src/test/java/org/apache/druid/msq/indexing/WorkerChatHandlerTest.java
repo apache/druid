@@ -162,7 +162,7 @@ public class WorkerChatHandlerTest
     }
 
     @Override
-    public TaskStatus run() throws Exception
+    public TaskStatus run()
     {
       return null;
     }

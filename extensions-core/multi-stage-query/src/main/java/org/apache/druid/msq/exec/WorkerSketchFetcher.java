@@ -90,14 +90,27 @@ public class WorkerSketchFetcher implements AutoCloseable
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
-          log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+          log.info(
+              "Query[%s] stage[%d] for AUTO mode: chose PARALLEL mode to merge key statistics",
+              stageDefinition.getId().getQueryId(),
+              stageDefinition.getStageNumber()
+          );
           // If there is no time clustering, there is no scope for sequential merge
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
-        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
-          log.info("Query [%s] AUTO mode: chose SEQUENTIAL mode to merge key statistics", stageDefinition.getId().getQueryId());
+        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD
+                   || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
+          log.info(
+              "Query[%s] stage[%d] for AUTO mode: chose SEQUENTIAL mode to merge key statistics",
+              stageDefinition.getId().getQueryId(),
+              stageDefinition.getStageNumber()
+          );
           return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
         }
-        log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+        log.info(
+            "Query[%s] stage[%d] for AUTO mode: chose PARALLEL mode to merge key statistics",
+            stageDefinition.getId().getQueryId(),
+            stageDefinition.getStageNumber()
+        );
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       default:
         throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
@@ -123,8 +136,15 @@ public class WorkerSketchFetcher implements AutoCloseable
     // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
 
+    log.info(
+        "Fetching stats using %s for stage[%d] for tasks[%s]",
+        ClusterStatisticsMergeMode.PARALLEL,
+        stageDefinition.getStageNumber(),
+        String.join("", workerTaskIds)
+    );
+
     // Submit a task for each worker to fetch statistics
-    IntStream.range(0, workerCount).forEach(workerNo -> {
+    IntStream.range(0, stageDefinition.getMaxWorkerCount()).forEach(workerNo -> {
       executorService.submit(() -> {
         ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
             workerClient.fetchClusterByStatisticsSnapshot(
@@ -176,6 +196,13 @@ public class WorkerSketchFetcher implements AutoCloseable
         stageDefinition,
         workerTaskIds,
         completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().entrySet().iterator()
+    );
+
+    log.info(
+        "Fetching stats using %s for stage[%d] for tasks[%s]",
+        ClusterStatisticsMergeMode.SEQUENTIAL,
+        stageDefinition.getStageNumber(),
+        String.join("", workerTaskIds)
     );
     sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
     return sequentialFetchStage.getPartitionFuture();

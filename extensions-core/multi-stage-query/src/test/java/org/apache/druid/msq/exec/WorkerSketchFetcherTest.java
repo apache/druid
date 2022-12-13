@@ -117,6 +117,7 @@ public class WorkerSketchFetcherTest
     final Queue<ClusterByStatisticsSnapshot> snapshotQueue = new ConcurrentLinkedQueue<>();
     final List<String> workerIds = ImmutableList.of("0", "1", "2", "3", "4");
     final CountDownLatch latch = new CountDownLatch(workerIds.size());
+    doReturn(workerIds.size()).when(stageDefinition).getMaxWorkerCount();
 
     target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.PARALLEL, 300_000_000));
 

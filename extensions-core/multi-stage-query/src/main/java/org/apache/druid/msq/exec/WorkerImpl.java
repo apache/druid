@@ -30,7 +30,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
@@ -572,64 +571,34 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
-    SettableFuture<ClusterByStatisticsSnapshot> statFuture = SettableFuture.create();
-    kernelManipulationQueue.add(holder -> {
-      try {
-        if (stageKernelMap.get(stageId) == null) {
-          throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
-        }
-        if (!WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(stageKernelMap.get(stageId)
-                                                                                                      .getPhase())) {
-          throw new ISE(
-              "Requested statistics snapshot in unexpected worker phase %s",
-              stageKernelMap.get(stageId).getPhase()
-          );
-        }
-        statFuture.set(stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot());
-      }
-      catch (Exception e) {
-        statFuture.setException(e);
-      }
-    });
-
-    try {
-      return FutureUtils.get(statFuture, true);
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+    if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
     }
+    return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
-    SettableFuture<ClusterByStatisticsSnapshot> statFuture = SettableFuture.create();
-    kernelManipulationQueue.add(holder -> {
-      try {
-        if (stageKernelMap.get(stageId) == null) {
-          throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
-        }
-        if (!WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(stageKernelMap.get(stageId)
-                                                                                                      .getPhase())) {
-          throw new ISE(
-              "Requested statistics snapshot in unexpected worker phase %s",
-              stageKernelMap.get(stageId).getPhase()
-          );
-        }
-        statFuture.set(stageKernelMap.get(stageId)
-                                     .getResultKeyStatisticsSnapshot()
-                                     .getSnapshotForTimeChunk(timeChunk));
-      }
-      catch (Exception e) {
-        statFuture.setException(e);
-      }
-    });
-    try {
-      return FutureUtils.get(statFuture, true);
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+    if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
     }
+    return stageKernelMap.get(stageId)
+                         .getResultKeyStatisticsSnapshot()
+                         .getSnapshotForTimeChunk(timeChunk);
+
   }
 
 
@@ -695,7 +664,7 @@ public class WorkerImpl implements Worker
   /**
    * Decorates the server-wide {@link QueryProcessingPool} such that any Callables and Runnables, not just
    * {@link PrioritizedCallable} and {@link PrioritizedRunnable}, may be added to it.
-   *
+   * <p>
    * In production, the underlying {@link QueryProcessingPool} pool is set up by
    * {@link org.apache.druid.guice.DruidProcessingModule}.
    */
