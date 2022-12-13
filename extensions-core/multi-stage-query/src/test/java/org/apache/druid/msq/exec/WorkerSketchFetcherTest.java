@@ -49,6 +49,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
@@ -117,7 +118,6 @@ public class WorkerSketchFetcherTest
     final Queue<ClusterByStatisticsSnapshot> snapshotQueue = new ConcurrentLinkedQueue<>();
     final List<String> workerIds = ImmutableList.of("0", "1", "2", "3", "4");
     final CountDownLatch latch = new CountDownLatch(workerIds.size());
-    doReturn(workerIds.size()).when(stageDefinition).getMaxWorkerCount();
 
     target = spy(new WorkerSketchFetcher(workerClient, ClusterStatisticsMergeMode.PARALLEL, 300_000_000));
 
@@ -132,7 +132,8 @@ public class WorkerSketchFetcherTest
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
         workerIds,
-        stageDefinition
+        stageDefinition,
+        workerIds.stream().map(Integer::parseInt).collect(Collectors.toSet())
     );
 
     // Assert that the final result is complete and all other sketches returned have been merged.
@@ -172,7 +173,8 @@ public class WorkerSketchFetcherTest
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
         ImmutableList.of("0", "1", "2", "3", "4"),
-        stageDefinition
+        stageDefinition,
+        ImmutableSet.of()
     );
 
     // Assert that the final result is complete and all other sketches returned have been merged.

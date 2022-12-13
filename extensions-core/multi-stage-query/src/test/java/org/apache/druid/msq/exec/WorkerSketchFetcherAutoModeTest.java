@@ -56,7 +56,7 @@ public class WorkerSketchFetcherAutoModeTest
 
     target = spy(new WorkerSketchFetcher(mock(WorkerClient.class), ClusterStatisticsMergeMode.AUTO, 300_000_000));
     // Don't actually try to fetch sketches
-    doReturn(null).when(target).inMemoryFullSketchMerging(any(), any());
+    doReturn(null).when(target).inMemoryFullSketchMerging(any(), any(), any());
     doReturn(null).when(target).sequentialTimeChunkMerging(any(), any(), any());
 
     doReturn(StageId.fromString("1_1")).when(stageDefinition).getId();
@@ -81,8 +81,13 @@ public class WorkerSketchFetcherAutoModeTest
     // Worker count below threshold
     doReturn(1).when(stageDefinition).getMaxWorkerCount();
 
-    target.submitFetcherTask(completeKeyStatisticsInformation, Collections.emptyList(), stageDefinition);
-    verify(target, times(1)).inMemoryFullSketchMerging(any(), any());
+    target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        Collections.emptyList(),
+        stageDefinition,
+        Collections.emptySet()
+    );
+    verify(target, times(1)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(0)).sequentialTimeChunkMerging(any(), any(), any());
   }
 
@@ -98,8 +103,13 @@ public class WorkerSketchFetcherAutoModeTest
     // Worker count below threshold
     doReturn((int) WorkerSketchFetcher.WORKER_THRESHOLD + 1).when(stageDefinition).getMaxWorkerCount();
 
-    target.submitFetcherTask(completeKeyStatisticsInformation, Collections.emptyList(), stageDefinition);
-    verify(target, times(0)).inMemoryFullSketchMerging(any(), any());
+    target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        Collections.emptyList(),
+        stageDefinition,
+        Collections.emptySet()
+    );
+    verify(target, times(0)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(1)).sequentialTimeChunkMerging(any(), any(), any());
   }
 
@@ -115,8 +125,13 @@ public class WorkerSketchFetcherAutoModeTest
     // Worker count above threshold
     doReturn((int) WorkerSketchFetcher.WORKER_THRESHOLD + 1).when(stageDefinition).getMaxWorkerCount();
 
-    target.submitFetcherTask(completeKeyStatisticsInformation, Collections.emptyList(), stageDefinition);
-    verify(target, times(1)).inMemoryFullSketchMerging(any(), any());
+    target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        Collections.emptyList(),
+        stageDefinition,
+        Collections.emptySet()
+    );
+    verify(target, times(1)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(0)).sequentialTimeChunkMerging(any(), any(), any());
   }
 
@@ -132,8 +147,13 @@ public class WorkerSketchFetcherAutoModeTest
     // Worker count below threshold
     doReturn(1).when(stageDefinition).getMaxWorkerCount();
 
-    target.submitFetcherTask(completeKeyStatisticsInformation, Collections.emptyList(), stageDefinition);
-    verify(target, times(0)).inMemoryFullSketchMerging(any(), any());
+    target.submitFetcherTask(
+        completeKeyStatisticsInformation,
+        Collections.emptyList(),
+        stageDefinition,
+        Collections.emptySet()
+    );
+    verify(target, times(0)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(1)).sequentialTimeChunkMerging(any(), any(), any());
   }
 }

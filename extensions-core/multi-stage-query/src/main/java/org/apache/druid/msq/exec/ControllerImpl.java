@@ -263,6 +263,10 @@ public class ControllerImpl implements Controller
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stagePartitionCountsForLiveReports = new ConcurrentHashMap<>();
 
+  // Stage number -> set of immutable workers assigned for that stage
+  // Always accessed by the main controller thread.
+  private final Map<Integer, Set<Integer>> stageToWorkers = new HashMap<>();
+
   private WorkerSketchFetcher workerSketchFetcher;
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
@@ -616,8 +620,7 @@ public class ControllerImpl implements Controller
 
           if (queryKernel.getStagePhase(stageId).equals(ControllerStagePhase.MERGING_STATISTICS)) {
             // we only need tasks which are active for this stage.
-            List<String> workerTaskIds = workerTaskLauncher.getTaskList()
-                                                           .subList(0, queryKernel.getWorkerCountForStage(stageId));
+            List<String> workerTaskIds = workerTaskLauncher.getTaskList();
             CompleteKeyStatisticsInformation completeKeyStatisticsInformation =
                 queryKernel.getCompleteKeyStatisticsInformation(stageId);
 
@@ -626,7 +629,8 @@ public class ControllerImpl implements Controller
                 workerSketchFetcher.submitFetcherTask(
                     completeKeyStatisticsInformation,
                     workerTaskIds,
-                    stageDef
+                    stageDef,
+                    stageToWorkers.get(stageNumber)
                 );
 
             // Add the listener to handle completion.
@@ -1067,6 +1071,7 @@ public class ControllerImpl implements Controller
     );
 
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
+    stageToWorkers.put(stageNumber, ImmutableSet.copyOf(workOrders.keySet()));
 
     contactWorkersForStage(
         (netClient, taskId, workerNumber) -> netClient.postWorkOrder(taskId, workOrders.get(workerNumber)),

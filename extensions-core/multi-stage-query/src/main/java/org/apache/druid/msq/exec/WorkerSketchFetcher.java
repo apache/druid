@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.IntStream;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
@@ -78,7 +77,8 @@ public class WorkerSketchFetcher implements AutoCloseable
   public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
       CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
       List<String> workerTaskIds,
-      StageDefinition stageDefinition
+      StageDefinition stageDefinition,
+      Set<Integer> workersForStage
   )
   {
     ClusterBy clusterBy = stageDefinition.getClusterBy();
@@ -87,7 +87,7 @@ public class WorkerSketchFetcher implements AutoCloseable
       case SEQUENTIAL:
         return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
       case PARALLEL:
-        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
           log.info(
@@ -96,7 +96,7 @@ public class WorkerSketchFetcher implements AutoCloseable
               stageDefinition.getStageNumber()
           );
           // If there is no time clustering, there is no scope for sequential merge
-          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
         } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD
                    || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
           log.info(
@@ -111,7 +111,7 @@ public class WorkerSketchFetcher implements AutoCloseable
             stageDefinition.getId().getQueryId(),
             stageDefinition.getStageNumber()
         );
-        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
+        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
       default:
         throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
     }
@@ -124,7 +124,8 @@ public class WorkerSketchFetcher implements AutoCloseable
    */
   CompletableFuture<Either<Long, ClusterByPartitions>> inMemoryFullSketchMerging(
       StageDefinition stageDefinition,
-      List<String> workerTaskIds
+      List<String> workerTaskIds,
+      Set<Integer> workersForStage
   )
   {
     CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
@@ -144,7 +145,7 @@ public class WorkerSketchFetcher implements AutoCloseable
     );
 
     // Submit a task for each worker to fetch statistics
-    IntStream.range(0, workerCount).forEach(workerNo -> {
+    workersForStage.forEach(workerNo -> {
       executorService.submit(() -> {
         ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
             workerClient.fetchClusterByStatisticsSnapshot(
