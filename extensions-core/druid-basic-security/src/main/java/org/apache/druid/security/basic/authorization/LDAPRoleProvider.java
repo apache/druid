@@ -129,15 +129,8 @@ public class LDAPRoleProvider implements RoleProvider
   @Override
   public boolean validateGroupPattern(String groupPattern)
   {
-    LdapName ldapName;
     try {
-      if (groupPattern.startsWith("*,")) {
-        ldapName = new LdapName(groupPattern.substring(2));
-      } else if (groupPattern.endsWith(",*")) {
-        ldapName = new LdapName(groupPattern.substring(0, groupPattern.length() - 2));
-      } else {
-        ldapName = new LdapName(groupPattern);
-      }
+      createLdapNameFromPattern(groupPattern);
       return true;
     }
     catch (InvalidNameException e) {
@@ -159,18 +152,16 @@ public class LDAPRoleProvider implements RoleProvider
         BasicAuthorizerGroupMapping groupMapping = groupMappingEntry.getValue();
         String mask = groupMapping.getGroupPattern();
         try {
+          LdapName ln = createLdapNameFromPattern(mask);
           if (mask.startsWith("*,")) {
-            LdapName ln = new LdapName(mask.substring(2));
             if (groupName.startsWith(ln)) {
               roles.addAll(groupMapping.getRoles());
             }
           } else if (mask.endsWith(",*")) {
-            LdapName ln = new LdapName(mask.substring(0, mask.length() - 2));
             if (groupName.endsWith(ln)) {
               roles.addAll(groupMapping.getRoles());
             }
           } else {
-            LdapName ln = new LdapName(mask);
             if (groupName.equals(ln)) {
               roles.addAll(groupMapping.getRoles());
             }
@@ -219,19 +210,17 @@ public class LDAPRoleProvider implements RoleProvider
   {
     for (String filter : groupFilters) {
       try {
+        LdapName ln = createLdapNameFromPattern(filter);
         if (filter.startsWith("*,")) {
-          LdapName ln = new LdapName(filter.substring(2));
           if (groupName.startsWith(ln)) {
             return true;
           }
         } else if (filter.endsWith(",*")) {
-          LdapName ln = new LdapName(filter.substring(0, filter.length() - 2));
           if (groupName.endsWith(ln)) {
             return true;
           }
         } else {
           LOG.debug("Attempting exact filter %s", filter);
-          LdapName ln = new LdapName(filter);
           if (groupName.equals(ln)) {
             return true;
           }
@@ -242,5 +231,16 @@ public class LDAPRoleProvider implements RoleProvider
       }
     }
     return false;
+  }
+
+  public static LdapName createLdapNameFromPattern(String pattern) throws InvalidNameException
+  {
+    if (pattern.startsWith("*,")) {
+      return new LdapName(pattern.substring(2));
+    } else if (pattern.endsWith(",*")) {
+      return new LdapName(pattern.substring(0, pattern.length() - 2));
+    } else {
+      return new LdapName(pattern);
+    }
   }
 }
