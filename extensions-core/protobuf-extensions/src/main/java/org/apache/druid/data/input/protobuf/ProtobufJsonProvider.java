@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.simple;
+package org.apache.druid.data.input.protobuf;
 
 import org.apache.druid.java.util.common.parsers.FlattenerJsonProvider;
-import org.apache.parquet.example.data.Group;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -29,17 +28,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Provides json path for Parquet {@link Group} objects
+ * Basically a plain java object {@link FlattenerJsonProvider}, but it lives here for now...
  */
-public class ParquetGroupJsonProvider extends FlattenerJsonProvider
+public class ProtobufJsonProvider extends FlattenerJsonProvider
 {
-  private final ParquetGroupConverter converter;
-
-  public ParquetGroupJsonProvider(ParquetGroupConverter converter)
-  {
-    this.converter = converter;
-  }
-
   @Override
   public boolean isArray(final Object o)
   {
@@ -49,18 +41,14 @@ public class ParquetGroupJsonProvider extends FlattenerJsonProvider
   @Override
   public boolean isMap(final Object o)
   {
-    return o == null || o instanceof Map || o instanceof Group;
+    return o == null || o instanceof Map;
   }
 
   @Override
   public int length(final Object o)
   {
     if (o instanceof List) {
-      return ((List) o).size();
-    } else if (o instanceof Group) {
-      // both lists and maps are 'Group' type, but we should only have a group here in a map context
-      Group g = (Group) o;
-      return g.getType().getFields().size();
+      return ((List<?>) o).size();
     } else {
       return 0;
     }
@@ -72,9 +60,7 @@ public class ParquetGroupJsonProvider extends FlattenerJsonProvider
     if (o == null) {
       return Collections.emptySet();
     } else if (o instanceof Map) {
-      return ((Map<Object, Object>) o).keySet().stream().map(String::valueOf).collect(Collectors.toSet());
-    } else if (o instanceof Group) {
-      return ((Group) o).getType().getFields().stream().map(f -> f.getName()).collect(Collectors.toSet());
+      return ((Map<?, ?>) o).keySet().stream().map(String::valueOf).collect(Collectors.toSet());
     } else {
       throw new UnsupportedOperationException(o.getClass().getName());
     }
@@ -86,12 +72,8 @@ public class ParquetGroupJsonProvider extends FlattenerJsonProvider
     if (o == null) {
       return null;
     } else if (o instanceof Map) {
-      return ((Map) o).get(s);
-    } else if (o instanceof Group) {
-      Group g = (Group) o;
-      return converter.convertField(g, s);
+      return ((Map<?, ?>) o).get(s);
     }
     throw new UnsupportedOperationException(o.getClass().getName());
   }
 }
-
