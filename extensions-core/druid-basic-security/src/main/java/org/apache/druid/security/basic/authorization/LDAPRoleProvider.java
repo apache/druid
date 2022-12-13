@@ -129,13 +129,14 @@ public class LDAPRoleProvider implements RoleProvider
   @Override
   public boolean validateGroupPattern(String groupPattern)
   {
+    LdapName ldapName;
     try {
       if (groupPattern.startsWith("*,")) {
-        new LdapName(groupPattern.substring(2));
+        ldapName = new LdapName(groupPattern.substring(2));
       } else if (groupPattern.endsWith(",*")) {
-        new LdapName(groupPattern.substring(0, groupPattern.length() - 2));
+        ldapName = new LdapName(groupPattern.substring(0, groupPattern.length() - 2));
       } else {
-        new LdapName(groupPattern);
+        ldapName = new LdapName(groupPattern);
       }
       return true;
     }
