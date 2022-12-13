@@ -389,6 +389,29 @@ public class FileUtils
   }
 
   /**
+   * Computes the size of the file. If it is a directory, computes the size up
+   * to a depth of 1.
+   */
+  public static long getFileSize(File file)
+  {
+    if (file == null) {
+      return 0;
+    } else if (file.isDirectory()) {
+      File[] children = file.listFiles();
+      if (children == null) {
+        return 0;
+      }
+      long totalSize = 0;
+      for (File child : children) {
+        totalSize += child.length();
+      }
+      return totalSize;
+    } else {
+      return file.length();
+    }
+  }
+
+  /**
    * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
    * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
    *
