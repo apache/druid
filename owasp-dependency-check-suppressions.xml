@@ -239,6 +239,14 @@
     <cve>CVE-2022-25857</cve>
   </suppress>
   <suppress>
+    <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
+    <notes><![CDATA[
+    file name: snakeyaml-1.27.jar
+    ]]></notes>
+    <cve>CVE-2022-25857</cve>
+    <cve>CVE-2022-1471</cve>
+  </suppress>
+  <suppress>
     <notes><![CDATA[
    file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-annotations:2.4.0)
    ]]></notes>
