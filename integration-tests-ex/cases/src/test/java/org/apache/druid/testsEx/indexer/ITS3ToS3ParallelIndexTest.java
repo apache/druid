@@ -19,14 +19,15 @@
 
 package org.apache.druid.testsEx.indexer;
 
-import java.util.List;
+import junitparams.Parameters;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testsEx.categories.S3DeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import junitparams.Parameters;
+import java.util.List;
 
 /**
  * IMPORTANT:
@@ -43,6 +44,7 @@ import junitparams.Parameters;
 @Category(S3DeepStorage.class)
 public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
 {
+  @Test
   @Parameters(method = "resources")
   public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
   {

@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
@@ -43,6 +44,10 @@ public class AbstractITSQLBasedIngestion
   String REINDEX_DATASOURCE_STRING_IN_TASK = "%%REINDEX_DATASOURCE%%";
 
   public static final Logger LOG = new Logger(TestQueryHelper.class);
+
+  @Inject
+  protected IntegrationTestingConfig config;
+
   @Inject
   private MsqTestQueryHelper msqHelper;
 

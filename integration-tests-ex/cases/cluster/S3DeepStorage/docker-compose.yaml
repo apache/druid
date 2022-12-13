@@ -43,6 +43,9 @@ services:
       # long for the coordinator to notice changes.
       - druid_manager_segments_pollDuration=PT5S
       - druid_coordinator_period=PT10S
+      - AWS_REGION=${AWS_REGION}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
     depends_on:
       - zookeeper
       - metadata
@@ -54,6 +57,9 @@ services:
     container_name: overlord
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - AWS_REGION=${AWS_REGION}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
     depends_on:
       - zookeeper
       - metadata
@@ -64,6 +70,9 @@ services:
       service: broker
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - AWS_REGION=${AWS_REGION}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
     depends_on:
       - zookeeper
 
@@ -73,6 +82,9 @@ services:
       service: router
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - AWS_REGION=${AWS_REGION}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
     depends_on:
       - zookeeper
 
@@ -82,6 +94,9 @@ services:
       service: historical
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - AWS_REGION=${AWS_REGION}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
     depends_on:
       - zookeeper
 
@@ -93,11 +108,12 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
       - druid_test_loadList=druid-s3-extensions
       - druid_storage_type=s3
-      - druid_storage_bucket=<S3_BUCKET>
-      - druid_storage_baseKey=<S3_BASE_KEY>
-      - druid_s3_accessKey=<S3_ACCESS_KEY>
-      - druid_s3_secretKey=<S3_SECRET_KEY>
-      - AWS_REGION=<AWS_REGION>
+      - druid_storage_bucket=${DRUID_CLOUD_BUCKET}
+      # Using DRUID_CLOUD_PATH env as baseKey as well.
+      - druid_storage_baseKey=${DRUID_CLOUD_PATH}
+      - druid_s3_accessKey=${AWS_ACCESS_KEY_ID}
+      - druid_s3_secretKey=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
     volumes:
       # Test data
       - ../data:/resources
