@@ -1164,6 +1164,143 @@ public class NestedFieldLiteralColumnIndexSupplierTest extends InitializedNullHa
     checkBitmap(lowLevelIndex.getBitmap(-1));
   }
 
+  @Test
+  public void testEnsureNoImproperSelectionFromAdjustedGlobals() throws IOException
+  {
+    // make sure we only pick matching values, not "matching" values from not validating that
+    // globalId actually exists before looking it up in local dictionary
+    ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 10).order(ByteOrder.nativeOrder());
+    ByteBuffer bitmapsBuffer = ByteBuffer.allocate(1 << 10);
+
+    ByteBuffer stringBuffer = ByteBuffer.allocate(1 << 10);
+    ByteBuffer longBuffer = ByteBuffer.allocate(1 << 10).order(ByteOrder.nativeOrder());
+    ByteBuffer doubleBuffer = ByteBuffer.allocate(1 << 10).order(ByteOrder.nativeOrder());
+
+    GenericIndexedWriter<String> stringWriter = new GenericIndexedWriter<>(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        "strings",
+        GenericIndexed.STRING_STRATEGY
+    );
+    stringWriter.open();
+    stringWriter.write(null);
+    stringWriter.write("1");
+    writeToBuffer(stringBuffer, stringWriter);
+
+    FixedIndexedWriter<Long> longWriter = new FixedIndexedWriter<>(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        TypeStrategies.LONG,
+        ByteOrder.nativeOrder(),
+        Long.BYTES,
+        true
+    );
+    longWriter.open();
+    longWriter.write(-2L);
+    writeToBuffer(longBuffer, longWriter);
+
+    FixedIndexedWriter<Double> doubleWriter = new FixedIndexedWriter<>(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        TypeStrategies.DOUBLE,
+        ByteOrder.nativeOrder(),
+        Double.BYTES,
+        true
+    );
+    doubleWriter.open();
+    writeToBuffer(doubleBuffer, doubleWriter);
+
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
+    Supplier<Indexed<ByteBuffer>> stringIndexed = () -> strings.singleThreaded();
+    Supplier<FixedIndexed<Long>> longIndexed = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
+    Supplier<FixedIndexed<Double>> doubleIndexed = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
+
+    FixedIndexedWriter<Integer> localDictionaryWriter = new FixedIndexedWriter<>(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        ByteOrder.nativeOrder(),
+        Integer.BYTES,
+        true
+    );
+    localDictionaryWriter.open();
+    GenericIndexedWriter<ImmutableBitmap> bitmapWriter = new GenericIndexedWriter<>(
+        new OnHeapMemorySegmentWriteOutMedium(),
+        "bitmaps",
+        roaringFactory.getObjectStrategy()
+    );
+    bitmapWriter.setObjectsNotSorted();
+    bitmapWriter.open();
+
+    // 10 rows
+    // globals: [
+    //    [null, '1'],
+    //    [-2],
+    //    []
+    // ]
+    // local: [null, '1', -2]
+    // column: ['1', null, -2]
+
+    // null
+    localDictionaryWriter.write(0);
+    bitmapWriter.write(fillBitmap(1));
+
+    // '1'
+    localDictionaryWriter.write(1);
+    bitmapWriter.write(fillBitmap(0));
+
+    // -2
+    localDictionaryWriter.write(2);
+    bitmapWriter.write(fillBitmap(2));
+
+    writeToBuffer(localDictionaryBuffer, localDictionaryWriter);
+    writeToBuffer(bitmapsBuffer, bitmapWriter);
+
+    Supplier<FixedIndexed<Integer>> dictionarySupplier = FixedIndexed.read(
+        localDictionaryBuffer,
+        NestedDataColumnSerializer.INT_TYPE_STRATEGY,
+        ByteOrder.nativeOrder(),
+        Integer.BYTES
+    );
+
+    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+
+    NestedFieldLiteralColumnIndexSupplier<?> indexSupplier = new NestedFieldLiteralColumnIndexSupplier<>(
+        new NestedLiteralTypeInfo.TypeSet(
+            new NestedLiteralTypeInfo.MutableTypeSet().add(ColumnType.STRING)
+                                                      .add(ColumnType.LONG)
+                                                      .getByteValue()
+        ),
+        roaringFactory.getBitmapFactory(),
+        bitmaps,
+        dictionarySupplier,
+        stringIndexed,
+        longIndexed,
+        doubleIndexed
+    );
+
+    StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+    Assert.assertNotNull(valueSetIndex);
+
+    // 3 rows
+    // local: [null, '1', -2]
+    // column: ['1', null, -2]
+
+    BitmapColumnIndex columnIndex = valueSetIndex.forValue("1");
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.3333, columnIndex.estimateSelectivity(3), 0.001);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 0);
+
+    columnIndex = valueSetIndex.forValue("-2");
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.3333, columnIndex.estimateSelectivity(3), 0.001);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap, 2);
+
+    columnIndex = valueSetIndex.forValue("2");
+    Assert.assertNotNull(columnIndex);
+    Assert.assertEquals(0.0, columnIndex.estimateSelectivity(3), 0.0);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    checkBitmap(bitmap);
+  }
+
   private NestedFieldLiteralColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException
   {
     ByteBuffer localDictionaryBuffer = ByteBuffer.allocate(1 << 12).order(ByteOrder.nativeOrder());
