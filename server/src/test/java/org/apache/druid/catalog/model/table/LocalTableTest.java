@@ -19,13 +19,15 @@
 
 package org.apache.druid.catalog.model.table;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.java.util.common.IAE;
@@ -37,6 +39,7 @@ import org.junit.experimental.categories.Category;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -45,9 +48,8 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @Category(CatalogTest.class)
-public class LocalTableTest
+public class LocalTableTest extends BaseExternTableTest
 {
-  private final ObjectMapper mapper = new ObjectMapper();
   private final LocalTableDefn tableDefn = new LocalTableDefn();
   private final TableBuilder baseBuilder = TableBuilder.of(tableDefn)
       .description("local file input")
@@ -74,16 +76,16 @@ public class LocalTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
     assertEquals("*.csv", sourceSpec.getFilter());
     assertEquals("my.csv", sourceSpec.getFiles().get(0).toString());
 
     // Just a sanity check: details of CSV conversion are tested elsewhere.
-    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat();
+    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat;
     assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
 
-    RowSignature sig = externSpec.signature();
+    RowSignature sig = externSpec.signature;
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
@@ -103,7 +105,7 @@ public class LocalTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
     assertEquals("*", sourceSpec.getFilter());
     assertEquals("my.csv", sourceSpec.getFiles().get(0).toString());
@@ -123,7 +125,7 @@ public class LocalTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
     assertEquals("*.csv", sourceSpec.getFilter());
     assertTrue(sourceSpec.getFiles().isEmpty());
@@ -159,10 +161,7 @@ public class LocalTableTest
         .buildResolved(mapper);
 
     ParameterizedDefn parameterizedTable = tableDefn;
-    assertEquals(2, parameterizedTable.parameters().size());
-    assertNotNull(parameterizedTable.parameter(LocalTableDefn.FILE_FILTER_PROPERTY));
-    assertNotNull(parameterizedTable.parameter(LocalTableDefn.FILES_PROPERTY));
-
+    assertEquals(1, parameterizedTable.parameters().size());
 
     // Apply files parameter
     Map<String, Object> params = ImmutableMap.of(
@@ -172,7 +171,7 @@ public class LocalTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = parameterizedTable.applyParameters(table, params);
 
-    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
     assertEquals("*", sourceSpec.getFilter());
     assertEquals(
@@ -196,9 +195,45 @@ public class LocalTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.applyParameters(table, params);
 
-    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource();
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
     assertEquals("/tmp", sourceSpec.getBaseDir().toString());
     assertEquals("Oct*.csv", sourceSpec.getFilter());
     assertTrue(sourceSpec.getFiles().isEmpty());
+  }
+
+  @Test
+  public void testSqlFunction()
+  {
+    List<PropertyDefn<?>> params = tableDefn.tableFunctionParameters();
+
+    // Ensure the relevant properties are available as SQL function parameters
+    PropertyDefn<?> fileDirProp = findProperty(params, LocalTableDefn.BASE_DIR_PROPERTY);
+    assertNotNull(fileDirProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(fileDirProp));
+
+    PropertyDefn<?> filesProp = findProperty(params, LocalTableDefn.FILES_PROPERTY);
+    assertNotNull(filesProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(fileDirProp));
+
+    PropertyDefn<?> formatProp = findProperty(params, FormattedExternalTableDefn.FORMAT_PROPERTY);
+    assertNotNull(formatProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(formatProp));
+
+    // Pretend to accept values for the SQL parameters.
+    final ResolvedTable table = TableBuilder.of(tableDefn)
+        .property(fileDirProp.name(), fileDirProp.decodeSqlValue("/tmp", mapper))
+        .property(filesProp.name(), filesProp.decodeSqlValue("Oct.csv, Nov.csv", mapper))
+        .property(formatProp.name(), formatProp.decodeSqlValue(InputFormats.CSV_FORMAT_TYPE, mapper))
+        .column("x", Columns.VARCHAR)
+        .column("y", Columns.BIGINT)
+        .buildResolved(mapper);
+
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
+    LocalInputSource sourceSpec = (LocalInputSource) externSpec.inputSource;
+    assertEquals("/tmp", sourceSpec.getBaseDir().toString());
+    assertEquals(
+        Arrays.asList(new File("Oct.csv"), new File("Nov.csv")),
+        sourceSpec.getFiles()
+    );
   }
 }
