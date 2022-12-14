@@ -25,33 +25,32 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanQuery;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
 public class SorterTests
 {
 
-  public void addData(Sorter<Integer> sorter, List<Integer> datas)
+  public void addData(Sorter<Integer> sorter, Integer[] datas)
   {
     sorter.add(datas);
   }
 
   @Nonnull
-  protected Comparator<List<Integer>> getMultiColumnSorterElementComparator(
+  protected Comparator<Comparable[]> getMultiColumnSorterElementComparator(
       List<String> orderByDirection,
       List<Integer> orderByIdxs
   )
   {
-    Comparator<List<Integer>> comparator = (o1, o2) -> {
+    Comparator<Comparable[]> comparator = (o1, o2) -> {
       for (int i = 0; i < orderByIdxs.size(); i++) {
         int compare;
         if (ScanQuery.Order.ASCENDING.equals(ScanQuery.Order.fromString(orderByDirection.get(i)))) {
           compare = Comparators.<Comparable>naturalNullsFirst()
-                               .compare(o1.get(orderByIdxs.get(i)), o2.get(orderByIdxs.get(i)));
+                               .compare(o1[orderByIdxs.get(i)], o2[orderByIdxs.get(i)]);
         } else {
           compare = Comparators.<Comparable>naturalNullsFirst()
-                               .compare(o2.get(orderByIdxs.get(i)), o1.get(orderByIdxs.get(i)));
+                               .compare(o2[orderByIdxs.get(i)], o1[orderByIdxs.get(i)]);
         }
         if (compare != 0) {
           return compare;
@@ -62,9 +61,9 @@ public class SorterTests
     return comparator;
   }
 
-  private List<Object> getDatas(Object... datas)
+  private Comparable[] getDatas(Comparable... datas)
   {
-    return Arrays.asList(datas);
+    return datas;
   }
 
   protected void singleColumnAscSortDatas(Sorter<Object> sorter, List<Integer> expectedValues)

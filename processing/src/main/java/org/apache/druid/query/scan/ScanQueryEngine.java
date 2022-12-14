@@ -73,9 +73,6 @@ public class ScanQueryEngine
   )
   {
     QueryableIndex queryableIndex = segment.asQueryableIndex();
-    if (!ScanQueries.canPushSort(query) && Objects.nonNull(queryableIndex)) {
-      return new QueryableIndexOrderbyRunner().process(query, segment, responseContext, queryMetrics, queryableIndex);
-    }
 
     if (queryableIndex != null && queryableIndex.isFromTombstone()) {
       return Sequences.empty();
@@ -135,6 +132,9 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     if (!ScanQueries.canPushSort(query)) {
+      if (Objects.nonNull(queryableIndex)) {
+        return new QueryableIndexOrderbyRunner().process(query, segment, queryMetrics, queryableIndex, allColumns, filter, intervals);
+      }
       return processWithMultiColumnSort(query, legacy, hasTimeout, timeoutAt, adapter, allColumns, intervals, segmentId, filter, queryMetrics);
     }
     // If the row count is not set, set it to 0, else do nothing.
@@ -338,7 +338,7 @@ public class ScanQueryEngine
                         }
                         Sorter<Object> sorter = new QueueBasedSorter<>(limit, query.getGenericResultOrdering());
                         rowsToSorter(sorter);
-                        final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
+                        final List<Object[]> sortedElements = new ArrayList<>(sorter.size());
                         Iterators.addAll(sortedElements, sorter.drainElement());
                         return new ScanResultValue(segmentId.toString(), allColumns, sortedElements);
                       }
@@ -346,24 +346,24 @@ public class ScanQueryEngine
                       private void rowsToSorter(Sorter<Object> sorter)
                       {
                         for (; !cursor.isDone(); cursor.advance()) {
-                          final List<Object> theEvent = new ArrayList<>(allColumns.size());
+                          final Object[] theEvent = new Object[allColumns.size()];
                           for (int j = 0; j < allColumns.size(); j++) {
-                            theEvent.add(getColumnValue(j));
+                            theEvent[j] = getColumnValue(j);
                           }
                           sorter.add(theEvent);
                         }
                       }
 
-                      private Object getColumnValue(int i)
+                      private Comparable getColumnValue(int i)
                       {
                         final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
-                        final Object value;
+                        final Comparable value;
 
                         if (legacy && allColumns.get(i).equals(LEGACY_TIMESTAMP_KEY)) {
                           Preconditions.checkNotNull(selector);
                           value = DateTimes.utc((long) selector.getObject());
                         } else {
-                          value = selector == null ? null : selector.getObject();
+                          value = selector == null ? null : (Comparable) selector.getObject();
                         }
 
                         return value;

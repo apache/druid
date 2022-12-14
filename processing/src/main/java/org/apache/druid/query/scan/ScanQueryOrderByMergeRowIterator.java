@@ -30,7 +30,6 @@ import org.apache.druid.utils.CollectionUtils;
 
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -68,33 +67,33 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
       scanRowsLimit = Math.toIntExact(query.getScanRowsLimit());
     }
 
-    Comparator<List<Object>> comparator = query.getGenericResultOrdering();
-    Sorter<Object> sorter = new QueueBasedSorter<Object>(scanRowsLimit, comparator);
+    Comparator<Object[]> comparator = query.getGenericResultOrdering();
+    Sorter<Object> sorter = new QueueBasedSorter<>(scanRowsLimit, comparator);
     List<String> columns = new ArrayList<>();
     while (!yielder.isDone()) {
       ScanResultValue srv = yielder.get();
       columns = columns.isEmpty() ? srv.getColumns() : columns;
-      List<List<Object>> events = (List<List<Object>>) srv.getEvents();
+      List<Object[]> events = (List<Object[]>) srv.getEvents();
       for (Object event : events) {
         if (event instanceof LinkedHashMap) {
-          sorter.add(Arrays.asList(((LinkedHashMap) event).values().toArray()));
+          sorter.add(((LinkedHashMap) event).values().toArray());
         } else {
-          sorter.add((List<Object>) event);
+          sorter.add((Object[]) event);
         }
       }
       yielder = yielder.next(null);
       count++;
     }
-    final List<List<Object>> sortedElements = new ArrayList<>(sorter.size());
+    final List<Object[]> sortedElements = new ArrayList<>(sorter.size());
     Iterators.addAll(sortedElements, sorter.drainElement());
 
     if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
       List<Map<String, Object>> events = new ArrayList<>(sortedElements.size());
-      for (List<Object> event : sortedElements) {
+      for (Object[] event : sortedElements) {
         Map<String, Object> eventMap = CollectionUtils.newLinkedHashMapWithExpectedSize(columns.size());
         events.add(eventMap);
         for (int j = 0; j < columns.size(); j++) {
-          eventMap.put(columns.get(j), event.get(j));
+          eventMap.put(columns.get(j), event[j]);
         }
       }
       return new ScanResultValue(null, columns, events);

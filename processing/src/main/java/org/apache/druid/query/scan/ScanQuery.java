@@ -456,11 +456,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return idxArray;
   }
 
-  public Ordering<List<Object>> getGenericResultOrdering()
+  public Ordering<Object[]> getGenericResultOrdering()
+  {
+    int[] sortColumnIdxs = getSortColumnIndexes();
+    return getGenericResultOrdering(sortColumnIdxs);
+  }
+
+  public Ordering<Object[]> getGenericResultOrdering(int[] sortColumnIdxs)
   {
     List<String> orderByDirection = getOrderBys().stream()
-                                                 .map(orderBy -> orderBy.getOrder().toString())
-                                                 .collect(Collectors.toList());
+                                         .map(orderBy -> orderBy.getOrder().toString())
+                                         .collect(Collectors.toList());
 
 
     Ordering<Comparable>[] orderings = new Ordering[orderByDirection.size()];
@@ -470,22 +476,19 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
                      : Comparators.<Comparable>naturalNullsFirst().reverse();
     }
 
-    Comparator<List<Object>> comparator = new Comparator<List<Object>>()
+    Comparator<Object[]> comparator = new Comparator<Object[]>()
     {
-
-      int[] sortColumnIdxs = getSortColumnIndexes();
-
       @Override
       public int compare(
-          List<Object> o1,
-          List<Object> o2
+          Object[] o1,
+          Object[] o2
       )
       {
         for (int i = 0; i < sortColumnIdxs.length; i++) {
           int idx = sortColumnIdxs[i];
           int compare = orderings[i].compare(
-              (Comparable) o1.get(idx),
-              (Comparable) o2.get(idx)
+              (Comparable) o1[idx],
+              (Comparable) o2[idx]
           );
           if (compare != 0) {
             return compare;
@@ -496,6 +499,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     };
     return Ordering.from(comparator);
   }
+
 
   @Nullable
   @Override
