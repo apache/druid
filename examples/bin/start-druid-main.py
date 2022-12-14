@@ -37,7 +37,7 @@ TASK_JAVA_OPTS_PROPERTY = "druid.indexer.runner.javaOptsArray"
 TASK_WORKER_CAPACITY_PROPERTY = "druid.worker.capacity"
 TASK_COUNT = "task-count"
 TASK_MEM_TYPE_LOW = "low"
-TASK_MEM_TYPE_LOW = "medium"
+TASK_MEM_TYPE_MEDIUM = "medium"
 TASK_MEM_TYPE_HIGH = "high"
 TASK_MEM_MAP = {
     TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256m"],
@@ -459,7 +459,7 @@ def compute_tasks_memory(allocated_memory):
     elif allocated_memory >= 2048:
         task_count = int(allocated_memory / 1024)
         memory_type = TASK_MEM_TYPE_MEDIUM
-        task_memory = 1024
+        task_memory_mb = 1024
     else:
         task_count = 2
         memory_type = TASK_MEM_TYPE_LOW
