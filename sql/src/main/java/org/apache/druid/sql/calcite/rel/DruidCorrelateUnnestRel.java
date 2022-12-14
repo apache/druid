@@ -84,6 +84,12 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         logicalCorrelate.getRowType().getFieldNames(),
         logicalCorrelate.getRowType()
     );
+
+    final RowSignature rowSignature1 = RowSignatures.fromRelDataType(
+        getRowType().getFieldNames(),
+        getRowType()
+    );
+
     final DruidExpression expression = Expressions.toDruidExpression(
         getPlannerContext(),
         rowSignature,
@@ -102,7 +108,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         null
     );
 
-    DruidQuery query = baseQueryRel.getPartialDruidQuery().build(
+    DruidQuery query = partialQuery.build(
         dataSource,
         rowSignature,
         getPlannerContext(),
