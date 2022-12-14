@@ -2,6 +2,7 @@ package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -18,6 +19,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   private final LogicalCorrelate logicalCorrelate;
   private final DruidUnnestDatasourceRel unnestDatasourceRel;
   private final PartialDruidQuery partialQuery;
+  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
 
   private DruidCorrelateUnnestRel(
       LogicalCorrelate logicalCorrelate,
@@ -61,7 +63,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     return new DruidCorrelateUnnestRel(
         logicalCorrelate,
-        baseQueryRel.withPartialQuery(newQueryBuilder),
+        baseQueryRel,
         unnestDatasourceRel,
         newQueryBuilder,
         getPlannerContext()
@@ -115,6 +117,16 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
+    /*return partialQuery.build(
+        DUMMY_DATA_SOURCE,
+        RowSignatures.fromRelDataType(
+            logicalCorrelate.getRowType().getFieldNames(),
+            logicalCorrelate.getRowType()
+        ),
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        false
+    );*/
     return toDruidQuery(false);
   }
 

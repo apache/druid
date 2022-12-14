@@ -2670,7 +2670,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
                       "dim3",
-                      "dim3",
+                      "EXPR$0",
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -2678,7 +2678,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .columns(ImmutableList.of(
-                      "dim3"
+                      "d3"
                   ))
                   .build()
         ),
