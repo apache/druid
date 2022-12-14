@@ -129,6 +129,32 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertOnFoo1WithTimeFunctionWithSequential()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(
+                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                                                  ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                                              )
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedResultRows(expectedFooRows())
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnFoo1WithMultiValueDim()
   {
     RowSignature rowSignature = RowSignature.builder()
