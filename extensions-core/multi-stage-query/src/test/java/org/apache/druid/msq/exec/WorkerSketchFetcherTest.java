@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.util.concurrent.Futures;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -49,7 +51,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 import static org.easymock.EasyMock.mock;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,11 +90,19 @@ public class WorkerSketchFetcherTest
     doReturn(clusterBy).when(stageDefinition).getClusterBy();
     doReturn(25_000).when(stageDefinition).getMaxPartitionCount();
 
-    expectedPartitions1 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(mock(RowKey.class), mock(RowKey.class))));
-    expectedPartitions2 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(mock(RowKey.class), mock(RowKey.class))));
+    expectedPartitions1 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(
+        mock(RowKey.class),
+        mock(RowKey.class)
+    )));
+    expectedPartitions2 = new ClusterByPartitions(ImmutableList.of(new ClusterByPartition(
+        mock(RowKey.class),
+        mock(RowKey.class)
+    )));
 
-    doReturn(Either.value(expectedPartitions1)).when(stageDefinition).generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector1));
-    doReturn(Either.value(expectedPartitions2)).when(stageDefinition).generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector2));
+    doReturn(Either.value(expectedPartitions1)).when(stageDefinition)
+                                               .generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector1));
+    doReturn(Either.value(expectedPartitions2)).when(stageDefinition)
+                                               .generatePartitionsForShuffle(eq(mergedClusterByStatisticsCollector2));
 
     doReturn(
         mergedClusterByStatisticsCollector1,
@@ -129,11 +138,14 @@ public class WorkerSketchFetcherTest
       return Futures.immediateFuture(snapshot);
     }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), anyInt());
 
+    IntSet workersForStage = new IntAVLTreeSet();
+    workersForStage.addAll(ImmutableSet.of(0, 1, 2, 3, 4));
+
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
         workerIds,
         stageDefinition,
-        workerIds.stream().map(Integer::parseInt).collect(Collectors.toSet())
+        workersForStage
     );
 
     // Assert that the final result is complete and all other sketches returned have been merged.
@@ -156,7 +168,12 @@ public class WorkerSketchFetcherTest
     // Store snapshots in a queue
     final Queue<ClusterByStatisticsSnapshot> snapshotQueue = new ConcurrentLinkedQueue<>();
 
-    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(1L, ImmutableSet.of(0, 1, 2), 2L, ImmutableSet.of(0, 1, 4));
+    SortedMap<Long, Set<Integer>> timeSegmentVsWorkerMap = ImmutableSortedMap.of(
+        1L,
+        ImmutableSet.of(0, 1, 2),
+        2L,
+        ImmutableSet.of(0, 1, 4)
+    );
     doReturn(timeSegmentVsWorkerMap).when(completeKeyStatisticsInformation).getTimeSegmentVsWorkerMap();
 
     final CyclicBarrier barrier = new CyclicBarrier(3);
@@ -170,11 +187,14 @@ public class WorkerSketchFetcherTest
       return Futures.immediateFuture(snapshot);
     }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyInt(), anyLong());
 
+    IntSet workersForStage = new IntAVLTreeSet();
+    workersForStage.addAll(ImmutableSet.of(0, 1, 2, 3, 4));
+
     CompletableFuture<Either<Long, ClusterByPartitions>> eitherCompletableFuture = target.submitFetcherTask(
         completeKeyStatisticsInformation,
         ImmutableList.of("0", "1", "2", "3", "4"),
         stageDefinition,
-        ImmutableSet.of()
+        workersForStage
     );
 
     // Assert that the final result is complete and all other sketches returned have been merged.

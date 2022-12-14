@@ -263,9 +263,6 @@ public class ControllerImpl implements Controller
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stagePartitionCountsForLiveReports = new ConcurrentHashMap<>();
 
-  // Stage number -> set of immutable workers assigned for that stage
-  // Always accessed by the main controller thread.
-  private final Map<Integer, Set<Integer>> stageToWorkers = new HashMap<>();
 
   private WorkerSketchFetcher workerSketchFetcher;
   // Time at which the query started.
@@ -629,7 +626,8 @@ public class ControllerImpl implements Controller
                     completeKeyStatisticsInformation,
                     workerTaskIds,
                     stageDef,
-                    stageToWorkers.get(stageNumber) // we only need tasks which are active for this stage.
+                    queryKernel.getWorkerInputsForStage(stageId).workers()
+                    // we only need tasks which are active for this stage.
                 );
 
             // Add the listener to handle completion.
@@ -1070,7 +1068,6 @@ public class ControllerImpl implements Controller
     );
 
     final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
-    stageToWorkers.put(stageNumber, ImmutableSet.copyOf(workOrders.keySet()));
 
     contactWorkersForStage(
         (netClient, taskId, workerNumber) -> netClient.postWorkOrder(taskId, workOrders.get(workerNumber)),

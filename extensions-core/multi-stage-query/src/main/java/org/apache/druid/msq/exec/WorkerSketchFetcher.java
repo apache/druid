@@ -20,6 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
@@ -78,7 +80,7 @@ public class WorkerSketchFetcher implements AutoCloseable
       CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
       List<String> workerTaskIds,
       StageDefinition stageDefinition,
-      Set<Integer> workersForStage
+      IntSet workersForStage
   )
   {
     ClusterBy clusterBy = stageDefinition.getClusterBy();
@@ -125,7 +127,7 @@ public class WorkerSketchFetcher implements AutoCloseable
   CompletableFuture<Either<Long, ClusterByPartitions>> inMemoryFullSketchMerging(
       StageDefinition stageDefinition,
       List<String> workerTaskIds,
-      Set<Integer> workersForStage
+      IntSet workersForStage
   )
   {
     CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
@@ -133,15 +135,15 @@ public class WorkerSketchFetcher implements AutoCloseable
     // Create a new key statistics collector to merge worker sketches into
     final ClusterByStatisticsCollector mergedStatisticsCollector =
         stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
-    final int workerCount = workerTaskIds.size();
+    final int workerCount = workersForStage.size();
     // Guarded by synchronized mergedStatisticsCollector
     final Set<Integer> finishedWorkers = new HashSet<>();
 
     log.info(
-        "Fetching stats using %s for stage[%d] for tasks[%s]",
+        "Fetching stats using %s for stage[%d] for workers[%s] ",
         ClusterStatisticsMergeMode.PARALLEL,
         stageDefinition.getStageNumber(),
-        String.join("", workerTaskIds)
+        workersForStage.stream().map(Object::toString).collect(Collectors.joining(","))
     );
 
     // Submit a task for each worker to fetch statistics

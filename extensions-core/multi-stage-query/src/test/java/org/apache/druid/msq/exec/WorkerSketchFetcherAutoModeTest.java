@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -85,7 +86,7 @@ public class WorkerSketchFetcherAutoModeTest
         completeKeyStatisticsInformation,
         Collections.emptyList(),
         stageDefinition,
-        Collections.emptySet()
+        IntSet.of()
     );
     verify(target, times(1)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(0)).sequentialTimeChunkMerging(any(), any(), any());
@@ -107,7 +108,7 @@ public class WorkerSketchFetcherAutoModeTest
         completeKeyStatisticsInformation,
         Collections.emptyList(),
         stageDefinition,
-        Collections.emptySet()
+        IntSet.of()
     );
     verify(target, times(0)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(1)).sequentialTimeChunkMerging(any(), any(), any());
@@ -129,7 +130,7 @@ public class WorkerSketchFetcherAutoModeTest
         completeKeyStatisticsInformation,
         Collections.emptyList(),
         stageDefinition,
-        Collections.emptySet()
+        IntSet.of()
     );
     verify(target, times(1)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(0)).sequentialTimeChunkMerging(any(), any(), any());
@@ -151,7 +152,7 @@ public class WorkerSketchFetcherAutoModeTest
         completeKeyStatisticsInformation,
         Collections.emptyList(),
         stageDefinition,
-        Collections.emptySet()
+        IntSet.of()
     );
     verify(target, times(0)).inMemoryFullSketchMerging(any(), any(), any());
     verify(target, times(1)).sequentialTimeChunkMerging(any(), any(), any());
