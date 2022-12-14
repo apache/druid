@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -65,8 +67,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -75,6 +79,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
+  private static final String NO_MATCH = "no";
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -221,6 +227,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnIndexSupplier xIndexSupplier = column.getColumnIndexSupplier(xPath);
     Assert.assertNotNull(xIndexSupplier);
     StringValueSetIndex xValueIndex = xIndexSupplier.as(StringValueSetIndex.class);
+    DruidPredicateIndex xPredicateIndex = xIndexSupplier.as(DruidPredicateIndex.class);
     NullValueIndex xNulls = xIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> yPath = NestedPathFinder.parseJsonPath("$.y");
@@ -231,6 +238,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnIndexSupplier yIndexSupplier = column.getColumnIndexSupplier(yPath);
     Assert.assertNotNull(yIndexSupplier);
     StringValueSetIndex yValueIndex = yIndexSupplier.as(StringValueSetIndex.class);
+    DruidPredicateIndex yPredicateIndex = yIndexSupplier.as(DruidPredicateIndex.class);
     NullValueIndex yNulls = yIndexSupplier.as(NullValueIndex.class);
 
     final List<NestedPathPart> zPath = NestedPathFinder.parseJsonPath("$.z");
@@ -241,6 +249,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnIndexSupplier zIndexSupplier = column.getColumnIndexSupplier(zPath);
     Assert.assertNotNull(zIndexSupplier);
     StringValueSetIndex zValueIndex = zIndexSupplier.as(StringValueSetIndex.class);
+    DruidPredicateIndex zPredicateIndex = zIndexSupplier.as(DruidPredicateIndex.class);
     NullValueIndex zNulls = zIndexSupplier.as(NullValueIndex.class);
 
     Assert.assertEquals(ImmutableList.of(xPath, yPath, zPath), column.getNestedFields());
@@ -255,13 +264,24 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(row.get("x"), xSelector.getObject());
         Assert.assertEquals(row.get("x"), xSelector.getLong());
 
-        Assert.assertEquals(String.valueOf(row.get("x")), xDimSelector.getObject());
+        final String theString = String.valueOf(row.get("x"));
+        Assert.assertEquals(theString, xDimSelector.getObject());
         String dimSelectorLookupVal = xDimSelector.lookupName(xDimSelector.getRow().get(0));
-        Assert.assertEquals(String.valueOf(row.get("x")), dimSelectorLookupVal);
+        Assert.assertEquals(theString, dimSelectorLookupVal);
         Assert.assertEquals(xDimSelector.idLookup().lookupId(dimSelectorLookupVal), xDimSelector.getRow().get(0));
 
-        Assert.assertTrue(xValueIndex.forValue(String.valueOf(row.get("x"))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(xValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(xValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(xPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(xNulls.forNull().computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(xDimSelector.makeValueMatcher(theString).matches());
+        Assert.assertFalse(xDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(xDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+        Assert.assertFalse(xDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       } else {
         Assert.assertNull(xSelector.getObject());
         Assert.assertTrue(xSelector.isNull());
@@ -271,19 +291,41 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(xDimSelector.lookupName(xDimSelector.getRow().get(0)));
 
         Assert.assertTrue(xValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(xNulls.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(xPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(xDimSelector.makeValueMatcher((String) null).matches());
+        Assert.assertFalse(xDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(xDimSelector.makeValueMatcher(x -> x == null).matches());
+        Assert.assertFalse(xDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       }
       if (row.containsKey("y")) {
         Assert.assertEquals(row.get("y"), ySelector.getObject());
         Assert.assertEquals(row.get("y"), ySelector.getDouble());
 
-        Assert.assertEquals(String.valueOf(row.get("y")), yDimSelector.getObject());
+        final String theString = String.valueOf(row.get("y"));
+
+        Assert.assertEquals(theString, yDimSelector.getObject());
         String dimSelectorLookupVal = yDimSelector.lookupName(yDimSelector.getRow().get(0));
-        Assert.assertEquals(String.valueOf(row.get("y")), dimSelectorLookupVal);
+        Assert.assertEquals(theString, dimSelectorLookupVal);
         Assert.assertEquals(yDimSelector.idLookup().lookupId(dimSelectorLookupVal), yDimSelector.getRow().get(0));
 
-        Assert.assertTrue(yValueIndex.forValue(String.valueOf(row.get("y"))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(yValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(yValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(yPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(yNulls.forNull().computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(yDimSelector.makeValueMatcher(theString).matches());
+        Assert.assertFalse(yDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(yDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+        Assert.assertFalse(yDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       } else {
         Assert.assertNull(ySelector.getObject());
         Assert.assertTrue(ySelector.isNull());
@@ -293,18 +335,37 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(yDimSelector.lookupName(yDimSelector.getRow().get(0)));
 
         Assert.assertTrue(yValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(yPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(yPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(yNulls.forNull().computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(yDimSelector.makeValueMatcher((String) null).matches());
+        Assert.assertFalse(yDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(yDimSelector.makeValueMatcher(x -> x == null).matches());
+        Assert.assertFalse(yDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       }
       if (row.containsKey("z")) {
         Assert.assertEquals(row.get("z"), zSelector.getObject());
 
-        Assert.assertEquals(String.valueOf(row.get("z")), zDimSelector.getObject());
+        final String theString = String.valueOf(row.get("z"));
+        Assert.assertEquals(theString, zDimSelector.getObject());
         String dimSelectorLookupVal = zDimSelector.lookupName(zDimSelector.getRow().get(0));
-        Assert.assertEquals(String.valueOf(row.get("z")), dimSelectorLookupVal);
+        Assert.assertEquals(theString, dimSelectorLookupVal);
         Assert.assertEquals(zDimSelector.idLookup().lookupId(dimSelectorLookupVal), zDimSelector.getRow().get(0));
 
-        Assert.assertTrue(zValueIndex.forValue((String) row.get("z")).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(zValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(zValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(zPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(zValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(zValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(zPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(zNulls.forNull().computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(zDimSelector.makeValueMatcher(theString).matches());
+        Assert.assertFalse(zDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(zDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+        Assert.assertFalse(zDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       } else {
         Assert.assertNull(zSelector.getObject());
         Assert.assertTrue(zSelector.isNull());
@@ -314,7 +375,15 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(zDimSelector.lookupName(zDimSelector.getRow().get(0)));
 
         Assert.assertTrue(zValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(zPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(zValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(zNulls.forNull().computeBitmapResult(resultFactory).get(i));
+
+        Assert.assertTrue(zDimSelector.makeValueMatcher((String) null).matches());
+        Assert.assertFalse(zDimSelector.makeValueMatcher(NO_MATCH).matches());
+        Assert.assertTrue(zDimSelector.makeValueMatcher(x -> x == null).matches());
+        Assert.assertFalse(zDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
       }
       offset.increment();
     }

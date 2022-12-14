@@ -568,6 +568,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
+      final boolean inputNull = value == null;
       final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
@@ -578,7 +579,11 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         public double estimateSelectivity(int totalRows)
         {
           if (longValue == null) {
-            return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
+            if (inputNull) {
+              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
+            } else {
+              return 0.0;
+            }
           }
           final int globalId = longDictionary.indexOf(longValue);
           if (globalId < 0) {
@@ -591,7 +596,11 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           if (longValue == null) {
-            return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
+            if (inputNull) {
+              return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
+            } else {
+              return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
+            }
           }
           final int globalId = longDictionary.indexOf(longValue);
           if (globalId < 0) {
@@ -767,6 +776,7 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
+      final boolean inputNull = value == null;
       final Double doubleValue = Strings.isNullOrEmpty(value) ? null : Doubles.tryParse(value);
       return new SimpleBitmapColumnIndex()
       {
@@ -776,7 +786,11 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         public double estimateSelectivity(int totalRows)
         {
           if (doubleValue == null) {
-            return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
+            if (inputNull) {
+              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
+            } else {
+              return 0.0;
+            }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
           if (globalId < 0) {
@@ -789,7 +803,11 @@ public class NestedFieldLiteralColumnIndexSupplier<TStringDictionary extends Ind
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
         {
           if (doubleValue == null) {
-            return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
+            if (inputNull) {
+              return bitmapResultFactory.wrapDimensionValue(getBitmap(localDictionary.indexOf(0)));
+            } else {
+              return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
+            }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
           if (globalId < 0) {
