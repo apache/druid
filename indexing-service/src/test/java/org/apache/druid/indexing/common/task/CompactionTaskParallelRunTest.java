@@ -52,7 +52,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -62,7 +61,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -94,7 +93,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
 @RunWith(Parameterized.class)
 public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervisorTaskTest
@@ -880,46 +878,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       return baseToolbox;
     } else {
       return new TaskToolbox.Builder(baseToolbox)
-          .segmentCacheManager(
-              new SegmentCacheManager()
-              {
-                @Override
-                public boolean isSegmentCached(DataSegment segment)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-
-                @Override
-                public File getSegmentFiles(DataSegment segment)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-
-                @Override
-                public boolean reserve(DataSegment segment)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-
-                @Override
-                public boolean release(DataSegment segment)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-
-                @Override
-                public void cleanup(DataSegment segment)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-
-                @Override
-                public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-                {
-                  throw new ISE("Expected no segment fetches by the compaction task");
-                }
-              }
-          )
+          .segmentCacheManager(new NoopSegmentCacheManager())
           .build();
     }
   }

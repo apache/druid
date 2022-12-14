@@ -24,6 +24,7 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
@@ -48,7 +49,7 @@ public class FirehoseToInputSourceReaderAdaptor implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read() throws IOException
+  public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
     return new CloseableIterator<InputRow>()
     {
