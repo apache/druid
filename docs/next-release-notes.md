@@ -98,12 +98,6 @@ https://github.com/apache/druid/pull/13092
 
 ## Multi-stage query task engine
 
-### Worker retry
-
-The MSQ controller task now retries worker tasks if they fail up to two times. The maximum number of total retries for a job across all workers is 30.
-
-https://github.com/apache/druid/pull/13353
-
 ### CLUSTERED BY limit
 
 When using the MSQ task engine to ingest data, there is now a 1,500 column limit to the number of columns that can be passed in the CLUSTERED BY clause.
