@@ -560,28 +560,26 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (unparseableEvents.getValue() instanceof List) {
         List<Object> buildSegments = (List) unparseableEvents.getValue();
         for (Object buildSegment : buildSegments) {
-          if (buildSegment instanceof Map) {
-            Map<String, Object> unparseableEventDetails = (Map) buildSegment;
-            if ("unparseable".equals(unparseableEventDetails.get("errorType"))) {
-              Object input = unparseableEventDetails.get("input");
-              Object details = unparseableEventDetails.get("details");
-              Long timeOfExceptionMillis = (Long) unparseableEventDetails.get("timeOfExceptionMillis");
-              DateTime dateTime = new DateTime(timeOfExceptionMillis);
-              String service = toolbox.getTaskExecutorNode().getServiceName();
-              String host = toolbox.getTaskExecutorNode().getHost();
-              int port = toolbox.getTaskExecutorNode().getPlaintextPort();
-              String dataSource = this.getDataSource();
-              String groupId = getGroupId();
-              Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
-                  .put("supervisorId", dataSource)
-                  .put("dataSource", dataSource)
-                  .put("groupId", groupId)
-                  .put("input", input)
-                  .put("details", details)
-                  .build();
-              Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
-              toolbox.getEmitter().emit(event);
-            }
+          if (buildSegment instanceof ParseExceptionReport) {
+            ParseExceptionReport parseExceptionReport = (ParseExceptionReport) buildSegment;
+            Object input = parseExceptionReport.getInput();
+            Object details = parseExceptionReport.getDetails();
+            long timeOfExceptionMillis = parseExceptionReport.getTimeOfExceptionMillis();
+            DateTime dateTime = new DateTime(timeOfExceptionMillis);
+            String service = toolbox.getTaskExecutorNode().getServiceName();
+            String host = toolbox.getTaskExecutorNode().getHost();
+            int port = toolbox.getTaskExecutorNode().getPlaintextPort();
+            String dataSource = this.getDataSource();
+            String groupId = getGroupId();
+            Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
+                .put("supervisorId", dataSource)
+                .put("dataSource", dataSource)
+                .put("groupId", groupId)
+                .put("input", input)
+                .put("details", details)
+                .build();
+            Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
+            toolbox.getEmitter().emit(event);
           }
         }
       }
