@@ -146,7 +146,7 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     final int globalId = dictionary.get(id);
     if (globalId < globalDictionary.size()) {
       return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-    } else if (globalId < adjustLongId + globalLongDictionary.size()) {
+    } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
       return String.valueOf(globalLongDictionary.get(globalId - adjustLongId));
     } else {
       return String.valueOf(globalDoubleDictionary.get(globalId - adjustDoubleId));
@@ -156,7 +156,11 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
   @Override
   public int lookupId(String name)
   {
-    return dictionary.indexOf(getIdFromGlobalDictionary(name));
+    final int globalId = getIdFromGlobalDictionary(name);
+    if (globalId < 0) {
+      return -1;
+    }
+    return dictionary.indexOf(globalId);
   }
 
   @Override
@@ -179,9 +183,17 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
     if (singleType != null) {
       switch (singleType.getType()) {
         case LONG:
-          return globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          final int globalLong = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+          if (globalLong < 0) {
+            return -1;
+          }
+          return globalLong + adjustLongId;
         case DOUBLE:
-          return globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          final int globalDouble = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+          if (globalDouble < 0) {
+            return -1;
+          }
+          return globalDouble + adjustDoubleId;
         default:
           return globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       }
@@ -189,9 +201,15 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
       int candidate = globalDictionary.indexOf(StringUtils.toUtf8ByteBuffer(val));
       if (candidate < 0) {
         candidate = globalLongDictionary.indexOf(GuavaUtils.tryParseLong(val));
+        if (candidate >= 0) {
+          candidate += adjustLongId;
+        }
       }
       if (candidate < 0) {
         candidate = globalDoubleDictionary.indexOf(Doubles.tryParse(val));
+        if (candidate >= 0) {
+          candidate += adjustDoubleId;
+        }
       }
       return candidate;
     }
