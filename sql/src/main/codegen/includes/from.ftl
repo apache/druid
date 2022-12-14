@@ -197,12 +197,6 @@
                  tableRef = ParameterizeOperator.PARAM.createCall(tableRef, paramList);
              }
          ]
-         [
-             [ <EXTEND> ]
-             extendList = ExtendList() {
-                 tableRef = extend(tableRef, extendList);
-             }
-         ]
          over = TableOverOpt() {
              if (over != null) {
                  tableRef = SqlStdOperatorTable.OVER.createCall(
