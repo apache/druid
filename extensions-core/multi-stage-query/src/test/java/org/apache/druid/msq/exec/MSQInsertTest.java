@@ -106,6 +106,11 @@ public class MSQInsertTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         channelCountersWith().rows(20).bytes(toRead.length())
+                                              .files(1).totalFiles(1).build(),
+                         0, 0, "input0"
+                     )
                      .verifyResults();
 
   }

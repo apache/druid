@@ -74,7 +74,8 @@ An example output is shown below:
         },
         "buildSegments": {
           "processed": 5390324,
-          "processedWithError": 5109573212,
+          "processedBytes": 5109573212,
+          "processedWithError": 0,
           "thrownAway": 0,
           "unparseable": 0
         }

@@ -69,6 +69,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -168,7 +172,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -176,6 +179,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -613,6 +617,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return new IngestTester();
   }
 
+  public static CounterSnapshotBuilder channelCountersWith()
+  {
+    return new CounterSnapshotBuilder();
+  }
+
   private ObjectMapper setupObjectMapper(Injector injector)
   {
     ObjectMapper mapper = injector.getInstance(ObjectMapper.class)
@@ -745,7 +754,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-  public abstract class MSQTester<Builder extends MSQTester<?>>
+  public abstract class MSQTester<Builder extends MSQTester<Builder>>
   {
     protected String sql = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
@@ -758,78 +767,90 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected final Map<Integer, Map<Integer, Map<String, QueryCounterSnapshot>>>
+        expectedStageWorkerChannelToCounters = new HashMap<>();
 
     private boolean hasRun = false;
 
-    @SuppressWarnings("unchecked")
     public Builder setSql(String sql)
     {
       this.sql = sql;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedRowSignature(RowSignature expectedRowSignature)
     {
       Preconditions.checkArgument(!expectedRowSignature.equals(RowSignature.empty()), "Row signature cannot be empty");
       this.expectedRowSignature = expectedRowSignature;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
       this.expectedSegments = expectedSegments;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
       Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
       this.expectedResultRows = expectedResultRows;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
     {
       this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
     {
       this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQFault(MSQFault MSQFault)
     {
       this.expectedMSQFault = MSQFault;
-      return (Builder) this;
+      return asBuilder();
     }
 
     public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
     {
       this.expectedMSQFaultClass = expectedMSQFaultClass;
+      return asBuilder();
+    }
+
+    public Builder setExpectedCountersForStageWorkerChannel(
+        QueryCounterSnapshot counterSnapshot,
+        int stage,
+        int worker,
+        String channel
+    )
+    {
+      this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
+                                               .computeIfAbsent(worker, w -> new HashMap<>())
+                                               .put(channel, counterSnapshot);
+      return asBuilder();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Builder asBuilder()
+    {
       return (Builder) this;
     }
 
@@ -943,7 +964,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           return;
         }
-        getPayloadOrThrow(controllerId);
+        MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
+        verifyCounters(reportPayload.getCounters());
+
         MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
         log.info(
             "found generated segments: %s",
@@ -1055,6 +1078,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
 
+    private void verifyCounters(CounterSnapshotsTree counterSnapshotsTree)
+    {
+      Assert.assertNotNull(counterSnapshotsTree);
+
+      final Map<Integer, Map<Integer, CounterSnapshots>> stageWorkerToSnapshots = counterSnapshotsTree.copyMap();
+      expectedStageWorkerChannelToCounters.forEach((stage, expectedWorkerChannelToCounters) -> {
+        final Map<Integer, CounterSnapshots> workerToCounters = stageWorkerToSnapshots.get(stage);
+        Assert.assertNotNull("No counters for stage " + stage, workerToCounters);
+
+        expectedWorkerChannelToCounters.forEach((worker, expectedChannelToCounters) -> {
+          CounterSnapshots counters = workerToCounters.get(worker);
+          Assert.assertNotNull(
+              StringUtils.format("No counters for stage [%d], worker [%d]", stage, worker),
+              counters
+          );
+
+          final Map<String, QueryCounterSnapshot> channelToCounters = counters.getMap();
+          expectedChannelToCounters.forEach(
+              (channel, counter) -> Assert.assertEquals(
+                  StringUtils.format(
+                      "Counter mismatch for stage [%d], worker [%d], channel [%s]",
+                      stage,
+                      worker,
+                      channel
+                  ),
+                  counter,
+                  channelToCounters.get(channel)
+              )
+          );
+        });
+      });
+    }
+
     public void verifyExecutionError()
     {
       Preconditions.checkArgument(sql != null, "sql cannot be null");
@@ -1161,6 +1217,50 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql);
       }
+    }
+  }
+
+  public static class CounterSnapshotBuilder
+  {
+    private long[] rows;
+    private long[] bytes;
+    private long[] frames;
+    private long[] files;
+    private long[] totalFiles;
+
+    public CounterSnapshotBuilder rows(long... rows)
+    {
+      this.rows = rows;
+      return this;
+    }
+
+    public CounterSnapshotBuilder bytes(long... bytes)
+    {
+      this.bytes = bytes;
+      return this;
+    }
+
+    public CounterSnapshotBuilder frames(long... frames)
+    {
+      this.frames = frames;
+      return this;
+    }
+
+    public CounterSnapshotBuilder files(long... files)
+    {
+      this.files = files;
+      return this;
+    }
+
+    public CounterSnapshotBuilder totalFiles(long... totalFiles)
+    {
+      this.totalFiles = totalFiles;
+      return this;
+    }
+
+    public QueryCounterSnapshot build()
+    {
+      return new ChannelCounters.Snapshot(rows, bytes, frames, files, totalFiles);
     }
   }
 }
