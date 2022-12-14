@@ -84,7 +84,7 @@ SERVICE_MEMORY_RATIO = {
 
 MINIMUM_MEMORY_MB = {
     MIDDLE_MANAGER: 64,
-    ROUTER: 128,
+    ROUTER: 256,
     TASKS: 1024,
     BROKER: 900,
     COORDINATOR: 256,
@@ -486,6 +486,8 @@ def build_memory_config(service, allocated_memory):
     else:
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
+        if service == ROUTER:
+            direct_memory = 128
         heap_memory = int(heap_memory)
 
         if direct_memory == 0:
