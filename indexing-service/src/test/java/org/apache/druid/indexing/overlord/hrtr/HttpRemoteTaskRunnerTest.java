@@ -80,6 +80,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.easymock.EasyMock.isA;
 
@@ -1604,6 +1605,63 @@ public class HttpRemoteTaskRunnerTest
         StringUtils.format("Actual message is: %s", future.get().getErrorMsg()),
         future.get().getErrorMsg().startsWith("Failed to assign this task")
     );
+  }
+
+  @Test
+  public void testShutdown()
+  {
+    List<Object> listenerNotificationsAccumulator = new ArrayList<>();
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForTestTaskAddedOrUpdated(
+        EasyMock.createStrictMock(TaskStorage.class),
+        listenerNotificationsAccumulator
+    );
+
+    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+
+    WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
+    workerHolder.resetContinuouslyFailedTasksCount();
+    EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
+    EasyMock.replay(workerHolder);
+
+    taskRunner.start();
+
+    Task pendingTask = NoopTask.create("pendingTask");
+    taskRunner.run(pendingTask);
+    // Pending task is not cleaned up immediately
+    taskRunner.shutdown(pendingTask.getId(), "Forced shutdown");
+    Assert.assertTrue(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(pendingTask.getId())
+    );
+
+    Task completedTask = NoopTask.create("completedTask");
+    taskRunner.run(completedTask);
+    taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
+        completedTask,
+        TaskStatus.success(completedTask.getId()),
+        TaskLocation.create("worker", 1, 2)
+    ), workerHolder);
+    Assert.assertEquals(completedTask.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+
+    // Completed tasks are cleaned up when shutdown is invokded on them (by TaskQueue)
+    taskRunner.shutdown(completedTask.getId(), "Cleanup");
+    Assert.assertFalse(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(completedTask.getId())
+    );
+
   }
 
   private HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
