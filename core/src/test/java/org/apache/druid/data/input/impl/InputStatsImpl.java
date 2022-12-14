@@ -17,29 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.segment.loading;
+package org.apache.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.InputStats;
 
-import java.io.File;
-
-/**
- */
-public class LocalDataSegmentPusherConfig
+public class InputStatsImpl implements InputStats
 {
-  @JsonProperty
-  public File storageDirectory = new File("/tmp/druid/localStorage");
+  private long processedBytes;
 
-  @JsonProperty
-  public boolean zip = false;
-
-  public File getStorageDirectory()
+  @Override
+  public void incrementProcessedBytes(long incrementByValue)
   {
-    return storageDirectory;
+    processedBytes += incrementByValue;
   }
 
-  public boolean isZip()
+  @Override
+  public long getProcessedBytes()
   {
-    return zip;
+    return processedBytes;
   }
 }

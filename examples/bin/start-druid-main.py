@@ -50,6 +50,7 @@ HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
 TASKS = "tasks"
 INDEXER = "indexer"
+ZK = "zookeeper"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -65,7 +66,8 @@ SUPPORTED_SERVICES = [
     COORDINATOR,
     HISTORICAL,
     MIDDLE_MANAGER,
-    INDEXER
+    INDEXER,
+    ZK
 ]
 
 SERVICE_MEMORY_RATIO = {
@@ -115,6 +117,8 @@ def configure_parser():
 sample usage:
     start-druid
             Start up all the services (including zk).
+            services config is read from conf/druid/auto.
+            zk config is always read from conf/zk.
     start-druid -m=100g
             Start up all the services (including zk)
             using a total memory of 100GB.
@@ -133,11 +137,11 @@ sample usage:
             from the given root directory. Calculates memory requirements for
             each service, if required, using upto 80% of the total system memory.
     start-druid -m=100g \\
-    -s=broker,router \\
+    -s=broker,router,zookeeper \\
     -c=conf/druid/single-server/custom \\
-    --zk
             Starts broker, router and zookeeper.
-            zookeeper config is read from conf/zk.
+            Configs for broker and router are read from the specified root directory.
+            Config for zookeeper is read from conf/zk.
 """
     )
     parser.add_argument('--memory', '-m', type=str, required=False,
@@ -146,7 +150,7 @@ sample usage:
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
     parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
-                             '{broker, router, middleManager, historical, coordinator-overlord, indexer}. \n'
+                             '{broker, router, middleManager, historical, coordinator-overlord, indexer, zookeeper}. \n'
                              'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
                              'and zookeeper is started. e.g. -s=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
@@ -155,16 +159,13 @@ sample usage:
                              'This directory must contain \'_common\' directory with \n'
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
-                             'conf/druid/auto directory is used.\n')
+                             'conf/druid/auto directory is used.\n'
+                             'Note. zookeeper config cannot be overriden.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
-    parser.add_argument('--zk', '-zk', action='store_true',
-                        help='Specification to run zookeeper, \n'
-                             'zk config is picked up from conf/zk.')
     parser.add_argument('--verbose', action='store_true', help='Log details')
 
-    parser.set_defaults(zk=False)
     parser.set_defaults(compute=False)
     parser.set_defaults(verbose=False)
 
@@ -208,8 +209,6 @@ def parse_arguments(args):
 
     if args.compute:
         compute = True
-    if args.zk:
-        zk = True
     if args.config is not None:
         config = resolve_path(os.path.join(os.getcwd(), args.config))
         if is_dir(config) is False:
@@ -221,15 +220,20 @@ def parse_arguments(args):
 
         for service in services:
             if service not in SUPPORTED_SERVICES:
-                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, DEFAULT_SERVICES))
+                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, SUPPORTED_SERVICES))
 
             if service in service_list:
                 raise ValueError('{0} is specified multiple times'.format(service))
+
+            if service == ZK:
+                zk = True
+                continue
 
             service_list.append(service)
 
         if INDEXER in services and MIDDLE_MANAGER in services:
             raise ValueError('one of indexer and middleManager can run')
+
 
     if len(service_list) == 0:
         # start all services

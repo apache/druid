@@ -19,72 +19,51 @@
 
 package org.apache.druid.segment.incremental;
 
-import java.util.Map;
-
-public class SimpleRowIngestionMeters implements RowIngestionMeters
+/**
+ * Utility class to build {@link RowIngestionMetersTotals}, used in tests.
+ */
+public class RowMeters
 {
-  private long processed;
+  private long processedBytes;
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
 
-  @Override
-  public long getProcessed()
+  /**
+   * Creates a new {@link RowMeters}, that can be used to build an instance of
+   * {@link RowIngestionMetersTotals}.
+   */
+  public static RowMeters with()
   {
-    return processed;
+    return new RowMeters();
   }
 
-  @Override
-  public void incrementProcessed()
+  public RowMeters bytes(long processedBytes)
   {
-    processed++;
+    this.processedBytes = processedBytes;
+    return this;
   }
 
-  @Override
-  public long getProcessedWithError()
+  public RowMeters errors(long processedWithError)
   {
-    return processedWithError;
+    this.processedWithError = processedWithError;
+    return this;
   }
 
-  @Override
-  public void incrementProcessedWithError()
+  public RowMeters unparseable(long unparseable)
   {
-    processedWithError++;
+    this.unparseable = unparseable;
+    return this;
   }
 
-  @Override
-  public long getUnparseable()
+  public RowMeters thrownAway(long thrownAway)
   {
-    return unparseable;
+    this.thrownAway = thrownAway;
+    return this;
   }
 
-  @Override
-  public void incrementUnparseable()
+  public RowIngestionMetersTotals totalProcessed(long processed)
   {
-    unparseable++;
-  }
-
-  @Override
-  public long getThrownAway()
-  {
-    return thrownAway;
-  }
-
-  @Override
-  public void incrementThrownAway()
-  {
-    thrownAway++;
-  }
-
-  @Override
-  public RowIngestionMetersTotals getTotals()
-  {
-    return new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable);
-  }
-
-  @Override
-  public Map<String, Object> getMovingAverages()
-  {
-    throw new UnsupportedOperationException();
+    return new RowIngestionMetersTotals(processed, processedBytes, processedWithError, thrownAway, unparseable);
   }
 }

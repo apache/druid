@@ -21,20 +21,13 @@ package org.apache.druid.segment.incremental;
 
 import java.util.Map;
 
-public class MutableRowIngestionMeters implements RowIngestionMeters
+public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
   private long processed;
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
-
-  public MutableRowIngestionMeters()
-  {
-    this.processed = 0;
-    this.processedWithError = 0;
-    this.unparseable = 0;
-    this.thrownAway = 0;
-  }
+  private long processedBytes;
 
   @Override
   public long getProcessed()
@@ -46,6 +39,18 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
   public void incrementProcessed()
   {
     processed++;
+  }
+
+  @Override
+  public void incrementProcessedBytes(long increment)
+  {
+    processedBytes += increment;
+  }
+
+  @Override
+  public long getProcessedBytes()
+  {
+    return processedBytes;
   }
 
   @Override
@@ -87,7 +92,13 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
   @Override
   public RowIngestionMetersTotals getTotals()
   {
-    return new RowIngestionMetersTotals(processed, processedWithError, thrownAway, unparseable);
+    return new RowIngestionMetersTotals(
+        processed,
+        processedBytes,
+        processedWithError,
+        thrownAway,
+        unparseable
+    );
   }
 
   @Override
@@ -102,5 +113,6 @@ public class MutableRowIngestionMeters implements RowIngestionMeters
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
     this.thrownAway += rowIngestionMetersTotals.getThrownAway();
+    this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
   }
 }

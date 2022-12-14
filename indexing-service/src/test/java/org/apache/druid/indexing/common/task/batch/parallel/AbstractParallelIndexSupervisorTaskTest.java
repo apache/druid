@@ -831,6 +831,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     );
     Map<String, Object> emptyAverageMinuteMap = ImmutableMap.of(
         "processed", 0.0,
+        "processedBytes", 0.0,
         "unparseable", 0.0,
         "thrownAway", 0.0,
         "processedWithError", 0.0
