@@ -527,6 +527,124 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         };
       }
     }
+    if (singleType == null) {
+      return new ColumnValueSelector<Object>()
+      {
+
+        private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();
+        private int nullMark = -1;
+        private int offsetMark = -1;
+
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId < globalDictionary.size()) {
+            return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
+          } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
+            return globalLongDictionary.get(globalId - adjustLongId);
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId);
+          }
+        }
+
+        @Override
+        public float getFloat()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            assert NullHandling.replaceWithDefault();
+            return 0f;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to float
+            Float f = Floats.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return f == null ? 0f : f;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId).floatValue();
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId).floatValue();
+          }
+        }
+
+        @Override
+        public double getDouble()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            assert NullHandling.replaceWithDefault();
+            return 0.0;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to double
+            Double d = Doubles.tryParse(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return d == null ? 0.0 : d;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId).doubleValue();
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId);
+          }
+        }
+
+        @Override
+        public long getLong()
+        {
+          final int localId = column.get(offset.getOffset());
+          final int globalId = dictionary.get(localId);
+          if (globalId == 0) {
+            // zero
+            assert NullHandling.replaceWithDefault();
+            return 0L;
+          } else if (globalId < adjustLongId) {
+            // try to convert string to long
+            Long l = GuavaUtils.tryParseLong(StringUtils.fromUtf8(globalDictionary.get(globalId)));
+            return l == null ? 0L : l;
+          } else if (globalId < adjustDoubleId) {
+            return globalLongDictionary.get(globalId - adjustLongId);
+          } else {
+            return globalDoubleDictionary.get(globalId - adjustDoubleId).longValue();
+          }
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final int i = offset.getOffset();
+          if (i < offsetMark) {
+            // offset was reset, reset iterator state
+            nullMark = -1;
+            nullIterator = nullBitmap.peekableIterator();
+          }
+          offsetMark = i;
+          if (nullMark < i) {
+            nullIterator.advanceIfNeeded(offsetMark);
+            if (nullIterator.hasNext()) {
+              nullMark = nullIterator.next();
+            }
+          }
+          return nullMark == offsetMark;
+        }
+
+        @Override
+        public Class<?> classOfObject()
+        {
+          return Object.class;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("longColumn", longsColumn);
+          inspector.visit("nullBitmap", nullBitmap);
+        }
+      };
+    }
+
+    // single type strings, use a dimension selector
     return makeDimensionSelector(offset, null);
   }
 

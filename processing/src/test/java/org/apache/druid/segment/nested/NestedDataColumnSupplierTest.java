@@ -88,12 +88,12 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(new RoaringBitmapFactory());
 
   List<Map<String, Object>> data = ImmutableList.of(
-      ImmutableMap.of("x", 1L, "y", 1.0, "z", "a"),
-      ImmutableMap.of("y", 3.0, "z", "d"),
+      ImmutableMap.of("x", 1L, "y", 1.0, "z", "a", "v", "100"),
+      ImmutableMap.of("y", 3.0, "z", "d", "v", 1000L),
       ImmutableMap.of("x", 5L, "y", 5.0, "z", "b"),
-      ImmutableMap.of("x", 3L, "y", 4.0, "z", "c"),
-      ImmutableMap.of("x", 2L),
-      ImmutableMap.of("x", 4L, "y", 2.0, "z", "e")
+      ImmutableMap.of("x", 3L, "y", 4.0, "z", "c", "v", 3000.333),
+      ImmutableMap.of("x", 2L, "v", "40000"),
+      ImmutableMap.of("x", 4L, "y", 2.0, "z", "e", "v", 11111L)
   );
 
   Closer closer = Closer.create();
@@ -252,7 +252,18 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     DruidPredicateIndex zPredicateIndex = zIndexSupplier.as(DruidPredicateIndex.class);
     NullValueIndex zNulls = zIndexSupplier.as(NullValueIndex.class);
 
-    Assert.assertEquals(ImmutableList.of(xPath, yPath, zPath), column.getNestedFields());
+    final List<NestedPathPart> vPath = NestedPathFinder.parseJsonPath("$.v");
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE), column.getColumnTypes(vPath));
+    Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(vPath).getCapabilities().toColumnType());
+    ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, offset);
+    DimensionSelector vDimSelector = column.makeDimensionSelector(vPath, offset, null);
+    ColumnIndexSupplier vIndexSupplier = column.getColumnIndexSupplier(vPath);
+    Assert.assertNotNull(vIndexSupplier);
+    StringValueSetIndex vValueIndex = vIndexSupplier.as(StringValueSetIndex.class);
+    DruidPredicateIndex vPredicateIndex = vIndexSupplier.as(DruidPredicateIndex.class);
+    NullValueIndex vNulls = vIndexSupplier.as(NullValueIndex.class);
+
+    Assert.assertEquals(ImmutableList.of(vPath, xPath, yPath, zPath), column.getNestedFields());
 
     for (int i = 0; i < data.size(); i++) {
       Map row = data.get(i);
@@ -260,132 +271,73 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           JSON_MAPPER.writeValueAsString(row),
           JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject()))
       );
-      if (row.containsKey("x")) {
-        Assert.assertEquals(row.get("x"), xSelector.getObject());
-        Assert.assertEquals(row.get("x"), xSelector.getLong());
 
-        final String theString = String.valueOf(row.get("x"));
-        Assert.assertEquals(theString, xDimSelector.getObject());
-        String dimSelectorLookupVal = xDimSelector.lookupName(xDimSelector.getRow().get(0));
-        Assert.assertEquals(theString, dimSelectorLookupVal);
-        Assert.assertEquals(xDimSelector.idLookup().lookupId(dimSelectorLookupVal), xDimSelector.getRow().get(0));
+      testPath(row, i, "v", vSelector, vDimSelector, vValueIndex, vPredicateIndex, vNulls, null);
+      testPath(row, i, "x", xSelector, xDimSelector, xValueIndex, xPredicateIndex, xNulls, ColumnType.LONG);
+      testPath(row, i, "y", ySelector, yDimSelector, yValueIndex, yPredicateIndex, yNulls, ColumnType.DOUBLE);
+      testPath(row, i, "z", zSelector, zDimSelector, zValueIndex, zPredicateIndex, zNulls, ColumnType.STRING);
 
-        Assert.assertTrue(xValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(xValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(xPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xNulls.forNull().computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(xDimSelector.makeValueMatcher(theString).matches());
-        Assert.assertFalse(xDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(xDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
-        Assert.assertFalse(xDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      } else {
-        Assert.assertNull(xSelector.getObject());
-        Assert.assertTrue(xSelector.isNull());
-
-        Assert.assertEquals(0, xDimSelector.getRow().get(0));
-        Assert.assertNull(xDimSelector.getObject());
-        Assert.assertNull(xDimSelector.lookupName(xDimSelector.getRow().get(0)));
-
-        Assert.assertTrue(xValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(xNulls.forNull().computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(xPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(xDimSelector.makeValueMatcher((String) null).matches());
-        Assert.assertFalse(xDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(xDimSelector.makeValueMatcher(x -> x == null).matches());
-        Assert.assertFalse(xDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      }
-      if (row.containsKey("y")) {
-        Assert.assertEquals(row.get("y"), ySelector.getObject());
-        Assert.assertEquals(row.get("y"), ySelector.getDouble());
-
-        final String theString = String.valueOf(row.get("y"));
-
-        Assert.assertEquals(theString, yDimSelector.getObject());
-        String dimSelectorLookupVal = yDimSelector.lookupName(yDimSelector.getRow().get(0));
-        Assert.assertEquals(theString, dimSelectorLookupVal);
-        Assert.assertEquals(yDimSelector.idLookup().lookupId(dimSelectorLookupVal), yDimSelector.getRow().get(0));
-
-        Assert.assertTrue(yValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(yValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(yPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yNulls.forNull().computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(yDimSelector.makeValueMatcher(theString).matches());
-        Assert.assertFalse(yDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(yDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
-        Assert.assertFalse(yDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      } else {
-        Assert.assertNull(ySelector.getObject());
-        Assert.assertTrue(ySelector.isNull());
-
-        Assert.assertEquals(0, yDimSelector.getRow().get(0));
-        Assert.assertNull(yDimSelector.getObject());
-        Assert.assertNull(yDimSelector.lookupName(yDimSelector.getRow().get(0)));
-
-        Assert.assertTrue(yValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(yPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(yPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(yNulls.forNull().computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(yDimSelector.makeValueMatcher((String) null).matches());
-        Assert.assertFalse(yDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(yDimSelector.makeValueMatcher(x -> x == null).matches());
-        Assert.assertFalse(yDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      }
-      if (row.containsKey("z")) {
-        Assert.assertEquals(row.get("z"), zSelector.getObject());
-
-        final String theString = String.valueOf(row.get("z"));
-        Assert.assertEquals(theString, zDimSelector.getObject());
-        String dimSelectorLookupVal = zDimSelector.lookupName(zDimSelector.getRow().get(0));
-        Assert.assertEquals(theString, dimSelectorLookupVal);
-        Assert.assertEquals(zDimSelector.idLookup().lookupId(dimSelectorLookupVal), zDimSelector.getRow().get(0));
-
-        Assert.assertTrue(zValueIndex.forValue(theString).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(zValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(zPredicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(zValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(zValueIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(zPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(zNulls.forNull().computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(zDimSelector.makeValueMatcher(theString).matches());
-        Assert.assertFalse(zDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(zDimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
-        Assert.assertFalse(zDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      } else {
-        Assert.assertNull(zSelector.getObject());
-        Assert.assertTrue(zSelector.isNull());
-
-        Assert.assertEquals(0, zDimSelector.getRow().get(0));
-        Assert.assertNull(zDimSelector.getObject());
-        Assert.assertNull(zDimSelector.lookupName(zDimSelector.getRow().get(0)));
-
-        Assert.assertTrue(zValueIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(zPredicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(zValueIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(xPredicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(zNulls.forNull().computeBitmapResult(resultFactory).get(i));
-
-        Assert.assertTrue(zDimSelector.makeValueMatcher((String) null).matches());
-        Assert.assertFalse(zDimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(zDimSelector.makeValueMatcher(x -> x == null).matches());
-        Assert.assertFalse(zDimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
-      }
       offset.increment();
+    }
+  }
+
+  private void testPath(
+      Map row,
+      int rowNumber,
+      String path,
+      ColumnValueSelector<?> valueSelector,
+      DimensionSelector dimSelector,
+      StringValueSetIndex valueSetIndex,
+      DruidPredicateIndex predicateIndex,
+      NullValueIndex nullValueIndex,
+      @Nullable ColumnType singleType
+  )
+  {
+    if (row.containsKey(path) && row.get(path) != null) {
+      Assert.assertEquals(row.get(path), valueSelector.getObject());
+      if (ColumnType.LONG.equals(singleType)) {
+        Assert.assertEquals(row.get(path), valueSelector.getLong());
+      } else if (ColumnType.DOUBLE.equals(singleType)) {
+        Assert.assertEquals((double) row.get(path), valueSelector.getDouble(), 0.0);
+      }
+
+      final String theString = String.valueOf(row.get(path));
+      Assert.assertEquals(theString, dimSelector.getObject());
+      String dimSelectorLookupVal = dimSelector.lookupName(dimSelector.getRow().get(0));
+      Assert.assertEquals(theString, dimSelectorLookupVal);
+      Assert.assertEquals(dimSelector.idLookup().lookupId(dimSelectorLookupVal), dimSelector.getRow().get(0));
+
+      Assert.assertTrue(valueSetIndex.forValue(theString).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(theString))).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(theString)).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH))).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(rowNumber));
+
+      Assert.assertTrue(dimSelector.makeValueMatcher(theString).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, theString)).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+    } else {
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertTrue(valueSelector.isNull());
+
+      Assert.assertEquals(0, dimSelector.getRow().get(0));
+      Assert.assertNull(dimSelector.getObject());
+      Assert.assertNull(dimSelector.lookupName(dimSelector.getRow().get(0)));
+
+      Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null)).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(rowNumber));
+      Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH)).computeBitmapResult(resultFactory).get(rowNumber));
+
+      Assert.assertTrue(dimSelector.makeValueMatcher((String) null).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
+      Assert.assertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
+      Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
     }
   }
 
