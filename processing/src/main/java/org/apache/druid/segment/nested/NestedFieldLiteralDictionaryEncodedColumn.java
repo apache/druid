@@ -25,7 +25,6 @@ import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -246,7 +245,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0f;
         } else if (globalId < adjustLongId) {
           // try to convert string to float
@@ -266,7 +264,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0.0;
         } else if (globalId < adjustLongId) {
           // try to convert string to double
@@ -286,7 +283,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         final int globalId = dictionary.get(localId);
         if (globalId == 0) {
           // zero
-          assert NullHandling.replaceWithDefault();
           return 0L;
         } else if (globalId < adjustLongId) {
           // try to convert string to long
@@ -541,9 +537,9 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
         {
           final int localId = column.get(offset.getOffset());
           final int globalId = dictionary.get(localId);
-          if (globalId < globalDictionary.size()) {
+          if (globalId < adjustLongId) {
             return StringUtils.fromUtf8Nullable(globalDictionary.get(globalId));
-          } else if (globalId < globalDictionary.size() + globalLongDictionary.size()) {
+          } else if (globalId < adjustDoubleId) {
             return globalLongDictionary.get(globalId - adjustLongId);
           } else {
             return globalDoubleDictionary.get(globalId - adjustDoubleId);
@@ -557,7 +553,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
           final int globalId = dictionary.get(localId);
           if (globalId == 0) {
             // zero
-            assert NullHandling.replaceWithDefault();
             return 0f;
           } else if (globalId < adjustLongId) {
             // try to convert string to float
@@ -577,7 +572,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
           final int globalId = dictionary.get(localId);
           if (globalId == 0) {
             // zero
-            assert NullHandling.replaceWithDefault();
             return 0.0;
           } else if (globalId < adjustLongId) {
             // try to convert string to double
@@ -597,7 +591,6 @@ public class NestedFieldLiteralDictionaryEncodedColumn<TStringDictionary extends
           final int globalId = dictionary.get(localId);
           if (globalId == 0) {
             // zero
-            assert NullHandling.replaceWithDefault();
             return 0L;
           } else if (globalId < adjustLongId) {
             // try to convert string to long

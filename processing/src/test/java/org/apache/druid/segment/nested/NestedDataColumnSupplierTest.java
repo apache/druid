@@ -300,6 +300,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       } else if (ColumnType.DOUBLE.equals(singleType)) {
         Assert.assertEquals((double) row.get(path), valueSelector.getDouble(), 0.0);
       }
+      Assert.assertFalse(valueSelector.isNull());
 
       final String theString = String.valueOf(row.get(path));
       Assert.assertEquals(theString, dimSelector.getObject());
