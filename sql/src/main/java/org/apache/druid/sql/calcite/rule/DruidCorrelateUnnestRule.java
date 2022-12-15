@@ -6,6 +6,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -108,6 +109,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         ),
         druidQueryRel,
         unnestDatasourceRel,
+        leftFilter,
         plannerContext
     );
 

@@ -1,5 +1,6 @@
 package org.apache.druid.sql.calcite.rel;
 
+import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.query.TableDataSource;
@@ -19,6 +20,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   private final LogicalCorrelate logicalCorrelate;
   private final DruidUnnestDatasourceRel unnestDatasourceRel;
   private final PartialDruidQuery partialQuery;
+  private final Filter baseFilter;
+
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
 
   private DruidCorrelateUnnestRel(
@@ -26,6 +29,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       DruidQueryRel druidQueryRel,
       DruidUnnestDatasourceRel unnestDatasourceRel,
       PartialDruidQuery partialDruidQuery,
+      Filter baseFilter,
       PlannerContext plannerContext
   )
   {
@@ -34,12 +38,14 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     this.logicalCorrelate = logicalCorrelate;
     this.unnestDatasourceRel = unnestDatasourceRel;
     this.partialQuery = partialDruidQuery;
+    this.baseFilter = baseFilter;
   }
 
   public static DruidCorrelateUnnestRel create(
       LogicalCorrelate logicalCorrelate,
       DruidQueryRel druidQueryRel,
       DruidUnnestDatasourceRel unnestDatasourceRel,
+      Filter baseFilter,
       PlannerContext plannerContext
   ){
     return new DruidCorrelateUnnestRel(
@@ -47,6 +53,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         druidQueryRel,
         unnestDatasourceRel,
         PartialDruidQuery.create(logicalCorrelate),
+        baseFilter,
         plannerContext
     );
   }
@@ -66,6 +73,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         baseQueryRel,
         unnestDatasourceRel,
         newQueryBuilder,
+        baseFilter,
         getPlannerContext()
     );
   }
@@ -139,7 +147,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public DruidCorrelateUnnestRel asDruidConvention()
   {
-    return new DruidCorrelateUnnestRel(logicalCorrelate, baseQueryRel.asDruidConvention(), unnestDatasourceRel, partialQuery, getPlannerContext());
+    return new DruidCorrelateUnnestRel(logicalCorrelate, baseQueryRel.asDruidConvention(), unnestDatasourceRel, partialQuery, baseFilter, getPlannerContext());
   }
 
   @Override

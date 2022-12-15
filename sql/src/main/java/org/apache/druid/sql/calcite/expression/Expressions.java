@@ -33,6 +33,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -59,6 +60,7 @@ import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
@@ -230,6 +232,8 @@ public class Expressions
   {
     // Translate field references.
     final RexFieldAccess ref = (RexFieldAccess) rexNode;
+    if (ref.getField().getIndex() > rowSignature.size())
+      return DruidExpression.ofColumn(null, rowSignature.getColumnName(0));
     final String columnName = rowSignature.getColumnName(ref.getField().getIndex());
     final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getField().getIndex());
     if (columnName == null) {
