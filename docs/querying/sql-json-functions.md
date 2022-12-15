@@ -47,7 +47,7 @@ You can use the following JSON functions to extract, transform, and create `COMP
 
 ### JSONPath syntax
 
-Druid supports a subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures.
+Druid supports a subset of the [JSONPath syntax](https://github.com/json-path/JsonPath/blob/master/README.md) operators, primarily limited to extracting individual values from nested data structures. You can't use wildcards, invoke functions, or filter expressions.
 
 |Operator|Description|
 | --- | --- |
