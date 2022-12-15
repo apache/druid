@@ -296,9 +296,9 @@ export class DatasourcesView extends React.PureComponent<
         visibleColumns.shown('Total data size') &&
           `SUM("size") FILTER (WHERE is_active = 1) AS total_data_size`,
         visibleColumns.shown('Segment rows') && [
-          `MIN("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS min_segment_rows`,
-          `AVG("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS avg_segment_rows`,
-          `MAX("num_rows") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS max_segment_rows`,
+          `MIN("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS min_segment_rows`,
+          `AVG("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS avg_segment_rows`,
+          `MAX("num_rows") FILTER (WHERE is_available = 1 AND is_realtime = 0) AS max_segment_rows`,
         ],
         visibleColumns.shown('Segment size') && [
           `MIN("size") FILTER (WHERE is_active = 1 AND is_realtime = 0) AS min_segment_size`,
@@ -316,7 +316,7 @@ export class DatasourcesView extends React.PureComponent<
         visibleColumns.shown('Total rows') &&
           `SUM("num_rows") FILTER (WHERE is_active = 1) AS total_rows`,
         visibleColumns.shown('Avg. row size') &&
-          `CASE WHEN SUM("num_rows") FILTER (WHERE is_active = 1) <> 0 THEN (SUM("size") FILTER (WHERE is_active = 1) / SUM("num_rows") FILTER (WHERE is_active = 1)) ELSE 0 END AS avg_row_size`,
+          `CASE WHEN SUM("num_rows") FILTER (WHERE is_available = 1) <> 0 THEN (SUM("size") FILTER (WHERE is_available = 1) / SUM("num_rows") FILTER (WHERE is_available = 1)) ELSE 0 END AS avg_row_size`,
         visibleColumns.shown('Replicated size') &&
           `SUM("size" * "num_replicas") FILTER (WHERE is_active = 1) AS replicated_size`,
       ].flat(),
@@ -1079,7 +1079,7 @@ ORDER BY 1`;
             accessor: 'num_segments',
             className: 'padded',
             Cell: ({ value: num_segments, original }) => {
-              const { datasource, unused, num_segments_to_load } = original as Datasource;
+              const { datasource, unused, num_segments_to_load, rules } = original as Datasource;
               if (unused) {
                 return (
                   <span>
@@ -1089,6 +1089,7 @@ ORDER BY 1`;
                 );
               }
 
+              const hasCold = RuleUtil.hasColdRule(rules, defaultRules);
               const segmentsEl = (
                 <a onClick={() => goToSegments(datasource)}>
                   {pluralIfNeeded(num_segments, 'segment')}
@@ -1103,13 +1104,13 @@ ORDER BY 1`;
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0) {
+              } else if (num_segments_to_load === 0 || hasCold) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
-                    Fully available ({segmentsEl})
+                    Fully available{hasCold ? ', some cold' : ''} ({segmentsEl})
                   </span>
                 );
               } else {
@@ -1141,7 +1142,14 @@ ORDER BY 1`;
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
+              const { num_segments, num_segments_to_load, num_segments_to_drop, rules } =
+                original as Datasource;
+              if (RuleUtil.hasColdRule(rules, defaultRules)) {
+                return `${pluralIfNeeded(
+                  Number(num_segments) - Number(num_segments_to_load),
+                  'hot segment',
+                )}, ${pluralIfNeeded(num_segments_to_load, 'cold segment')}`;
+              }
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
           },

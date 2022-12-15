@@ -81,10 +81,9 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               />
             ))}
             <MenuItem
-              icon={
-                typeof maxNumTasks === 'number' &&
-                tickIcon(!shownMaxNumTaskOptions.includes(maxNumTasks))
-              }
+              icon={tickIcon(
+                typeof maxNumTasks === 'number' && !shownMaxNumTaskOptions.includes(maxNumTasks),
+              )}
               text="Custom"
               onClick={() => setCustomMaxNumTasksDialogOpen(true)}
             />

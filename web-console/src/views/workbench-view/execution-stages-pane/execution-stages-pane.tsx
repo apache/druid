@@ -319,13 +319,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     if (!stages.hasCounterForStage(stage, inputCounter)) return;
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
 
+    const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     return (
       <div
         className="data-transfer"
         key={inputNumber}
-        title={`Input${inputNumber} uncompressed size: ${formatBytesCompact(
-          stages.getTotalCounterForStage(stage, inputCounter, 'bytes'),
-        )} ${NOT_SIZE_ON_DISK}`}
+        title={
+          bytes
+            ? `Input${inputNumber} uncompressed size: ${formatBytesCompact(
+                bytes,
+              )} ${NOT_SIZE_ON_DISK}`
+            : undefined
+        }
       >
         <BracedText
           text={formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))}
@@ -408,18 +413,9 @@ ${title} uncompressed size: ${formatBytesCompact(
           stages.getTotalCounterForStage(stage, 'shuffle', 'bytes'),
         )} ${NOT_SIZE_ON_DISK}`}
       >
-        {shuffleRows ? (
-          <>
-            <BracedText text={formatRows(shuffleRows)} braces={rowsValues} /> &nbsp;{' '}
-            {0 < sortProgress && sortProgress < 1 && (
-              <>
-                {' '}
-                &nbsp; <div className="sort-percent">{`[${formatPercent(sortProgress)}]`}</div>
-              </>
-            )}
-          </>
-        ) : (
-          <BracedText text={`[${formatPercent(sortProgress)}]`} braces={rowsValues} />
+        <BracedText text={shuffleRows ? formatRows(shuffleRows) : ''} braces={rowsValues} /> &nbsp;{' '}
+        {0 < sortProgress && sortProgress < 1 && (
+          <> &nbsp;{` ${formatPercent(sortProgress)} sorted`}</>
         )}
       </div>
     );

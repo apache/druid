@@ -134,7 +134,13 @@ export class RuleUtil {
     return total;
   }
 
-  static coldRule(rule: Rule): boolean {
+  static isColdRule(rule: Rule): boolean {
     return RuleUtil.hasTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
+  }
+
+  static hasColdRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
+    return (
+      (rules || []).some(RuleUtil.isColdRule) || (defaultRules || []).some(RuleUtil.isColdRule)
+    );
   }
 }
