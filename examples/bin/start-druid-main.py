@@ -37,9 +37,11 @@ TASK_JAVA_OPTS_PROPERTY = "druid.indexer.runner.javaOptsArray"
 TASK_WORKER_CAPACITY_PROPERTY = "druid.worker.capacity"
 TASK_COUNT = "task-count"
 TASK_MEM_TYPE_LOW = "low"
+TASK_MEM_TYPE_MEDIUM = "medium"
 TASK_MEM_TYPE_HIGH = "high"
 TASK_MEM_MAP = {
     TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256m"],
+    TASK_MEM_TYPE_MEDIUM: ["-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=512m"],
     TASK_MEM_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
 }
 
@@ -82,7 +84,7 @@ SERVICE_MEMORY_RATIO = {
 
 MINIMUM_MEMORY_MB = {
     MIDDLE_MANAGER: 64,
-    ROUTER: 128,
+    ROUTER: 256,
     TASKS: 1024,
     BROKER: 900,
     COORDINATOR: 256,
@@ -431,10 +433,7 @@ def check_memory_constraint(total_memory, services):
     if total_memory < required_memory:
         raise ValueError('Minimum memory required for starting services is {0}m'.format(required_memory))
 
-    if total_memory >= 2 * lower_bound_memory:
-        return int(total_memory / 2)
-    else:
-        return lower_bound_memory
+    return int(total_memory * 0.8)
 
 
 def build_mm_task_java_opts_array(memory_type):
@@ -457,6 +456,10 @@ def compute_tasks_memory(allocated_memory):
         task_count = int(allocated_memory / 2048)
         memory_type = TASK_MEM_TYPE_HIGH
         task_memory_mb = 2048
+    elif allocated_memory >= 2048:
+        task_count = int(allocated_memory / 1024)
+        memory_type = TASK_MEM_TYPE_MEDIUM
+        task_memory_mb = 1024
     else:
         task_count = 2
         memory_type = TASK_MEM_TYPE_LOW
@@ -483,6 +486,8 @@ def build_memory_config(service, allocated_memory):
     else:
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
+        if service == ROUTER:
+            direct_memory = 128
         heap_memory = int(heap_memory)
 
         if direct_memory == 0:
