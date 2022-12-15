@@ -24,7 +24,7 @@ sidebar_label: "SQL query translation"
   -->
 
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+> This document describes the Druid SQL language.
 
 Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
@@ -34,8 +34,8 @@ This topic includes best practices and tools to help you achieve good performanc
 
 ## Best practices
 
-Consider this (non-exhaustive) list of things to look out for when looking into the performance implications of
-how your SQL queries are translated to native queries.
+Consider the following non-exhaustive list of best practices when looking into performance implications of
+translating Druid SQL queries to native queries.
 
 1. If you wrote a filter on the primary time column `__time`, make sure it is being correctly translated to an
 `"intervals"` filter, as described in the [Time filters](#time-filters) section below. If not, you may need to change
@@ -241,10 +241,9 @@ enabling logging and running this query, we can see that it actually runs as the
 
 Druid SQL uses four different native query types.
 
-- [Scan](scan-query.md) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
+- [Scan](scan-query.md) is used for queries that do not aggregate&mdash;no GROUP BY, no DISTINCT.
 
-- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time,
-period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
+- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time, period)`, have no other grouping expressions, no HAVING clause, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
 by time.

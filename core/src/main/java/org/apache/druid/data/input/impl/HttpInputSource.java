@@ -44,6 +44,8 @@ import java.util.stream.Stream;
 
 public class HttpInputSource extends AbstractInputSource implements SplittableInputSource<URI>
 {
+  public static final String TYPE_KEY = "http";
+
   private final List<URI> uris;
   @Nullable
   private final String httpAuthenticationUsername;

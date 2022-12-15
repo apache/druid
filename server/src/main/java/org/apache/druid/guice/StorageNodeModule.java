@@ -101,7 +101,7 @@ public class StorageNodeModule implements Module
           serverTypeConfig.getServerType()
       );
       if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
-        throw new ProvisionException("Segment cache locations must be set on historicals.");
+        throw new ProvisionException("druid.segmentCache.locations must be set on historicals.");
       }
     }
 

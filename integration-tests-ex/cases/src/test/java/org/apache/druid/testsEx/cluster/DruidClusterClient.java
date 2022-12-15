@@ -35,10 +35,12 @@ import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.config.ResolvedConfig;
 import org.apache.druid.testsEx.config.ResolvedDruidService;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedInstance;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
 import java.net.URL;
@@ -171,15 +173,21 @@ public class DruidClusterClient
    */
   public StatusResponseHolder get(String url)
   {
+    return send(HttpMethod.GET, url);
+  }
+
+  public StatusResponseHolder send(HttpMethod method, String url)
+  {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.GET, new URL(url)),
+          new Request(method, new URL(url)),
           StatusResponseHandler.getInstance()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error from GET [%s] status [%s] content [%s]",
+            "Error from %s [%s] status [%s] content [%s]",
+            method,
             url,
             response.getStatus(),
             response.getContent()
@@ -190,6 +198,44 @@ public class DruidClusterClient
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public StatusResponseHolder post(String url, Object body)
+  {
+    return sendPayload(HttpMethod.POST, url, body);
+  }
+
+  public StatusResponseHolder put(String url, Object body)
+  {
+    return sendPayload(HttpMethod.PUT, url, body);
+  }
+
+  public StatusResponseHolder sendPayload(HttpMethod method, String url, Object body)
+  {
+    final StatusResponseHolder response;
+    try {
+      final byte[] payload = jsonMapper.writeValueAsBytes(body);
+      response = httpClient.go(
+          new Request(method, new URL(url))
+              .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
+              .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+              .setContent(payload),
+          StatusResponseHandler.getInstance()
+      ).get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error from POST [%s] status [%s] content [%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+    return response;
   }
 
   /**
@@ -214,6 +260,50 @@ public class DruidClusterClient
     StatusResponseHolder response = get(url);
     try {
       return jsonMapper.readValue(response.getContent(), typeRef);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public <M, R> R post(String url, M body, TypeReference<R> typeRef)
+  {
+    StatusResponseHolder response = post(url, body);
+    try {
+      return jsonMapper.readValue(response.getContent(), typeRef);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public <M, R> R post(String url, M body, Class<R> responseClass)
+  {
+    StatusResponseHolder response = post(url, body);
+    try {
+      return jsonMapper.readValue(response.getContent(), responseClass);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public <M, R> R put(String url, M body, Class<R> responseClass)
+  {
+    StatusResponseHolder response = put(url, body);
+    try {
+      return jsonMapper.readValue(response.getContent(), responseClass);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public <T> T delete(String url, Class<T> clazz)
+  {
+    StatusResponseHolder response = send(HttpMethod.DELETE, url);
+    try {
+      return jsonMapper.readValue(response.getContent(), clazz);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

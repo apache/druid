@@ -69,6 +69,6 @@ To use [EXTERN](reference.md#extern), you need READ permission on the resource n
 
 ## Next steps
 
-* [Read about key concepts](./concepts.md) to learn more about how SQL-based ingestion and multi-stage queries work.
-* [Check out the examples](./examples.md) to see SQL-based ingestion in action.
-* [Explore the Query view](../operations/web-console.md) to get started in the web console.
+- [Read about key concepts](./concepts.md) to learn more about how SQL-based ingestion and multi-stage queries work.
+- [Check out the examples](./examples.md) to see SQL-based ingestion in action.
+- [Explore the Query view](../operations/web-console.md) to get started in the web console.

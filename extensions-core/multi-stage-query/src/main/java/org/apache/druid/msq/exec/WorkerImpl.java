@@ -106,6 +106,7 @@ import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DecoratedExecutorService;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.PrioritizedCallable;
@@ -159,6 +160,7 @@ public class WorkerImpl implements Worker
   private final BlockingQueue<Consumer<KernelHolder>> kernelManipulationQueue = new LinkedBlockingDeque<>();
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -365,10 +367,14 @@ public class WorkerImpl implements Worker
 
         if (kernel.getPhase() == WorkerStagePhase.READING_INPUT && kernel.hasResultKeyStatisticsSnapshot()) {
           if (controllerAlive) {
-            controllerClient.postKeyStatistics(
+            PartialKeyStatisticsInformation partialKeyStatisticsInformation =
+                kernel.getResultKeyStatisticsSnapshot()
+                      .partialKeyStatistics();
+
+            controllerClient.postPartialKeyStatistics(
                 stageDefinition.getId(),
                 kernel.getWorkOrder().getWorkerNumber(),
-                kernel.getResultKeyStatisticsSnapshot()
+                partialKeyStatisticsInformation
             );
           }
           kernel.startPreshuffleWaitingForResultPartitionBoundaries();
@@ -563,6 +569,40 @@ public class WorkerImpl implements Worker
   }
 
   @Override
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
+  {
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
+    } else {
+      return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+    }
+  }
+
+  @Override
+  public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
+  {
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
+    } else {
+      return stageKernelMap.get(stageId)
+                           .getResultKeyStatisticsSnapshot()
+                           .getSnapshotForTimeChunk(timeChunk);
+    }
+
+  }
+
+
+  @Override
   public CounterSnapshotsTree getCounters()
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
@@ -624,7 +664,7 @@ public class WorkerImpl implements Worker
   /**
    * Decorates the server-wide {@link QueryProcessingPool} such that any Callables and Runnables, not just
    * {@link PrioritizedCallable} and {@link PrioritizedRunnable}, may be added to it.
-   *
+   * <p>
    * In production, the underlying {@link QueryProcessingPool} pool is set up by
    * {@link org.apache.druid.guice.DruidProcessingModule}.
    */
@@ -1273,9 +1313,8 @@ public class WorkerImpl implements Worker
     }
   }
 
-  private static class KernelHolder
+  private class KernelHolder
   {
-    private final Map<StageId, WorkerStageKernel> stageKernelMap = new HashMap<>();
     private boolean done = false;
 
     public Map<StageId, WorkerStageKernel> getStageKernelMap()

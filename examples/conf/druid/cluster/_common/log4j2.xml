@@ -82,5 +82,10 @@
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
       <Appender-ref ref="FileAppender"/>
     </Logger>
+
+    <!-- Quieter KafkaSupervisors -->
+    <Logger name="org.apache.kafka.clients.consumer.internals" level="warn" additivity="false">
+      <Appender-ref ref="FileAppender"/>
+    </Logger>
   </Loggers>
 </Configuration>

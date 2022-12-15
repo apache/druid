@@ -41,7 +41,7 @@ export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
             )}
             {downloadFilename && (
               <Button
-                text="Save"
+                text="Download"
                 minimal
                 onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
               />

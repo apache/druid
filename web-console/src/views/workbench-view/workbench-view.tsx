@@ -324,9 +324,14 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <ConnectExternalDataDialog
-        onSetExternalConfig={(externalConfig, isArrays, timeExpression) => {
+        onSetExternalConfig={(externalConfig, isArrays, timeExpression, partitionedByHint) => {
           this.handleNewTab(
-            WorkbenchQuery.fromInitExternalConfig(externalConfig, isArrays, timeExpression),
+            WorkbenchQuery.fromInitExternalConfig(
+              externalConfig,
+              isArrays,
+              timeExpression,
+              partitionedByHint,
+            ),
             'Ext ' + guessDataSourceNameFromInputSource(externalConfig.inputSource),
           );
         }}
@@ -652,11 +657,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   onClick={this.openExplainDialog}
                 />
               )}
-              <MenuItem
-                icon={IconNames.HISTORY}
-                text="Query history"
-                onClick={this.openHistoryDialog}
-              />
+              {currentTabEntry.query.getEffectiveEngine() !== 'sql-msq-task' && (
+                <MenuItem
+                  icon={IconNames.HISTORY}
+                  text="Query history"
+                  onClick={this.openHistoryDialog}
+                />
+              )}
               {currentTabEntry.query.canPrettify() && (
                 <MenuItem
                   icon={IconNames.ALIGN_LEFT}

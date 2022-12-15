@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.druid.collections.ResourceHolder;
 import org.hamcrest.MatcherAssert;
@@ -36,9 +37,28 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 public class ByteBufferUtilsTest
 {
+  private static final List<String> COMPARE_TEST_STRINGS = ImmutableList.of(
+      "（請參見已被刪除版本）",
+      "請參見已被刪除版本",
+      "שָׁלוֹם",
+      "＋{{[[Template:別名重定向|別名重定向]]}}",
+      "\uD83D\uDC4D\uD83D\uDC4D\uD83D\uDC4D",
+      "\uD83D\uDCA9",
+      "",
+      "f",
+      "fo",
+      "\uD83D\uDE42",
+      "\uD83E\uDEE5",
+      "\uD83E\uDD20",
+      "quick",
+      "brown",
+      "fox"
+  );
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -82,9 +102,9 @@ public class ByteBufferUtilsTest
 
   @Test
   @SuppressWarnings("EqualsWithItself")
-  public void testUnsignedComparator()
+  public void testUtf8Comparator()
   {
-    final Comparator<ByteBuffer> comparator = ByteBufferUtils.unsignedComparator();
+    final Comparator<ByteBuffer> comparator = ByteBufferUtils.utf8Comparator();
 
     // Tests involving null
     MatcherAssert.assertThat(comparator.compare(null, null), Matchers.equalTo(0));
@@ -112,18 +132,33 @@ public class ByteBufferUtilsTest
         Matchers.greaterThan(0)
     );
 
-    // Tests involving the full range of bytes
-    for (byte i = Byte.MIN_VALUE; i < Byte.MAX_VALUE; i++) {
-      for (byte j = Byte.MIN_VALUE; j < Byte.MAX_VALUE; j++) {
-        final int cmp = Integer.compare(Byte.toUnsignedInt(i), Byte.toUnsignedInt(j));
+    for (final String string1 : COMPARE_TEST_STRINGS) {
+      for (final String string2 : COMPARE_TEST_STRINGS) {
+        final byte[] utf8Bytes1 = StringUtils.toUtf8(string1);
+        final byte[] utf8Bytes2 = StringUtils.toUtf8(string2);
+        final ByteBuffer utf8ByteBuffer1 = ByteBuffer.allocate(utf8Bytes1.length + 2);
+        final ByteBuffer utf8ByteBuffer2 = ByteBuffer.allocate(utf8Bytes2.length + 2);
+        utf8ByteBuffer1.position(1);
+        utf8ByteBuffer1.put(utf8Bytes1, 0, utf8Bytes1.length).position(utf8Bytes1.length);
+        utf8ByteBuffer1.position(1).limit(1 + utf8Bytes1.length);
+        utf8ByteBuffer2.position(1);
+        utf8ByteBuffer2.put(utf8Bytes2, 0, utf8Bytes2.length).position(utf8Bytes2.length);
+        utf8ByteBuffer2.position(1).limit(1 + utf8Bytes2.length);
 
-        MatcherAssert.assertThat(
-            StringUtils.format("comparison of %s to %s", Byte.toUnsignedInt(i), Byte.toUnsignedInt(j)),
-            comparator.compare(
-                ByteBuffer.wrap(new byte[]{i}),
-                ByteBuffer.wrap(new byte[]{j})
+        final int compareByteBufferUtilsUtf8 = ByteBufferUtils.utf8Comparator().compare(
+            utf8ByteBuffer1,
+            utf8ByteBuffer2
+        );
+
+        Assert.assertEquals(
+            StringUtils.format(
+                "compareByteBufferUtilsUtf8(byte[]) (actual) "
+                + "matches compareJavaString (expected) for [%s] vs [%s]",
+                string1,
+                string2
             ),
-            cmp < 0 ? Matchers.lessThan(0) : cmp > 0 ? Matchers.greaterThan(0) : Matchers.equalTo(0)
+            (int) Math.signum(string1.compareTo(string2)),
+            (int) Math.signum(compareByteBufferUtilsUtf8)
         );
       }
     }

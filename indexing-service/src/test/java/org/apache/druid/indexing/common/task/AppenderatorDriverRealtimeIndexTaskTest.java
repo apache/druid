@@ -147,7 +147,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -158,7 +157,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHandlingTest
 {
@@ -690,25 +688,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
-
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
     List<String> expectedMessages = ImmutableList.of(
         "Unable to parse value[foo] for field[met1]"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = ImmutableList.of(
         "{t=3000000, dim1=foo, met1=foo}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test(timeout = 60_000L)
@@ -792,6 +782,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
             RowIngestionMeters.UNPARSEABLE, 2,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -895,6 +886,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
             RowIngestionMeters.UNPARSEABLE, 2,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -906,12 +898,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
-
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = Arrays.asList(
         "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
@@ -919,10 +909,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         "Unable to parse value[foo] for field[met1]",
         "Timestamp[null] is unparseable! Event: null"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{dim1=foo, met1=2.0, __fail__=x}",
@@ -930,11 +917,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         "{t=1521251960729, dim1=foo, met1=foo}",
         null
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
-
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
     Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
   }
 
@@ -1000,6 +983,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
             RowIngestionMeters.UNPARSEABLE, 2,
             RowIngestionMeters.THROWN_AWAY, 0
@@ -1007,9 +991,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages = ImmutableList.of(
         "Timestamp[null] is unparseable! Event: {dim1=foo, met1=2.0, __fail__=x}",
@@ -1017,10 +1000,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         "Unable to parse value[foo] for field[met1]",
         "Timestamp[null] is unparseable! Event: null"
     );
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{dim1=foo, met1=2.0, __fail__=x}",
@@ -1028,12 +1008,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         "{t=1521251960729, dim1=foo, met1=foo}",
         null
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
-
-
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
     Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
   }
 
@@ -1272,6 +1247,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
           ImmutableMap.of(
               RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
               RowIngestionMeters.PROCESSED, 0,
+              RowIngestionMeters.PROCESSED_BYTES, 0,
               RowIngestionMeters.UNPARSEABLE, 0,
               RowIngestionMeters.THROWN_AWAY, 0
           )
@@ -1574,7 +1550,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        OBJECT_MAPPER
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

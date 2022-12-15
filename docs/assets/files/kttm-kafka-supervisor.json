@@ -1,0 +1,66 @@
+{
+  "type": "kafka",
+  "spec": {
+    "ioConfig": {
+      "type": "kafka",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "kttm",
+      "inputFormat": {
+        "type": "json"
+      },
+      "useEarliestOffset": true
+    },
+    "tuningConfig": {
+      "type": "kafka"
+    },
+    "dataSchema": {
+      "dataSource": "kttm-kafka-supervisor-api",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "session",
+          "number",
+          "client_ip",
+          "language",
+          "adblock_list",
+          "app_version",
+          "path",
+          "loaded_image",
+          "referrer",
+          "referrer_host",
+          "server_ip",
+          "screen",
+          "window",
+          {
+            "type": "long",
+            "name": "session_length"
+          },
+          "timezone",
+          "timezone_offset",
+          {
+            "type": "json",
+            "name": "event"
+          },
+          {
+            "type": "json",
+            "name": "agent"
+          },
+          {
+            "type": "json",
+            "name": "geo_ip"
+          }
+        ]
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+      }
+    }
+  }
+}

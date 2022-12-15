@@ -72,9 +72,9 @@ import java.util.stream.Collectors;
 
 /**
  * Query handler for the Broker processes (see CliBroker).
- *
+ * <p>
  * This class is responsible for:
- *
+ * <p>
  * 1) Running queries on the cluster using its 'clusterClient'
  * 2) Running queries locally (when all datasources are global) using its 'localClient'
  * 3) Inlining subqueries if necessary, in service of the above two goals
@@ -133,7 +133,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     this(
         emitter,
-        (QuerySegmentWalker) clusterClient,
+        clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
         joinableFactory,
@@ -239,16 +239,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // 1) Must be based on a concrete datasource that is not a table.
     // 2) Must be based on globally available data (so we have a copy here on the Broker).
     // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
     //    subqueries on its own).
-    return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && analysis.isGlobal()
-           && (!analysis.isQuery()
-               || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
+    return analysis.isConcreteBased() && !analysis.isConcreteTableBased() && dataSourceFromQuery.isGlobal()
+           && (!(dataSourceFromQuery instanceof QueryDataSource)
+               || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 
   /**
@@ -257,15 +258,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
     // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).
     // 2) If there is an outer query, it must be handleable by the query toolchest (the cluster walker does not handle
     //    subqueries on its own).
     return analysis.isConcreteTableBased()
-           && (!analysis.isQuery()
-               || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
+           && (!(dataSourceFromQuery instanceof QueryDataSource)
+               || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 
 
@@ -291,20 +293,20 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   /**
    * Replace QueryDataSources with InlineDataSources when necessary and possible. "Necessary" is defined as:
-   *
+   * <p>
    * 1) For outermost subqueries: inlining is necessary if the toolchest cannot handle it.
    * 2) For all other subqueries (e.g. those nested under a join): inlining is always necessary.
    *
-   * @param dataSource           datasource to process.
-   * @param toolChestIfOutermost if provided, and if the provided datasource is a {@link QueryDataSource}, this method
-   *                             will consider whether the toolchest can handle a subquery on the datasource using
-   *                             {@link QueryToolChest#canPerformSubquery}. If the toolchest can handle it, then it will
-   *                             not be inlined. See {@link org.apache.druid.query.groupby.GroupByQueryQueryToolChest}
-   *                             for an example of a toolchest that can handle subqueries.
+   * @param dataSource                  datasource to process.
+   * @param toolChestIfOutermost        if provided, and if the provided datasource is a {@link QueryDataSource}, this method
+   *                                    will consider whether the toolchest can handle a subquery on the datasource using
+   *                                    {@link QueryToolChest#canPerformSubquery}. If the toolchest can handle it, then it will
+   *                                    not be inlined. See {@link org.apache.druid.query.groupby.GroupByQueryQueryToolChest}
+   *                                    for an example of a toolchest that can handle subqueries.
    * @param subqueryRowLimitAccumulator an accumulator for tracking the number of accumulated rows in all subqueries
    *                                    for a particular master query
-   * @param maxSubqueryRows      Max rows that all the subqueries generated by a master query can have, combined
-   * @param dryRun               if true, does not actually execute any subqueries, but will inline empty result sets.
+   * @param maxSubqueryRows             Max rows that all the subqueries generated by a master query can have, combined
+   * @param dryRun                      if true, does not actually execute any subqueries, but will inline empty result sets.
    */
   @SuppressWarnings({"rawtypes", "unchecked"}) // Subquery, toolchest, runner handling all use raw types
   private DataSource inlineIfNecessary(
@@ -331,15 +333,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           current = Iterables.getOnlyElement(current.getChildren());
         }
 
-        assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
+        if (current instanceof QueryDataSource) {
+          throw new ISE("Got a QueryDataSource[%s], should've walked it away in the loop above.", current);
+        }
         current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
 
         while (!stack.isEmpty()) {
           current = stack.pop().withChildren(Collections.singletonList(current));
         }
 
-        assert current instanceof QueryDataSource;
-
+        if (!(current instanceof QueryDataSource)) {
+          throw new ISE("Should have a QueryDataSource, but got[%s] instead", current);
+        }
         if (toolChest.canPerformSubquery(((QueryDataSource) current).getQuery())) {
           return current;
         } else {
@@ -431,7 +436,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
-                new TypeReference<PostProcessingOperator<T>>() {}
+                new TypeReference<PostProcessingOperator<T>>()
+                {
+                }
             )
         )
         .map(
@@ -572,7 +579,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final RowSignature signature = toolChest.resultArraySignature(query);
 
-    final List<Object[]> resultList = new ArrayList<>();
+    final ArrayList<Object[]> resultList = new ArrayList<>();
 
     toolChest.resultsAsArrays(query, results).accumulate(
         resultList,

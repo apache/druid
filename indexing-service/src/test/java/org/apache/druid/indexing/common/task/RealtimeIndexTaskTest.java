@@ -915,7 +915,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new DefaultObjectMapper()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
