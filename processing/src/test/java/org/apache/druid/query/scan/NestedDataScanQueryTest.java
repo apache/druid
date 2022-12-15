@@ -43,7 +43,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Segment;
@@ -438,13 +437,13 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NESTED_MIXED_NUMERIC_FIELD
     );
     Assert.assertNotNull(mixedNumericValueSelector);
-    Assert.assertTrue(mixedNumericValueSelector instanceof DimensionDictionarySelector);
+    Assert.assertTrue(mixedNumericValueSelector instanceof ColumnValueSelector);
 
     ColumnValueSelector mixedValueSelector = columnSelectorFactory.makeColumnValueSelector(
         NESTED_MIXED_FIELD
     );
     Assert.assertNotNull(mixedValueSelector);
-    Assert.assertTrue(mixedValueSelector instanceof DimensionDictionarySelector);
+    Assert.assertTrue(mixedValueSelector instanceof ColumnValueSelector);
 
 
     ColumnValueSelector sparseLongValueSelector = columnSelectorFactory.makeColumnValueSelector(
@@ -463,13 +462,13 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NESTED_SPARSE_MIXED_NUMERIC_FIELD
     );
     Assert.assertNotNull(sparseMixedNumericValueSelector);
-    Assert.assertTrue(sparseMixedNumericValueSelector instanceof DimensionDictionarySelector);
+    Assert.assertTrue(sparseMixedNumericValueSelector instanceof ColumnValueSelector);
 
     ColumnValueSelector sparseMixedValueSelector = columnSelectorFactory.makeColumnValueSelector(
         NESTED_SPARSE_MIXED_FIELD
     );
     Assert.assertNotNull(sparseMixedValueSelector);
-    Assert.assertTrue(sparseMixedValueSelector instanceof DimensionDictionarySelector);
+    Assert.assertTrue(sparseMixedValueSelector instanceof ColumnValueSelector);
     //CHECKSTYLE.ON: Regexp
   }
 
