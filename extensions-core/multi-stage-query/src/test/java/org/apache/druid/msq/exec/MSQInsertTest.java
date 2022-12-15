@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
+import org.apache.druid.msq.test.CounterSnapshotBuilder;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -106,6 +107,12 @@ public class MSQInsertTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
                      .verifyResults();
 
   }
