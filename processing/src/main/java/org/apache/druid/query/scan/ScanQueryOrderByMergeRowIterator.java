@@ -80,9 +80,9 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
         //During the merge phase, there are 3 result types to consider
         if (event instanceof LinkedHashMap) {
           sorter.add(((LinkedHashMap) event).values().toArray());
-        } else if (event instanceof Object[]){
+        } else if (event instanceof Object[]) {
           sorter.add((Object[]) event);
-        }else {
+        } else {
           sorter.add(((List<Object>) event).toArray());
         }
       }
