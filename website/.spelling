@@ -379,6 +379,7 @@ non-nullable
 noop
 numerics
 numShards
+parameterize
 objectGlob
 parameterized
 parse_json
@@ -424,6 +425,10 @@ programmatically
 proto
 proxied
 proxyConfig
+python2
+python3
+Python2
+Python3
 QPS
 quantile
 quantiles
@@ -734,6 +739,8 @@ appenders
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
+Minio
+multi-server
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
@@ -2297,3 +2304,8 @@ Czechia
 Zeelund
  - ../docs/tutorials/docker.md
  nano
+ - ../docs/operations/python.md
+MacOS
+RHEL
+psutil
+pathlib

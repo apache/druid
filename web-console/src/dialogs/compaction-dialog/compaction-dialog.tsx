@@ -16,11 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import { AutoForm, FormJsonSelector, FormJsonTabs, JsonInput } from '../../components';
-import { COMPACTION_CONFIG_FIELDS, CompactionConfig } from '../../druid-models';
+import {
+  COMPACTION_CONFIG_FIELDS,
+  CompactionConfig,
+  compactionConfigHasLegacyInputSegmentSizeBytesSet,
+} from '../../druid-models';
+import { deepDelete, formatBytesCompact } from '../../utils';
 
 import './compaction-dialog.scss';
 
@@ -55,13 +60,29 @@ export const CompactionDialog = React.memo(function CompactionDialog(props: Comp
       canOutsideClickClose={false}
       title={`Compaction config: ${datasource}`}
     >
+      {compactionConfigHasLegacyInputSegmentSizeBytesSet(currentConfig) && (
+        <Callout className="legacy-callout" intent={Intent.WARNING}>
+          <p>
+            You current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
+            <Code>{formatBytesCompact(currentConfig.inputSegmentSizeBytes!)}</Code> it is
+            recommended to unset this property.
+          </p>
+          <p>
+            <Button
+              intent={Intent.WARNING}
+              text="Remove legacy setting"
+              onClick={() => setCurrentConfig(deepDelete(currentConfig, 'inputSegmentSizeBytes'))}
+            />
+          </p>
+        </Callout>
+      )}
       <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
       <div className="content">
         {currentTab === 'form' ? (
           <AutoForm
             fields={COMPACTION_CONFIG_FIELDS}
             model={currentConfig}
-            onChange={m => setCurrentConfig(m)}
+            onChange={m => setCurrentConfig(m as CompactionConfig)}
           />
         ) : (
           <JsonInput

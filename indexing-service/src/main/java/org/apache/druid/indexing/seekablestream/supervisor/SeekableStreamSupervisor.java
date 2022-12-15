@@ -2014,9 +2014,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     Map<String, ListenableFuture<Boolean>> tasksToResume = new HashMap<>();
+    if (activelyReadingTaskGroups.isEmpty()) {
+      return;
+    }
+    // Resume only running tasks and not pending / waiting ones.
+    if (!taskMaster.getTaskRunner().isPresent()) {
+      return;
+    }
+    Set<String> runningTaskIds = taskMaster.getTaskRunner()
+                                           .get()
+                                           .getRunningTasks()
+                                           .stream()
+                                           .map(TaskRunnerWorkItem::getTaskId)
+                                           .collect(Collectors.toSet());
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.tasks.keySet()) {
-        tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+        if (runningTaskIds.contains(taskId)) {
+          tasksToResume.put(taskId, taskClient.resumeAsync(taskId));
+        }
       }
     }
 

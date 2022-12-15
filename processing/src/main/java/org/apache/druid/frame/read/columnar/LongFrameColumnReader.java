@@ -23,7 +23,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
-import org.apache.druid.frame.write.columnar.LongFrameColumnWriter;
+import org.apache.druid.frame.write.columnar.LongFrameMaker;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -67,7 +67,7 @@ public class LongFrameColumnReader implements FrameColumnReader
   private void validate(final Memory region, final int numRows)
   {
     // Check if column is big enough for a header
-    if (region.getCapacity() < LongFrameColumnWriter.DATA_OFFSET) {
+    if (region.getCapacity() < LongFrameMaker.DATA_OFFSET) {
       throw new ISE("Column is not big enough for a header");
     }
 
@@ -77,10 +77,10 @@ public class LongFrameColumnReader implements FrameColumnReader
     }
 
     final boolean hasNulls = getHasNulls(region);
-    final int sz = LongFrameColumnWriter.valueSize(hasNulls);
+    final int sz = LongFrameMaker.valueSize(hasNulls);
 
     // Check column length again, now that we know exactly how long it should be.
-    if (region.getCapacity() != LongFrameColumnWriter.DATA_OFFSET + (long) sz * numRows) {
+    if (region.getCapacity() != LongFrameMaker.DATA_OFFSET + (long) sz * numRows) {
       throw new ISE("Column does not have the correct length");
     }
   }
@@ -106,9 +106,9 @@ public class LongFrameColumnReader implements FrameColumnReader
     {
       this.frame = frame;
       this.hasNulls = hasNulls;
-      this.sz = LongFrameColumnWriter.valueSize(hasNulls);
+      this.sz = LongFrameMaker.valueSize(hasNulls);
       this.memory = memory;
-      this.memoryPosition = LongFrameColumnWriter.DATA_OFFSET;
+      this.memoryPosition = LongFrameMaker.DATA_OFFSET;
     }
 
     @Override
