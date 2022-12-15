@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -39,9 +40,12 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullValueIndex;
@@ -49,9 +53,11 @@ import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -94,6 +100,12 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   SmooshedFileMapper fileMapper;
 
   ByteBuffer baseBuffer;
+
+  @BeforeClass
+  public static void staticSetup()
+  {
+    NestedDataModule.registerHandlersAndSerde();
+  }
 
   @Before
   public void setup() throws IOException
@@ -205,6 +217,49 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     threadsStartLatch.countDown();
     Futures.allAsList(futures).get();
     Assert.assertEquals(expectedReason, failureReason.get());
+  }
+
+  @Test
+  public void testLegacyV3ReaderFormat() throws IOException
+  {
+    String columnName = "shipTo";
+    String firstValue = "Cole";
+    File tmpLocation = tempFolder.newFolder();
+    File v3Segment = new File(
+        NestedDataColumnSupplierTest.class.getClassLoader().getResource("nested_segment_v3/index.zip").getFile()
+    );
+    CompressionUtils.unzip(v3Segment, tmpLocation);
+    try (Closer closer = Closer.create()) {
+      QueryableIndex theIndex = closer.register(TestHelper.getTestIndexIO().loadIndex(tmpLocation));
+      ColumnHolder holder = theIndex.getColumnHolder(columnName);
+      Assert.assertNotNull(holder);
+      Assert.assertEquals(NestedDataComplexTypeSerde.TYPE, holder.getCapabilities().toColumnType());
+
+      NestedDataColumnV3<?> v3 = closer.register((NestedDataColumnV3<?>) holder.getColumn());
+      Assert.assertNotNull(v3);
+
+      List<NestedPathPart> path = ImmutableList.of(new NestedPathField("lastName"));
+      ColumnHolder nestedColumnHolder = v3.getColumnHolder(path);
+      Assert.assertNotNull(nestedColumnHolder);
+      Assert.assertEquals(ColumnType.STRING, nestedColumnHolder.getCapabilities().toColumnType());
+      NestedFieldLiteralDictionaryEncodedColumn<?> nestedColumn =
+          (NestedFieldLiteralDictionaryEncodedColumn<?>) nestedColumnHolder.getColumn();
+
+      Assert.assertNotNull(nestedColumn);
+
+      ColumnValueSelector<?> selector = nestedColumn.makeColumnValueSelector(
+          new SimpleAscendingOffset(theIndex.getNumRows())
+      );
+
+      ColumnIndexSupplier indexSupplier = v3.getColumnIndexSupplier(path);
+      Assert.assertNotNull(indexSupplier);
+      StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+      Assert.assertNotNull(valueSetIndex);
+
+      BitmapColumnIndex indexForValue = valueSetIndex.forValue(firstValue);
+      Assert.assertEquals(firstValue, selector.getObject());
+      Assert.assertTrue(indexForValue.computeBitmapResult(resultFactory).get(0));
+    }
   }
 
   private void smokeTest(NestedDataComplexColumn column) throws IOException
