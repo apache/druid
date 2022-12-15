@@ -201,12 +201,17 @@ public class QueryResource implements QueryCountStatsProvider
         authResult = queryLifecycle.authorize(req);
       }
       catch (RuntimeException e) {
-        return io.getResponseWriter()
-                 .buildNonOkResponse(
-                     HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                     QueryInterruptedException.wrapIfNeeded(e)
-                 );
+        final QueryException qe;
+
+        if (e instanceof QueryException) {
+          qe = (QueryException) e;
+        } else {
+          qe = new QueryInterruptedException(e);
+        }
+
+        return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
+
       if (!authResult.isAllowed()) {
         throw new ForbiddenException(authResult.toString());
       }

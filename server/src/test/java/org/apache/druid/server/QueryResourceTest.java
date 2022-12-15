@@ -97,6 +97,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class QueryResourceTest
@@ -690,7 +691,7 @@ public class QueryResourceTest
                 // When the query is cancelled the control will reach here,
                 // countdown the latch and rethrow the exception so that error response is returned for the query
                 cancelledCountDownLatch.countDown();
-                throw new RuntimeException(e);
+                throw new QueryInterruptedException(e);
               }
               return new Access(true);
             } else {
@@ -727,26 +728,25 @@ public class QueryResourceTest
     ObjectMapper mapper = new DefaultObjectMapper();
     Query<?> query = mapper.readValue(queryString, Query.class);
 
-    ListenableFuture<?> future = MoreExecutors.listeningDecorator(
+    AtomicReference<Response> responseFromEndpoint = new AtomicReference<>();
+
+    // We expect this future to get canceled so we have to grab the exception somewhere else.
+    ListenableFuture<Response> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_resource_%s")
     ).submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
-                  null,
-                  testServletRequest
-              );
-
-              Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
+        () -> {
+          try {
+            responseFromEndpoint.set(queryResource.doPost(
+                new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
+                null,
+                testServletRequest
+            ));
+            return null;
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          finally {
             waitFinishLatch.countDown();
           }
         }
@@ -756,20 +756,19 @@ public class QueryResourceTest
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            Response response = queryResource.cancelQuery("id_1", testServletRequest);
-            Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
-            waitForCancellationLatch.countDown();
-            waitFinishLatch.countDown();
-          }
+        () -> {
+          Response response = queryResource.cancelQuery("id_1", testServletRequest);
+          Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+          waitForCancellationLatch.countDown();
+          waitFinishLatch.countDown();
         }
     );
     waitFinishLatch.await();
     cancelledCountDownLatch.await();
+
+    Assert.assertTrue(future.isCancelled());
+    final Response response = responseFromEndpoint.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
   }
 
   @Test(timeout = 60_000L)

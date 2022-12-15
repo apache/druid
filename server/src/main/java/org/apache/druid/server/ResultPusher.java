@@ -183,6 +183,7 @@ public abstract class ResultPusher
     final QueryException.FailType failType = e.getFailType();
     switch (failType) {
       case USER_ERROR:
+      case UNAUTHORIZED:
       case QUERY_RUNTIME_FAILURE:
       case SERVER_ERROR:
       case CANCELED:

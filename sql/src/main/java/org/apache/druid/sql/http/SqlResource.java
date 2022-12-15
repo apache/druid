@@ -275,7 +275,10 @@ public class SqlResource
           // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
           catch (AssertionError e) {
             log.warn(e, "AssertionError killed query: %s", sqlQuery);
-            final QueryInterruptedException wrappedEx = QueryInterruptedException.wrapIfNeeded(e);
+
+            // We wrap the exception here so that we get the sanitization.  java.lang.AssertionError apparently
+            // doesn't implement org.apache.druid.common.exception.SanitizableException.
+            final QueryInterruptedException wrappedEx = new QueryInterruptedException(e);
             recordFailure(wrappedEx);
             writeErrorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response, wrappedEx);
             return null;
