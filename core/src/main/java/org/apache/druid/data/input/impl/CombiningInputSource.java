@@ -45,6 +45,8 @@ import java.util.stream.Stream;
 
 public class CombiningInputSource extends AbstractInputSource implements SplittableInputSource
 {
+  public static final String TYPE_KEY = "combining";
+
   private final List<SplittableInputSource> delegates;
 
   @JsonCreator

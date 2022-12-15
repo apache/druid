@@ -22,63 +22,56 @@ package org.apache.druid.sql.calcite.external;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.table.ExternalTable;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * Used by {@link ExternalOperatorConversion} to generate {@link DruidTable} that reference {@link ExternalDataSource}.
+ * Used by {@link ExternalOperatorConversion} to generate a {@link DruidTable}
+ * that references an {@link ExternalDataSource}.
  *
  * This class is exercised in CalciteInsertDmlTest but is not currently exposed to end users.
  */
 public class ExternalTableMacro implements TableMacro
 {
+  private final List<FunctionParameter> parameters = ImmutableList.of(
+      new FunctionParameterImpl(0, "inputSource", DruidTypeSystem.TYPE_FACTORY.createJavaType(String.class)),
+      new FunctionParameterImpl(1, "inputFormat", DruidTypeSystem.TYPE_FACTORY.createJavaType(String.class)),
+      new FunctionParameterImpl(2, "signature", DruidTypeSystem.TYPE_FACTORY.createJavaType(String.class))
+  );
+
   private final ObjectMapper jsonMapper;
 
-  @Inject
-  public ExternalTableMacro(@Json final ObjectMapper jsonMapper)
+  public ExternalTableMacro(final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
+  }
+
+  public String signature()
+  {
+    final List<String> names = parameters.stream().map(p -> p.getName()).collect(Collectors.toList());
+    return "(" + String.join(", ", names) + ")";
   }
 
   @Override
   public TranslatableTable apply(final List<Object> arguments)
   {
     try {
-      final InputSource inputSource = jsonMapper.readValue((String) arguments.get(0), InputSource.class);
-      final InputFormat inputFormat = jsonMapper.readValue((String) arguments.get(1), InputFormat.class);
-      final RowSignature signature = jsonMapper.readValue((String) arguments.get(2), RowSignature.class);
-
-      // Prevent a RowSignature that has a ColumnSignature with name "__time" and type that is not LONG because it
-      // will be automatically casted to LONG while processing in RowBasedColumnSelectorFactory.
-      // This can cause an issue when the incorrectly typecasted data is ingested or processed upon. One such example
-      // of inconsistency is that functions such as TIME_PARSE evaluate incorrectly
-      Optional<ColumnType> timestampColumnTypeOptional = signature.getColumnType(ColumnHolder.TIME_COLUMN_NAME);
-      if (timestampColumnTypeOptional.isPresent() && !timestampColumnTypeOptional.get().equals(ColumnType.LONG)) {
-        throw new ISE("EXTERN function with __time column can be used when __time column is of type long. "
-                      + "Please change the column name to something other than __time");
-      }
-
-      return new ExternalTable(
-            new ExternalDataSource(inputSource, inputFormat, signature),
-            signature,
-            jsonMapper
+      ExternalTableSpec spec = new ExternalTableSpec(
+          jsonMapper.readValue((String) arguments.get(0), InputSource.class),
+          jsonMapper.readValue((String) arguments.get(1), InputFormat.class),
+          jsonMapper.readValue((String) arguments.get(2), RowSignature.class)
       );
+      return Externals.buildExternalTable(spec, jsonMapper);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -88,85 +81,6 @@ public class ExternalTableMacro implements TableMacro
   @Override
   public List<FunctionParameter> getParameters()
   {
-    return ImmutableList.of(
-        new FunctionParameter()
-        {
-          @Override
-          public int getOrdinal()
-          {
-            return 0;
-          }
-
-          @Override
-          public String getName()
-          {
-            return "inputSource";
-          }
-
-          @Override
-          public RelDataType getType(RelDataTypeFactory typeFactory)
-          {
-            return typeFactory.createJavaType(String.class);
-          }
-
-          @Override
-          public boolean isOptional()
-          {
-            return false;
-          }
-        },
-        new FunctionParameter()
-        {
-          @Override
-          public int getOrdinal()
-          {
-            return 1;
-          }
-
-          @Override
-          public String getName()
-          {
-            return "inputFormat";
-          }
-
-          @Override
-          public RelDataType getType(RelDataTypeFactory typeFactory)
-          {
-            return typeFactory.createJavaType(String.class);
-          }
-
-          @Override
-          public boolean isOptional()
-          {
-            return false;
-          }
-        },
-        new FunctionParameter()
-        {
-          @Override
-          public int getOrdinal()
-          {
-            return 2;
-          }
-
-          @Override
-          public String getName()
-          {
-            return "signature";
-          }
-
-          @Override
-          public RelDataType getType(RelDataTypeFactory typeFactory)
-          {
-            return typeFactory.createJavaType(String.class);
-          }
-
-          @Override
-          public boolean isOptional()
-          {
-            return false;
-          }
-        }
-    );
+    return parameters;
   }
 }

@@ -19,10 +19,8 @@
 
 package org.apache.druid.query.aggregation.variance.sql;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -30,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
@@ -51,11 +50,11 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -69,27 +68,18 @@ import java.util.List;
 
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(
-          new BaseVarianceSqlAggregator.VarPopSqlAggregator(),
-          new BaseVarianceSqlAggregator.VarSampSqlAggregator(),
-          new BaseVarianceSqlAggregator.VarianceSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevPopSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevSampSqlAggregator(),
-          new BaseVarianceSqlAggregator.StdDevSqlAggregator()
-      ),
-      ImmutableSet.of()
-  );
-
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    return Iterables.concat(super.getJacksonModules(), new DruidStatsModule().getJacksonModules());
+    super.configureGuice(builder);
+    builder.addModule(new DruidStatsModule());
   }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      QueryRunnerFactoryConglomerate conglomerate
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
   ) throws IOException
   {
     final QueryableIndex index =
@@ -128,12 +118,6 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                    .build(),
         index
     );
-  }
-
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return OPERATOR_TABLE;
   }
 
   public void addToHolder(VarianceAggregatorCollector holder, Object raw)

@@ -18,14 +18,16 @@
 
 import { CompactionConfig } from '../compaction-config/compaction-config';
 
-import {
-  CompactionStatus,
-  formatCompactionConfigAndStatus,
-  zeroCompactionStatus,
-} from './compaction-status';
+import { CompactionStatus, formatCompactionInfo, zeroCompactionStatus } from './compaction-status';
 
 describe('compaction status', () => {
-  const BASIC_CONFIG: CompactionConfig = {};
+  const BASIC_CONFIG: CompactionConfig = {
+    dataSource: 'tbl',
+  };
+  const LEGACY_CONFIG: CompactionConfig = {
+    dataSource: 'tbl',
+    inputSegmentSizeBytes: 1e6,
+  };
   const ZERO_STATUS: CompactionStatus = {
     dataSource: 'tbl',
     scheduleStatus: 'RUNNING',
@@ -40,49 +42,112 @@ describe('compaction status', () => {
     intervalCountSkipped: 0,
   };
 
-  it('zeroCompactionStatus', () => {
-    expect(zeroCompactionStatus(ZERO_STATUS)).toEqual(true);
+  describe('zeroCompactionStatus', () => {
+    it('works with zero', () => {
+      expect(zeroCompactionStatus(ZERO_STATUS)).toEqual(true);
+    });
 
-    expect(
-      zeroCompactionStatus({
-        dataSource: 'tbl',
-        scheduleStatus: 'RUNNING',
-        bytesAwaitingCompaction: 1,
-        bytesCompacted: 0,
-        bytesSkipped: 0,
-        segmentCountAwaitingCompaction: 0,
-        segmentCountCompacted: 0,
-        segmentCountSkipped: 0,
-        intervalCountAwaitingCompaction: 0,
-        intervalCountCompacted: 0,
-        intervalCountSkipped: 0,
-      }),
-    ).toEqual(false);
+    it('works with non-zero', () => {
+      expect(
+        zeroCompactionStatus({
+          dataSource: 'tbl',
+          scheduleStatus: 'RUNNING',
+          bytesAwaitingCompaction: 1,
+          bytesCompacted: 0,
+          bytesSkipped: 0,
+          segmentCountAwaitingCompaction: 0,
+          segmentCountCompacted: 0,
+          segmentCountSkipped: 0,
+          intervalCountAwaitingCompaction: 0,
+          intervalCountCompacted: 0,
+          intervalCountSkipped: 0,
+        }),
+      ).toEqual(false);
+    });
   });
 
-  it('formatCompactionConfigAndStatus', () => {
-    expect(formatCompactionConfigAndStatus(undefined, undefined)).toEqual('Not enabled');
+  describe('formatCompactionConfigAndStatus', () => {
+    it('works with nothing', () => {
+      expect(formatCompactionInfo({})).toEqual('Not enabled');
+    });
 
-    expect(formatCompactionConfigAndStatus(BASIC_CONFIG, undefined)).toEqual('Awaiting first run');
+    it('works when there is no status', () => {
+      expect(formatCompactionInfo({ config: BASIC_CONFIG })).toEqual('Awaiting first run');
+    });
 
-    expect(formatCompactionConfigAndStatus(undefined, ZERO_STATUS)).toEqual('Not enabled');
+    it('works when here is no config', () => {
+      expect(formatCompactionInfo({ status: ZERO_STATUS })).toEqual('Not enabled');
+    });
 
-    expect(formatCompactionConfigAndStatus(BASIC_CONFIG, ZERO_STATUS)).toEqual('Running');
+    it('works with config and zero status', () => {
+      expect(formatCompactionInfo({ config: BASIC_CONFIG, status: ZERO_STATUS })).toEqual(
+        'Running',
+      );
+    });
 
-    expect(
-      formatCompactionConfigAndStatus(BASIC_CONFIG, {
-        dataSource: 'tbl',
-        scheduleStatus: 'RUNNING',
-        bytesAwaitingCompaction: 0,
-        bytesCompacted: 100,
-        bytesSkipped: 0,
-        segmentCountAwaitingCompaction: 0,
-        segmentCountCompacted: 10,
-        segmentCountSkipped: 0,
-        intervalCountAwaitingCompaction: 0,
-        intervalCountCompacted: 10,
-        intervalCountSkipped: 0,
-      }),
-    ).toEqual('Fully compacted');
+    it('works when fully compacted', () => {
+      expect(
+        formatCompactionInfo({
+          config: BASIC_CONFIG,
+          status: {
+            dataSource: 'tbl',
+            scheduleStatus: 'RUNNING',
+            bytesAwaitingCompaction: 0,
+            bytesCompacted: 100,
+            bytesSkipped: 0,
+            segmentCountAwaitingCompaction: 0,
+            segmentCountCompacted: 10,
+            segmentCountSkipped: 0,
+            intervalCountAwaitingCompaction: 0,
+            intervalCountCompacted: 10,
+            intervalCountSkipped: 0,
+          },
+        }),
+      ).toEqual('Fully compacted');
+    });
+
+    it('works when fully compacted and some segments skipped', () => {
+      expect(
+        formatCompactionInfo({
+          config: BASIC_CONFIG,
+          status: {
+            dataSource: 'tbl',
+            scheduleStatus: 'RUNNING',
+            bytesAwaitingCompaction: 0,
+            bytesCompacted: 0,
+            bytesSkipped: 3776979,
+            segmentCountAwaitingCompaction: 0,
+            segmentCountCompacted: 0,
+            segmentCountSkipped: 24,
+            intervalCountAwaitingCompaction: 0,
+            intervalCountCompacted: 0,
+            intervalCountSkipped: 24,
+          },
+        }),
+      ).toEqual('Fully compacted (except the last P1D of data, 24 segments skipped)');
+    });
+
+    it('works when fully compacted and some segments skipped (with legacy config)', () => {
+      expect(
+        formatCompactionInfo({
+          config: LEGACY_CONFIG,
+          status: {
+            dataSource: 'tbl',
+            scheduleStatus: 'RUNNING',
+            bytesAwaitingCompaction: 0,
+            bytesCompacted: 0,
+            bytesSkipped: 3776979,
+            segmentCountAwaitingCompaction: 0,
+            segmentCountCompacted: 0,
+            segmentCountSkipped: 24,
+            intervalCountAwaitingCompaction: 0,
+            intervalCountCompacted: 0,
+            intervalCountSkipped: 24,
+          },
+        }),
+      ).toEqual(
+        'Fully compacted (except the last P1D of data and segments larger than 1.00MB, 24 segments skipped)',
+      );
+    });
   });
 });

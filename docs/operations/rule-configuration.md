@@ -44,7 +44,7 @@ You can use the Druid [web console](./web-console.md) or the [Coordinator API](.
 
 To set retention rules in the Druid web console:
 
-1. On the console home page, click **Datasources**. 
+1. On the console home page, click **Datasources**.
 2. Click the name of your datasource to open the data window.
 3. Select **Actions > Edit retention rules**.
 4. Click **+New rule**.
@@ -84,6 +84,7 @@ curl --location --request POST 'http://localhost:8888/druid/coordinator/v1/rules
     "includeFuture": true
    }]'
 ```
+
 To retrieve all rules for all datasources, send a GET request to `/druid/coordinator/v1/rules`&mdash;for example:
 
 ```bash
@@ -112,7 +113,7 @@ If you have a single tier, Druid automatically names the tier `_default` and loa
 
 ### Forever load rule
 
-The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`. 
+The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`.
 
 The following example places one replica of each segment on a custom tier named `hot`, and another single replica on the default tier.
 
@@ -125,7 +126,9 @@ The following example places one replica of each segment on a custom tier named 
   }
 }
 ```
+
 Set the following property:
+
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
 ### Period load rule
@@ -147,6 +150,7 @@ Period load rules have type `loadByPeriod`. The following example places one rep
 ```
 
 Set the following properties:
+
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if:
 <br>- the segment interval overlaps the rule interval, or
@@ -172,6 +176,7 @@ Interval load rules have type `loadByInterval`. The following example places one
 ```
 
 Set the following properties:
+
 - `interval`: the load interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
@@ -208,6 +213,7 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 ```
 
 Set the following properties:
+
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if:
 <br>- the segment interval overlaps the rule interval, or
@@ -216,7 +222,7 @@ Set the following properties:
 
 ### Period drop before rule
 
-Druid compares a segment's interval to the period you specify in the rule and drops the matching data. The rule matches if the segment interval is before the specified period. 
+Druid compares a segment's interval to the period you specify in the rule and drops the matching data. The rule matches if the segment interval is before the specified period.
 
 If you only want to retain recent data, you can use this rule to drop old data before a specified period, and add a `loadForever` rule to retain the data that follows it. Note that the rule combination `dropBeforeByPeriod` + `loadForever` is equivalent to `loadByPeriod(includeFuture = true)` + `dropForever`.
 
@@ -230,6 +236,7 @@ Period drop rules have type `dropBeforeByPeriod` and the following JSON structur
 ```
 
 Set the following property:
+
 - `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
 
 ### Interval drop rule
@@ -246,6 +253,7 @@ Interval drop rules have type `dropByInterval` and the following JSON structure:
 ```
 
 Set the following property:
+
 - `interval`: the drop interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Broadcast rules
@@ -254,7 +262,7 @@ Druid extensions use broadcast rules to load segment data onto all brokers in th
 
 ### Forever broadcast rule
 
-The forever broadcast rule loads all segment data in your datasources onto all brokers in the cluster. 
+The forever broadcast rule loads all segment data in your datasources onto all brokers in the cluster.
 
 Forever broadcast rules have type `broadcastForever`:
 
@@ -262,7 +270,7 @@ Forever broadcast rules have type `broadcastForever`:
 {
   "type": "broadcastForever",
 }
-``` 
+```
 
 ### Period broadcast rule
 

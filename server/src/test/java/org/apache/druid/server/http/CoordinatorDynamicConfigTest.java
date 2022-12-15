@@ -352,6 +352,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(100.0, actual.getMaxSegmentsInNodeLoadingQueue(), 0.0);
     Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxNonPrimaryReplicantsToLoad());
     Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxSegmentsToLoadPerCoordinationCycle());
+    Assert.assertEquals(false, actual.isUseRoundRobinSegmentAssignment());
   }
 
   @Test

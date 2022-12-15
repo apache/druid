@@ -26,6 +26,8 @@ import com.google.common.base.Preconditions;
 
 public class EnvironmentVariablePasswordProvider implements PasswordProvider
 {
+  public static final String TYPE_KEY = "environment";
+
   private final String variable;
 
   @JsonCreator

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -170,5 +171,45 @@ public class ChangeRequestHistoryTest
     ChangeRequestsSnapshot snapshot = future.get(1, TimeUnit.MINUTES);
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
     Assert.assertEquals(1, snapshot.getRequests().size());
+  }
+
+  @Test
+  public void testStop()
+  {
+    final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
+
+    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSince(
+        ChangeRequestHistory.Counter.ZERO
+    );
+    Assert.assertEquals(1, history.waitingFutures.size());
+
+    final AtomicBoolean callbackExcecuted = new AtomicBoolean(false);
+    Futures.addCallback(
+        future,
+        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
+        {
+          @Override
+          public void onSuccess(ChangeRequestsSnapshot result)
+          {
+            callbackExcecuted.set(true);
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            callbackExcecuted.set(true);
+          }
+        }
+    );
+
+    history.stop();
+    // any new change requests should be ignored, there should be no waiting futures, and open futures should be resolved
+    history.addChangeRequest(new SegmentChangeRequestNoop());
+    Assert.assertEquals(0, history.waitingFutures.size());
+    Assert.assertTrue(callbackExcecuted.get());
+    Assert.assertTrue(future.isDone());
+
+    Throwable thrown = Assert.assertThrows(ExecutionException.class, future::get);
+    Assert.assertEquals("java.lang.IllegalStateException: Server is shutting down.", thrown.getMessage());
   }
 }

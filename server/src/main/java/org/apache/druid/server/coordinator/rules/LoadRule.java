@@ -44,7 +44,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -179,7 +178,7 @@ public abstract class LoadRule implements Rule
           targetReplicants.getOrDefault(tier, 0),
           numAssigned, // note that the currentReplicantsInTier is the just-assigned primary replica.
           params,
-          createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
+          createLoadQueueSizeLimitingPredicate(segment).and(holder -> !holder.equals(primaryHolderToLoad)),
           segment
       );
 
@@ -195,15 +194,10 @@ public abstract class LoadRule implements Rule
   }
 
   private static Predicate<ServerHolder> createLoadQueueSizeLimitingPredicate(
-      final DruidCoordinatorRuntimeParams params
+      final DataSegment segment
   )
   {
-    final int maxSegmentsInNodeLoadingQueue = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
-    if (maxSegmentsInNodeLoadingQueue <= 0) {
-      return Objects::nonNull;
-    } else {
-      return s -> (s != null && s.getNumberOfSegmentsInQueue() < maxSegmentsInNodeLoadingQueue);
-    }
+    return server -> server != null && server.canLoadSegment(segment);
   }
 
   private static List<ServerHolder> getFilteredHolders(
@@ -221,6 +215,21 @@ public abstract class LoadRule implements Rule
     return queue.stream().filter(isActive.and(predicate)).collect(Collectors.toList());
   }
 
+  private Iterator<ServerHolder> getRoundRobinIterator(
+      DruidCoordinatorRuntimeParams params,
+      String tier,
+      DataSegment segment
+  )
+  {
+    if (params.getRoundRobinServerSelector() == null
+        || !params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()) {
+      return null;
+    }
+
+    return params.getRoundRobinServerSelector()
+                 .getServersInTierToLoadSegment(tier, segment);
+  }
+
   /**
    * Iterates through each tier and find the respective segment homes; with the found segment homes, selects the one
    * with the highest priority to be the holder for the primary replica.
@@ -232,6 +241,8 @@ public abstract class LoadRule implements Rule
   )
   {
     ServerHolder topCandidate = null;
+    final boolean useRoundRobinAssignment = params.getCoordinatorDynamicConfig()
+                                                  .isUseRoundRobinSegmentAssignment();
     for (final Object2IntMap.Entry<String> entry : targetReplicants.object2IntEntrySet()) {
       final int targetReplicantsInTier = entry.getIntValue();
       // sanity check: target number of replicants should be more than zero.
@@ -250,7 +261,7 @@ public abstract class LoadRule implements Rule
       final List<ServerHolder> holders = getFilteredHolders(
           tier,
           params.getDruidCluster(),
-          createLoadQueueSizeLimitingPredicate(params)
+          createLoadQueueSizeLimitingPredicate(segment)
       );
       // no holders satisfy the predicate
       if (holders.isEmpty()) {
@@ -258,12 +269,20 @@ public abstract class LoadRule implements Rule
         continue;
       }
 
-      final ServerHolder candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      final ServerHolder candidate;
+      if (useRoundRobinAssignment) {
+        Iterator<ServerHolder> roundRobinIterator = getRoundRobinIterator(params, tier, segment);
+        candidate = roundRobinIterator.hasNext() ? roundRobinIterator.next() : null;
+      } else {
+        candidate = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+        if (candidate != null) {
+          strategyCache.put(tier, candidate);
+        }
+      }
+
       if (candidate == null) {
         log.warn(noAvailability);
       } else {
-        // cache the result for later use.
-        strategyCache.put(tier, candidate);
         if (topCandidate == null ||
             candidate.getServer().getPriority() > topCandidate.getServer().getPriority()) {
           topCandidate = candidate;
@@ -309,7 +328,7 @@ public abstract class LoadRule implements Rule
           entry.getIntValue(),
           params.getSegmentReplicantLookup().getTotalReplicants(segment.getId(), tier),
           params,
-          createLoadQueueSizeLimitingPredicate(params),
+          createLoadQueueSizeLimitingPredicate(segment),
           segment
       );
       stats.addToGlobalStat(AGGREGATE_ASSIGNED_COUNT, numAssigned);
@@ -350,6 +369,7 @@ public abstract class LoadRule implements Rule
       return 0;
     }
 
+    final Iterator<ServerHolder> roundRobinServerIterator = getRoundRobinIterator(params, tier, segment);
     final ReplicationThrottler throttler = params.getReplicationManager();
     for (int numAssigned = 0; numAssigned < numToAssign; numAssigned++) {
       if (!throttler.canCreateReplicant(tier)) {
@@ -358,10 +378,15 @@ public abstract class LoadRule implements Rule
       }
 
       // Retrieves from cache if available
-      ServerHolder holder = strategyCache.remove(tier);
-      // Does strategy call if not in cache
-      if (holder == null) {
+      final ServerHolder holder;
+      if (strategyCache.containsKey(tier)) {
+        // found in cache
+        holder = strategyCache.remove(tier);
+      } else if (roundRobinServerIterator == null) {
+        // Call balancer strategy
         holder = params.getBalancerStrategy().findNewSegmentHomeReplicator(segment, holders);
+      } else {
+        holder = roundRobinServerIterator.hasNext() ? roundRobinServerIterator.next() : null;
       }
 
       if (holder == null) {

@@ -157,7 +157,7 @@ public class QueryLifecycle
     try {
       preAuthorized(authenticationResult, authorizationResult);
       if (!authorizationResult.isAllowed()) {
-        throw new ISE("Unauthorized");
+        throw new ISE(Access.DEFAULT_ERROR_MESSAGE);
       }
 
       queryResponse = execute();
