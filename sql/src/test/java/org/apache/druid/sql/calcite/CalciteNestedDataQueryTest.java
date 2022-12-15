@@ -2233,7 +2233,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"$\"]", 5L},
-            new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
+            new Object[]{"[\"$.array[1]\",\"$.array[0]\",\"$.n.x\"]", 2L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING_ARRAY)
