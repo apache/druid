@@ -362,6 +362,10 @@ https://github.com/apache/druid/pull/12177
 
 ## Operations
 
+### Deploying Druid
+
+There is now a Python installation script available for Druid that simplifies deployments that don't fit the parameters of the singel-server profiles, such as the nano or micro-quickstart profiles. This `start-druid` script lets you override Druid settings to fit your needs. For more information, see [Single server deployment](https://druid.apache.org/docs/latest/operations/single-server.html).
+
 ### Compaction
 
 Compaction behavior has changed to improve the amount of time it takes and disk space it takes:
