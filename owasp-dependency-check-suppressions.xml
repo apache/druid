@@ -244,6 +244,7 @@
     file name: snakeyaml-1.27.jar
     ]]></notes>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2022-1471</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
