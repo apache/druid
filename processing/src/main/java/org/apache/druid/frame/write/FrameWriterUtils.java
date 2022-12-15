@@ -205,7 +205,7 @@ public class FrameWriterUtils
   /**
    * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
    *
-   * @throws InvalidNullByteException "allowNullBytes" is true and a null byte is encountered
+   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
    */
   public static void copyByteBufferToMemory(
       final ByteBuffer src,

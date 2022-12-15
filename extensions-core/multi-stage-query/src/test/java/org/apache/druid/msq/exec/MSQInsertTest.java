@@ -29,9 +29,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
-import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -79,7 +79,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnExternalDataSource() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -120,6 +120,32 @@ public class MSQInsertTest extends MSQTestBase
 
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedResultRows(expectedFooRows())
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeFunctionWithSequential()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(
+                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                                                  ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                                              )
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setQueryContext(context)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
@@ -304,7 +330,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testRollUpOnExternalDataSource() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -340,7 +366,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test()
   public void testRollUpOnExternalDataSourceWithCompositeKey() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -383,29 +409,6 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertNullTimestamp()
-  {
-    final RowSignature rowSignature =
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("dim1", ColumnType.STRING)
-                    .build();
-
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO foo1\n"
-            + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
-            + "FROM foo\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
-        .setExpectedMSQFault(InsertTimeNullFault.instance())
-        .verifyResults();
-  }
-
-  @Test
   public void testInsertWrongTypeTimestamp()
   {
     final RowSignature rowSignature =
@@ -443,6 +446,7 @@ public class MSQInsertTest extends MSQTestBase
                      ))
                      .verifyPlanningErrors();
   }
+
 
   @Test
   public void testInsertRestrictedColumns()
@@ -495,7 +499,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertWithTooLargeRowShouldThrowException() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();

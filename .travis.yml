@@ -70,129 +70,6 @@ stages:
 
 jobs:
   include:
-    - name: "animal sniffer checks"
-      stage: Tests - phase 1
-      script: ${MVN} animal-sniffer:check --fail-at-end
-
-    - name: "checkstyle"
-      script: ${MVN} checkstyle:checkstyle --fail-at-end
-
-    - name: "enforcer checks"
-      script: ${MVN} enforcer:enforce --fail-at-end
-
-    - name: "forbidden api checks"
-      script: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
-
-    - name: "pmd checks"
-      script: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
-
-    - name: "spotbugs checks"
-      script: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
-
-    - name: "license checks"
-      before_script: &setup_generate_license
-        - sudo apt-get update && sudo apt-get install python3 -y
-        - curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
-        - ./check_test_suite.py && travis_terminate 0 || echo 'Continuing setup'
-        - pip3 install wheel  # install wheel first explicitly
-        - pip3 install --upgrade pyyaml
-      script:
-        - >
-          ${MVN} apache-rat:check -Prat --fail-at-end
-          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-          -Drat.consoleOutput=true
-        # Generate dependency reports and checks they are valid. When running on Travis CI, 2 cores are available
-        # (https://docs.travis-ci.com/user/reference/overview/#virtualisation-environment-vs-operating-system).
-        - mkdir -p target
-        - distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-        - distribution/bin/check-licenses.py licenses.yaml target/license-reports
-    - name: "script checks"
-      install: skip
-      # who watches the watchers?
-      script: ./check_test_suite_test.py
-
-    - name: "(openjdk11) strict compilation"
-      install: skip
-      # errorprone requires JDK 11
-      jdk: openjdk11
-      # Strict compilation requires more than 2 GB
-      script: >
-        ./check_test_suite.py && travis_terminate 0 || MAVEN_OPTS='-Xmx3000m' ${MVN} clean -DstrictCompile compile test-compile --fail-at-end
-        ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
-
-    - name: "analyze dependencies"
-      script: |-
-        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true || { echo "
-
-        The dependency analysis has found a dependency that is either:
-
-        1) Used and undeclared: These are available as a transitive dependency but should be explicitly
-        added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
-        shown above.
-
-        2) Unused and declared: These are not needed and removing them from the POM will speed up the build
-        and reduce the artifact size. The dependencies to remove are shown above.
-
-        If there are false positive dependency analysis warnings, they can be suppressed:
-        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
-        https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
-
-        For more information, refer to:
-        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
-
-        " && false; }
-
-    - name: "analyze hadoop 3 dependencies"
-      script: |-
-        MAVEN_OPTS='-Xmx3000m' ${MVN} ${MAVEN_SKIP} dependency:analyze -DoutputXML=true -DignoreNonCompile=true -DfailOnWarning=true -Phadoop3 || { echo "
-
-        The dependency analysis has found a dependency that is either:
-
-        1) Used and undeclared: These are available as a transitive dependency but should be explicitly
-        added to the POM to ensure the dependency version. The XML to add the dependencies to the POM is
-        shown above.
-
-        2) Unused and declared: These are not needed and removing them from the POM will speed up the build
-        and reduce the artifact size. The dependencies to remove are shown above.
-
-        If there are false positive dependency analysis warnings, they can be suppressed:
-        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html#usedDependencies
-        https://maven.apache.org/plugins/maven-dependency-plugin/examples/exclude-dependencies-from-dependency-analysis.html
-
-        For more information, refer to:
-        https://maven.apache.org/plugins/maven-dependency-plugin/analyze-mojo.html
-
-        " && false; }
-
-    - name: "intellij inspections"
-      script: >
-        ./check_test_suite.py && travis_terminate 0 || docker run --rm
-        -v $(pwd):/project
-        -v ~/.m2:/home/inspect/.m2
-        ccaominh/intellij-inspect:1.0.0
-        /project/pom.xml
-        /project/.idea/inspectionProfiles/Druid.xml
-        --levels ERROR
-        --scope JavaInspectionsScope
-
-    - &package
-      name: "(openjdk8) packaging check"
-      install: skip
-      before_script: *setup_generate_license
-      script: >
-        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
-        -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
-
-    - <<: *package
-      name: "(openjdk11) packaging check"
-      stage: Tests - phase 2
-      jdk: openjdk11
-
-    - <<: *package
-      name: "(openjdk17) packaging check"
-      stage: Tests - phase 2
-      jdk: openjdk17
-
     - &test_processing_module
       name: "(openjdk8) processing module test"
       stage: Tests - phase 1
@@ -375,36 +252,6 @@ jobs:
       stage: Tests - phase 2
       jdk: openjdk17
 
-    - name: "web console"
-      install: skip
-      stage: Tests - phase 1
-      script:
-        - ./check_test_suite.py && travis_terminate 0 || ${MVN} test -pl 'web-console'
-      after_success:
-        - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
-
-    - name: "web console end-to-end test"
-      stage: Tests - phase 1
-      before_install: *setup_generate_license
-      install: web-console/script/druid build
-      before_script:
-        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 16.17.0
-        - web-console/script/druid start
-      script: (cd web-console && npm run test-e2e)
-      after_script: web-console/script/druid stop
-
-    - name: "docs"
-      stage: Tests - phase 1
-      before_script:
-        - ./check_test_suite.py && travis_terminate 0 || echo 'Starting nvm install...'
-        - nvm install 16.17.0
-        - (cd website && npm install)
-      script:
-        - cd website
-        - npm run link-lint
-        - npm run spellcheck
-
     - name: "Build and test on ARM64 CPU architecture (1)"
       stage: Tests - phase 2
       arch: arm64-graviton2
@@ -450,10 +297,6 @@ jobs:
           echo $v dmesg ======================== ;
           docker exec -it druid-$v sh -c 'dmesg | tail -3' ;
           done
-
-    - <<: *integration_batch_index
-      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer"
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_input_format
       name: "(Compile=openjdk8, Run=openjdk8) input format integration test"
@@ -688,16 +531,23 @@ jobs:
       jdk: openjdk8
       services: *integration_test_services
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
-      # Uses the installation defined above. Then, builds the test tools and docker image,
-      # and runs one IT. If tests fail, echos log lines of any of
-      # the Druid services that did not exit normally.
       script: ./it.sh travis MultiStageQuery
 
-    # Disabling BatchIndex test as it is failing with due to timeout, fixing it will be taken in a separate PR.
-    #- <<: *integration_tests_ex
-    #  name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
-    #  env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
-    #  script: ./it.sh travis BatchIndex
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) catalog integration tests"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
+      script: ./it.sh travis Catalog
+
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) batch index integration test with Indexer (new)"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      script: ./it.sh travis BatchIndex
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
@@ -803,11 +653,12 @@ jobs:
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
           sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
           done
-    - name: "security vulnerabilities"
+    - &security_vulnerabilities
+      name: "security vulnerabilities"
       stage: cron
       install: skip
       script: |-
-        ${MVN} dependency-check:purge dependency-check:check || { echo "
+        ${MVN} dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
 
         The OWASP dependency check has found security vulnerabilities. Please use a newer version
         of the dependency that does not have vulnerabilities. To see a report run
@@ -817,6 +668,11 @@ jobs:
         information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).
 
         " && false; }
+
+    - <<: *security_vulnerabilities
+      name: "security vulnerabilities with Hadoop3"
+      env:
+        - HADOOP_PROFILE='-Phadoop3'
 
 # Travis CI only supports per build (and not per-job notifications): https://github.com/travis-ci/travis-ci/issues/9888
 notifications:
@@ -829,4 +685,4 @@ notifications:
       # https://github.com/travis-ci/travis-ci/issues/2711
       - secure: "MupjX/0jLwh3XzHPl74BTk2/Kp5r+8TrEewfRhpQdWKFMBXLKNqu0k2VXf5C/NIg3uvPianq3REk+qeTHI8dL2ShjiWS/eIRkJOHLfObdNNBuos5fo4TxAuBQcXyT4VjAq5jnAkH84Pxf2Nl0rkisWoIhvwSX7+kNrjW1qdu7K0="
     on_success: change
-    on_failure: change
+    on_failure: always

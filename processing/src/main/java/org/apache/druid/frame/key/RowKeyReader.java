@@ -131,6 +131,28 @@ public class RowKeyReader
   }
 
   /**
+   * Trims the key reader to a particular fieldCount. Used to read keys trimmed by {@link #trim(RowKey, int)}.
+   */
+  public RowKeyReader trimmedKeyReader(int trimmedFieldCount)
+  {
+    final RowSignature.Builder newSignature = RowSignature.builder();
+
+    if (trimmedFieldCount > signature.size()) {
+      throw new IAE("Cannot trim to [%,d] fields, only have [%,d] fields", trimmedFieldCount, signature);
+    }
+
+    for (int i = 0; i < trimmedFieldCount; i++) {
+      final String columnName = signature.getColumnName(i);
+      final ColumnType columnType =
+          Preconditions.checkNotNull(signature.getColumnType(i).orElse(null), "Type for column [%s]", columnName);
+
+      newSignature.add(columnName, columnType);
+    }
+
+    return RowKeyReader.create(newSignature.build());
+  }
+
+  /**
    * Trim a key to a particular fieldCount. The returned key may be a copy, but is not guaranteed to be.
    */
   public RowKey trim(final RowKey key, final int trimmedFieldCount)

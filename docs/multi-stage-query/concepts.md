@@ -79,7 +79,7 @@ publishes them at the end of its run. For this reason, it is best suited to load
 INSERT statements to load data in a sequence of microbatches; for that, use [streaming
 ingestion](../ingestion/index.md#streaming) instead.
 
-When deciding whether to use REPLACE or INSERT, keep in mind that segments generated with REPLACE can be pruned with dimension-based pruning but those generated with INSERT cannot. For more information about the requirements for dimension-based pruning, see [Clustering](#clustering). 
+When deciding whether to use REPLACE or INSERT, keep in mind that segments generated with REPLACE can be pruned with dimension-based pruning but those generated with INSERT cannot. For more information about the requirements for dimension-based pruning, see [Clustering](#clustering).
 
 For more information about the syntax, see [INSERT](./reference.md#insert).
 
@@ -211,19 +211,19 @@ For an example, see [INSERT with rollup example](examples.md#insert-with-rollup)
 When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](api.md#submit-a-query), the following
 happens:
 
-1.  The Broker plans your SQL query into a native query, as usual.
+1. The Broker plans your SQL query into a native query, as usual.
 
-2.  The Broker wraps the native query into a task of type `query_controller`
+2. The Broker wraps the native query into a task of type `query_controller`
     and submits it to the indexing service.
 
 3. The Broker returns the task ID to you and exits.
 
-4.  The controller task launches some number of worker tasks determined by
+4. The controller task launches some number of worker tasks determined by
     the `maxNumTasks` and `taskAssignment` [context parameters](./reference.md#context-parameters). You can set these settings individually for each query.
 
-5.  Worker tasks of type `query_worker` execute the query.
+5. Worker tasks of type `query_worker` execute the query.
 
-6.  If the query is a SELECT query, the worker tasks send the results
+6. If the query is a SELECT query, the worker tasks send the results
     back to the controller task, which writes them into its task report.
     If the query is an INSERT or REPLACE query, the worker tasks generate and
     publish new Druid segments to the provided datasource.
@@ -233,7 +233,8 @@ happens:
 The [`maxNumTasks`](./reference.md#context-parameters) query parameter determines the maximum number of tasks your
 query will use, including the one `query_controller` task. Generally, queries perform better with more workers. The
 lowest possible value of `maxNumTasks` is two (one worker and one controller). Do not set this higher than the number of
-free slots available in your cluster; doing so will result in a [TaskStartTimeout](reference.md#error-codes) error.
+free slots available in your cluster; doing so will result in a [TaskStartTimeout](reference.md#error_TaskStartTimeout)
+error.
 
 When [reading external data](#extern), EXTERN can read multiple files in parallel across
 different worker tasks. However, EXTERN does not split individual files across multiple worker tasks. If you have a
@@ -287,4 +288,4 @@ Worker tasks use local disk for four purposes:
 
 Workers use the task working directory, given by
 [`druid.indexer.task.baseDir`](../configuration/index.md#additional-peon-configuration), for these items. It is
-important that this directory has enough space available for these purposes. 
+important that this directory has enough space available for these purposes.

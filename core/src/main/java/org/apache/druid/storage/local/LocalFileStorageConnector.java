@@ -21,6 +21,7 @@ package org.apache.druid.storage.local;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.StorageConnector;
 
@@ -29,6 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
@@ -105,6 +109,23 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
+  }
+
+  @Override
+  public List<String> listDir(String dirName)
+  {
+    File directory = fileWithBasePath(dirName);
+    if (!directory.exists()) {
+      throw new IAE("No directory exists on path [%s]", dirName);
+    }
+    if (!directory.isDirectory()) {
+      throw new IAE("Cannot list contents of [%s] since it is not a directory", dirName);
+    }
+    File[] files = directory.listFiles();
+    if (files == null) {
+      throw new ISE("Unable to fetch the file list from the path [%s]", dirName);
+    }
+    return Arrays.stream(files).map(File::getName).collect(Collectors.toList());
   }
 
   public File getBasePath()

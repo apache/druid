@@ -32,9 +32,8 @@ public class RowKey
 {
   private static final RowKey EMPTY_KEY = new RowKey(new byte[0]);
 
-  // Constant to account for hashcode and object overhead
-  // 24 bytes (header) + 8 bytes (reference) + 8 bytes (hashCode long) + 4 bytes (safe estimate of hashCodeComputed)
-  static final int OBJECT_OVERHEAD_SIZE_BYTES = 44;
+  // Constant to account for byte array overhead.
+  static final int OBJECT_OVERHEAD_SIZE_BYTES = 24;
 
   private final byte[] key;
 
@@ -114,7 +113,7 @@ public class RowKey
   }
 
   /**
-   * Estimate number of bytes taken by an object of {@link RowKey}. Only returns an estimate and does not account for
+   * Estimate number of bytes taken by the key array. Only returns an estimate and does not account for
    * platform or JVM specific implementation.
    */
   public int estimatedObjectSizeBytes()

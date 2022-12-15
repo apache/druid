@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -33,9 +35,11 @@ public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
   private final TaskStorage taskStorage;
+  private final SegmentAllocationQueue segmentAllocationQueue;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
+  private final ObjectMapper jsonMapper;
   private Optional<TaskRunnerFactory> factory = Optional.absent();
 
   @Inject
@@ -43,8 +47,10 @@ public class TaskActionToolbox
       TaskLockbox taskLockbox,
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      SegmentAllocationQueue segmentAllocationQueue,
       ServiceEmitter emitter,
-      SupervisorManager supervisorManager
+      SupervisorManager supervisorManager,
+      @Json ObjectMapper jsonMapper
   )
   {
     this.taskLockbox = taskLockbox;
@@ -52,6 +58,28 @@ public class TaskActionToolbox
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
+    this.jsonMapper = jsonMapper;
+    this.segmentAllocationQueue = segmentAllocationQueue;
+  }
+
+  public TaskActionToolbox(
+      TaskLockbox taskLockbox,
+      TaskStorage taskStorage,
+      IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      ServiceEmitter emitter,
+      SupervisorManager supervisorManager,
+      @Json ObjectMapper jsonMapper
+  )
+  {
+    this(
+        taskLockbox,
+        taskStorage,
+        indexerMetadataStorageCoordinator,
+        null,
+        emitter,
+        supervisorManager,
+        jsonMapper
+    );
   }
 
   public TaskLockbox getTaskLockbox()
@@ -79,6 +107,11 @@ public class TaskActionToolbox
     return supervisorManager;
   }
 
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
+  }
+
   @Inject(optional = true)
   public void setTaskRunnerFactory(TaskRunnerFactory factory)
   {
@@ -93,4 +126,13 @@ public class TaskActionToolbox
     return Optional.absent();
   }
 
+  public SegmentAllocationQueue getSegmentAllocationQueue()
+  {
+    return segmentAllocationQueue;
+  }
+
+  public boolean canBatchSegmentAllocation()
+  {
+    return segmentAllocationQueue != null && segmentAllocationQueue.isEnabled();
+  }
 }

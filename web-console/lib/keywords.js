@@ -61,6 +61,9 @@ exports.SQL_KEYWORDS = [
   'REPLACE INTO',
   'OVERWRITE',
   'RETURNING',
+  'OVER',
+  'PARTITION BY',
+  'WINDOW',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [
