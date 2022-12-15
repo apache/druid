@@ -558,6 +558,112 @@ When you run the query, pay special attention to how the total number of rows ha
 
 </details>
 
+## Unnest an inline datasource
+
+You can also use the `unnest` datasource to unnest an inline datasource. The following query takes the row `[1,2,3]` in the column `inline_datasource` that is provided inline within the query and returns it as unnested values in the `output` column:
+
+<details><summary>Show the query</summary>
+
+```json
+{
+  "queryType": "scan",
+  "dataSource": {
+    "type": "unnest",
+    "base": {
+      "type": "inline",
+      "columnNames": [
+        "inline_datasource"
+      ],
+      "columnTypes": [
+        "long_array"
+      ],
+      "rows": [
+        [
+          [1,2,3]
+        ]
+      ]
+    },
+    "column": "inline_datasource",
+    "outputName": "output",
+    "allowList": []
+  },
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "resultFormat": "compactedList",
+  "limit": 1001,
+  "columns": [
+    "inline_datasource",
+    "output"
+  ],
+  "legacy": false,
+  "granularity": {
+    "type": "all"
+  }
+}
+```
+
+</details>
+
+## Unnest a virtual column
+
+The `unnest` datasource supports unnesting a virtual columns, which is a queryable composite column that can draw data from multiple source columns.
+
+The following Scan query uses the `nested_data2` table you created in [Load data with two columns of nested values](#load-data-with-two-columns-of-nested-values). It returns the columns `unnest-v0` and `m1`. The `unnest-v0` column is the unnested version of the virtual column `v0`, which contains an array of the `dim2` and `dim3` columns.
+
+<details><summary>Show the query</summary>
+
+```json
+{
+  "queryType": "scan",
+  "dataSource":{
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data2"
+    },
+    "column": "v0",
+    "outputName": "unnest-v0"
+  }
+  "intervals": {
+    "type": "intervals",
+    "intervals": [
+      "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+    ]
+  },
+  "virtualColumns": [
+    {
+      "type": "expression",
+      "name": "v0",
+      "expression": "array(\"dim2\",\"dim3\")",
+      "outputType": "ARRAY<STRING>"
+    }
+  ],
+  "resultFormat": "compactedList",
+  "limit": 1001,
+  "columns": [
+    "unnest-v0",
+    "m1"
+  ],
+  "legacy": false,
+  "context": {
+    "populateCache": false,
+    "queryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
+    "sqlOuterLimit": 1001,
+    "sqlQueryId": "d273facb-08cc-4de7-ac0b-d0b82173e531",
+    "useCache": false,
+    "useNativeQueryExplain": true
+  },
+  "granularity": {
+    "type": "all"
+  }
+}
+```
+
+</details>
 
 ## Learn more
 

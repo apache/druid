@@ -420,7 +420,7 @@ The `unnest` datasource uses the following syntax:
   * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
   * `dataSource.base.name`: The name of the datasource you want to unnest.
 * `dataSource.column`: The name of the source column that contains the nested values.
-* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. 
+* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
 * `dataSource.allowList`: Optional. The subset of values you want to unnest.
 
 To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
