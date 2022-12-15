@@ -558,9 +558,9 @@ When you run the query, pay special attention to how the total number of rows ha
 
 </details>
 
-## Unnest an inline datasource
+## Unnest inline datasource
 
-You can also use the `unnest` datasource to unnest an inline datasource. The following query takes the row `[1,2,3]` in the column `inline_datasource` that is provided inline within the query and returns it as unnested values in the `output` column:
+You can also use the `unnest` datasource to unnest an inline datasource. The following query takes the row `[1,2,3]` in the column `inline_data` that is provided inline within the query and returns it as unnested values in the `output` column:
 
 <details><summary>Show the query</summary>
 
@@ -572,7 +572,7 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
     "base": {
       "type": "inline",
       "columnNames": [
-        "inline_datasource"
+        "inline_data"
       ],
       "columnTypes": [
         "long_array"
@@ -583,7 +583,7 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
         ]
       ]
     },
-    "column": "inline_datasource",
+    "column": "inline_data",
     "outputName": "output",
     "allowList": []
   },
@@ -596,7 +596,7 @@ You can also use the `unnest` datasource to unnest an inline datasource. The fol
   "resultFormat": "compactedList",
   "limit": 1001,
   "columns": [
-    "inline_datasource",
+    "inline_data",
     "output"
   ],
   "legacy": false,
