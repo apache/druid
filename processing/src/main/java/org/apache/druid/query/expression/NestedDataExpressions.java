@@ -503,7 +503,6 @@ public class NestedDataExpressions
           List<String> transformed = info.getLiteralFields()
                                          .stream()
                                          .map(NestedPathFinder::toNormalizedJsonPath)
-                                         .sorted()
                                          .collect(Collectors.toList());
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
