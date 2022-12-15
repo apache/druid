@@ -19,24 +19,34 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.CountingOutputStream;
+import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public abstract class ResultPusher
+public abstract class QueryResultPusher
 {
-  private static final Logger log = new Logger(ResultPusher.class);
+  private static final Logger log = new Logger(QueryResultPusher.class);
 
   private final HttpServletResponse response;
   private final String queryId;
@@ -48,7 +58,7 @@ public abstract class ResultPusher
 
   private StreamingHttpResponseAccumulator accumulator = null;
 
-  public ResultPusher(
+  public QueryResultPusher(
       HttpServletResponse response,
       ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
@@ -68,13 +78,15 @@ public abstract class ResultPusher
   }
 
   /**
-   * Starts a ResultsWriter, which encapsulates logic to run the query, serialize it and also report success/failure
+   * Builds a ResultsWriter to start the lifecycle of the QueryResultPusher.  The ResultsWriter encapsulates the logic
+   * to run the query, serialize it and also report success/failure.
    * <p>
    * This response must not be null.  The job of this ResultsWriter is largely to provide lifecycle management to
-   * the query running and reporting, so this object must never be null.  Also, this start() method should do as little
-   * work as possible.
+   * the query running and reporting, so this object must never be null.
+   * <p>
+   * This start() method should do as little work as possible, it should really just make the ResultsWriter and return.
    *
-   * @return
+   * @return a new ResultsWriter
    */
   public abstract ResultsWriter start();
 
@@ -97,16 +109,7 @@ public abstract class ResultPusher
 
       final Sequence<Object> results = queryResponse.getResults();
 
-      accumulator = new StreamingHttpResponseAccumulator(
-          ResultPusher.this.response,
-          queryId,
-          queryResponse.getResponseContext(),
-          jsonMapper,
-          responseContextConfig,
-          resultsWriter,
-          selfNode,
-          contentType
-      );
+      accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
 
       results.accumulate(null, accumulator);
       accumulator.flush();
@@ -264,5 +267,153 @@ public abstract class ResultPusher
      * End of the response. Must allow the user to know that they have read all data successfully.
      */
     void writeResponseEnd() throws IOException;
+  }
+
+  public class StreamingHttpResponseAccumulator implements Accumulator<Response, Object>, Closeable
+  {
+    private final ResponseContext responseContext;
+    private final ResultsWriter resultsWriter;
+
+    private boolean closed = false;
+    private boolean initialized = false;
+    private CountingOutputStream out = null;
+    private Writer writer = null;
+
+    public StreamingHttpResponseAccumulator(
+        ResponseContext responseContext,
+        ResultsWriter resultsWriter
+    )
+    {
+      this.responseContext = responseContext;
+      this.resultsWriter = resultsWriter;
+    }
+
+    public long getNumBytesSent()
+    {
+      return out == null ? 0 : out.getCount();
+    }
+
+    public boolean isInitialized()
+    {
+      return initialized;
+    }
+
+    /**
+     * Initializes the response.  This is done lazily so that we can put various metadata that we only get once
+     * we have some of the response stream into the result.
+     * <p>
+     * This is called once for each result object, but should only actually happen once.
+     *
+     * @return boolean if initialization occurred.  False most of the team because initialization only happens once.
+     */
+    public void initialize()
+    {
+      if (closed) {
+        throw new ISE("Cannot reinitialize after closing.");
+      }
+
+      if (!initialized) {
+        response.setStatus(HttpServletResponse.SC_OK);
+
+        Object entityTag = responseContext.remove(ResponseContext.Keys.ETAG);
+        if (entityTag != null) {
+          response.setHeader(QueryResource.HEADER_ETAG, entityTag.toString());
+        }
+
+        DirectDruidClient.removeMagicResponseContextFields(responseContext);
+
+        // Limit the response-context header, see https://github.com/apache/druid/issues/2331
+        // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        // and encodes the string using ASCII, so 1 char is = 1 byte
+        ResponseContext.SerializationResult serializationResult;
+        try {
+          serializationResult = responseContext.serializeWith(
+              jsonMapper,
+              responseContextConfig.getMaxResponseContextHeaderSize()
+          );
+        }
+        catch (JsonProcessingException e) {
+          QueryResource.log.info(e, "Problem serializing to JSON!?");
+          serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
+        }
+
+        if (serializationResult.isTruncated()) {
+          final String logToPrint = StringUtils.format(
+              "Response Context truncated for id [%s]. Full context is [%s].",
+              queryId,
+              serializationResult.getFullResult()
+          );
+          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
+            QueryResource.log.error(logToPrint);
+            throw new QueryInterruptedException(
+                new TruncatedResponseContextException(
+                    "Serialized response context exceeds the max size[%s]",
+                    responseContextConfig.getMaxResponseContextHeaderSize()
+                ),
+                selfNode.getHostAndPortToUse()
+            );
+          } else {
+            QueryResource.log.warn(logToPrint);
+          }
+        }
+
+        response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
+        response.setHeader("Content-Type", contentType.toString());
+
+        try {
+          out = new CountingOutputStream(response.getOutputStream());
+          writer = resultsWriter.makeWriter(out);
+        }
+        catch (IOException e) {
+          throw new RE(e, "Problems setting up response stream for query[%s]!?", queryId);
+        }
+
+        try {
+          writer.writeResponseStart();
+        }
+        catch (IOException e) {
+          throw new RE(e, "Could not start the response for query[%s]!?", queryId);
+        }
+
+        initialized = true;
+      }
+    }
+
+    @Override
+    public Response accumulate(Response retVal, Object in)
+    {
+      if (!initialized) {
+        initialize();
+      }
+
+      try {
+        writer.writeRow(in);
+      }
+      catch (IOException ex) {
+        QueryResource.NO_STACK_LOGGER.warn(ex, "Unable to write query response.");
+        throw new RuntimeException(ex);
+      }
+      return null;
+    }
+
+    public void flush() throws IOException
+    {
+      if (!initialized) {
+        initialize();
+      }
+      writer.writeResponseEnd();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (closed) {
+        return;
+      }
+      if (initialized && writer != null) {
+        writer.close();
+      }
+      closed = true;
+    }
   }
 }

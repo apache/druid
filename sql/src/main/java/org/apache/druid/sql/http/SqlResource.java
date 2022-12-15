@@ -32,8 +32,8 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
-import org.apache.druid.server.ResultPusher;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -130,7 +130,7 @@ public class SqlResource
       final AsyncContext asyncContext = req.startAsync();
 
       try {
-        ResultPusher pusher = new SqlResourceResultPusher(asyncContext, sqlQueryId, stmt, sqlQuery);
+        QueryResultPusher pusher = new SqlResourceQueryResultPusher(asyncContext, sqlQueryId, stmt, sqlQuery);
         pusher.push();
         return null;
       }
@@ -213,13 +213,13 @@ public class SqlResource
     }
   }
 
-  private class SqlResourceResultPusher extends ResultPusher
+  private class SqlResourceQueryResultPusher extends QueryResultPusher
   {
     private final String sqlQueryId;
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
 
-    public SqlResourceResultPusher(
+    public SqlResourceQueryResultPusher(
         AsyncContext asyncContext,
         String sqlQueryId,
         HttpStatement stmt,
@@ -260,14 +260,10 @@ public class SqlResource
             retVal = thePlan.run();
           }
           catch (RelOptPlanner.CannotPlanException e) {
-            recordFailure(e);
-            final SqlPlanningException wrappedException = new SqlPlanningException(
+            throw new SqlPlanningException(
                 SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
                 e.getMessage()
             );
-
-            writeErrorResponse(HttpServletResponse.SC_BAD_REQUEST, response, wrappedException);
-            return null;
           }
           // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
           // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
@@ -282,6 +278,10 @@ public class SqlResource
             recordFailure(wrappedEx);
             writeErrorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response, wrappedEx);
             return null;
+          }
+
+          if (sqlQuery.includeHeader()) {
+            response.setHeader(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
           }
 
           return (QueryResponse) retVal;

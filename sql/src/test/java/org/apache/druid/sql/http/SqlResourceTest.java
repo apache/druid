@@ -67,7 +67,6 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -720,41 +719,95 @@ public class SqlResourceTest extends CalciteTestBase
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
-    Assert.assertEquals(
-        ImmutableList.of(
-            EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS,
-            EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS,
-            EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS,
-            Arrays.asList(
-                "2000-01-01T00:00:00.000Z",
-                "",
-                "a",
-                "[\"a\",\"b\"]",
-                1,
-                1.0,
-                1.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
-            ),
-            Arrays.asList(
-                "2000-01-02T00:00:00.000Z",
-                "10.1",
-                nullStr,
-                "[\"b\",\"c\"]",
-                1,
-                2.0,
-                2.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
-            )
-        ),
-        doPost(
-            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>()
-            {
-            }
-        ).rhs
+    final String hllStr = "org.apache.druid.hll.VersionOneHyperLogLogCollector";
+    List[] expectedQueryResults = new List[]{
+        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, hllStr, nullStr),
+        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", nullStr, "[\"b\",\"c\"]", 1, 2.0, 2.0, hllStr, nullStr)
+    };
+
+    MockHttpServletResponse response = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        req.mimic()
     );
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {{
+          add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+          add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
+          add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
+          addAll(Arrays.asList(expectedQueryResults));
+        }},
+        JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoSqlTypesHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoSqlTypesHeader.getStatus());
+    Assert.assertEquals("yes", responseNoSqlTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {{
+          add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+          add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
+          addAll(Arrays.asList(expectedQueryResults));
+        }},
+        JSON_MAPPER.readValue(responseNoSqlTypesHeader.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoTypesHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, false, true, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoTypesHeader.getStatus());
+    Assert.assertEquals("yes", responseNoTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {{
+          add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+          add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
+          addAll(Arrays.asList(expectedQueryResults));
+        }},
+        JSON_MAPPER.readValue(responseNoTypesHeader.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoTypes = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, false, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoTypes.getStatus());
+    Assert.assertEquals("yes", responseNoTypes.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {{
+          add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+          addAll(Arrays.asList(expectedQueryResults));
+        }},
+        JSON_MAPPER.readValue(responseNoTypes.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoHeader.getStatus());
+    Assert.assertNull(responseNoHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {{
+          addAll(Arrays.asList(expectedQueryResults));
+        }},
+        JSON_MAPPER.readValue(responseNoHeader.baos.toByteArray(), Object.class)
+    );
+
   }
 
   @Test
@@ -762,6 +815,15 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // Test a query that returns null header for some of the columns
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
+
+    MockHttpServletResponse response = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        req
+    );
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
+
     Assert.assertEquals(
         ImmutableList.of(
             Collections.singletonList("EXPR$0"),
@@ -774,12 +836,7 @@ public class SqlResourceTest extends CalciteTestBase
                 )
             )
         ),
-        doPost(
-            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>()
-            {
-            }
-        ).rhs
+        JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
     );
   }
 
@@ -1872,21 +1929,9 @@ public class SqlResourceTest extends CalciteTestBase
   @Nonnull
   private MockHttpServletResponse postForResponse(SqlQuery query, MockHttpServletRequest req)
   {
-    MockHttpServletResponse response = setupRequestForAsync(req);
+    MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
 
     Assert.assertNull(resource.doPost(query, req));
-    return response;
-  }
-
-  @Nonnull
-  private MockHttpServletResponse setupRequestForAsync(MockHttpServletRequest req)
-  {
-    MockHttpServletResponse response = new MockHttpServletResponse();
-    req.asyncContextSupplier = () -> {
-      final MockAsyncContext retVal = new MockAsyncContext();
-      retVal.response = response;
-      return retVal;
-    };
     return response;
   }
 

@@ -225,7 +225,7 @@ public class QueryResource implements QueryCountStatsProvider
       final AsyncContext asyncContext = req.startAsync();
 
       try {
-        new QueryResourceResultPusher(req, queryLifecycle, io, (HttpServletResponse) asyncContext.getResponse())
+        new QueryResourceQueryResultPusher(req, queryLifecycle, io, (HttpServletResponse) asyncContext.getResponse())
             .push();
       }
       finally {
@@ -529,13 +529,13 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  private class QueryResourceResultPusher extends ResultPusher
+  private class QueryResourceQueryResultPusher extends QueryResultPusher
   {
     private final HttpServletRequest req;
     private final QueryLifecycle queryLifecycle;
     private final ResourceIOReaderWriter io;
 
-    public QueryResourceResultPusher(
+    public QueryResourceQueryResultPusher(
         HttpServletRequest req,
         QueryLifecycle queryLifecycle,
         ResourceIOReaderWriter io,

@@ -36,6 +36,17 @@ import java.util.Locale;
 
 public class MockHttpServletResponse implements HttpServletResponse
 {
+  public static MockHttpServletResponse forRequest(MockHttpServletRequest req)
+  {
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    req.newAsyncContext(() -> {
+      final MockAsyncContext retVal = new MockAsyncContext();
+      retVal.response = response;
+      return retVal;
+    });
+    return response;
+  }
+
   public Multimap<String, String> headers = Multimaps.newListMultimap(
       new LinkedHashMap<>(), ArrayList::new
   );
@@ -158,7 +169,7 @@ public class MockHttpServletResponse implements HttpServletResponse
   public String getHeader(String name)
   {
     final Collection<String> vals = headers.get(name);
-    if (vals == null) {
+    if (vals == null || vals.isEmpty()) {
       return null;
     }
     return vals.iterator().next();

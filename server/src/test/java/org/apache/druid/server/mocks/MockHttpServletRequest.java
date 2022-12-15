@@ -33,7 +33,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 import java.io.BufferedReader;
-import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -265,7 +264,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public void setCharacterEncoding(String env) throws UnsupportedEncodingException
+  public void setCharacterEncoding(String env)
   {
     throw new UnsupportedOperationException();
   }
@@ -433,7 +432,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public AsyncContext startAsync() throws IllegalStateException
+  public AsyncContext startAsync()
   {
     if (asyncContextSupplier == null) {
       throw new UnsupportedOperationException();
@@ -455,7 +454,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   public AsyncContext startAsync(
       ServletRequest servletRequest,
       ServletResponse servletResponse
-  ) throws IllegalStateException
+  )
   {
     throw new UnsupportedOperationException();
   }
@@ -482,6 +481,11 @@ public class MockHttpServletRequest implements HttpServletRequest
   public DispatcherType getDispatcherType()
   {
     throw new UnsupportedOperationException();
+  }
+
+  public void newAsyncContext(Supplier<AsyncContext> supplier) {
+    asyncContextSupplier = supplier;
+    currAsyncContext = null;
   }
 
   public MockHttpServletRequest mimic()

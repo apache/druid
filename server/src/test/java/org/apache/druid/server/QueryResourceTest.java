@@ -61,7 +61,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
-import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -842,7 +841,7 @@ public class QueryResourceTest
           try {
             startAwaitLatch.countDown();
             final MockHttpServletRequest localRequest = testServletRequest.mimic();
-            final MockHttpServletResponse retVal = setupMockResponse(localRequest);
+            final MockHttpServletResponse retVal = MockHttpServletResponse.forRequest(localRequest);
             queryResource.doPost(
                 new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
                 null,
@@ -1103,18 +1102,6 @@ public class QueryResourceTest
     });
   }
 
-  @Nonnull
-  private MockHttpServletResponse setupMockResponse(MockHttpServletRequest localRequest)
-  {
-    MockHttpServletResponse response = new MockHttpServletResponse();
-    localRequest.asyncContextSupplier = () -> {
-      final MockAsyncContext retVal = new MockAsyncContext();
-      retVal.response = response;
-      return retVal;
-    };
-    return response;
-  }
-
   private void expectPermissiveHappyPathAuth()
   {
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, AUTHENTICATION_RESULT);
@@ -1150,7 +1137,7 @@ public class QueryResourceTest
       byte[] queryBytes, QueryResource queryResource
   ) throws IOException
   {
-    final MockHttpServletResponse response = setupMockResponse(req);
+    final MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
 
     Assert.assertNull(queryResource.doPost(
         new ByteArrayInputStream(queryBytes),

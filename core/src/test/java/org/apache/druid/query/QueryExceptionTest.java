@@ -19,17 +19,12 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.query.QueryException.FailType;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicLong;
 
-@RunWith(MockitoJUnitRunner.class)
 public class QueryExceptionTest
 {
   private static final String ERROR_CODE = "error code";
@@ -38,36 +33,72 @@ public class QueryExceptionTest
   private static final String ERROR_MESSAGE_ORIGINAL = "aaaa";
   private static final String ERROR_MESSAGE_TRANSFORMED = "bbbb";
 
-  @Mock
-  private Function<String, String> trasformFunction;
-
   @Test
   public void testSanitizeWithTransformFunctionReturningNull()
   {
-    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(null);
     QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
-    QueryException actual = queryException.sanitize(trasformFunction);
+
+    AtomicLong callCount = new AtomicLong(0);
+    QueryException actual = queryException.sanitize(s -> {
+      callCount.incrementAndGet();
+      Assert.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
+      return null;
+    });
+
     Assert.assertNotNull(actual);
     Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
     Assert.assertNull(actual.getMessage());
     Assert.assertNull(actual.getHost());
     Assert.assertNull(actual.getErrorClass());
-    Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
-    Mockito.verifyNoMoreInteractions(trasformFunction);
+    Assert.assertEquals(1, callCount.get());
   }
 
   @Test
   public void testSanitizeWithTransformFunctionReturningNewString()
   {
-    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(ERROR_MESSAGE_TRANSFORMED);
     QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
-    QueryException actual = queryException.sanitize(trasformFunction);
+
+    AtomicLong callCount = new AtomicLong(0);
+    QueryException actual = queryException.sanitize(s -> {
+      callCount.incrementAndGet();
+      Assert.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
+      return ERROR_MESSAGE_TRANSFORMED;
+    });
+
     Assert.assertNotNull(actual);
     Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
     Assert.assertEquals(actual.getMessage(), ERROR_MESSAGE_TRANSFORMED);
     Assert.assertNull(actual.getHost());
     Assert.assertNull(actual.getErrorClass());
-    Mockito.verify(trasformFunction).apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL));
-    Mockito.verifyNoMoreInteractions(trasformFunction);
+    Assert.assertEquals(1, callCount.get());
+  }
+
+  @Test
+  public void testSanity()
+  {
+    expectFailTypeForCode(FailType.UNKNOWN, null);
+    expectFailTypeForCode(FailType.UNKNOWN, "Nobody knows me.");
+    expectFailTypeForCode(FailType.QUERY_RUNTIME_FAILURE, QueryException.UNKNOWN_EXCEPTION_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.JSON_PARSE_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.BAD_QUERY_CONTEXT_ERROR_CODE);
+    expectFailTypeForCode(FailType.CAPACITY_EXCEEDED, QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE);
+    expectFailTypeForCode(FailType.SERVER_ERROR, QueryException.QUERY_INTERRUPTED_ERROR_CODE);
+    expectFailTypeForCode(FailType.CANCELED, QueryException.QUERY_CANCELED_ERROR_CODE);
+    expectFailTypeForCode(FailType.UNAUTHORIZED, QueryException.UNAUTHORIZED_ERROR_CODE);
+    expectFailTypeForCode(FailType.QUERY_RUNTIME_FAILURE, QueryException.UNSUPPORTED_OPERATION_ERROR_CODE);
+    expectFailTypeForCode(FailType.SERVER_ERROR, QueryException.TRUNCATED_RESPONSE_CONTEXT_ERROR_CODE);
+    expectFailTypeForCode(FailType.TIMEOUT, QueryException.QUERY_TIMEOUT_ERROR_CODE);
+    expectFailTypeForCode(FailType.UNSUPPORTED, QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.RESOURCE_LIMIT_EXCEEDED_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.SQL_PARSE_FAILED_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.PLAN_VALIDATION_FAILED_ERROR_CODE);
+    expectFailTypeForCode(FailType.USER_ERROR, QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE);
+  }
+
+  private void expectFailTypeForCode(FailType expected, String code)
+  {
+    QueryException exception = new QueryException(new Exception(), code, "java.lang.Exception", "test");
+
+    Assert.assertEquals(code, expected, exception.getFailType());
   }
 }
