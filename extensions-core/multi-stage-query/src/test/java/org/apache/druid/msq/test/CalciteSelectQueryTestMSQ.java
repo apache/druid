@@ -184,7 +184,8 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
 
   @Override
   public SqlEngine createEngine(
-      QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper,
+      QueryLifecycleFactory qlf,
+      ObjectMapper queryJsonMapper,
       Injector injector
   )
   {

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -844,20 +845,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(new CalciteTestConfig())
+    return new QueryTestBuilder(new CalciteTestConfig(false))
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
 
   protected QueryTestBuilder testBuilderMSQ()
   {
-    return new QueryTestBuilder(new CalciteTestConfig())
+    return new QueryTestBuilder(new CalciteTestConfig(true))
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize);
+        .skipVectorize(skipVectorize)
+        .setCustomVerifications(ImmutableList.of(
+            new QueryTestRunner.QueryVerifyStepFactory()
+            {
+              @Override
+              public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.BaseExecuteQuery execStep)
+              {
+                return () -> {
+
+                };
+              }
+            }
+        ));
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
+
+    final boolean runUsingMSQEngine;
+
+    public CalciteTestConfig(boolean runUsingMSQEngine)
+    {
+      this.runUsingMSQEngine = runUsingMSQEngine;
+    }
+
     @Override
     public QueryLogHook queryLogHook()
     {
@@ -892,6 +913,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           expectedResults,
           expectedResultSignature
       );
+    }
+
+    @Override
+    public boolean runUsingMSQEngine()
+    {
+      return runUsingMSQEngine;
     }
   }
 

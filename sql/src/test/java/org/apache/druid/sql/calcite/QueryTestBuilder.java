@@ -37,7 +37,7 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,10 +69,15 @@ public class QueryTestBuilder
   public interface QueryTestConfig
   {
     QueryLogHook queryLogHook();
+
     ExpectedException expectedException();
+
     ObjectMapper jsonMapper();
+
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
     ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
+
+    boolean runUsingMSQEngine();
   }
 
   protected final QueryTestConfig config;
@@ -83,10 +88,12 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
   protected ResultsVerifier expectedResultsVerifier;
-  protected @Nullable Consumer<ExpectedException> expectedExceptionInitializer;
+  @Nullable
+  protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
   protected boolean queryCannotVectorize;
   protected AuthConfig authConfig = new AuthConfig();
@@ -148,6 +155,30 @@ public class QueryTestBuilder
   )
   {
     this.expectedResults = expectedResults;
+    return this;
+  }
+
+  public QueryTestBuilder sql(String sql)
+  {
+    this.sql = sql;
+    return this;
+  }
+
+
+  public QueryTestBuilder addCustomVerification(
+      QueryTestRunner.QueryVerifyStepFactory factory
+  )
+  {
+    this.customVerifications.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomVerifications(
+      List<QueryTestRunner.QueryVerifyStepFactory> factories
+  )
+  {
+    this.customVerifications = new ArrayList<>();
+    this.customVerifications.addAll(factories);
     return this;
   }
 
@@ -241,7 +272,7 @@ public class QueryTestBuilder
    * config: doing so would confuse the "please use mine" vs. "create a new
    * one each time" semantics.
    */
-  public SqlStatementFactory statementFactory()
+  protected SqlStatementFactory statementFactory()
   {
     if (plannerFixture != null) {
       return plannerFixture.statementFactory();
@@ -259,4 +290,5 @@ public class QueryTestBuilder
   {
     return build().resultsOnly();
   }
+
 }
