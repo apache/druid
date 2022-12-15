@@ -33,7 +33,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -232,8 +231,16 @@ public class Expressions
   {
     // Translate field references.
     final RexFieldAccess ref = (RexFieldAccess) rexNode;
-    if (ref.getField().getIndex() > rowSignature.size())
-      return DruidExpression.ofColumn(null, rowSignature.getColumnName(0));
+    // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
+    // while the underlying datasource is the scan stub created from LogicalValuesRule
+    // In such a case we throw an exception as the query cannot be built
+    if (ref.getField().getIndex() > rowSignature.size()) {
+      throw new CannotBuildQueryException(String.format(
+          "Cannot build query as index[%d] is higher than row size[%d]",
+          ref.getField().getIndex(),
+          rowSignature.size()
+      ));
+    }
     final String columnName = rowSignature.getColumnName(ref.getField().getIndex());
     final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getField().getIndex());
     if (columnName == null) {

@@ -2678,7 +2678,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .columns(ImmutableList.of(
-                      "d3"
+                      "EXPR$0"
                   ))
                   .build()
         ),
