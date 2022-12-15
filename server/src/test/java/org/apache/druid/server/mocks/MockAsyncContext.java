@@ -22,7 +22,6 @@ package org.apache.druid.server.mocks;
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncListener;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -112,7 +111,7 @@ public class MockAsyncContext implements AsyncContext
   }
 
   @Override
-  public <T extends AsyncListener> T createListener(Class<T> clazz) throws ServletException
+  public <T extends AsyncListener> T createListener(Class<T> clazz)
   {
     throw new UnsupportedOperationException();
   }

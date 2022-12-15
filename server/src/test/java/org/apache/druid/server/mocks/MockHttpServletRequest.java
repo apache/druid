@@ -23,7 +23,6 @@ import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -34,7 +33,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Collection;
@@ -213,7 +211,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public boolean authenticate(HttpServletResponse response) throws IOException, ServletException
+  public boolean authenticate(HttpServletResponse response)
   {
     throw new UnsupportedOperationException();
   }
@@ -231,19 +229,19 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public Collection<Part> getParts() throws IOException, ServletException
+  public Collection<Part> getParts()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Part getPart(String name) throws IOException, ServletException
+  public Part getPart(String name)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException
+  public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass)
   {
     throw new UnsupportedOperationException();
   }
@@ -291,7 +289,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public ServletInputStream getInputStream() throws IOException
+  public ServletInputStream getInputStream()
   {
     throw new UnsupportedOperationException();
   }
@@ -345,7 +343,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   }
 
   @Override
-  public BufferedReader getReader() throws IOException
+  public BufferedReader getReader()
   {
     throw new UnsupportedOperationException();
   }

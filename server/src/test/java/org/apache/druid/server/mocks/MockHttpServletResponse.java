@@ -28,7 +28,6 @@ import javax.servlet.WriteListener;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -83,19 +82,19 @@ public class MockHttpServletResponse implements HttpServletResponse
   }
 
   @Override
-  public void sendError(int sc, String msg) throws IOException
+  public void sendError(int sc, String msg)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void sendError(int sc) throws IOException
+  public void sendError(int sc)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void sendRedirect(String location) throws IOException
+  public void sendRedirect(String location)
   {
     throw new UnsupportedOperationException();
   }
@@ -190,7 +189,7 @@ public class MockHttpServletResponse implements HttpServletResponse
   }
 
   @Override
-  public ServletOutputStream getOutputStream() throws IOException
+  public ServletOutputStream getOutputStream()
   {
     return new ServletOutputStream()
     {
