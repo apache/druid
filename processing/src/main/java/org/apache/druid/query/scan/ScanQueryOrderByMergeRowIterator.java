@@ -30,10 +30,12 @@ import org.apache.druid.utils.CollectionUtils;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
 {
@@ -75,10 +77,13 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
       columns = columns.isEmpty() ? srv.getColumns() : columns;
       List<Object[]> events = (List<Object[]>) srv.getEvents();
       for (Object event : events) {
+        //During the merge phase, there are 3 result types to consider
         if (event instanceof LinkedHashMap) {
           sorter.add(((LinkedHashMap) event).values().toArray());
-        } else {
+        } else if (event instanceof Object[]){
           sorter.add((Object[]) event);
+        }else {
+          sorter.add(((List<Object>) event).toArray());
         }
       }
       yielder = yielder.next(null);
@@ -98,6 +103,6 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
       }
       return new ScanResultValue(null, columns, events);
     }
-    return new ScanResultValue(null, columns, sortedElements);
+    return new ScanResultValue(null, columns, sortedElements.stream().map(e -> Arrays.asList(e)).collect(Collectors.toList()));
   }
 }
