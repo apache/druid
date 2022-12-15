@@ -43,7 +43,7 @@ You need a Druid cluster, such as the [micro-quickstart](./index.md). The cluste
 The data you're ingesting contains a handful of rows that resemble the following:
 
 ```
-t:2000-01-01,m1:1.0,m2:1.0,dim1:,dim2:[a],dim3:[a,b]
+t:2000-01-01, m1:1.0, m2:1.0, dim1:, dim2:[a], dim3:[a,b]
 ```
 
 The focus of this tutorial is on the nested array of values in `dim3`.
