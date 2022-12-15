@@ -94,6 +94,7 @@ export class ConsoleApplication extends React.PureComponent<
         const capabilities = capabilitiesOverride
           ? new Capabilities(capabilitiesOverride)
           : await Capabilities.detectCapabilities();
+
         if (!capabilities) {
           ConsoleApplication.shownServiceNotification();
           return Capabilities.FULL;
