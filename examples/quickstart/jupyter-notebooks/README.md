@@ -61,7 +61,7 @@ The notebooks are located in the [apache/druid repo](https://github.com/apache/d
 
 The links that follow are the raw GitHub URLs, so you can use them to download the notebook directly, such as with `wget`, or manually through your web browser. Note that if you save the file from your web browser, make sure to remove the `.txt` extension.
 
-- [Introduction to the Druid API](https://raw.githubusercontent.com/apache/druid/master/api-tutorial-jupyter-nb/examples/quickstart/jupyter-notebooks/api-tutorial.ipynb) walks you through some of the basics related to the Druid API and several endpoints.
+- [Introduction to the Druid API](api-tutorial.ipynb) walks you through some of the basics related to the Druid API and several endpoints.
 
 ## Contributing
 
@@ -82,4 +82,4 @@ For the first PR, do the following:
 For the second PR, do the following:
 
 1. Update the list of [Tutorials](#tutorials) on this page and in the [ Jupyter tutorial index page](../../../docs/tutorials/tutorial-jupyter-index.md#tutorials) in the `docs/tutorials` directory. 
-2. Updating `tutorial-jupyter-index.md` and provide the URL to the raw version of the file that becomes available after the first PR is merged.
+2. Update `tutorial-jupyter-index.md` and provide the URL to the raw version of the file that becomes available after the first PR is merged.
