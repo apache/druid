@@ -3,6 +3,8 @@ package org.apache.druid.sql.calcite.rel;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -93,12 +95,12 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         logicalCorrelate.getRowType()
     );
 
-    final RowSignature rowSignature1 = RowSignatures.fromRelDataType(
-        getRowType().getFieldNames(),
-        getRowType()
-    );
 
-    final DruidExpression expression = Expressions.toDruidExpression(
+    RexCall rx = (RexCall) unnestDatasourceRel.getUnnestProject().getChildExps().get(0);
+    RexFieldAccess rf = (RexFieldAccess) rx.getOperands().get(0);
+    String dimension = rf.getField().getName();
+
+    /*final DruidExpression expression = Expressions.toDruidExpression(
         getPlannerContext(),
         rowSignature,
         unnestDatasourceRel.getUnnestProject().getProjects().get(0)
@@ -107,7 +109,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     String dimension = "";
     if (expression.getArguments().get(0).isDirectColumnAccess()) {
       dimension = expression.getArguments().get(0).getDirectColumn();
-    }
+    }*/
 
     UnnestDataSource dataSource = UnnestDataSource.create(
         baseQueryRel.getDruidTable().getDataSource(),
