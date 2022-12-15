@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator;
+package org.apache.druid.query.rowsandcols.semantic;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
@@ -30,71 +29,70 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
-public class NaivePartitioningOperatorTest
+public class SortedGroupPartitionerTest extends SemanticTestBase
 {
-  @Test
-  public void testDefaultImplementation()
+  public SortedGroupPartitionerTest(
+      String name,
+      Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn
+  )
   {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+    super(name, fn);
+  }
+
+  @Test
+  public void testDefaultSortedGroupPartitioner()
+  {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
             "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
             "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
         )
-    );
+    ));
 
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
-        ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac)
-    );
+    SortedGroupPartitioner parter = rac.as(SortedGroupPartitioner.class);
+    if (parter == null) {
+      parter = new DefaultSortedGroupPartitioner(rac);
+    }
 
-    op.open();
+    int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
 
     List<RowsAndColumnsHelper> expectations = Arrays.asList(
         new RowsAndColumnsHelper()
             .expectColumn("sorted", new int[]{0, 0, 0})
-            .expectColumn("unsorted", new int[]{3, 54, 21}),
+            .expectColumn("unsorted", new int[]{3, 54, 21})
+            .allColumnsRegistered(),
         new RowsAndColumnsHelper()
             .expectColumn("sorted", new int[]{1, 1})
-            .expectColumn("unsorted", new int[]{1, 5}),
+            .expectColumn("unsorted", new int[]{1, 5})
+            .allColumnsRegistered(),
         new RowsAndColumnsHelper()
             .expectColumn("sorted", new int[]{2})
-            .expectColumn("unsorted", new int[]{54}),
+            .expectColumn("unsorted", new int[]{54})
+            .allColumnsRegistered(),
         new RowsAndColumnsHelper()
             .expectColumn("sorted", new int[]{4, 4, 4})
             .expectColumn("unsorted", new int[]{2, 3, 92})
+            .allColumnsRegistered()
     );
 
+    final List<String> partCols = Collections.singletonList("sorted");
+    Assert.assertArrayEquals(expectedBounds, parter.computeBoundaries(partCols));
+
+    final Iterator<RowsAndColumns> partedChunks = parter.partitionOnBoundaries(partCols).iterator();
     for (RowsAndColumnsHelper expectation : expectations) {
-      Assert.assertTrue(op.hasNext());
-      expectation.validate(op.next());
+      Assert.assertTrue(partedChunks.hasNext());
+      expectation.validate(partedChunks.next());
     }
-    Assert.assertFalse(op.hasNext());
-
-    op.close(true);
-  }
-
-  @Test
-  public void testFailUnsorted()
-  {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
-        )
-    );
-
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
-        ImmutableList.of("unsorted"),
-        InlineScanOperator.make(rac)
-    );
-
-    op.open();
+    Assert.assertFalse(partedChunks.hasNext());
 
     boolean exceptionThrown = false;
     try {
-      op.next();
+      parter.partitionOnBoundaries(Collections.singletonList("unsorted"));
     }
     catch (ISE ex) {
       Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());

@@ -96,6 +96,13 @@ public class RowsAndColumnsHelper
     return this;
   }
 
+  public RowsAndColumnsHelper expectColumn(String col, Object[] expectedVals, ColumnType type)
+  {
+    final ColumnHelper helper = columnHelper(col, expectedVals.length, type);
+    helper.setExpectation(expectedVals);
+    return this;
+  }
+
   public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)
   {
     ColumnHelper retVal = helpers.get(column);
@@ -216,51 +223,43 @@ public class RowsAndColumnsHelper
           Assert.assertTrue(msg, accessor.isNull(i));
           Assert.assertNull(msg, accessor.getObject(i));
         }
+
+        Assert.assertEquals(msg + " is null?", expectedNulls[i], accessor.isNull(i));
         if (expectedVal instanceof Float) {
           if (expectedNulls[i]) {
-            Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertEquals(msg, 0.0f, accessor.getFloat(i), 0.0);
           } else {
-            Assert.assertFalse(msg, accessor.isNull(i));
             Assert.assertEquals(msg, (Float) expectedVal, accessor.getFloat(i), 0.0);
           }
         } else if (expectedVal instanceof Double) {
           if (expectedNulls[i]) {
-            Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertEquals(msg, 0.0d, accessor.getDouble(i), 0.0);
           } else {
-            Assert.assertFalse(msg, accessor.isNull(i));
             Assert.assertEquals(msg, (Double) expectedVal, accessor.getDouble(i), 0.0);
           }
         } else if (expectedVal instanceof Integer) {
           if (expectedNulls[i]) {
-            Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertEquals(msg, 0, accessor.getInt(i));
           } else {
-            Assert.assertFalse(msg, accessor.isNull(i));
             Assert.assertEquals(msg, ((Integer) expectedVal).intValue(), accessor.getInt(i));
           }
         } else if (expectedVal instanceof Long) {
           if (expectedNulls[i]) {
-            Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertEquals(msg, 0, accessor.getLong(i));
           } else {
-            Assert.assertFalse(msg, accessor.isNull(i));
             Assert.assertEquals(msg, ((Long) expectedVal).longValue(), accessor.getLong(i));
           }
         } else {
           if (expectedNulls[i]) {
-            Assert.assertTrue(msg, accessor.isNull(i));
             Assert.assertNull(msg, accessor.getObject(i));
             // asserting null on the expected value is here for consistency in the tests.  If it fails, it's most
             // likely indicative of something wrong with the test setup than the actual logic, we keep it for
             // sanity's sake to things consistent.
-            Assert.assertNull(msg, expectedVals[i]);
+            Assert.assertNull(msg, expectedVal);
           } else {
             final Object obj = accessor.getObject(i);
-            Assert.assertFalse(msg, accessor.isNull(i));
             Assert.assertNotNull(msg, obj);
-            Assert.assertEquals(msg, expectedVals[i], obj);
+            Assert.assertEquals(msg, expectedVal, obj);
           }
         }
       }

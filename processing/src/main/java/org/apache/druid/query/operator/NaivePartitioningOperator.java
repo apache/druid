@@ -20,9 +20,9 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.rowsandcols.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.SortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.DefaultSortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.SortedGroupPartitioner;
 
 import java.util.Iterator;
 import java.util.List;

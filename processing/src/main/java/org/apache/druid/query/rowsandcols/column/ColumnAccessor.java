@@ -100,5 +100,5 @@ public interface ColumnAccessor
    * @param rhsRowNum the cell id of the right-hand-side of the comparison
    * @return the result of the comparison of the two cells
    */
-  int compareCells(int lhsRowNum, int rhsRowNum);
+  int compareRows(int lhsRowNum, int rhsRowNum);
 }

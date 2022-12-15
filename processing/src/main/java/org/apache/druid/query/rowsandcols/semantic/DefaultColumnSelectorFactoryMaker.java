@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -38,7 +37,6 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,81 +44,35 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-public class DefaultOnHeapAggregatable implements OnHeapAggregatable, OnHeapCumulativeAggregatable
+public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryMaker
 {
   private final RowsAndColumns rac;
 
-  public DefaultOnHeapAggregatable(
-      RowsAndColumns rac
-  )
+  public DefaultColumnSelectorFactoryMaker(RowsAndColumns rac)
   {
     this.rac = rac;
   }
 
   @Override
-  public ArrayList<Object> aggregateAll(
-      List<AggregatorFactory> aggFactories
-  )
+  public ColumnSelectorFactory make(AtomicInteger rowIdProvider)
   {
-    Aggregator[] aggs = new Aggregator[aggFactories.size()];
-
-    AtomicInteger currRow = new AtomicInteger(0);
-    int index = 0;
-    for (AggregatorFactory aggFactory : aggFactories) {
-      aggs[index++] = aggFactory.factorize(new ColumnAccessorBasedColumnSelectorFactory(currRow));
-    }
-
-    int numRows = rac.numRows();
-    int rowId = currRow.get();
-    while (rowId < numRows) {
-      for (Aggregator agg : aggs) {
-        agg.aggregate();
-      }
-      rowId = currRow.incrementAndGet();
-    }
-
-    ArrayList<Object> retVal = new ArrayList<>(aggs.length);
-    for (Aggregator agg : aggs) {
-      retVal.add(agg.get());
-    }
-    return retVal;
+    return new ColumnAccessorBasedColumnSelectorFactory(rowIdProvider, rac);
   }
 
-  @Override
-  public ArrayList<Object[]> aggregateCumulative(List<AggregatorFactory> aggFactories)
-  {
-    Aggregator[] aggs = new Aggregator[aggFactories.size()];
-    ArrayList<Object[]> retVal = new ArrayList<>(aggFactories.size());
-
-    int numRows = rac.numRows();
-    AtomicInteger currRow = new AtomicInteger(0);
-    int index = 0;
-    for (AggregatorFactory aggFactory : aggFactories) {
-      aggs[index++] = aggFactory.factorize(new ColumnAccessorBasedColumnSelectorFactory(currRow));
-      retVal.add(new Object[numRows]);
-    }
-
-    int rowId = currRow.get();
-    while (rowId < numRows) {
-      for (int i = 0; i < aggs.length; ++i) {
-        aggs[i].aggregate();
-        retVal.get(i)[rowId] = aggs[i].get();
-      }
-      rowId = currRow.incrementAndGet();
-    }
-
-    return retVal;
-  }
-
-  private class ColumnAccessorBasedColumnSelectorFactory implements ColumnSelectorFactory
+  public static class ColumnAccessorBasedColumnSelectorFactory implements ColumnSelectorFactory
   {
     private final Map<String, ColumnAccessor> accessorCache = new HashMap<>();
 
     private final AtomicInteger cellIdSupplier;
+    private final RowsAndColumns rac;
 
-    public ColumnAccessorBasedColumnSelectorFactory(AtomicInteger cellIdSupplier)
+    public ColumnAccessorBasedColumnSelectorFactory(
+        AtomicInteger cellIdSupplier,
+        RowsAndColumns rac
+    )
     {
       this.cellIdSupplier = cellIdSupplier;
+      this.rac = rac;
     }
 
     @Override

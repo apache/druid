@@ -17,30 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.column;
+package org.apache.druid.query.rowsandcols.semantic;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.Column;
 
-public class NullColumnAccessorTest
+/**
+ * A RowsAndColumns that supports appending columns.  This interface is particularly useful because even if there is
+ * some composition of code that works with RowsAndColumns, we would like to add the columns to a singular base object
+ * instead of build up a complex object graph.
+ */
+public interface AppendableRowsAndColumns extends RowsAndColumns
 {
-
-  @Test
-  public void testSanity()
-  {
-    NullColumnAccessor accessor = new NullColumnAccessor(10);
-    Assert.assertEquals(10, accessor.numRows());
-
-    for (int i = 0; i < 10; ++i) {
-      Assert.assertTrue(accessor.isNull(i));
-      Assert.assertNull(accessor.getObject(i));
-      Assert.assertEquals(0, accessor.getInt(i));
-      Assert.assertEquals(0, accessor.getLong(i));
-      Assert.assertEquals(0.0, accessor.getFloat(i), 0);
-      Assert.assertEquals(0.0, accessor.getDouble(i), 0);
-      for (int j = 0; j < i; ++j) {
-        Assert.assertEquals(0, accessor.compareRows(j, i));
-      }
-    }
-  }
+  /**
+   * Mutates the RowsAndColumns by appending the requested Column.
+   *
+   * @param name   the name of the new column
+   * @param column the Column object representing the new column
+   */
+  void addColumn(String name, Column column);
 }
