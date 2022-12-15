@@ -31,7 +31,7 @@ import org.apache.druid.segment.data.Indexed;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuffer>>
+public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuffer>>
     extends CompressedNestedDataComplexColumn<TStringDictionary>
 {
   public NestedDataColumnV4(
