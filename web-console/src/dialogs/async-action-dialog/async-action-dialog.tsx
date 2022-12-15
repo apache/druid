@@ -47,7 +47,7 @@ export interface AsyncActionDialogProps {
   intent?: Intent;
   successText: string;
   failText: string;
-  warningChecks?: string[];
+  warningChecks?: ReactNode[];
   children?: ReactNode;
 }
 

@@ -155,6 +155,39 @@ public class ServerInjectorBuilderTest
   }
 
   @Test
+  public void testCreateInjectorWithEmptyNodeRolesAndRoleInjection()
+  {
+    final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);
+    Injector startupInjector = startupInjector();
+    Injector injector = ServerInjectorBuilder.makeServerInjector(
+        startupInjector,
+        ImmutableSet.of(),
+        ImmutableList.of(
+            (com.google.inject.Module) new DruidModule()
+            {
+              @Inject
+              public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
+              {
+                Assert.assertTrue(nodeRoles.isEmpty());
+              }
+
+              @Override
+              public void configure(Binder binder)
+              {
+
+              }
+            },
+            binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                expected
+            )
+        )
+    );
+    Assert.assertNotNull(injector);
+  }
+
+  @Test
   public void testCreateInjectorWithNodeRoleFilter_moduleNotLoaded()
   {
     final DruidNode expected = new DruidNode("test-inject", null, false, null, null, true, false);

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -33,7 +32,6 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
@@ -43,7 +41,7 @@ import java.util.List;
  * negative meaning the interval end target will be in the future. Also, retainDuration can be ignored,
  * meaning that there is no upper bound to the end interval of segments that will be killed. This action is called
  * "to kill a segment".
- *
+ * <p>
  * See org.apache.druid.indexing.common.task.KillUnusedSegmentsTask.
  */
 public class KillUnusedSegments implements CoordinatorDuty
@@ -105,79 +103,69 @@ public class KillUnusedSegments implements CoordinatorDuty
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
+    // If no datasource has been specified, all are eligible for killing unused segments
     if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
       dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
     }
 
-    if (dataSourcesToKill != null &&
-        dataSourcesToKill.size() > 0 &&
-        (lastKillTime + period) < System.currentTimeMillis()) {
-      lastKillTime = System.currentTimeMillis();
-
-      for (String dataSource : dataSourcesToKill) {
-        final Interval intervalToKill = findIntervalForKill(dataSource, maxSegmentsToKill);
-        if (intervalToKill != null) {
-          try {
-            indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill);
-          }
-          catch (Exception ex) {
-            log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
-            if (Thread.currentThread().isInterrupted()) {
-              log.warn("skipping kill task scheduling because thread is interrupted.");
-              break;
-            }
-          }
-        }
-      }
+    final long currentTimeMillis = System.currentTimeMillis();
+    if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
+      log.debug("No eligible datasource to kill unused segments.");
+    } else if (lastKillTime + period > currentTimeMillis) {
+      log.debug("Skipping kill of unused segments as kill period has not elapsed yet.");
+    } else {
+      log.debug("Killing unused segments in datasources: %s", dataSourcesToKill);
+      lastKillTime = currentTimeMillis;
+      killUnusedSegments(dataSourcesToKill);
     }
+
     return params;
   }
 
-  /**
-   * For a given datasource and limit of segments that can be killed in one task, determine the interval to be
-   * submitted with the kill task.
-   *
-   * @param dataSource dataSource whose unused segments are being killed.
-   * @param limit the maximum number of segments that can be included in the kill task.
-   * @return {@link Interval} to be used in the kill task.
-   */
-  @VisibleForTesting
-  @Nullable
-  Interval findIntervalForKill(String dataSource, int limit)
+  private void killUnusedSegments(Collection<String> dataSourcesToKill)
   {
-    List<Interval> unusedSegmentIntervals =
-        segmentsMetadataManager.getUnusedSegmentIntervals(
-            dataSource,
-            getEndTimeUpperLimit(),
-            limit,
-            DateTimes.nowUtc().minus(bufferPeriod)
-        );
+    int submittedTasks = 0;
+    for (String dataSource : dataSourcesToKill) {
+      final Interval intervalToKill = findIntervalForKill(dataSource);
+      if (intervalToKill == null) {
+        continue;
+      }
 
-    if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
-      return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
-    } else {
+      try {
+        indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill);
+        ++submittedTasks;
+      }
+      catch (Exception ex) {
+        log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
+        if (Thread.currentThread().isInterrupted()) {
+          log.warn("skipping kill task scheduling because thread is interrupted.");
+          break;
+        }
+      }
+    }
+
+    log.debug("Submitted kill tasks for [%d] datasources.", submittedTasks);
+  }
+
+  /**
+   * Calculates the interval for which segments are to be killed in a datasource.
+   */
+  private Interval findIntervalForKill(String dataSource)
+  {
+    final DateTime maxEndTime = ignoreRetainDuration
+                                ? DateTimes.COMPARE_DATE_AS_STRING_MAX
+                                : DateTimes.nowUtc().minus(retainDuration);
+
+    List<Interval> unusedSegmentIntervals = segmentsMetadataManager
+        .getUnusedSegmentIntervals(dataSource, maxEndTime, maxSegmentsToKill, DateTimes.nowUtc().minus(bufferPeriod));
+
+    if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;
+    } else if (unusedSegmentIntervals.size() == 1) {
+      return unusedSegmentIntervals.get(0);
+    } else {
+      return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
     }
   }
 
-  /**
-   * Calculate the {@link DateTime} that wil form the upper bound when looking for segments that are
-   * eligible to be killed. If ignoreDurationToRetain is true, we have no upper bound and return a DateTime object
-   * for "max" time that works when comparing date strings.
-   *
-   * @return {@link DateTime} representing the upper bound time used when looking for segments to kill.
-   */
-  @VisibleForTesting
-  DateTime getEndTimeUpperLimit()
-  {
-    return ignoreRetainDuration
-           ? DateTimes.COMPARE_DATE_AS_STRING_MAX
-           : DateTimes.nowUtc().minus(retainDuration);
-  }
-
-  @VisibleForTesting
-  Long getRetainDuration()
-  {
-    return retainDuration;
-  }
 }

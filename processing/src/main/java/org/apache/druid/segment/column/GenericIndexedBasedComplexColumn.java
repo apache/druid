@@ -58,7 +58,7 @@ public class GenericIndexedBasedComplexColumn implements ComplexColumn
   @Override
   public int getLength()
   {
-    return index.size();
+    return -1;
   }
 
   @Override

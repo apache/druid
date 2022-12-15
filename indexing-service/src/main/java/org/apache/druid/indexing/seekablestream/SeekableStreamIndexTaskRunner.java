@@ -769,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -897,7 +899,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
@@ -1035,7 +1036,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
             task.emitMetric(
                 toolbox.getEmitter(),
-                "ingest/segment/count",
+                "ingest/segments/count",
                 segmentCount
             );
           }

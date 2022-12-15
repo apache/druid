@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import axios from 'axios';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -92,6 +93,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     goToIngestion,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
+
+  // Store the cancellation function for natively run queries allowing us to trigger it only when the user explicitly clicks "cancel" (vs changing tab)
+  const nativeQueryCancelFnRef = useRef<() => void>();
+
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     onQueryChange(query.changeQueryString(queryString));
   });
@@ -165,11 +170,16 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
               const resultPromise = queryRunner.runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
+                cancelToken: new axios.CancelToken(cancelFn => {
+                  nativeQueryCancelFnRef.current = cancelFn;
+                }),
               });
               WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, sqlPrefixLines });
 
               result = await resultPromise;
+              nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
+              nativeQueryCancelFnRef.current = undefined;
               throw new DruidError(e, sqlPrefixLines);
             }
 
@@ -236,9 +246,8 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
   const handleRun = usePermanentCallback(async (preview: boolean) => {
     if (!query.isValid()) return;
 
-    WorkbenchHistory.addQueryToHistory(query);
-
     if (query.getEffectiveEngine() !== 'sql-msq-task') {
+      WorkbenchHistory.addQueryToHistory(query);
       queryManager.runQuery(query);
       return;
     }
@@ -280,6 +289,11 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
       extraInfo = summarizeExternalConfig(fitExternalConfigPattern(parsedQuery));
     } catch {}
   }
+
+  const onUserCancel = () => {
+    queryManager.cancelCurrent();
+    nativeQueryCancelFnRef.current?.();
+  };
 
   return (
     <div className="helper-query">
@@ -419,17 +433,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
                     execution={executionState.intermediate}
                     intermediateError={executionState.intermediateError}
                     goToIngestion={goToIngestion}
-                    onCancel={() => {
-                      queryManager.cancelCurrent();
-                    }}
+                    onCancel={onUserCancel}
                   />
                 ) : (
-                  <Loader
-                    cancelText="Cancel query"
-                    onCancel={() => {
-                      queryManager.cancelCurrent();
-                    }}
-                  />
+                  <Loader cancelText="Cancel query" onCancel={onUserCancel} />
                 ))}
             </div>
           )}

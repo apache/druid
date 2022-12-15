@@ -43,7 +43,6 @@ import java.util.List;
 
 public class DoublesSketchModule implements DruidModule
 {
-
   public static final String DOUBLES_SKETCH = "quantilesDoublesSketch";
   public static final String DOUBLES_SKETCH_MERGE = "quantilesDoublesSketchMerge";
   public static final ColumnType TYPE = ColumnType.ofComplex(DOUBLES_SKETCH);

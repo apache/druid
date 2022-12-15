@@ -47,7 +47,7 @@ public final class IndexedUtf8ValueSetIndex<TDictionary extends Indexed<ByteBuff
   // sorted merge instead of binary-search based algorithm.
   private static final double SORTED_MERGE_RATIO_THRESHOLD = 0.12D;
   private static final int SIZE_WORTH_CHECKING_MIN = 8;
-  private static final Comparator<ByteBuffer> COMPARATOR = ByteBufferUtils.unsignedComparator();
+  private static final Comparator<ByteBuffer> COMPARATOR = ByteBufferUtils.utf8Comparator();
 
   private final BitmapFactory bitmapFactory;
   private final TDictionary dictionary;

@@ -46,6 +46,51 @@ sub usage
   die "usage: $0 -c <conf file> [-d <var dir>] [-t <kill timeout>] [--svlogd <optional conf file>]\n";
 }
 
+sub process_config
+{
+    my @lines = @_;
+    my @commands;
+    my @verify;
+    my @notify;
+    my $kill_timeout;
+    for my $line (@lines)
+    {
+        if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
+          my $name = $1;
+          my $order = 50;
+          my $command = $2;
+
+          if ($name =~ /^(?:\!p([0-9]+)\s+)(.*)$/) {
+            $order = $1;
+            $name = $2;
+          }
+
+          if ($name eq ':verify') {
+            push @verify, $command;
+          } elsif ($name eq ':notify') {
+            push @notify, $command;
+          } elsif ($name eq ':kill-timeout') {
+            $kill_timeout = int($command);
+          } else {
+            die "Duplicate command: $line\n" if grep { $_->{name} eq $name } @commands;
+            push @commands, {
+              name => $name,
+              command => $command,
+              order => $order,  # Stop order for this command
+              pid => 0,         # Current pid, or 0 if not running
+              down => 0,        # Time the proc should be down until
+              killed => 0,      # Signal we sent to this process
+              restarting => 0,  # True if this command is currently restarting
+            };
+          }
+        } else {
+          die "Syntax error: $line\n";
+        }
+    }
+
+    return { commands => \@commands, verify => \@verify, notify => \@notify, 'kill-timeout' => $kill_timeout };
+}
+
 sub read_config_file
 {
   my ($config_file) = @_;
@@ -53,49 +98,20 @@ sub read_config_file
   open my $config_fh, "<", $config_file
     or die "open $config_file: $!";
 
-  my @commands;
-  my @verify;
-  my @notify;
-  my $kill_timeout;
+  my @lines;
   while (my $line = <$config_fh>) {
     chomp $line;
     next if $line =~ /^(\s*\#.*|\s*)$/;
 
     if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
-      my $name = $1;
-      my $order = 50;
-      my $command = $2;
-
-      if ($name =~ /^(?:\!p([0-9]+)\s+)(.*)$/) {
-        $order = $1;
-        $name = $2;
-      }
-
-      if ($name eq ':verify') {
-        push @verify, $command;
-      } elsif ($name eq ':notify') {
-        push @notify, $command;
-      } elsif ($name eq ':kill-timeout') {
-        $kill_timeout = int($command);
-      } else {
-        die "Duplicate command: $line\n" if grep { $_->{name} eq $name } @commands;
-        push @commands, {
-          name => $name,
-          command => $command,
-          order => $order,  # Stop order for this command
-          pid => 0,         # Current pid, or 0 if not running
-          down => 0,        # Time the proc should be down until
-          killed => 0,      # Signal we sent to this process
-          restarting => 0,  # True if this command is currently restarting
-        };
-      }
+        push @lines, $line
     } else {
       die "Syntax error: $line\n";
     }
   }
 
   close $config_fh;
-  return { commands => \@commands, verify => \@verify, notify => \@notify, 'kill-timeout' => $kill_timeout };
+  return @lines;
 }
 
 sub stringify_exit_status
@@ -179,13 +195,23 @@ usage() unless GetOptions(
   'vardir|d=s',
   'kill-timeout|t=i',
   'chdir=s',
-  'svlogd:s'
+  'svlogd:s',
+  'command=s@'
 );
 
-usage() unless $opt{'conf'} && $opt{'vardir'};
+usage() unless (($opt{'command'} && @{$opt{'command'}}) || $opt{'conf'}) && $opt{'vardir'};
 
-# Read config file
-my $config = read_config_file($opt{'conf'});
+my @config_lines;
+
+# get commands to execute either from reading the config file or command line
+if (not defined $opt{'conf'}) {
+    @config_lines = @{$opt{'command'}}
+} else {
+    @config_lines = read_config_file($opt{'conf'});
+}
+
+my $config = process_config(@config_lines);
+
 @commands = @{$config->{commands}};
 
 if (!@commands) {

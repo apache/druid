@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -47,19 +48,22 @@ import java.io.File;
  * }</pre>
  */
 @UnstableApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = InputSource.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @Type(name = "local", value = LocalInputSource.class),
-    @Type(name = "http", value = HttpInputSource.class),
-    @Type(name = "inline", value = InlineInputSource.class),
-    @Type(name = "combining", value = CombiningInputSource.class)
+    @Type(name = LocalInputSource.TYPE_KEY, value = LocalInputSource.class),
+    @Type(name = HttpInputSource.TYPE_KEY, value = HttpInputSource.class),
+    @Type(name = InlineInputSource.TYPE_KEY, value = InlineInputSource.class),
+    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class)
 })
 public interface InputSource
 {
+  String TYPE_PROPERTY = "type";
+
   /**
    * Returns true if this inputSource can be processed in parallel using ParallelIndexSupervisorTask. It must be
    * castable to SplittableInputSource and the various SplittableInputSource methods must work as documented.
    */
+  @JsonIgnore
   boolean isSplittable();
 
   /**

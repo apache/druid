@@ -207,6 +207,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     try {
       segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+          plannerContext.getJsonMapper(),
           plannerContext.queryContextMap()
       );
     }

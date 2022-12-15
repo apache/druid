@@ -407,9 +407,9 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     }
 
     @Override
-    public int compare(Integer o1, Integer o2)
+    public int compare(Object o1, Object o2)
     {
-      return Integer.compare(o1, o2);
+      return Integer.compare(((Number) o1).intValue(), ((Number) o2).intValue());
     }
   }
 }
