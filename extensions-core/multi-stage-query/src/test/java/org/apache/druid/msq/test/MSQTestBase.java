@@ -69,7 +69,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
@@ -597,14 +596,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       };
       segmentManager.addSegment(segment);
     }
-    return new Supplier<Pair<Segment, Closeable>>()
-    {
-      @Override
-      public Pair<Segment, Closeable> get()
-      {
-        return new Pair<>(segmentManager.getSegment(segmentId), Closer.create());
-      }
-    };
+    return () -> new Pair<>(segmentManager.getSegment(segmentId), Closer.create());
   }
 
   public SelectTester testSelectQuery()
@@ -615,11 +607,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public IngestTester testIngestQuery()
   {
     return new IngestTester();
-  }
-
-  public static CounterSnapshotBuilder channelCountersWith()
-  {
-    return new CounterSnapshotBuilder();
   }
 
   private ObjectMapper setupObjectMapper(Injector injector)
@@ -868,6 +855,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
       MatcherAssert.assertThat(e, expectedValidationErrorMatcher);
     }
 
+    protected void verifyCounters(CounterSnapshotsTree counterSnapshotsTree)
+    {
+      Assert.assertNotNull(counterSnapshotsTree);
+
+      final Map<Integer, Map<Integer, CounterSnapshots>> stageWorkerToSnapshots = counterSnapshotsTree.copyMap();
+      expectedStageWorkerChannelToCounters.forEach((stage, expectedWorkerChannelToCounters) -> {
+        final Map<Integer, CounterSnapshots> workerToCounters = stageWorkerToSnapshots.get(stage);
+        Assert.assertNotNull("No counters for stage " + stage, workerToCounters);
+
+        expectedWorkerChannelToCounters.forEach((worker, expectedChannelToCounters) -> {
+          CounterSnapshots counters = workerToCounters.get(worker);
+          Assert.assertNotNull(
+              StringUtils.format("No counters for stage [%d], worker [%d]", stage, worker),
+              counters
+          );
+
+          final Map<String, QueryCounterSnapshot> channelToCounters = counters.getMap();
+          expectedChannelToCounters.forEach(
+              (channel, counter) -> Assert.assertEquals(
+                  StringUtils.format(
+                      "Counter mismatch for stage [%d], worker [%d], channel [%s]",
+                      stage,
+                      worker,
+                      channel
+                  ),
+                  counter,
+                  channelToCounters.get(channel)
+              )
+          );
+        });
+      });
+    }
+
     protected void readyToRun()
     {
       if (!hasRun) {
@@ -1078,39 +1098,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
 
-    private void verifyCounters(CounterSnapshotsTree counterSnapshotsTree)
-    {
-      Assert.assertNotNull(counterSnapshotsTree);
-
-      final Map<Integer, Map<Integer, CounterSnapshots>> stageWorkerToSnapshots = counterSnapshotsTree.copyMap();
-      expectedStageWorkerChannelToCounters.forEach((stage, expectedWorkerChannelToCounters) -> {
-        final Map<Integer, CounterSnapshots> workerToCounters = stageWorkerToSnapshots.get(stage);
-        Assert.assertNotNull("No counters for stage " + stage, workerToCounters);
-
-        expectedWorkerChannelToCounters.forEach((worker, expectedChannelToCounters) -> {
-          CounterSnapshots counters = workerToCounters.get(worker);
-          Assert.assertNotNull(
-              StringUtils.format("No counters for stage [%d], worker [%d]", stage, worker),
-              counters
-          );
-
-          final Map<String, QueryCounterSnapshot> channelToCounters = counters.getMap();
-          expectedChannelToCounters.forEach(
-              (channel, counter) -> Assert.assertEquals(
-                  StringUtils.format(
-                      "Counter mismatch for stage [%d], worker [%d], channel [%s]",
-                      stage,
-                      worker,
-                      channel
-                  ),
-                  counter,
-                  channelToCounters.get(channel)
-              )
-          );
-        });
-      });
-    }
-
     public void verifyExecutionError()
     {
       Preconditions.checkArgument(sql != null, "sql cannot be null");
@@ -1168,6 +1155,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         MSQTaskReportPayload payload = getPayloadOrThrow(controllerId);
+        verifyCounters(payload.getCounters());
 
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
@@ -1220,47 +1208,4 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-  public static class CounterSnapshotBuilder
-  {
-    private long[] rows;
-    private long[] bytes;
-    private long[] frames;
-    private long[] files;
-    private long[] totalFiles;
-
-    public CounterSnapshotBuilder rows(long... rows)
-    {
-      this.rows = rows;
-      return this;
-    }
-
-    public CounterSnapshotBuilder bytes(long... bytes)
-    {
-      this.bytes = bytes;
-      return this;
-    }
-
-    public CounterSnapshotBuilder frames(long... frames)
-    {
-      this.frames = frames;
-      return this;
-    }
-
-    public CounterSnapshotBuilder files(long... files)
-    {
-      this.files = files;
-      return this;
-    }
-
-    public CounterSnapshotBuilder totalFiles(long... totalFiles)
-    {
-      this.totalFiles = totalFiles;
-      return this;
-    }
-
-    public QueryCounterSnapshot build()
-    {
-      return new ChannelCounters.Snapshot(rows, bytes, frames, files, totalFiles);
-    }
-  }
 }
