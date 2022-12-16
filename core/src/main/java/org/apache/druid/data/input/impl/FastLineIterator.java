@@ -44,7 +44,6 @@ public class FastLineIterator implements CloseableIterator<String>
   private final InputStream source;
   private final ByteArrayList buffer;
 
-  private boolean finished;
   private String nextLine;
 
   /**
@@ -61,14 +60,13 @@ public class FastLineIterator implements CloseableIterator<String>
    *
    * Existing contents of the buffer will be destroyed.
    * @param source
-   * @param buffer
+   * @param buffer a buffer used for between-read calls
    */
   public FastLineIterator(InputStream source, ByteArrayList buffer)
   {
     Preconditions.checkNotNull(source);
     Preconditions.checkNotNull(buffer);
     this.source = source;
-    this.finished = false;
     this.nextLine = null;
     this.buffer = buffer;
     this.buffer.size(0);
@@ -78,7 +76,6 @@ public class FastLineIterator implements CloseableIterator<String>
   public void close() throws IOException
   {
     nextLine = null;
-    finished = true;
     source.close();
     // Note: do not remove the thread local buffer; retain it for reuse later
   }
@@ -89,10 +86,6 @@ public class FastLineIterator implements CloseableIterator<String>
     //noinspection VariableNotUsedInsideIf
     if (nextLine != null) {
       return true;
-    }
-
-    if (finished) {
-      return false;
     }
 
     readNextLine();
@@ -116,9 +109,11 @@ public class FastLineIterator implements CloseableIterator<String>
   {
     byte[] load = BUFFER_LOCAL.get();
 
+    boolean endOfFile = false;
+
     // load data until finished or found a line feed
     int indexOfLf = buffer.indexOf(LF);
-    while (!finished && indexOfLf < 0) {
+    while (!endOfFile && indexOfLf < 0) {
       int readCount;
 
       try {
@@ -126,12 +121,11 @@ public class FastLineIterator implements CloseableIterator<String>
       }
       catch (IOException e) {
         nextLine = null;
-        finished = true;
         throw new IllegalStateException(e);
       }
 
       if (readCount < 0) {
-        finished = true;
+        endOfFile = true;
       } else {
         int sizeBefore = buffer.size();
         buffer.addElements(buffer.size(), load, 0, readCount);
@@ -146,7 +140,7 @@ public class FastLineIterator implements CloseableIterator<String>
       }
     }
 
-    if (finished && buffer.size() == 0) {
+    if (endOfFile && buffer.size() == 0) {
       // empty line and end of file
       nextLine = null;
 
