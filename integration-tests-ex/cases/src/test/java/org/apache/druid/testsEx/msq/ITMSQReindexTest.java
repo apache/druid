@@ -37,7 +37,7 @@ import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
-public class ITMSQReindexTest extends AbstractITSQLBasedIngestion
+public class ITMSQReindexTest extends AbstractITSQLBasedIngestionTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
 

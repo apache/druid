@@ -19,19 +19,30 @@
 
 package org.apache.druid.testsEx.indexer;
 
+import static junit.framework.Assert.fail;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.utils.s3TestUtil;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
 public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
+  private static String indexDatasource;
+  private static s3TestUtil s3;
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INPUT_SOURCE_URIS_KEY = "uris";
@@ -66,12 +77,41 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
     };
   }
 
+  public static List<String> fileList()
+  {
+    return Arrays.asList(WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3);
+  }
+
+  @BeforeClass
+  public static void uploadDataFilesToS3()
+  {
+    List<String> filesToUpload = new ArrayList<>();
+    String localPath = "resources/data/batch_index/json/";
+    for (String file : fileList()) {
+      filesToUpload.add(localPath + file);
+    }
+    try {
+      s3 = new s3TestUtil(config);
+      s3.uploadDataFilesToS3(filesToUpload);
+    }
+    catch (Exception e) {
+      // Fail if exception
+      fail();
+    }
+  }
+
+  @AfterClass
+  public static void deleteFilesFromS3()
+  {
+    s3.deleteFilesFromS3(fileList(), indexDatasource);
+  }
+
   void doTest(
       Pair<String, List> s3InputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws Exception
   {
-    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
+    indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
         final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {

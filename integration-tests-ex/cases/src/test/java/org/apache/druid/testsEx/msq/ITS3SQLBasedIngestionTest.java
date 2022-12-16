@@ -19,15 +19,8 @@
 
 package org.apache.druid.testsEx.msq;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import static junit.framework.Assert.fail;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,33 +30,44 @@ import junitparams.naming.TestCaseName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.utils.s3TestUtil;
 import org.apache.druid.testsEx.categories.S3DeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 /**
  * IMPORTANT:
  * To run this test, you must set the following env variables in the build environment
- * DRUID_CLOUD_BUCKET, DRUID_CLOUD_PATH, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+ * DRUID_CLOUD_BUCKET -    s3 Bucket to store in (value to be set in druid.storage.bucket)
+ * DRUID_CLOUD_PATH -      path inside the bucket where the test data files will be uploaded
+ *                         (this will also be used as druid.storage.baseKey for s3 deep storage setup)
+ * <p>
+ * The AWS key, secret and region should be set in
+ * AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_REGION respectively.
+ * <p>
+ * <a href="https://druid.apache.org/docs/latest/development/extensions-core/s3.html">S3 Deep Storage setup in druid</a>
  */
 
 @RunWith(DruidTestRunner.class)
 @Category(S3DeepStorage.class)
-public class ITS3SQLBasedIngestionTest extends AbstractITSQLBasedIngestion
+public class ITS3SQLBasedIngestionTest extends AbstractITSQLBasedIngestionTest
 {
   @Inject
   @Json
   protected ObjectMapper jsonMapper;
-  private static AmazonS3 s3Client = s3Client();
-  private static String datasource = "wikipedia_cloud_index_msq";
+  private static s3TestUtil s3;
+  private static final String datasource = "wikipedia_cloud_index_msq";
   private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
   private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
   private static final String INPUT_SOURCE_URIS_KEY = "uris";
@@ -98,64 +102,34 @@ public class ITS3SQLBasedIngestionTest extends AbstractITSQLBasedIngestion
     };
   }
 
-  public static AmazonS3 s3Client()
+  public static List<String> fileList()
   {
-    AWSCredentials credentials = new BasicAWSCredentials(
-        System.getenv("AWS_ACCESS_KEY_ID"),
-        System.getenv("AWS_SECRET_ACCESS_KEY")
-    );
-    return AmazonS3ClientBuilder
-        .standard()
-        .withCredentials(new AWSStaticCredentialsProvider(credentials))
-        .withRegion(System.getenv("AWS_REGION"))
-        .build();
-  }
-
-  public static String[] fileList()
-  {
-    return new String[] {
-        WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3
-    };
+    return Arrays.asList(WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3);
   }
 
   @BeforeClass
   public static void uploadDataFilesToS3()
   {
+    List<String> filesToUpload = new ArrayList <>();
     String localPath = "resources/data/batch_index/json/";
     for (String file : fileList()) {
-      s3Client.putObject(
-          System.getenv("DRUID_CLOUD_BUCKET"),
-          System.getenv("DRUID_CLOUD_PATH") + "/" + file,
-          new File(localPath + file)
-      );
+      filesToUpload.add(localPath + file);
+    }
+    try {
+      s3 = new s3TestUtil(config);
+      s3.uploadDataFilesToS3(filesToUpload);
+    }
+    catch (Exception e) {
+      LOG.error(e.toString());
+      // Fail if exception
+      fail();
     }
   }
 
   @AfterClass
   public static void deleteFilesFromS3()
   {
-    // Delete uploaded data files
-    DeleteObjectsRequest delObjReq = new DeleteObjectsRequest(System.getenv("DRUID_CLOUD_BUCKET"))
-        .withKeys(fileList());
-    s3Client.deleteObjects(delObjReq);
-
-    // Delete segments created by druid
-    ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
-        .withBucketName(System.getenv("DRUID_CLOUD_BUCKET"))
-        .withPrefix(System.getenv("DRUID_CLOUD_PATH") + "/" + datasource + "/");
-
-    ObjectListing objectListing = s3Client.listObjects(listObjectsRequest);
-
-    while (true) {
-      for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
-        s3Client.deleteObject(System.getenv("DRUID_CLOUD_BUCKET"), objectSummary.getKey());
-      }
-      if (objectListing.isTruncated()) {
-        objectListing = s3Client.listNextBatchOfObjects(objectListing);
-      } else {
-        break;
-      }
-    }
+    s3.deleteFilesFromS3(fileList(), datasource);
   }
 
   @Test
@@ -194,6 +168,8 @@ public class ITS3SQLBasedIngestionTest extends AbstractITSQLBasedIngestion
       );
 
       submitTask(sqlTask, datasource, context);
+
+      // Verifying ingested datasource
       doTestQuery(INDEX_QUERIES_FILE, datasource);
 
     }

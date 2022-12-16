@@ -38,15 +38,15 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-public class AbstractITSQLBasedIngestion
+public class AbstractITSQLBasedIngestionTest
 {
   String DATASOURCE_STRING_IN_TASK = "%%DATASOURCE%%";
   String REINDEX_DATASOURCE_STRING_IN_TASK = "%%REINDEX_DATASOURCE%%";
 
-  public static final Logger LOG = new Logger(TestQueryHelper.class);
+  public static final Logger LOG = new Logger(AbstractITSQLBasedIngestionTest.class);
 
   @Inject
-  protected IntegrationTestingConfig config;
+  protected static IntegrationTestingConfig config;
 
   @Inject
   private MsqTestQueryHelper msqHelper;

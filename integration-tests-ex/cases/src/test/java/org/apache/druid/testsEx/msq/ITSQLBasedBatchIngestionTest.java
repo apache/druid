@@ -34,7 +34,7 @@ import java.util.List;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
-public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedIngestion
+public class ITSQLBasedBatchIngestionTest extends AbstractITSQLBasedIngestionTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
 
