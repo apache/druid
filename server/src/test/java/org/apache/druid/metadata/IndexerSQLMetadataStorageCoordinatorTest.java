@@ -422,7 +422,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           PreparedBatch preparedBatch = handle.prepareBatch(
               StringUtils.format(
                   "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_flag_last_updated) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_flag_last_updated)",
                   table,
                   derbyConnector.getQuoteString()
               )
