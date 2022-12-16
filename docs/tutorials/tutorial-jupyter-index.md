@@ -48,13 +48,13 @@ Make sure you meet the following requirements before starting the Jupyter-based 
     # Install Jupyter Notebook
     pip3 install notebook
      ```
+     
   -  Start JupyterLab 
      ```bash
      # Start JupyterLab on port 3001
       jupyter lab --port 3001
       # Start Jupyter notebook on port 3001
       jupyter notebook --port 3001
-      ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](./index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 

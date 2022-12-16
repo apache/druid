@@ -45,13 +45,18 @@ Make sure you meet the following requirements before starting the Jupyter-based 
     # Install Jupyter Notebook
     pip3 install notebook
      ```
-  -  Start JupyterLab 
-     ```bash
-     # Start JupyterLab on port 3001
-      jupyter lab --port 3001
-      # Start Jupyter notebook on port 3001
-      jupyter notebook --port 3001
-      ```
+     
+  -  Start Jupyter:
+      -  JupyterLab 
+         ```bash
+         # Start JupyterLab on port 3001
+         jupyter lab --port 3001
+         ```
+      - Jupyter Notebook
+        ```bash
+        # Start Jupyter Notebook on port 3001
+        jupyter notebook --port 3001
+        ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](../../../docs/tutorials/index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 
@@ -83,4 +88,4 @@ For the first PR, do the following:
 For the second PR, do the following:
 
 1. Update the list of [Tutorials](#tutorials) on this page and in the [ Jupyter tutorial index page](../../../docs/tutorials/tutorial-jupyter-index.md#tutorials) in the `docs/tutorials` directory. 
-2. Updating `tutorial-jupyter-index.md` and provide the URL to the raw version of the file that becomes available after the first PR is merged.
+2. Update `tutorial-jupyter-index.md` and provide the URL to the raw version of the file that becomes available after the first PR is merged.
