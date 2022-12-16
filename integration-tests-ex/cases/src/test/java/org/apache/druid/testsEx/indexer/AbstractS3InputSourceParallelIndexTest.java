@@ -27,6 +27,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.utils.s3TestUtil;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -61,11 +62,11 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
                         "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_3
                     )
         )},
-        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-                    ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%/"
-                    )
-        )},
+//        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
+//                    ImmutableList.of(
+//                        "s3://%%BUCKET%%/%%PATH%%/"
+//                    )
+//        )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
                     ImmutableList.of(
                         ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_1),
@@ -99,14 +100,18 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
     }
   }
 
+  @After
+  public void deleteSegmentsFromS3()
+  {
+    // Deleting folder created for storing segments (by druid) after test is completed
+    s3.deleteFolderFromS3(indexDatasource);
+  }
+
   @AfterClass
-  public static void deleteFilesFromS3()
+  public static void deleteDataFilesFromS3()
   {
     // Deleting uploaded data files
     s3.deleteFilesFromS3(fileList());
-
-    // Deleting folder created for storing segments (by druid)
-    s3.deleteFolderFromS3(indexDatasource);
   }
 
   void doTest(

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.testing.utils;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -6,6 +25,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -19,7 +39,7 @@ public class s3TestUtil
 {
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
-  private AmazonS3 s3Client;
+  private final AmazonS3 s3Client;
   private final String S3_ACCESS_KEY;
   private final String S3_SECRET_KEY;
   private final String S3_REGION;
@@ -40,7 +60,7 @@ public class s3TestUtil
   /**
    * Verify required environment variables are set for
    */
-  public static void verifyEnvironment()
+  public void verifyEnvironment()
   {
     String[] envVars = {"DRUID_CLOUD_BUCKET", "DRUID_CLOUD_PATH", "AWS_ACCESS_KEY_ID",
                         "AWS_SECRET_ACCESS_KEY", "AWS_REGION"};
@@ -102,9 +122,12 @@ public class s3TestUtil
   public void deleteFilesFromS3(List<String> fileList)
   {
     try {
-      String[] fileListArr = new String[fileList.size()];
+      ArrayList<KeyVersion> keys = new ArrayList<>();
+      for (String fileName : fileList){
+        keys.add(new KeyVersion(fileName));
+      }
       DeleteObjectsRequest delObjReq = new DeleteObjectsRequest(S3_CLOUD_BUCKET)
-          .withKeys(fileListArr);
+          .withKeys(keys);
       s3Client.deleteObjects(delObjReq);
     }
     catch (Exception e) {
@@ -141,7 +164,7 @@ public class s3TestUtil
     }
     catch (Exception e){
       // Posting warn instead of error as not being able to delete files from s3 does not impact the test.
-      LOG.warn(e, "Unable to delete data files from s3");
+      LOG.warn(e, "Unable to delete folder from s3");
     }
   }
 }
