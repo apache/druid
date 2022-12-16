@@ -53,12 +53,12 @@ export function bootstrapReactTable() {
         .map((row: any) => row[column.id]);
       const previewCount = countBy(previewValues);
       return (
-        <span>
+        <div className="default-aggregated">
           {Object.keys(previewCount)
             .sort()
             .map(v => `${v} (${previewCount[v]})`)
             .join(', ')}
-        </span>
+        </div>
       );
     },
     defaultPageSize: 20,

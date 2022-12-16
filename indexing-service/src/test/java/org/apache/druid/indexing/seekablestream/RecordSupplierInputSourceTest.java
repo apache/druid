@@ -27,9 +27,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -88,7 +90,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     );
 
     int read = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         final InputRow inputRow = iterator.next();
         Assert.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
@@ -96,6 +99,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       }
     }
 
+    Assert.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
     Assert.assertEquals(NUM_ROWS, read);
     Assert.assertTrue(supplier.isClosed());
   }
@@ -120,11 +124,13 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     );
 
     int read = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         iterator.next();
       }
     }
+    Assert.assertEquals(0, inputStats.getProcessedBytes());
     Assert.assertEquals(0, read);
     Assert.assertTrue(supplier.isClosed());
   }
@@ -254,6 +260,11 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     public Integer getPosition(StreamPartition<Integer> partition)
     {
       throw new UnsupportedOperationException();
+    }
+
+    private long getMinRowSize()
+    {
+      return TIMESTAMP_STRING.length() + (NUM_COLS - 1) * STR_LEN;
     }
   }
 }

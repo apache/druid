@@ -44,10 +44,12 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -143,7 +145,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
         null
     );
     final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
@@ -158,7 +159,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
-        null,
         null,
         null,
         null
@@ -177,7 +177,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        null,
         null,
         null
     );
@@ -203,7 +202,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        null,
         mockConfigPropertiesWithoutKeyAndSecret
     );
     Assert.assertNotNull(withPrefixes);
@@ -223,7 +221,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         EXPECTED_LOCATION,
-        null,
         null,
         CLOUD_CONFIG_PROPERTIES
     );
@@ -245,7 +242,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         EXPECTED_LOCATION,
         null,
-        null,
         null
     );
     final OssInputSource serdeWithPrefixes =
@@ -263,7 +259,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(),
         ImmutableList.of(),
         EXPECTED_LOCATION,
-        null,
         null,
         null
     );
@@ -284,7 +279,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
-        null,
         null
     );
   }
@@ -300,7 +294,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         EXPECTED_URIS,
         PREFIXES,
         ImmutableList.of(),
-        null,
         null,
         null
     );
@@ -318,7 +311,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         EXPECTED_LOCATION,
         null,
-        null,
         null
     );
   }
@@ -330,7 +322,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         OSSCLIENT,
         INPUT_DATA_CONFIG,
         EXPECTED_URIS,
-        null,
         null,
         null,
         null,
@@ -360,7 +351,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        null,
         null
     );
 
@@ -386,7 +376,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
-        null,
         null,
         null,
         null
@@ -419,7 +408,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         PREFIXES,
         null,
         null,
-        null,
         null
     );
 
@@ -447,7 +435,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         INPUT_DATA_CONFIG,
         null,
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
-        null,
         null,
         null,
         null
@@ -481,7 +468,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_URIS.get(1)),
         null,
         null,
-        null,
         null
     );
 
@@ -497,7 +483,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
@@ -506,6 +493,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
+    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -526,7 +514,6 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
         null,
         null,
-        null,
         null
     );
 
@@ -542,7 +529,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
@@ -551,6 +539,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
+    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 

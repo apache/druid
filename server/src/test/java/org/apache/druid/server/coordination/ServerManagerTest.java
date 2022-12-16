@@ -29,8 +29,10 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -50,6 +52,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -66,7 +69,6 @@ import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -140,7 +142,7 @@ public class ServerManagerTest
   public void setUp()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-
+    NullHandling.initializeForTests();
     queryWaitLatch = new CountDownLatch(1);
     queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
@@ -469,6 +471,25 @@ public class ServerManagerTest
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
   }
 
+  @Test(expected = ISE.class)
+  public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegmentsOnQueryDataSource()
+  {
+    final Interval interval = Intervals.of("0000-01-01/P1D");
+    final SearchQuery query = searchQueryWithQueryDataSource("unknown_datasource", interval, Granularities.ALL);
+    final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
+        new SegmentDescriptor(interval, "unknown_version", 0)
+    );
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        unknownSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+  }
+
   @Test
   public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegments()
   {
@@ -533,7 +554,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
-        .getTimeline(DataSourceAnalysis.forDataSource(query.getDataSource()));
+        .getTimeline(query.getDataSource().getAnalysis());
     Assert.assertTrue(maybeTimeline.isPresent());
     final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
@@ -631,6 +652,30 @@ public class ServerManagerTest
   {
     return Druids.newSearchQueryBuilder()
                  .dataSource(datasource)
+                 .intervals(Collections.singletonList(interval))
+                 .granularity(granularity)
+                 .limit(10000)
+                 .query("wow")
+                 .build();
+  }
+
+
+  private SearchQuery searchQueryWithQueryDataSource(String datasource, Interval interval, Granularity granularity)
+  {
+    final ImmutableList<SegmentDescriptor> descriptors = ImmutableList.of(
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 0),
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
+    );
+    return Druids.newSearchQueryBuilder()
+                 .dataSource(
+                     new QueryDataSource(
+                         Druids.newTimeseriesQueryBuilder()
+                               .dataSource(datasource)
+                               .intervals(new MultipleSpecificSegmentSpec(descriptors))
+                               .granularity(Granularities.ALL)
+                               .build()
+                     )
+                 )
                  .intervals(Collections.singletonList(interval))
                  .granularity(granularity)
                  .limit(10000)
