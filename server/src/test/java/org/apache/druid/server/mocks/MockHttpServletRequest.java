@@ -483,7 +483,8 @@ public class MockHttpServletRequest implements HttpServletRequest
     throw new UnsupportedOperationException();
   }
 
-  public void newAsyncContext(Supplier<AsyncContext> supplier) {
+  public void newAsyncContext(Supplier<AsyncContext> supplier)
+  {
     asyncContextSupplier = supplier;
     currAsyncContext = null;
   }
