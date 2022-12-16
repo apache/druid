@@ -429,16 +429,20 @@ def check_memory_constraint(total_memory, services):
 
 
 def build_mm_task_java_opts_array(task_memory):
-    tasks_memory = '-D{0}=['.format(TASK_JAVA_OPTS_PROPERTY)
+    memory = int(task_memory / 2)
+    mem_array = ["-Xms{0}m".format(memory), "-Xmx{0}m".format(memory), "-XX:MaxDirectMemorySize={0}m".format(memory)]
 
-    mem_array = ["-Xms{0}m".format(task_memory), "-Xmx{0}m".format(task_memory), "-XX:MaxDirectMemorySize={0}m".format(task_memory)]
     java_opts_list = TASK_JAVA_OPTS_ARRAY + mem_array
-    for item in java_opts_list:
-        tasks_memory += '\"{0}\",'.format(item)
 
-    tasks_memory = tasks_memory[:-1]
-    tasks_memory += ']'
-    return tasks_memory
+    task_java_opts_value = ''
+
+    for item in java_opts_list:
+        task_java_opts_value += '\"{0}\",'.format(item)
+
+    task_java_opts_value = task_java_opts_value[:-1]
+    task_memory_config = '-D{0}=[{1}]'.format(TASK_JAVA_OPTS_PROPERTY, task_java_opts_value)
+
+    return task_memory_config
 
 
 def compute_tasks_memory(allocated_memory):
