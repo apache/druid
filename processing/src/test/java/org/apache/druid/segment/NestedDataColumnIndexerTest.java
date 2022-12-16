@@ -38,7 +38,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
     EncodedKeyComponent<StructuredData> key;
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
-    Assert.assertEquals(230, key.getEffectiveSizeBytes());
+    Assert.assertEquals(228, key.getEffectiveSizeBytes());
     Assert.assertEquals(1, indexer.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
@@ -67,7 +67,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertEquals(5, indexer.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)), false);
-    Assert.assertEquals(292, key.getEffectiveSizeBytes());
+    Assert.assertEquals(286, key.getEffectiveSizeBytes());
     Assert.assertEquals(5, indexer.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)), false);
