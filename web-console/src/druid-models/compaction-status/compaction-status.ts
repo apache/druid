@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-import { CompactionConfig } from '../compaction-config/compaction-config';
+import { formatBytesCompact, pluralIfNeeded } from '../../utils';
+import {
+  CompactionConfig,
+  compactionConfigHasLegacyInputSegmentSizeBytesSet,
+} from '../compaction-config/compaction-config';
 
 function capitalizeFirst(str: string): string {
   return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
@@ -50,19 +54,32 @@ export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolea
   );
 }
 
-export function formatCompactionConfigAndStatus(
-  compactionConfig: CompactionConfig | undefined,
-  compactionStatus: CompactionStatus | undefined,
-) {
-  if (compactionConfig) {
-    if (compactionStatus) {
+export interface CompactionInfo {
+  config?: CompactionConfig;
+  status?: CompactionStatus;
+}
+
+export function formatCompactionInfo(compaction: CompactionInfo) {
+  const { config, status } = compaction;
+  if (config) {
+    if (status) {
       if (
-        compactionStatus.bytesAwaitingCompaction === 0 &&
-        !zeroCompactionStatus(compactionStatus)
+        status.bytesAwaitingCompaction === 0 &&
+        status.segmentCountAwaitingCompaction === 0 &&
+        status.intervalCountAwaitingCompaction === 0 &&
+        !zeroCompactionStatus(status)
       ) {
-        return 'Fully compacted';
+        if (status.segmentCountSkipped) {
+          return `Fully compacted (except the last ${config.skipOffsetFromLatest || 'P1D'} of data${
+            compactionConfigHasLegacyInputSegmentSizeBytesSet(config)
+              ? ` and segments larger than ${formatBytesCompact(config.inputSegmentSizeBytes!)}`
+              : ''
+          }, ${pluralIfNeeded(status.segmentCountSkipped, 'segment')} skipped)`;
+        } else {
+          return 'Fully compacted';
+        }
       } else {
-        return capitalizeFirst(compactionStatus.scheduleStatus);
+        return capitalizeFirst(status.scheduleStatus);
       }
     } else {
       return 'Awaiting first run';

@@ -13,7 +13,7 @@
       "tutorials/tutorial-batch-hadoop",
       "tutorials/tutorial-query",
       "tutorials/tutorial-rollup",
-      "tutorials/tutorial-sketches-theta",      
+      "tutorials/tutorial-sketches-theta",
       "tutorials/tutorial-retention",
       "tutorials/tutorial-update-data",
       "tutorials/tutorial-compaction",
@@ -23,7 +23,8 @@
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
       "tutorials/tutorial-msq-convert-spec",
-      "tutorials/tutorial-jupyter-index"
+      "tutorials/tutorial-jupyter-index",
+      "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
@@ -58,6 +59,8 @@
         "ids": [
           "ingestion/native-batch",
           "ingestion/native-batch-input-sources",
+          "ingestion/migrate-from-firehose",
+          "ingestion/native-batch-firehose",
           "ingestion/hadoop"
         ]
       },

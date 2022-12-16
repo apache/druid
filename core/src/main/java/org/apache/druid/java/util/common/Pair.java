@@ -26,7 +26,6 @@ import java.util.Objects;
  */
 public class Pair<T1, T2>
 {
-
   public static <T1, T2> Pair<T1, T2> of(@Nullable T1 lhs, @Nullable T2 rhs)
   {
     return new Pair<>(lhs, rhs);
@@ -56,7 +55,7 @@ public class Pair<T1, T2>
     if (!(o instanceof Pair)) {
       return false;
     }
-    Pair pair = (Pair) o;
+    Pair<?, ?> pair = (Pair<?, ?>) o;
     return Objects.equals(lhs, pair.lhs) && Objects.equals(rhs, pair.rhs);
   }
 

@@ -35,10 +35,13 @@ import org.apache.druid.segment.nested.GlobalDictionarySortedCollector;
 import org.apache.druid.segment.nested.GlobalDimensionDictionary;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedLiteralTypeInfo;
+import org.apache.druid.segment.nested.NestedPathFinder;
+import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
@@ -56,8 +59,9 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
   protected final StructuredDataProcessor indexerProcessor = new StructuredDataProcessor()
   {
     @Override
-    public int processLiteralField(String fieldName, Object fieldValue)
+    public int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
     {
+      final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
       LiteralFieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
       if (fieldIndexer == null) {
         estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);

@@ -40,7 +40,6 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
-import java.util.Locale;
 import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
@@ -525,7 +524,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       try {
-        assertExpr(String.format(Locale.ENGLISH, "round(d, %s)", argAndType.lhs), null);
+        assertExpr(StringUtils.format("round(d, %s)", argAndType.lhs), null);
         Assert.fail("Did not throw IllegalArgumentException");
       }
       catch (ExpressionValidationException e) {
@@ -925,11 +924,24 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testComplexDecodeBaseArg0Null()
+  {
+    expectedException.expect(ExpressionValidationException.class);
+    expectedException.expectMessage(
+        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got NULL instead"
+    );
+    assertExpr(
+        "complex_decode_base64(null, string)",
+        null
+    );
+  }
+
+  @Test
   public void testComplexDecodeBaseArg0BadType()
   {
     expectedException.expect(ExpressionValidationException.class);
     expectedException.expectMessage(
-        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got LONG instead"
+        "Function[complex_decode_base64] first argument must be constant STRING expression containing a valid complex type name but got '1' instead"
     );
     assertExpr(
         "complex_decode_base64(1, string)",

@@ -25,29 +25,52 @@ title: "Deep storage"
 
 Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
-## Local Mount
+## Local
 
-A local mount can be used for storage of segments as well.  This allows you to use just your local file system or anything else that can be mount locally like NFS, Ceph, etc.  This is the default deep storage implementation.
+Local storage is intended for use in the following situations:
 
-In order to use a local mount for deep storage, you need to set the following configuration in your common configs.
+- You have just one server.
+- Or, you have multiple servers, and they all have access to a shared filesystem (for example: NFS).
+
+In multi-server production clusters, rather than local storage with a shared filesystem, it is instead recommended to
+use cloud-based deep storage ([Amazon S3](#amazon-s3-or-s3-compatible), [Google Cloud Storage](#google-cloud-storage),
+or [Azure Blob Storage](#azure-blob-storage)), S3-compatible storage (like Minio), or [HDFS](#hdfs). These options are
+generally more convenient, more scalable, and more robust than setting up a shared filesystem.
+
+The following configurations in `common.runtime.properties` apply to local storage:
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.storage.type`|local||Must be set.|
-|`druid.storage.storageDirectory`||Directory for storing segments.|Must be set.|
+|`druid.storage.type`|`local`||Must be set.|
+|`druid.storage.storageDirectory`|any local directory|Directory for storing segments. Must be different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.|`/tmp/druid/localStorage`|
+|`druid.storage.zip`|`true`, `false`|Whether segments in `druid.storage.storageDirectory` are written as directories (`false`) or zip files (`true`).|`false`|
 
-Note that you should generally set `druid.storage.storageDirectory` to something different from `druid.segmentCache.locations` and `druid.segmentCache.infoDir`.
+For example:
 
-If you are using the Hadoop indexer in local mode, then just give it a local file as your output directory and it will work.
+```
+druid.storage.type=local
+druid.storage.storageDirectory=/tmp/druid/localStorage
+```
 
-## S3-compatible
+The `druid.storage.storageDirectory` must be set to a different path than `druid.segmentCache.locations` or
+`druid.segmentCache.infoDir`.
 
-See [druid-s3-extensions extension documentation](../development/extensions-core/s3.md).
+## Amazon S3 or S3-compatible
+
+See [`druid-s3-extensions`](../development/extensions-core/s3.md).
+
+## Google Cloud Storage
+
+See [`druid-google-extensions`](../development/extensions-core/google.md).
+
+## Azure Blob Storage
+
+See [`druid-azure-extensions`](../development/extensions-core/azure.md).
 
 ## HDFS
 
 See [druid-hdfs-storage extension documentation](../development/extensions-core/hdfs.md).
 
-## Additional Deep Stores
+## Additional options
 
-For additional deep stores, please see our [extensions list](../development/extensions.md).
+For additional deep storage options, please see our [extensions list](../development/extensions.md).

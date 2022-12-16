@@ -96,7 +96,7 @@ public class SegmentAnalyzer
     final StorageAdapter storageAdapter = segment.asStorageAdapter();
 
     // get length and column names from storageAdapter
-    final int length = storageAdapter.getNumRows();
+    final int numRows = storageAdapter.getNumRows();
 
     // Use LinkedHashMap to preserve column order.
     final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
@@ -119,13 +119,13 @@ public class SegmentAnalyzer
           final int bytesPerRow =
               ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
 
-          analysis = analyzeNumericColumn(capabilities, length, bytesPerRow);
+          analysis = analyzeNumericColumn(capabilities, numRows, bytesPerRow);
           break;
         case FLOAT:
-          analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
+          analysis = analyzeNumericColumn(capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
           break;
         case DOUBLE:
-          analysis = analyzeNumericColumn(capabilities, length, Double.BYTES);
+          analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
           break;
         case STRING:
           if (index != null) {
@@ -136,7 +136,7 @@ public class SegmentAnalyzer
           break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
-          analysis = analyzeComplexColumn(capabilities, columnHolder);
+          analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
           break;
         default:
           log.warn("Unknown column type[%s].", capabilities.asTypeString());
@@ -330,6 +330,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeComplexColumn(
       @Nullable final ColumnCapabilities capabilities,
+      final int numCells,
       @Nullable final ColumnHolder columnHolder
   )
   {
@@ -362,8 +363,7 @@ public class SegmentAnalyzer
           );
         }
 
-        final int length = complexColumn.getLength();
-        for (int i = 0; i < length; ++i) {
+        for (int i = 0; i < numCells; ++i) {
           size += inputSizeFn.apply(complexColumn.getRowValue(i));
         }
       }

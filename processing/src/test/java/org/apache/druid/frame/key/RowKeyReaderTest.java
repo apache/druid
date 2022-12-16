@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -143,5 +144,42 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot trim")));
+  }
+
+  @Test
+  public void test_trimmedKeyReader_zero()
+  {
+    RowKey trimmedKey = keyReader.trim(key, 0);
+    RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(0);
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        trimmedKeyReader.read(trimmedKey)
+    );
+  }
+
+  @Test
+  public void test_trimmedKeyReader_one()
+  {
+    RowKey trimmedKey = keyReader.trim(key, 1);
+    RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(1);
+
+    Assert.assertEquals(
+        objects.subList(0, 1),
+        trimmedKeyReader.read(trimmedKey)
+    );
+  }
+
+  @Test
+  public void test_trimmedKeyReader_oneLessThanFullLength()
+  {
+    final int numFields = signature.size() - 1;
+    RowKey trimmedKey = keyReader.trim(key, numFields);
+    RowKeyReader trimmedKeyReader = keyReader.trimmedKeyReader(numFields);
+
+    Assert.assertEquals(
+        objects.subList(0, numFields),
+        trimmedKeyReader.read(trimmedKey)
+    );
   }
 }

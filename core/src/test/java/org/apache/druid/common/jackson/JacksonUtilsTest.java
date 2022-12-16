@@ -25,6 +25,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class JacksonUtilsTest
@@ -88,6 +91,32 @@ public class JacksonUtilsTest
     Assert.assertEquals(
         Arrays.asList("foo", null, 1.23),
         deserializedValues
+    );
+  }
+
+  @Test
+  public void testReadValue()
+  {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final byte[] bytes = StringUtils.toUtf8("{\"foo\":\"bar\"}");
+    final Map<String, Object> expected = ImmutableMap.of("foo", "bar");
+
+    Assert.assertEquals(
+        "readValue(Class)",
+        expected,
+        JacksonUtils.readValue(objectMapper, bytes, Map.class)
+    );
+
+    Assert.assertEquals(
+        "readValue(JavaType)",
+        expected,
+        JacksonUtils.readValue(objectMapper, bytes, objectMapper.constructType(Map.class))
+    );
+
+    Assert.assertEquals(
+        "readValue(TypeReference)",
+        expected,
+        JacksonUtils.readValue(objectMapper, bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING)
     );
   }
 

@@ -317,11 +317,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
-    Assert.assertEquals(1, stubServiceEmitter.getEvents().size());
-    Assert.assertEquals(
-        vectorize,
-        stubServiceEmitter.getEvents().get(0).toMap().getOrDefault("vectorized", null)
-    );
+    stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
