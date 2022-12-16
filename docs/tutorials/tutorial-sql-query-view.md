@@ -50,6 +50,8 @@ In this section you load the demo queries that are included in Druid, and run a 
 
 5. When ingestion is complete, Druid displays the time it took to complete the insert query, and the new datasource **kttm_simple** displays in the left pane.
 
+In this tutorial you only use the **Demo 1** query. You can explore the other tabs to see example queries that ingest, transform, and query sample data.
+
 ## View and filter query results
 
 In this section you run some queries against the new datasource and perform some operations on the query results.
