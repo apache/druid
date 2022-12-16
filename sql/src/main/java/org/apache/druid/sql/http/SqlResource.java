@@ -274,10 +274,7 @@ public class SqlResource
 
             // We wrap the exception here so that we get the sanitization.  java.lang.AssertionError apparently
             // doesn't implement org.apache.druid.common.exception.SanitizableException.
-            final QueryInterruptedException wrappedEx = new QueryInterruptedException(e);
-            recordFailure(wrappedEx);
-            writeErrorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response, wrappedEx);
-            return null;
+            throw new QueryInterruptedException(e);
           }
 
           if (sqlQuery.includeHeader()) {
@@ -285,22 +282,6 @@ public class SqlResource
           }
 
           return (QueryResponse) retVal;
-        }
-
-        private void writeErrorResponse(
-            int statusCode,
-            HttpServletResponse response,
-            Exception wrappedEx
-        )
-        {
-          response.setStatus(statusCode);
-          response.setContentType("application/json");
-          try (OutputStream out = response.getOutputStream()) {
-            writeExceptionInternal(wrappedEx, out);
-          }
-          catch (IOException ioException) {
-            log.warn(ioException, "Suppressing ioException when streaming error response for query[%s].", sqlQueryId);
-          }
         }
 
         @Override
@@ -376,15 +357,11 @@ public class SqlResource
     @Override
     public void writeException(Exception ex, OutputStream out) throws IOException
     {
-      writeExceptionInternal(ex, out);
-    }
-
-    private void writeExceptionInternal(Exception ex, OutputStream out) throws IOException
-    {
       if (ex instanceof SanitizableException) {
         ex = serverConfig.getErrorResponseTransformStrategy().transformIfNeeded((SanitizableException) ex);
       }
       out.write(jsonMapper.writeValueAsBytes(ex));
     }
+
   }
 }
