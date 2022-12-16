@@ -206,7 +206,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     try (DruidPlanner planner = sqlToolbox.plannerFactory.createPlanner(
         sqlToolbox.engine,
         queryPlus.sql(),
-        queryContext
+        queryContext,
+        hook
     )) {
       validate(planner);
       authorize(planner, authorizer());

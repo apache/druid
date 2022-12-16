@@ -53,10 +53,12 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -942,8 +944,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
+    Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
       Assert.assertEquals(NOW, nextRow.getTimestamp());
@@ -1036,8 +1040,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
+    Assert.assertEquals(CONTENT.length, inputStats.getProcessedBytes());
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
       Assert.assertEquals(NOW, nextRow.getTimestamp());

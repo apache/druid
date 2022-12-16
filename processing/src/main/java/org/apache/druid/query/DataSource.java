@@ -41,7 +41,8 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = JoinDataSource.class, name = "join"),
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
-    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable")
+    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
+    @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest")
 })
 public interface DataSource
 {
@@ -123,4 +124,10 @@ public interface DataSource
    */
   byte[] getCacheKey();
 
+  /**
+   * Get the analysis for a data source
+   *
+   * @return The {@link DataSourceAnalysis} object for the callee data source
+   */
+  DataSourceAnalysis getAnalysis();
 }

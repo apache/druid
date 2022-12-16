@@ -524,6 +524,8 @@ public class ControllerImpl implements Controller
     context.registerController(this, closer);
 
     this.netClient = new ExceptionWrappingWorkerClient(context.taskClientFor(this));
+    closer.register(netClient::close);
+
     ClusterStatisticsMergeMode clusterStatisticsMergeMode =
         MultiStageQueryContext.getClusterStatisticsMergeMode(task.getQuerySpec().getQuery().context());
 
@@ -532,8 +534,7 @@ public class ControllerImpl implements Controller
     int statisticsMaxRetainedBytes = WorkerMemoryParameters.createProductionInstanceForController(context.injector())
                                                                     .getPartitionStatisticsMaxRetainedBytes();
     this.workerSketchFetcher = new WorkerSketchFetcher(netClient, clusterStatisticsMergeMode, statisticsMaxRetainedBytes);
-
-    closer.register(netClient::close);
+    closer.register(workerSketchFetcher::close);
 
     final boolean isDurableStorageEnabled =
         MultiStageQueryContext.isDurableStorageEnabled(task.getQuerySpec().getQuery().context());
@@ -988,7 +989,7 @@ public class ControllerImpl implements Controller
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
-                    .put(GroupByQuery.class, new GroupByQueryKit())
+                    .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
                     .build();
 
     return new MultiQueryKit(kitMap);

@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -39,13 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
  */
-public class WorkerSketchFetcher
+public class WorkerSketchFetcher implements AutoCloseable
 {
   private static final Logger log = new Logger(WorkerSketchFetcher.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
@@ -59,11 +59,15 @@ public class WorkerSketchFetcher
   private final WorkerClient workerClient;
   private final ExecutorService executorService;
 
-  public WorkerSketchFetcher(WorkerClient workerClient, ClusterStatisticsMergeMode clusterStatisticsMergeMode, int statisticsMaxRetainedBytes)
+  public WorkerSketchFetcher(
+      WorkerClient workerClient,
+      ClusterStatisticsMergeMode clusterStatisticsMergeMode,
+      int statisticsMaxRetainedBytes
+  )
   {
     this.workerClient = workerClient;
     this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
-    this.executorService = Executors.newFixedThreadPool(DEFAULT_THREAD_COUNT);
+    this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
     this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
   }
 
@@ -86,14 +90,14 @@ public class WorkerSketchFetcher
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       case AUTO:
         if (clusterBy.getBucketByCount() == 0) {
-          log.debug("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+          log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
           // If there is no time clustering, there is no scope for sequential merge
           return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
         } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
-          log.debug("Query [%s] AUTO mode: chose SEQUENTIAL mode to merge key statistics", stageDefinition.getId().getQueryId());
+          log.info("Query [%s] AUTO mode: chose SEQUENTIAL mode to merge key statistics", stageDefinition.getId().getQueryId());
           return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
         }
-        log.debug("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
+        log.info("Query [%s] AUTO mode: chose PARALLEL mode to merge key statistics", stageDefinition.getId().getQueryId());
         return inMemoryFullSketchMerging(stageDefinition, workerTaskIds);
       default:
         throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
@@ -128,12 +132,6 @@ public class WorkerSketchFetcher
                 stageDefinition.getId().getQueryId(),
                 stageDefinition.getStageNumber()
             );
-        partitionFuture.whenComplete((result, exception) -> {
-          if (exception != null || (result != null && result.isError())) {
-            snapshotFuture.cancel(true);
-          }
-        });
-
         try {
           ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
           if (clusterByStatisticsSnapshot == null) {
@@ -151,12 +149,15 @@ public class WorkerSketchFetcher
         }
         catch (Exception e) {
           synchronized (mergedStatisticsCollector) {
-            partitionFuture.completeExceptionally(e);
-            mergedStatisticsCollector.clear();
+            if (!partitionFuture.isDone()) {
+              partitionFuture.completeExceptionally(e);
+              mergedStatisticsCollector.clear();
+            }
           }
         }
       });
     });
+
     return partitionFuture;
   }
 
@@ -247,11 +248,6 @@ public class WorkerSketchFetcher
                     stageDefinition.getStageNumber(),
                     timeChunk
                 );
-            partitionFuture.whenComplete((result, exception) -> {
-              if (exception != null || (result != null && result.isError())) {
-                snapshotFuture.cancel(true);
-              }
-            });
 
             try {
               ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
@@ -289,8 +285,10 @@ public class WorkerSketchFetcher
             }
             catch (Exception e) {
               synchronized (mergedStatisticsCollector) {
-                partitionFuture.completeExceptionally(e);
-                mergedStatisticsCollector.clear();
+                if (!partitionFuture.isDone()) {
+                  partitionFuture.completeExceptionally(e);
+                  mergedStatisticsCollector.clear();
+                }
               }
             }
           });
@@ -336,5 +334,11 @@ public class WorkerSketchFetcher
     } else {
       return either.valueOrThrow().size();
     }
+  }
+
+  @Override
+  public void close()
+  {
+    executorService.shutdownNow();
   }
 }
