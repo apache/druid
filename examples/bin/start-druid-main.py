@@ -437,26 +437,24 @@ def check_memory_constraint(total_memory, services):
 
 
 def build_mm_task_java_opts_array(task_memory):
-    task_memory = '-D{0}=['.format(TASK_JAVA_OPTS_PROPERTY)
+    tasks_memory = '-D{0}=['.format(TASK_JAVA_OPTS_PROPERTY)
 
     mem_array = ["-Xms{0}m".format(task_memory), "-Xmx{0}m".format(task_memory), "-XX:MaxDirectMemorySize={0}m".format(task_memory)]
-
     java_opts_list = TASK_JAVA_OPTS_ARRAY + mem_array
-
     for item in java_opts_list:
-        task_memory += '\"{0}\",'.format(item)
+        tasks_memory += '\"{0}\",'.format(item)
 
-    task_memory = task_memory[:-1]
-    task_memory += ']'
-    return task_memory
+    tasks_memory = tasks_memory[:-1]
+    tasks_memory += ']'
+    return tasks_memory
 
 
 def compute_tasks_memory(allocated_memory):
     cpu_count = multiprocessing.cpu_count()
 
     if allocated_memory >= cpu_count * 1024:
-        task_count = int(allocated_memory / 2048)
-        task_memory_mb = 2048
+        task_count = cpu_count
+        task_memory_mb = min(2048, int(allocated_memory / cpu_count))
     elif allocated_memory >= 2048:
         task_count = int(allocated_memory / 1024)
         task_memory_mb = 1024
@@ -470,7 +468,7 @@ def compute_tasks_memory(allocated_memory):
 def build_memory_config(service, allocated_memory):
     if service == TASKS:
         task_count, task_memory = compute_tasks_memory(allocated_memory)
-        java_opts_array = build_mm_task_java_opts_array(memory_type)
+        java_opts_array = build_mm_task_java_opts_array(task_memory)
         return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count),
                 java_opts_array], task_memory * task_count
     elif service == INDEXER:
