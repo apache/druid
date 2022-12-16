@@ -64,6 +64,8 @@ In this section you run some queries against the new datasource and perform some
 
 4. In the query results pane, click **Chrome** anywhere it appears in the **browser** column then click **Filter on: browser = 'Chrome'** to filter the results.
 
+In this tutorial you only use the **Demo 1** query. You can explore the other tabs to see examples of queries that ingest, transform, and query sample data.
+
 ## Run aggregate queries
 
 In this section you run some aggregate queries and perform some operations on the query results.
