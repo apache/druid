@@ -1105,12 +1105,16 @@ ORDER BY 1`;
                   </span>
                 );
               } else if (num_segments_to_load === 0 || hasCold) {
+                const numAvailableSegments = num_segments - num_segments_to_load;
+                const percentHot = (
+                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
+                ).toFixed(1);
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
-                    Fully available{hasCold ? ', some cold' : ''} ({segmentsEl})
+                    Fully available{hasCold ? `, ${percentHot}% hot` : ''} ({segmentsEl})
                   </span>
                 );
               } else {
@@ -1142,13 +1146,9 @@ ORDER BY 1`;
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments, num_segments_to_load, num_segments_to_drop, rules } =
-                original as Datasource;
+              const { num_segments_to_load, num_segments_to_drop, rules } = original as Datasource;
               if (RuleUtil.hasColdRule(rules, defaultRules)) {
-                return `${pluralIfNeeded(
-                  Number(num_segments) - Number(num_segments_to_load),
-                  'hot segment',
-                )}, ${pluralIfNeeded(num_segments_to_load, 'cold segment')}`;
+                return pluralIfNeeded(num_segments_to_load, 'cold segment');
               }
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
