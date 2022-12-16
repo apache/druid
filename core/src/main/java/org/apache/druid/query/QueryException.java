@@ -46,7 +46,7 @@ import java.util.function.Function;
  * exception could have been serialized across the wire, the code must catch a QueryException and check the errorCode
  * instead.
  * <p>
- * As a correlary, adding new state or adjusting the logic of this class must always be done in a backwards-compatible
+ * As a corollary, adding new state or adjusting the logic of this class must always be done in a backwards-compatible
  * fashion across all child classes of QueryException.
  * <p>
  * If there is any need to do different logic based on the type of error that has happened, the only reliable method
