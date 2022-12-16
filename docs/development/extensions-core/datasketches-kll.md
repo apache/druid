@@ -54,9 +54,9 @@ The result of the aggregation is a KllFloatsSketch or KllDoublesSketch that is t
 
 |Property|Description|Required?|
 |--------|-----------|---------|
-|`type`|This String should be "KllFloatsSketch" or "KllDoublesSketch"|yes|
+|`type`|Either "KllFloatsSketch" or "KllDoublesSketch"|yes|
 |`name`|A String for the output (result) name of the calculation.|yes|
-|`fieldName`|A String for the name of the input field (can contain sketches or raw numeric values).|yes|
+|`fieldName`|String for the name of the input field, which may contain sketches or raw numeric values.|yes|
 |`k`|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be from 8 to 65535. See [KLL Sketch Accuracy and Size](https://datasketches.apache.org/docs/KLL/KLLAccuracyAndSize.html).|no, defaults to 200|
 |`maxStreamLength`|This parameter defines the number of items that can be presented to each sketch before it may need to move from off-heap to on-heap memory. This is relevant to query types that use off-heap memory, including [TopN](../../querying/topnquery.md) and [GroupBy](../../querying/groupbyquery.md). Ideally, should be set high enough such that most sketches can stay off-heap.|no, defaults to 1000000000|
 

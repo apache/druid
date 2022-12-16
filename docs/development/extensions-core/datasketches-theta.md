@@ -53,10 +53,10 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
 |Property|Description|Required?|
 |--------|-----------|---------|
 |`type`|This string should always be "thetaSketch"|yes|
-|`name`|A string for the output (result) name of the calculation.|yes|
+|`name`|String representing the output column to store sketch values.|yes|
 |`fieldName`|A string for the name of the aggregator used at ingestion time.|yes|
-|`isInputThetaSketch`|This should only be used at indexing time if your input data contains theta sketch objects. This would be the case if you use datasketches library outside of Druid, say with Pig/Hive, to produce the data that you are ingesting into Druid |no, defaults to false|
-|`size`|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object will retain. Higher size means higher accuracy but more space to store sketches. Note that after you index with a particular size, druid will persist sketch in segments and you will use size greater or equal to that at query time. See the [DataSketches site](https://datasketches.apache.org/docs/Theta/ThetaSize) for details. In general, We recommend just sticking to default size. |no, defaults to 16384|
+|`isInputThetaSketch`|Only set this to true at indexing time if your input data contains Theta sketch objects. This applies to cases when you use DataSketches outside of Druid, for example with Pig or Hive, to produce the data to ingest into Druid |no, defaults to false|
+|`size`|Must be a power of 2. Internally, size refers to the maximum number of entries sketch object retains. Higher size means higher accuracy but more space to store sketches. After you index with a particular size, Druid persists the sketch in segments. At query time you must use a size greater or equal to the ingested size. See the [DataSketches site](https://datasketches.apache.org/docs/Theta/ThetaSize) for details. The default is recommended for the majority of use cases.|no, defaults to 16384|
 |`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 
 ## Post aggregators

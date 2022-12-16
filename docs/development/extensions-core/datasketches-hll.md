@@ -23,7 +23,8 @@ title: "DataSketches HLL Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregators to produce a union of sketch columns in the same row.
+This module provides Apache Druid aggregators for distinct counting based on HLL sketch from [Apache DataSketches](https://datasketches.apache.org/) library. At ingestion time, this aggregator creates the HLL sketch objects to store in Druid segments. By default, Druid reads and merges sketches at query time. The default result is
+the estimate of the number of distinct values presented to the sketch. You can also use post aggregators to produce a union of sketch columns in the same row.
 You can use the HLL sketch aggregator on any column to estimate its cardinality.
 
 To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
@@ -38,9 +39,9 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
 
 |Property|Description|Required?|
 |--------|-----------|---------|
-|`type`|This string should be [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator).|yes|
-|`name`|A string for the output (result) name of the calculation.|yes|
-|`fieldName`|A string for the name of the input field.|yes|
+|`type`|Either [`HLLSketchBuild`](#hllsketchbuild-aggregator) or [`HLLSketchMerge`](#hllsketchmerge-aggregator).|yes|
+|`name`|String representing the output column to store sketch values.|yes|
+|`fieldName`|The name of the input field.|yes|
 |`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be between 4 and 21 inclusively.|no, defaults to `12`|
 |`tgtHllType`|The type of the target HLL sketch. Must be `HLL_4`, `HLL_6` or `HLL_8` |no, defaults to `HLL_4`|
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
