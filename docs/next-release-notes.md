@@ -30,6 +30,12 @@ The multi-stage query (MSQ) task engine used for SQL-based ingestion is now prod
 - [Ingestion](https://druid.apache.org/docs/latest/ingestion/index.html)
 - [SQL-based ingestion](https://druid.apache.org/docs/latest/multi-stage-query/index.html)
 
+### Deploying Druid
+
+The new `start-druid` script greatly simplifies deploying any combination of Druid services on a single-server. It comes pre-packaged with the required configs and can be used to launch a fully functional Druid cluster simply by invoking `./start-druid`. For the experienced Druids, it also gives you complete control over the runtime properties and JVM arguments to have a cluster that exactly fits your needs.
+
+The `start-druid` script deprecates the existing profiles such as `start-micro-quickstart` and `start-nano-quickstart`. These profiles may be removed in future releases. For more information, see [Single server deployment](https://druid.apache.org/docs/latest/operations/single-server.html).
+
 ### String dictionary compression (experimental)
 
 > Any segment written using string dictionary compression is not readable by older versions of Druid.
@@ -93,6 +99,7 @@ This update changes the defaults for the following properties:
 | `druid.indexer.runner.type` for the Overlord | httpRemote | local |
 
 To use ZooKeeper instead of HTTP, change the values for the properties back to the previous defaults.
+ZooKeeper-based implementations for these properties are deprecated and will be removed in a subsequent release.
 
 https://github.com/apache/druid/pull/13092
 
@@ -361,10 +368,6 @@ Introduced a `tree` type to `flattenSpec`. In the event that a simple hierarchic
 https://github.com/apache/druid/pull/12177
 
 ## Operations
-
-### Deploying Druid
-
-There is now a Python installation script available for Druid that simplifies deployments that don't fit the parameters of the singel-server profiles, such as the nano or micro-quickstart profiles. This `start-druid` script lets you override Druid settings to fit your needs. For more information, see [Single server deployment](https://druid.apache.org/docs/latest/operations/single-server.html).
 
 ### Compaction
 
