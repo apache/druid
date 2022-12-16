@@ -68,14 +68,16 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
  * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
  */
-public final class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
+public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
     extends NestedDataComplexColumn
 {
   private final NestedDataColumnMetadata metadata;
@@ -121,9 +123,25 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
   }
 
+  public abstract List<NestedPathPart> parsePath(String path);
+
+  public abstract String getField(List<NestedPathPart> path);
+
+  public abstract String getFieldFileName(String fileNameBase, String field, int fieldIndex);
+
   public GenericIndexed<String> getFields()
   {
     return fields;
+  }
+
+  @Override
+  public List<List<NestedPathPart>> getNestedFields()
+  {
+    List<List<NestedPathPart>> fieldParts = new ArrayList<>(fields.size());
+    for (int i = 0; i < fields.size(); i++) {
+      fieldParts.add(parsePath(fields.get(i)));
+    }
+    return fieldParts;
   }
 
   public NestedLiteralTypeInfo getFieldInfo()
@@ -144,6 +162,11 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
   public FixedIndexed<Double> getDoubleDictionary()
   {
     return doubleDictionarySupplier.get();
+  }
+
+  public ImmutableBitmap getNullValues()
+  {
+    return nullValues;
   }
 
   @Nullable
@@ -264,7 +287,7 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
   @Override
   public int getLength()
   {
-    return 0;
+    return -1;
   }
 
   @Override
@@ -346,6 +369,27 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
     }
   }
 
+
+
+  @Nullable
+  @Override
+  public Set<ColumnType> getColumnTypes(List<NestedPathPart> path)
+  {
+    String field = getField(path);
+    int index = fields.indexOf(field);
+    if (index < 0) {
+      return null;
+    }
+    return NestedLiteralTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+  }
+
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(List<NestedPathPart> path)
+  {
+    return getColumnHolder(getField(path));
+  }
+
   @Nullable
   @Override
   public ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path)
@@ -367,11 +411,6 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
     return getColumnHolder(field).getCapabilities().isNumeric();
   }
 
-  private String getField(List<NestedPathPart> path)
-  {
-    return NestedPathFinder.toNormalizedJqPath(path);
-  }
-
   private ColumnHolder getColumnHolder(String field)
   {
     return columns.computeIfAbsent(field, this::readNestedFieldColumn);
@@ -383,12 +422,17 @@ public final class CompressedNestedDataComplexColumn<TStringDictionary extends I
       if (fields.indexOf(field) < 0) {
         return null;
       }
-      final NestedLiteralTypeInfo.TypeSet types = fieldInfo.getTypes(fields.indexOf(field));
-      final ByteBuffer dataBuffer = fileMapper.mapFile(
-          NestedDataColumnSerializer.getFieldFileName(metadata.getFileNameBase(), field)
-      );
+      final int fieldIndex = fields.indexOf(field);
+      final NestedLiteralTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
+      final String fieldFileName = getFieldFileName(metadata.getFileNameBase(), field, fieldIndex);
+      final ByteBuffer dataBuffer = fileMapper.mapFile(fieldFileName);
       if (dataBuffer == null) {
-        throw new ISE("Can't find field [%s] in [%s] file.", field, metadata.getFileNameBase());
+        throw new ISE(
+            "Can't find field [%s] with name [%s] in [%s] file.",
+            field,
+            fieldFileName,
+            metadata.getFileNameBase()
+        );
       }
 
       ColumnBuilder columnBuilder = new ColumnBuilder().setFileMapper(fileMapper);

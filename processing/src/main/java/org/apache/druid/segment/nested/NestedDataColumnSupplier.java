@@ -45,6 +45,7 @@ import java.nio.ByteBuffer;
 
 public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
 {
+  private final byte version;
   private final NestedDataColumnMetadata metadata;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
@@ -78,9 +79,9 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
       TypeStrategy<Double> doubleTypeStrategy
   )
   {
-    byte version = bb.get();
+    this.version = bb.get();
 
-    if (version == 0x03) {
+    if (version == 0x03 || version == 0x04) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         metadata = jsonMapper.readValue(
@@ -107,7 +108,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
             // this provides backwards compatibility should we switch at some point in the future to always
             // writing dictionaryVersion
-            dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, mapper);
+            dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
             frontCodedDictionarySupplier = null;
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
@@ -117,7 +118,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
           // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
           // GenericIndexed version can be correctly read
           stringDictionaryBuffer.position(dictionaryStartPosition);
-          dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY, mapper);
+          dictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
           frontCodedDictionarySupplier = null;
         }
         final ByteBuffer longDictionaryBuffer = loadInternalFile(
@@ -157,10 +158,10 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         }
       }
       catch (IOException ex) {
-        throw new RE(ex, "Failed to deserialize V3 column.");
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
       }
     } else {
-      throw new RE("Unknown version" + version);
+      throw new RE("Unknown version " + version);
     }
 
     fileMapper = Preconditions.checkNotNull(columnBuilder.getFileMapper(), "Null fileMapper");
@@ -171,8 +172,16 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   @Override
   public ComplexColumn get()
   {
+    if (version == 0x03) {
+      return makeV3();
+    }
+    return makeV4();
+  }
+
+  private NestedDataColumnV3 makeV3()
+  {
     if (frontCodedDictionarySupplier != null) {
-      return new CompressedNestedDataComplexColumn<>(
+      return new NestedDataColumnV3<>(
           metadata,
           columnConfig,
           compressedRawColumnSupplier,
@@ -185,7 +194,37 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
           fileMapper
       );
     }
-    return new CompressedNestedDataComplexColumn<>(
+    return new NestedDataColumnV3<>(
+        metadata,
+        columnConfig,
+        compressedRawColumnSupplier,
+        nullValues,
+        fields,
+        fieldInfo,
+        dictionary::singleThreaded,
+        longDictionarySupplier,
+        doubleDictionarySupplier,
+        fileMapper
+    );
+  }
+
+  private NestedDataColumnV4 makeV4()
+  {
+    if (frontCodedDictionarySupplier != null) {
+      return new NestedDataColumnV4<>(
+          metadata,
+          columnConfig,
+          compressedRawColumnSupplier,
+          nullValues,
+          fields,
+          fieldInfo,
+          frontCodedDictionarySupplier,
+          longDictionarySupplier,
+          doubleDictionarySupplier,
+          fileMapper
+      );
+    }
+    return new NestedDataColumnV4<>(
         metadata,
         columnConfig,
         compressedRawColumnSupplier,
@@ -202,9 +241,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private ByteBuffer loadInternalFile(SmooshedFileMapper fileMapper, String internalFileName) throws IOException
   {
     return fileMapper.mapFile(
-        NestedDataColumnSerializer.getInternalFileName(
-            metadata.getFileNameBase(), internalFileName
-        )
+        NestedDataColumnSerializer.getInternalFileName(metadata.getFileNameBase(), internalFileName)
     );
   }
 }

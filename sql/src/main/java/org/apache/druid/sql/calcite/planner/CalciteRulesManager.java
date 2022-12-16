@@ -206,6 +206,7 @@ public class CalciteRulesManager
   /**
    * Manages the rules for planning of SQL queries via Calcite. Also provides methods for extensions to provide custom
    * rules for planning.
+   *
    * @param extensionCalciteRuleProviderSet the set of custom rules coming from extensions
    */
   @Inject
@@ -265,11 +266,11 @@ public class CalciteRulesManager
   public List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext))
-        .addAll(Bindables.RULES)
-        .addAll(DEFAULT_BINDABLE_RULES)
-        .add(AggregateReduceFunctionsRule.INSTANCE)
-        .build();
+                        .addAll(baseRuleSet(plannerContext))
+                        .addAll(Bindables.RULES)
+                        .addAll(DEFAULT_BINDABLE_RULES)
+                        .add(AggregateReduceFunctionsRule.INSTANCE)
+                        .build();
   }
 
   public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)

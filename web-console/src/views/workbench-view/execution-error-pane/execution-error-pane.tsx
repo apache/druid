@@ -46,7 +46,9 @@ export const ExecutionErrorPane = React.memo(function ExecutionErrorPane(
       <p className="error-message-text">
         {error.errorCode && (
           <>
-            <ExternalLink href={getLink('DOCS_MSQ_ERROR')}>{error.errorCode}</ExternalLink>
+            <ExternalLink href={`${getLink('DOCS_MSQ_ERROR')}#error_${error.errorCode}`}>
+              {error.errorCode}
+            </ExternalLink>
             {': '}
           </>
         )}

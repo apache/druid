@@ -19,15 +19,18 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.druid.frame.file.FrameFileHttpResponseHandler;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
@@ -70,7 +73,7 @@ public class WorkerChatHandler implements ChatHandler
 
   /**
    * Returns up to {@link #CHANNEL_DATA_CHUNK_SIZE} bytes of stage output data.
-   *
+   * <p>
    * See {@link org.apache.druid.msq.exec.WorkerClient#fetchChannelData} for the client-side code that calls this API.
    */
   @GET
@@ -176,6 +179,72 @@ public class WorkerChatHandler implements ChatHandler
       return Response.status(Response.Status.ACCEPTED).build();
     } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+  }
+
+  @POST
+  @Path("/keyStatistics/{queryId}/{stageNumber}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpFetchKeyStatistics(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot clusterByStatisticsSnapshot;
+    StageId stageId = new StageId(queryId, stageNumber);
+    try {
+      clusterByStatisticsSnapshot = worker.fetchStatisticsSnapshot(stageId);
+      return Response.status(Response.Status.ACCEPTED)
+                     .entity(clusterByStatisticsSnapshot)
+                     .build();
+    }
+    catch (Exception e) {
+      String errorMessage = StringUtils.format(
+          "Invalid request for key statistics for query[%s] and stage[%d]",
+          queryId,
+          stageNumber
+      );
+      log.error(e, errorMessage);
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of("error", errorMessage))
+                     .build();
+    }
+  }
+
+  @POST
+  @Path("/keyStatisticsForTimeChunk/{queryId}/{stageNumber}/{timeChunk}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpFetchKeyStatisticsWithSnapshot(
+      @PathParam("queryId") final String queryId,
+      @PathParam("stageNumber") final int stageNumber,
+      @PathParam("timeChunk") final long timeChunk,
+      @Context final HttpServletRequest req
+  )
+  {
+    ChatHandlers.authorizationCheck(req, Action.READ, task.getDataSource(), toolbox.getAuthorizerMapper());
+    ClusterByStatisticsSnapshot snapshotForTimeChunk;
+    StageId stageId = new StageId(queryId, stageNumber);
+    try {
+      snapshotForTimeChunk = worker.fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk);
+      return Response.status(Response.Status.ACCEPTED)
+                     .entity(snapshotForTimeChunk)
+                     .build();
+    }
+    catch (Exception e) {
+      String errorMessage = StringUtils.format(
+          "Invalid request for key statistics for query[%s], stage[%d] and timeChunk[%d]",
+          queryId,
+          stageNumber,
+          timeChunk
+      );
+      log.error(e, errorMessage);
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of("error", errorMessage))
+                     .build();
     }
   }
 

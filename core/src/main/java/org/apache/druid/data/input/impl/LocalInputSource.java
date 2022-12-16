@@ -57,6 +57,7 @@ import java.util.stream.Stream;
 public class LocalInputSource extends AbstractInputSource implements SplittableInputSource<List<File>>
 {
   private static final Logger log = new Logger(LocalInputSource.class);
+  public static final String TYPE_KEY = "local";
 
   @Nullable
   private final File baseDir;
@@ -226,5 +227,15 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   public int hashCode()
   {
     return Objects.hash(baseDir, filter, files);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "LocalInputSource{" +
+        "baseDir=\"" + baseDir +
+        "\", filter=" + filter +
+        ", files=" + files +
+        "}";
   }
 }

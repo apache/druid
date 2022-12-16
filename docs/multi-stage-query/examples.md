@@ -145,7 +145,6 @@ CLUSTERED BY page
 
 </details>
 
-
 ## INSERT with JOIN
 
 This example inserts data into a table named `w003` and joins data from two sources:
@@ -302,9 +301,7 @@ CLUSTERED BY page
 
 ## SELECT with EXTERN and JOIN
 
-
 <details><summary>Show the query</summary>
-
 
 ```sql
 WITH flights AS (
