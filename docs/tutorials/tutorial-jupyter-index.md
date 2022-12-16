@@ -48,13 +48,18 @@ Make sure you meet the following requirements before starting the Jupyter-based 
     # Install Jupyter Notebook
     pip3 install notebook
      ```
-  -  Start JupyterLab 
-     ```bash
-     # Start JupyterLab on port 3001
-      jupyter lab --port 3001
-      # Start Jupyter notebook on port 3001
-      jupyter notebook --port 3001
-      ```
+
+  -  Start Jupyter:
+      -  JupyterLab 
+         ```bash
+         # Start JupyterLab on port 3001
+         jupyter lab --port 3001
+         ```
+      - Jupyter Notebook
+        ```bash
+        # Start Jupyter Notebook on port 3001
+        jupyter notebook --port 3001
+        ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](./index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 
@@ -66,3 +71,4 @@ The links that follow are the raw GitHub URLs, so you can use them to download t
 
 - [Introduction to the Druid API](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/api-tutorial.ipynb) walks you through some of the basics related to the Druid API and several endpoints.
 - [Introduction to Druid SQL](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/sql-tutorial.ipynb) covers the basics of Druid SQL.
+- [Druid SQL segment sizing and partitioning](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/partitioned-by-tutorial.ipynb) lists the different ways you can time-partition data in Druid SQL.
