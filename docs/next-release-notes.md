@@ -601,6 +601,16 @@ Helm deployment is now compatible with `druid-kubernetes-extension`.
 
 https://github.com/apache/druid/pull/13262
 
+## Docs
+
+### Jupyter Notebook tutorials
+
+We released our first Jupyter Notebook-based tutorial to learn the basics of the Druid API. Download the notebook and follow along with the tutorial to learn how to get basic cluster information, ingest data, and query data.
+For more information, see [Jupyter Notebook tutorials](https://druid.apache.org/docs/latest/tutorials/tutorial-jupyter-index.html).
+
+https://github.com/apache/druid/pull/13342  
+https://github.com/apache/druid/pull/13345
+
 ## Dependency updates
 
 ### Updated Kafka version
