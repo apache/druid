@@ -88,7 +88,7 @@ In this section you run some aggregate queries and perform some operations on th
 
    ![aggregate-query](../assets/tutorial-sql-aggregate-query.png)
 
-6. Click **Engine: auto (sql-native)**&mdash;from the menu options you can edit the query context and turn off some query defaults. 
+6. Click **Engine: auto (sql-native)**. From the menu that appears you can edit the query context and turn off some query defaults. 
 
    Uncheck **Use approximate COUNT(DISTINCT)** and rerun the query. The country count in the results decreases because the computation has become more exact.
 
