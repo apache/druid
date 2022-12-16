@@ -16,18 +16,26 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
-import React from 'react';
+import { useEffect, useState } from 'react';
 
-import { Capabilities } from '../../../helpers';
+function getNowToSecond(): Date {
+  const now = new Date();
+  now.setMilliseconds(0);
+  return now;
+}
 
-import { TasksCard } from './tasks-card';
+export function useClock() {
+  const [now, setNow] = useState<Date>(getNowToSecond);
 
-describe('TasksCard', () => {
-  it('matches snapshot', () => {
-    const tasksCard = <TasksCard capabilities={Capabilities.FULL} />;
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      setNow(getNowToSecond());
+    }, 1000);
 
-    const { container } = render(tasksCard);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, []);
+
+  return now;
+}

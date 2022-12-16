@@ -485,6 +485,13 @@ export class WorkbenchQuery {
     return ret.changeQueryString(newQueryString);
   }
 
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    const { queryContext } = this;
+    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+
+    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
+  }
+
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
     query: Record<string, any>;

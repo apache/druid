@@ -27,7 +27,7 @@ import React, { useState } from 'react';
 import { Loader } from '../../../components';
 import { Execution, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
-import { useInterval, useQueryManager } from '../../../hooks';
+import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
 import { downloadQueryDetailArchive, formatDuration, queryDruidSql } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
@@ -113,6 +113,8 @@ LIMIT 100`,
   useInterval(() => {
     queryManager.rerunLastQuery(true);
   }, 30000);
+
+  const now = useClock();
 
   const incrementWorkVersion = useWorkStateStore(state => state.increment);
 
@@ -205,6 +207,11 @@ LIMIT 100`,
               </Menu>
             );
 
+            const duration =
+              w.taskStatus === 'RUNNING'
+                ? now.valueOf() - new Date(w.createdTime).valueOf()
+                : w.duration;
+
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
               <Popover2 className="work-entry" key={w.taskId} position="left" content={menu}>
@@ -217,7 +224,7 @@ LIMIT 100`,
                     />
                     <div className="timing">
                       {w.createdTime.replace('T', ' ').replace(/\.\d\d\dZ$/, '') +
-                        (w.duration > 0 ? ` (${formatDuration(w.duration)})` : '')}
+                        (duration > 0 ? ` (${formatDuration(duration)})` : '')}
                     </div>
                   </div>
                   <div className="line2">
