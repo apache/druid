@@ -36,14 +36,6 @@ TASK_JAVA_OPTS_ARRAY = ["-server", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8
 TASK_JAVA_OPTS_PROPERTY = "druid.indexer.runner.javaOptsArray"
 TASK_WORKER_CAPACITY_PROPERTY = "druid.worker.capacity"
 TASK_COUNT = "task-count"
-TASK_MEM_TYPE_LOW = "low"
-TASK_MEM_TYPE_MEDIUM = "medium"
-TASK_MEM_TYPE_HIGH = "high"
-TASK_MEM_MAP = {
-    TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256m"],
-    TASK_MEM_TYPE_MEDIUM: ["-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=512m"],
-    TASK_MEM_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
-}
 
 BROKER = "broker"
 ROUTER = "router"
