@@ -29,9 +29,6 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
-
 public class NaivePartitioningOperatorTest
 {
   @Test
@@ -49,30 +46,22 @@ public class NaivePartitioningOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    op.open();
-
-    List<RowsAndColumnsHelper> expectations = Arrays.asList(
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{0, 0, 0})
-            .expectColumn("unsorted", new int[]{3, 54, 21}),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{1, 1})
-            .expectColumn("unsorted", new int[]{1, 5}),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{2})
-            .expectColumn("unsorted", new int[]{54}),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{4, 4, 4})
-            .expectColumn("unsorted", new int[]{2, 3, 92})
-    );
-
-    for (RowsAndColumnsHelper expectation : expectations) {
-      Assert.assertTrue(op.hasNext());
-      expectation.validate(op.next());
-    }
-    Assert.assertFalse(op.hasNext());
-
-    op.close(true);
+    new OperatorTestHelper(op)
+        .expectRowsAndColumns(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{0, 0, 0})
+                .expectColumn("unsorted", new int[]{3, 54, 21}),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1})
+                .expectColumn("unsorted", new int[]{1, 5}),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{2})
+                .expectColumn("unsorted", new int[]{54}),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{4, 4, 4})
+                .expectColumn("unsorted", new int[]{2, 3, 92})
+        )
+        .runToCompletion();
   }
 
   @Test
@@ -90,11 +79,17 @@ public class NaivePartitioningOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    op.open();
 
     boolean exceptionThrown = false;
     try {
-      op.next();
+      new OperatorTestHelper(op)
+          .withPushFn(
+              rac1 -> {
+                Assert.fail("I shouldn't be called, an exception should've been thrown.");
+                return true;
+              }
+          )
+          .runToCompletion();
     }
     catch (ISE ex) {
       Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());

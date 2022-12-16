@@ -49,25 +49,12 @@ public class InlineScanOperator implements Operator
   }
 
   @Override
-  public void open()
+  public void go(Receiver receiver)
   {
-  }
-
-  @Override
-  public RowsAndColumns next()
-  {
-    return iter.next();
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    return iter.hasNext();
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-    iter = null;
+    boolean keepItGoing = true;
+    while (keepItGoing && iter.hasNext()) {
+      keepItGoing = receiver.push(iter.next());
+    }
+    receiver.completed();
   }
 }
