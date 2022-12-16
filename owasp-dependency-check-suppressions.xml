@@ -228,6 +228,8 @@
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jettison/jettison@1.*$</packageUrl>
     <cve>CVE-2022-40149</cve>
     <cve>CVE-2022-40150</cve>
+    <cve>CVE-2022-45685</cve>
+    <cve>CVE-2022-45693</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
