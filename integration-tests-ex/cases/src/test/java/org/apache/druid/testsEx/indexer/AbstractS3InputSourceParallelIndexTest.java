@@ -27,15 +27,14 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.utils.s3TestUtil;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -57,21 +56,21 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "s3://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
+                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_1,
+                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_2,
+                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%"
+                        "s3://%%BUCKET%%/%%PATH%%/"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
                     ImmutableList.of(
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_1),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_2),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%" + WIKIPEDIA_DATA_3)
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_1),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_2),
+                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_3)
                     )
         )}
     };
@@ -91,7 +90,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
       filesToUpload.add(localPath + file);
     }
     try {
-      s3 = new s3TestUtil(config);
+      s3 = new s3TestUtil();
       s3.uploadDataFilesToS3(filesToUpload);
     }
     catch (Exception e) {
@@ -103,7 +102,11 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
   @AfterClass
   public static void deleteFilesFromS3()
   {
-    s3.deleteFilesFromS3(fileList(), indexDatasource);
+    // Deleting uploaded data files
+    s3.deleteFilesFromS3(fileList());
+
+    // Deleting folder created for storing segments (by druid)
+    s3.deleteFolderFromS3(indexDatasource);
   }
 
   void doTest(
@@ -169,6 +172,54 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
           true,
           segmentAvailabilityConfirmationPair
       );
+    }
+  }
+
+  public void doMSQTest(Pair<String, List> s3InputSource,
+                                         String IngestSQLFilePath,
+                                         String TestQueriesFilePath)
+  {
+    try {
+      indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
+      String sqlTask = getStringFromFileAndReplaceDatasource(IngestSQLFilePath, indexDatasource);
+      String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
+      Map<String, Object> context = ImmutableMap.of("finalizeAggregations", false,
+                                                    "maxNumTasks", 5,
+                                                    "groupByEnableMultiValueUnnesting", false);
+
+      sqlTask = StringUtils.replace(
+          sqlTask,
+          "%%INPUT_SOURCE_PROPERTY_KEY%%",
+          s3InputSource.lhs
+      );
+      sqlTask = StringUtils.replace(
+          sqlTask,
+          "%%INPUT_SOURCE_PROPERTY_VALUE%%",
+          inputSourceValue
+      );
+
+      // Setting the correct object path in the sqlTask.
+      sqlTask = StringUtils.replace(
+          sqlTask,
+          "%%BUCKET%%",
+          config.getCloudBucket() // Getting from DRUID_CLOUD_BUCKET env variable
+      );
+      sqlTask = StringUtils.replace(
+          sqlTask,
+          "%%PATH%%",
+          config.getCloudPath() // Getting from DRUID_CLOUD_PATH env variable
+      );
+
+      submitMSQTask(sqlTask, indexDatasource, context);
+
+      // Verifying ingested datasource
+      doTestQuery(indexDatasource, TestQueriesFilePath);
+
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing [%s] with s3 input source property key [%s]",
+                IngestSQLFilePath, s3InputSource.lhs);
+      throw new RuntimeException(e);
     }
   }
 }

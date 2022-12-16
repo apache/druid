@@ -27,6 +27,7 @@ import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -37,7 +38,7 @@ import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
-public class ITMSQReindexTest extends AbstractITSQLBasedIngestionTest
+public class ITMSQReindexTest extends AbstractITBatchIndexTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
 
@@ -65,9 +66,9 @@ public class ITMSQReindexTest extends AbstractITSQLBasedIngestionTest
                                                   "maxNumTasks", 5,
                                                   "groupByEnableMultiValueUnnesting", false);
     try {
-      submitTaskFromFile(MSQ_TASKS_DIR + sqlFileName,
-                         indexDatasource,
-                         context);
+      submitMSQTaskFromFile(MSQ_TASKS_DIR + sqlFileName,
+                            indexDatasource,
+                            context);
 
       runReindexMSQTaskandTestQueries(MSQ_TASKS_DIR + reIndexSqlFileName,
                                       MSQ_TASKS_DIR + reIndexQueryFileName,

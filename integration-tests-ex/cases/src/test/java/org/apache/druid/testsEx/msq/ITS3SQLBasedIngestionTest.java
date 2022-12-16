@@ -19,32 +19,20 @@
 
 package org.apache.druid.testsEx.msq;
 
-import static junit.framework.Assert.fail;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.utils.s3TestUtil;
 import org.apache.druid.testsEx.categories.S3DeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.apache.druid.testsEx.indexer.AbstractS3InputSourceParallelIndexTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 /**
  * IMPORTANT:
@@ -61,122 +49,20 @@ import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(S3DeepStorage.class)
-public class ITS3SQLBasedIngestionTest extends AbstractITSQLBasedIngestionTest
+public class ITS3SQLBasedIngestionTest extends AbstractS3InputSourceParallelIndexTest
 {
   @Inject
   @Json
   protected ObjectMapper jsonMapper;
-  private static s3TestUtil s3;
-  private static final String datasource = "wikipedia_cloud_index_msq";
   private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
   private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
-  private static final String INPUT_SOURCE_URIS_KEY = "uris";
-  private static final String INPUT_SOURCE_PREFIXES_KEY = "prefixes";
-  private static final String INPUT_SOURCE_OBJECTS_KEY = "objects";
-  private static final String WIKIPEDIA_DATA_1 = "wikipedia_index_data1.json";
-  private static final String WIKIPEDIA_DATA_2 = "wikipedia_index_data2.json";
-  private static final String WIKIPEDIA_DATA_3 = "wikipedia_index_data3.json";
 
-  public static Object[][] test_cases()
-  {
-    return new Object[][]{
-        {new Pair<>(INPUT_SOURCE_URIS_KEY,
-                    ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_1,
-                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_2,
-                        "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_3
-                    )
-        )},
-        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-                    ImmutableList.of(
-                        "s3://%%BUCKET%%/%%PATH%%/"
-                    )
-        )},
-        {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
-                    ImmutableList.of(
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_1),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_2),
-                        ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_3)
-                    )
-        )}
-    };
-  }
-
-  public static List<String> fileList()
-  {
-    return Arrays.asList(WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3);
-  }
-
-  @BeforeClass
-  public static void uploadDataFilesToS3()
-  {
-    List<String> filesToUpload = new ArrayList <>();
-    String localPath = "resources/data/batch_index/json/";
-    for (String file : fileList()) {
-      filesToUpload.add(localPath + file);
-    }
-    try {
-      s3 = new s3TestUtil(config);
-      s3.uploadDataFilesToS3(filesToUpload);
-    }
-    catch (Exception e) {
-      LOG.error(e.toString());
-      // Fail if exception
-      fail();
-    }
-  }
-
-  @AfterClass
-  public static void deleteFilesFromS3()
-  {
-    s3.deleteFilesFromS3(fileList(), datasource);
-  }
 
   @Test
-  @Parameters(method = "test_cases")
+  @Parameters(method = "resources")
   @TestCaseName("Test_{index} ({0})")
   public void testSQLBasedBatchIngestion(Pair<String, List> s3InputSource)
   {
-    try {
-      String sqlTask = getStringFromFileAndReplaceDatasource(CLOUD_INGEST_SQL, datasource);
-      String inputSourceValue = jsonMapper.writeValueAsString(s3InputSource.rhs);
-      Map<String, Object> context = ImmutableMap.of("finalizeAggregations", false,
-                                                    "maxNumTasks", 5,
-                                                    "groupByEnableMultiValueUnnesting", false);
-
-      sqlTask = StringUtils.replace(
-          sqlTask,
-          "%%INPUT_SOURCE_PROPERTY_KEY%%",
-          s3InputSource.lhs
-      );
-      sqlTask = StringUtils.replace(
-          sqlTask,
-          "%%INPUT_SOURCE_PROPERTY_VALUE%%",
-          inputSourceValue
-      );
-
-      // Setting the correct object path in the sqlTask.
-      sqlTask = StringUtils.replace(
-          sqlTask,
-          "%%BUCKET%%",
-          config.getCloudBucket() // Getting from DRUID_CLOUD_BUCKET env variable
-      );
-      sqlTask = StringUtils.replace(
-          sqlTask,
-          "%%PATH%%",
-          config.getCloudPath() // Getting from DRUID_CLOUD_PATH env variable
-      );
-
-      submitTask(sqlTask, datasource, context);
-
-      // Verifying ingested datasource
-      doTestQuery(INDEX_QUERIES_FILE, datasource);
-
-    }
-    catch (Exception e) {
-      LOG.error(e, "Error while testing [%s] with s3 input source property key [%s]",
-                CLOUD_INGEST_SQL, s3InputSource.lhs);
-      throw new RuntimeException(e);
-    }
+    doMSQTest(s3InputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE);
   }
 }

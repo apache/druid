@@ -14,23 +14,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
 
 public class s3TestUtil
 {
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
-  private final IntegrationTestingConfig config;
+  private AmazonS3 s3Client;
+  private final String S3_ACCESS_KEY;
+  private final String S3_SECRET_KEY;
+  private final String S3_REGION;
+  private final String S3_CLOUD_PATH;
+  private final String S3_CLOUD_BUCKET;
 
-  private static AmazonS3 s3Client;
-
-  public s3TestUtil(IntegrationTestingConfig config)
+  public s3TestUtil()
   {
-    LOG.info("Inside s3TestUtil contructor");
-    this.config = config;
     verifyEnvironment();
+    S3_ACCESS_KEY = System.getenv("AWS_ACCESS_KEY_ID");
+    S3_SECRET_KEY = System.getenv("AWS_SECRET_ACCESS_KEY");
+    S3_REGION = System.getenv("AWS_REGION");
+    S3_CLOUD_PATH = System.getenv("DRUID_CLOUD_PATH");
+    S3_CLOUD_BUCKET = System.getenv("DRUID_CLOUD_BUCKET");
     s3Client = s3Client();
-    LOG.info("Finished s3TestUtil contructor");
   }
 
   /**
@@ -54,12 +58,11 @@ public class s3TestUtil
    */
   private AmazonS3 s3Client()
   {
-    AWSCredentials credentials = new BasicAWSCredentials(config.getProperty("s3Accesskey"),
-                                                         config.getProperty("s3SecretKey"));
+    AWSCredentials credentials = new BasicAWSCredentials(S3_ACCESS_KEY, S3_SECRET_KEY);
     return AmazonS3ClientBuilder
         .standard()
         .withCredentials(new AWSStaticCredentialsProvider(credentials))
-        .withRegion(config.getProperty("s3Region"))
+        .withRegion(S3_REGION)
         .build();
   }
 
@@ -72,18 +75,17 @@ public class s3TestUtil
   {
     List<String> s3ObjectPaths = new ArrayList<>();
     for (String file : localFiles) {
-      String s3ObjectPath = config.getCloudPath() + "/" + file.substring(file.lastIndexOf('/')+1);
+      String s3ObjectPath = S3_CLOUD_PATH + "/" + file.substring(file.lastIndexOf('/')+1);
       s3ObjectPaths.add(s3ObjectPath);
       try {
         s3Client.putObject(
-            config.getCloudBucket(),
+            S3_CLOUD_BUCKET,
             s3ObjectPath,
             new File(file)
         );
       }
       catch (Exception e) {
         LOG.error("Unable to upload file %s", file);
-        LOG.error(e.toString());
         // Delete rest of the uploaded files
         deleteFilesFromS3(s3ObjectPaths);
         // Pass the exception forward for the test to handle
@@ -101,14 +103,13 @@ public class s3TestUtil
   {
     try {
       String[] fileListArr = new String[fileList.size()];
-      DeleteObjectsRequest delObjReq = new DeleteObjectsRequest(config.getCloudBucket())
+      DeleteObjectsRequest delObjReq = new DeleteObjectsRequest(S3_CLOUD_BUCKET)
           .withKeys(fileListArr);
       s3Client.deleteObjects(delObjReq);
     }
     catch (Exception e) {
       // Posting warn instead of error as not being able to delete files from s3 does not impact the test.
-      LOG.warn("Unable to delete data files from s3");
-      LOG.warn(e.toString());
+      LOG.warn(e, "Unable to delete data files from s3");
     }
   }
 
@@ -117,19 +118,19 @@ public class s3TestUtil
    *
    * @param  datasource Path of folder inside a s3 bucket
    */
-  public void deleteFilesFromS3(String datasource)
+  public void deleteFolderFromS3(String datasource)
   {
     try {
       // Delete segments created by druid
       ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
-          .withBucketName(config.getCloudBucket())
-          .withPrefix(config.getCloudPath() + "/" + datasource + "/");
+          .withBucketName(S3_CLOUD_BUCKET)
+          .withPrefix(S3_CLOUD_PATH + "/" + datasource + "/");
 
       ObjectListing objectListing = s3Client.listObjects(listObjectsRequest);
 
       while (true) {
         for (S3ObjectSummary objectSummary : objectListing.getObjectSummaries()) {
-          s3Client.deleteObject(config.getCloudBucket(), objectSummary.getKey());
+          s3Client.deleteObject(S3_CLOUD_BUCKET, objectSummary.getKey());
         }
         if (objectListing.isTruncated()) {
           objectListing = s3Client.listNextBatchOfObjects(objectListing);
@@ -140,27 +141,7 @@ public class s3TestUtil
     }
     catch (Exception e){
       // Posting warn instead of error as not being able to delete files from s3 does not impact the test.
-      LOG.warn("Unable to delete data files from s3");
-      LOG.warn(e.toString());
-    }
-  }
-
-  /**
-   * Deletes a list of files provide in fileList and all files inside a folder (datasource) in a s3 bucket
-   *
-   * @param  fileList List of path of files inside a s3 bucket
-   * @param  datasource Path of folder inside a s3 bucket
-   */
-  public void deleteFilesFromS3(List<String> fileList, String datasource)
-  {
-    try {
-      deleteFilesFromS3(fileList);
-      deleteFilesFromS3(datasource);
-    }
-    catch (Exception e){
-      // Posting warn instead of error as not being able to delete files from s3 does not impact the test.
-      LOG.warn("Unable to delete data files from s3");
-      LOG.warn(e.toString());
+      LOG.warn(e, "Unable to delete data files from s3");
     }
   }
 }

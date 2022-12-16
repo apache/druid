@@ -25,6 +25,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -34,7 +35,7 @@ import java.util.List;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
-public class ITSQLBasedBatchIngestionTest extends AbstractITSQLBasedIngestionTest
+public class ITSQLBasedBatchIngestionTest extends AbstractITBatchIndexTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
 
