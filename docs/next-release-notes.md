@@ -218,14 +218,14 @@ https://github.com/apache/druid/pull/13238
 
 Segment allocation can now be performed in batches, which can improve performance and decrease ingestion lag. For more information about this change, see [Segment batch allocation](#segment-batch-allocation). The following metrics correspond to those changes.
 
-Metrics for batch segment allocation (dims: dataSource, taskActionType=segmentAllocate):
+Metrics emitted for a batch segment allocate request (dims: dataSource, taskActionType=segmentAllocate):
 
 - `task/action/batch/runTime`: Milliseconds taken to execute a batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions
-- task/action/batch/queueTime: Milliseconds spent by a batch of task actions in queue. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
+- `task/action/batch/queueTime`: Milliseconds spent by a batch of task actions in queue. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
 - `task/action/batch/size`: Number of task actions in a batch that was executed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
 - `task/action/batch/attempts`: Number of execution attempts for a single batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation). 
 
-Metrics for a request (dims: taskId, taskType, dataSource, taskActionType=segmentAllocate):
+Metrics emitted for a single segment allocate request (dims: taskId, taskType, dataSource, taskActionType=segmentAllocate):
 
 - `task/action/failed/count`: Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
 - `task/action/success/count`: Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](#segment-batch-allocation).
