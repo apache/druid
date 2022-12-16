@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.SortedGroupPartitioner;
@@ -53,48 +52,34 @@ public class NaivePartitioningOperator implements Operator
   }
 
   @Override
-  public void open()
+  public void go(Receiver receiver)
   {
-    child.open();
-  }
+    child.go(
+        new Receiver()
+        {
+          @Override
+          public boolean push(RowsAndColumns rac)
+          {
+            SortedGroupPartitioner groupPartitioner = rac.as(SortedGroupPartitioner.class);
+            if (groupPartitioner == null) {
+              groupPartitioner = new DefaultSortedGroupPartitioner(rac);
+            }
 
-  @Override
-  public RowsAndColumns next()
-  {
-    if (partitionsIter != null && partitionsIter.hasNext()) {
-      return partitionsIter.next();
-    }
+            partitionsIter = groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
 
-    if (child.hasNext()) {
-      final RowsAndColumns rac = child.next();
+            boolean keepItGoing = true;
+            while (keepItGoing && partitionsIter.hasNext()) {
+              keepItGoing = receiver.push(partitionsIter.next());
+            }
+            return keepItGoing;
+          }
 
-      SortedGroupPartitioner groupPartitioner = rac.as(SortedGroupPartitioner.class);
-      if (groupPartitioner == null) {
-        groupPartitioner = new DefaultSortedGroupPartitioner(rac);
-      }
-
-      partitionsIter = groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
-      return partitionsIter.next();
-    }
-
-    throw new ISE("Asked for next when already complete");
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    if (partitionsIter != null && partitionsIter.hasNext()) {
-      return true;
-    }
-
-    return child.hasNext();
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-    if (cascade) {
-      child.close(cascade);
-    }
+          @Override
+          public void completed()
+          {
+            receiver.completed();
+          }
+        }
+    );
   }
 }
