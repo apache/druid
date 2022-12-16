@@ -22,7 +22,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
-@SuppressWarnings("MissingOverride")
+@SuppressWarnings({"ALL", "MissingOverride"})
 public final class ProtoTestEventWrapper {
   private ProtoTestEventWrapper() {}
   public static void registerAllExtensions(
