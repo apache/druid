@@ -416,6 +416,9 @@
     <cve>CVE-2021-35516</cve>
     <cve>CVE-2021-35515</cve>
     <cve>CVE-2021-36090</cve>
+    <cve>CVE-2022-2048</cve>
+    <cve>CVE-2022-3509</cve>
+    <cve>CVE-2022-40152</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
@@ -523,6 +526,7 @@
     <cve>CVE-2020-10740</cve>
     <cve>CVE-2020-25644</cve>
     <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
   </suppress>
 
   <suppress>
