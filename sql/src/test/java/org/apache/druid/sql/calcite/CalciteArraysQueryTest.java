@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -2696,7 +2697,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestOuter()
+  public void testUnnestVirtual1()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -2705,13 +2706,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT * FROM druid.numfoo LEFT JOIN UNNEST(MV_TO_ARRAY(dim3)) as tr ON dim2=tr.EXPR$0",
+        "SELECT longs FROM druid.numfoo, UNNEST(ARRAY[l1, l2]) as unnested (longs)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(CalciteTests.DATASOURCE3),
-                      "dim3",
-                      "dim3",
+                      "l1",
+                      "EXPR$0",
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -2719,7 +2720,48 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .columns(ImmutableList.of(
-                      "dim3"
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestVirtual2()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT longs FROM druid.numfoo, UNNEST(ARRAY[1,2,3]) as unnested (longs)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "l1",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
                   ))
                   .build()
         ),

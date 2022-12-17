@@ -26,9 +26,12 @@ import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidUnnestDatasourceRel;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 public class DruidUnnestDatasourceRule extends RelOptRule
 {
@@ -65,6 +68,7 @@ public class DruidUnnestDatasourceRule extends RelOptRule
         ImmutableList.of(rexBuilder.makeInputRef(uncollectRel.getRowType().getFieldList().get(0).getType(), 0)),
         uncollectRel.getRowType()
     );
+
 
     DruidUnnestDatasourceRel unnestDatasourceRel = new DruidUnnestDatasourceRel(
         uncollectRel,

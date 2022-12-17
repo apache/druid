@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rule;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -26,6 +27,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
+import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
@@ -123,12 +125,14 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         logicalCorrelate.getRequiredColumns(),
         logicalCorrelate.getJoinType()
     );
+
+
     DruidCorrelateUnnestRel newRel = new DruidCorrelateUnnestRel(
         lc.getCluster(),
         lc.getTraitSet(),
         lc,
         PartialDruidQuery.create(lc),
-        druidQueryRel.getDruidTable().getDataSource(),
+        druidQueryRel,
         unnestDatasourceRel,
         leftFilter,
         plannerContext
