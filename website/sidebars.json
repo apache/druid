@@ -22,7 +22,8 @@
       "tutorials/tutorial-transform-spec",
       "tutorials/docker",
       "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-msq-convert-spec"
+      "tutorials/tutorial-msq-convert-spec",
+      "tutorials/tutorial-jupyter-index"
     ],
     "Design": [
       "design/architecture",
