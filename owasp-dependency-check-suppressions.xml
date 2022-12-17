@@ -723,6 +723,14 @@
      <vulnerabilityName>1084597</vulnerabilityName>
    </suppress>
    <suppress>
+    <notes><![CDATA[
+    file name: y18n:4.0.0
+    ]]></notes>
+    <packageUrl regex="true">^pkg:npm/y18n@.*$</packageUrl>
+    <vulnerabilityName>1085089</vulnerabilityName>
+   </suppress>
+
+   <suppress>
      <notes><![CDATA[
      file name: protobuf-java-3.11.0.jar
      ]]></notes>
