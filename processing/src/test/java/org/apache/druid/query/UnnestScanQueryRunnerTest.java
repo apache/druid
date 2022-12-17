@@ -98,12 +98,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   private Druids.ScanQueryBuilder newTestUnnestQuery()
   {
     return Druids.newScanQueryBuilder()
-                 .dataSource(UnnestDataSource.create(
-                     new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-                     QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-                     null
-                 ))
+                 .dataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
                  .columns(Collections.emptyList())
                  .eternityInterval()
                  .limit(3)
@@ -168,7 +163,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         events,
         legacy
         ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
         0,
         3
     );
@@ -218,7 +213,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         events,
         legacy
         ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
         0,
         3
     );
@@ -340,7 +335,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         events,
         legacy
         ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Lists.newArrayList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
         0,
         3
     );
