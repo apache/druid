@@ -101,6 +101,13 @@ public class QueryRunnerTestHelper
             .collect(Collectors.toList())
   );
 
+  public static final DataSource UNNEST_DATA_SOURCE = UnnestDataSource.create(
+      new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
+      QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+      null
+  );
+
   public static final Granularity DAY_GRAN = Granularities.DAY;
   public static final Granularity ALL_GRAN = Granularities.ALL;
   public static final Granularity MONTH_GRAN = Granularities.MONTH;

@@ -597,12 +597,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     cannotVectorize();
 
     GroupByQuery query = makeQueryBuilder()
-        .setDataSource(UnnestDataSource.create(
-            new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
-        ))
+        .setDataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(
             new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")

@@ -170,6 +170,70 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
+  @Test
+  public void testUnnestRunnerVirtualColumns()
+  {
+    ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .intervals(I_0112_0114)
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+                  "vc",
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  null
+              ))
+              .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+              .eternityInterval()
+              .legacy(legacy)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "vc",
+                      "mv_to_array(placementish)",
+                      ColumnType.STRING_ARRAY,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .limit(3)
+              .build();
+
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    ScanQueryRunnerTest.verify(expectedResults, results);
+  }
 
   @Test
   public void testUnnestRunnerWithFilter()
@@ -342,35 +406,6 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
-  private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
-  {
-    return toEvents(
-        new String[]{
-            getTimestampName() + ":TIME",
-            QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
-            QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
-            "qualityLong" + ":LONG",
-            "qualityFloat" + ":FLOAT",
-            "qualityDouble" + ":DOUBLE",
-            "qualityNumericString" + ":STRING",
-            "longNumericNull" + ":LONG",
-            "floatNumericNull" + ":FLOAT",
-            "doubleNumericNull" + ":DOUBLE",
-            QueryRunnerTestHelper.PLACEMENT_DIMENSION + ":STRING",
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + ":STRINGS",
-            QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE",
-            QueryRunnerTestHelper.PARTIAL_NULL_DIMENSION + ":STRING",
-            "expr",
-            "indexMin",
-            "indexFloat",
-            "indexMaxPlusTen",
-            "indexMinFloat",
-            "indexMaxFloat",
-            "quality_uniques"
-        },
-        valueSet
-    );
-  }
 
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
   {
