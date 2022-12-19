@@ -85,9 +85,8 @@ public class QueryException extends RuntimeException implements SanitizableExcep
     UNAUTHORIZED(401),
     CAPACITY_EXCEEDED(429),
     UNKNOWN(500),
-    SERVER_ERROR(500),
     CANCELED(500),
-    QUERY_RUNTIME_FAILURE(501),
+    QUERY_RUNTIME_FAILURE(500),
     UNSUPPORTED(501),
     TIMEOUT(504);
 
@@ -116,17 +115,12 @@ public class QueryException extends RuntimeException implements SanitizableExcep
 
       // These error codes are generally expected to come from a QueryInterruptedException
       case QUERY_INTERRUPTED_ERROR_CODE:
-        return FailType.SERVER_ERROR;
       case UNSUPPORTED_OPERATION_ERROR_CODE:
       case UNKNOWN_EXCEPTION_ERROR_CODE:
+      case TRUNCATED_RESPONSE_CONTEXT_ERROR_CODE:
         return FailType.QUERY_RUNTIME_FAILURE;
       case UNAUTHORIZED_ERROR_CODE:
         return FailType.UNAUTHORIZED;
-
-      // This comes from a QueryInterruptedException, but there is an expectation that it generates a 500 error
-      // code instead of a 501 error code, so we give it a different FailType
-      case TRUNCATED_RESPONSE_CONTEXT_ERROR_CODE:
-        return FailType.SERVER_ERROR;
 
       case QUERY_CAPACITY_EXCEEDED_ERROR_CODE:
         return FailType.CAPACITY_EXCEEDED;

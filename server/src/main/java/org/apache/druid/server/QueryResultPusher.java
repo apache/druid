@@ -188,7 +188,6 @@ public abstract class QueryResultPusher
       case USER_ERROR:
       case UNAUTHORIZED:
       case QUERY_RUNTIME_FAILURE:
-      case SERVER_ERROR:
       case CANCELED:
         counter.incrementInterrupted();
         break;
