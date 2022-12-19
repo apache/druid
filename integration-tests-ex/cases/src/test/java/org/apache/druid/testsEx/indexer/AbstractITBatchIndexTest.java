@@ -431,6 +431,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       startSubTaskCount = countCompleteSubTasks(dataSourceName, !taskSpec.contains("dynamic"));
     }
 
+    LOG.info("Submitting the following spec for ingestion - \n%s", taskSpec);
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);

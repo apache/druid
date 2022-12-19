@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.utils.s3TestUtil;
+import org.apache.druid.testing.utils.S3TestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -43,7 +43,7 @@ import static junit.framework.Assert.fail;
 public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static String indexDatasource;
-  private static s3TestUtil s3;
+  private static S3TestUtil s3;
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INPUT_SOURCE_URIS_KEY = "uris";
@@ -92,7 +92,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
       filesToUpload.add(localPath + file);
     }
     try {
-      s3 = new s3TestUtil();
+      s3 = new S3TestUtil();
       s3.uploadDataFilesToS3(filesToUpload);
     }
     catch (Exception e) {
