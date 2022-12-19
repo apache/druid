@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -54,7 +55,7 @@ public class GroupByRules
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
-      final VirtualColumnRegistry virtualColumnRegistry,
+      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final Project project,
       final List<Aggregation> existingAggregations,

@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -148,7 +149,7 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
     return new InputSourceReader()
     {
       @Override
-      public CloseableIterator<InputRow> read()
+      public CloseableIterator<InputRow> read(InputStats inputStats)
       {
         return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>()
         {

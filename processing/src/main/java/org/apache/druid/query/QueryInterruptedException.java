@@ -29,7 +29,7 @@ import java.util.concurrent.CancellationException;
 /**
  * Exception representing a failed query. The name "QueryInterruptedException" is a misnomer; this is actually
  * used on the client side for *all* kinds of failed queries.
- *
+ * <p>
  * Fields:
  * - "errorCode" is a well-defined errorCode code taken from a specific list (see the static constants). "Unknown exception"
  * represents all wrapped exceptions other than interrupt, cancellation, resource limit exceeded, unauthorized
@@ -37,21 +37,12 @@ import java.util.concurrent.CancellationException;
  * - "errorMessage" is the toString of the wrapped exception
  * - "errorClass" is the class of the wrapped exception
  * - "host" is the host that the errorCode occurred on
- *
+ * <p>
  * The QueryResource is expected to emit the JSON form of this object when errors happen, and the DirectDruidClient
  * deserializes and wraps them.
  */
 public class QueryInterruptedException extends QueryException
 {
-  public static final String QUERY_INTERRUPTED = "Query interrupted";
-  // Note: the proper spelling is with a single "l", but the version with
-  // two "l"s is documented, we can't change the text of the message.
-  public static final String QUERY_CANCELED = "Query cancelled";
-  public static final String UNAUTHORIZED = "Unauthorized request";
-  public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
-  public static final String TRUNCATED_RESPONSE_CONTEXT = "Truncated response context";
-  public static final String UNKNOWN_EXCEPTION = "Unknown exception";
-
   @JsonCreator
   public QueryInterruptedException(
       @JsonProperty("error") @Nullable String errorCode,
@@ -96,15 +87,15 @@ public class QueryInterruptedException extends QueryException
     if (e instanceof QueryInterruptedException) {
       return ((QueryInterruptedException) e).getErrorCode();
     } else if (e instanceof InterruptedException) {
-      return QUERY_INTERRUPTED;
+      return QUERY_INTERRUPTED_ERROR_CODE;
     } else if (e instanceof CancellationException) {
-      return QUERY_CANCELED;
+      return QUERY_CANCELED_ERROR_CODE;
     } else if (e instanceof UnsupportedOperationException) {
-      return UNSUPPORTED_OPERATION;
+      return UNSUPPORTED_OPERATION_ERROR_CODE;
     } else if (e instanceof TruncatedResponseContextException) {
-      return TRUNCATED_RESPONSE_CONTEXT;
+      return TRUNCATED_RESPONSE_CONTEXT_ERROR_CODE;
     } else {
-      return UNKNOWN_EXCEPTION;
+      return UNKNOWN_EXCEPTION_ERROR_CODE;
     }
   }
 

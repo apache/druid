@@ -90,7 +90,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                     <span
                       class="bp4-button-text"
                     >
-                      loadByPeriod(P1000Y+future)
+                      loadByPeriod(P1000Y+future, 2x)
                     </span>
                     <span
                       aria-hidden="true"
@@ -325,7 +325,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                                   autocomplete="off"
                                   class="bp4-input"
                                   max="256"
-                                  min="1"
+                                  min="0"
                                   type="text"
                                   value="2"
                                 />
@@ -562,7 +562,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                   <span
                     class="bp4-button-text"
                   >
-                    loadForever
+                    loadForever(2x)
                   </span>
                 </button>
               </div>
