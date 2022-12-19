@@ -139,7 +139,6 @@ https://github.com/apache/druid/pull/13231
 
 Multi-stage queries no longer show up in the Query history dialog. They are still available in the **Recent query tasks** panel.
 
-## <a name="25.0.0-query-engine" href="#25.0.0-query-engine">#</a> Query engine
 
 ### <a name="25.0.0-query-engine-use-worker-number-to-communicate-between-tasks" href="#25.0.0-query-engine-use-worker-number-to-communicate-between-tasks">#</a> Use worker number to communicate between tasks
 
