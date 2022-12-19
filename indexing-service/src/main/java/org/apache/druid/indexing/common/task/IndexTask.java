@@ -555,32 +555,33 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private void emitUnparseableEvents(TaskToolbox toolbox)
   {
+    // if (should emit unparseableEvents) { ...
     String taskId = getId();
-    for(Map.Entry<String, Object> unparseableEvents : getTaskCompletionUnparseableEvents().entrySet()) {
-      if (unparseableEvents.getValue() instanceof List) {
-        List<Object> buildSegments = (List) unparseableEvents.getValue();
-        for (Object buildSegment : buildSegments) {
-          if (buildSegment instanceof ParseExceptionReport) {
-            ParseExceptionReport parseExceptionReport = (ParseExceptionReport) buildSegment;
-            Object input = parseExceptionReport.getInput();
-            Object details = parseExceptionReport.getDetails();
-            long timeOfExceptionMillis = parseExceptionReport.getTimeOfExceptionMillis();
-            DateTime dateTime = new DateTime(timeOfExceptionMillis);
-            String service = toolbox.getTaskExecutorNode().getServiceName();
-            String host = toolbox.getTaskExecutorNode().getHost();
-            int port = toolbox.getTaskExecutorNode().getPlaintextPort();
-            String dataSource = this.getDataSource();
-            String groupId = getGroupId();
-            Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
-                .put("supervisorId", dataSource)
-                .put("dataSource", dataSource)
-                .put("groupId", groupId)
-                .put("input", input)
-                .put("details", details)
-                .build();
-            Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
-            toolbox.getEmitter().emit(event);
-          }
+    String service = toolbox.getTaskExecutorNode().getServiceName();
+    String host = toolbox.getTaskExecutorNode().getHost();
+    String dataSource = getDataSource();
+    String groupId = getGroupId();
+    ImmutableMap.Builder<String, Object> dataMapBuilder = new ImmutableMap.Builder<>();
+    dataMapBuilder.put("supervisorId", dataSource)
+                  .put("dataSource", dataSource)
+                  .put("groupId", groupId)
+                  .put("taskId", taskId);
+    // getTaskCompletionUnparseableEvents returns a map with two essentially duplicate map entries. By using
+    // determine_partitions we won't duplicate events emitted.
+    Object unparseableEvents = getTaskCompletionUnparseableEvents().get(RowIngestionMeters.DETERMINE_PARTITIONS);
+    if (unparseableEvents instanceof List) {
+      List<Object> buildSegments = (List) unparseableEvents;
+      for (Object buildSegment : buildSegments) {
+        if (buildSegment instanceof ParseExceptionReport) {
+          ParseExceptionReport parseExceptionReport = (ParseExceptionReport) buildSegment;
+          Object input = parseExceptionReport.getInput();
+          Object details = parseExceptionReport.getDetails();
+          long timeOfExceptionMillis = parseExceptionReport.getTimeOfExceptionMillis();
+          DateTime dateTime = new DateTime(timeOfExceptionMillis);
+          dataMapBuilder.put("input", input)
+                        .put("details", details)
+          Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMapBuilder.build());
+          toolbox.getEmitter().emit(event);
         }
       }
     }
@@ -603,6 +604,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     );
   }
 
+  /**
+   * Return a map with details regarding unparseableEvents from the completed task
+   *
+   * @return A Map that contains unparseableEventDetails for determineParitionParseExceptionReports and
+   * buildSegmentsParseExceptionReports
+   */
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
