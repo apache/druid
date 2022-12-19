@@ -29,11 +29,12 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest.KeyVersion;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.druid.java.util.common.logger.Logger;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.druid.java.util.common.logger.Logger;
 
 public class s3TestUtil
 {
@@ -64,9 +65,9 @@ public class s3TestUtil
   {
     String[] envVars = {"DRUID_CLOUD_BUCKET", "DRUID_CLOUD_PATH", "AWS_ACCESS_KEY_ID",
                         "AWS_SECRET_ACCESS_KEY", "AWS_REGION"};
-    for (String val : envVars){
+    for (String val : envVars) {
       String envValue = System.getenv(val);
-      if (envValue == null){
+      if (envValue == null) {
         LOG.error("%s was not set", val);
         LOG.error("All of %s MUST be set in the environment", Arrays.toString(envVars));
       }
@@ -95,7 +96,7 @@ public class s3TestUtil
   {
     List<String> s3ObjectPaths = new ArrayList<>();
     for (String file : localFiles) {
-      String s3ObjectPath = S3_CLOUD_PATH + "/" + file.substring(file.lastIndexOf('/')+1);
+      String s3ObjectPath = S3_CLOUD_PATH + "/" + file.substring(file.lastIndexOf('/') + 1);
       s3ObjectPaths.add(s3ObjectPath);
       try {
         s3Client.putObject(
@@ -123,8 +124,8 @@ public class s3TestUtil
   {
     try {
       ArrayList<KeyVersion> keys = new ArrayList<>();
-      for (String fileName : fileList){
-        keys.add(new KeyVersion(fileName));
+      for (String fileName : fileList) {
+        keys.add(new KeyVersion(S3_CLOUD_PATH + "/" + fileName));
       }
       DeleteObjectsRequest delObjReq = new DeleteObjectsRequest(S3_CLOUD_BUCKET)
           .withKeys(keys);
@@ -162,7 +163,7 @@ public class s3TestUtil
         }
       }
     }
-    catch (Exception e){
+    catch (Exception e) {
       // Posting warn instead of error as not being able to delete files from s3 does not impact the test.
       LOG.warn(e, "Unable to delete folder from s3");
     }

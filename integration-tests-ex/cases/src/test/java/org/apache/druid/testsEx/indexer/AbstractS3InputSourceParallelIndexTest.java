@@ -19,8 +19,6 @@
 
 package org.apache.druid.testsEx.indexer;
 
-import static junit.framework.Assert.fail;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -38,6 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+
+import static junit.framework.Assert.fail;
+
 
 public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
@@ -62,11 +63,11 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
                         "s3://%%BUCKET%%/%%PATH%%/" + WIKIPEDIA_DATA_3
                     )
         )},
-//        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
-//                    ImmutableList.of(
-//                        "s3://%%BUCKET%%/%%PATH%%/"
-//                    )
-//        )},
+        {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
+                    ImmutableList.of(
+                        "s3://%%BUCKET%%/%%PATH%%/"
+                    )
+        )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
                     ImmutableList.of(
                         ImmutableMap.of("bucket", "%%BUCKET%%", "path", "%%PATH%%/" + WIKIPEDIA_DATA_1),
