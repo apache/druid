@@ -17,28 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.server.mocks;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParseException;
+import org.apache.druid.java.util.common.RE;
 
-public class BadJsonQueryException extends BadQueryException
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.function.Supplier;
+
+public class ExceptionalInputStream extends InputStream
 {
-  public static final String ERROR_CLASS = JsonParseException.class.getName();
+  private final Supplier<Exception> supplier;
 
-  public BadJsonQueryException(JsonParseException e)
-  {
-    this(JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
-  }
-
-  @JsonCreator
-  private BadJsonQueryException(
-      @JsonProperty("error") String errorCode,
-      @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass
+  public ExceptionalInputStream(
+      Supplier<Exception> supplier
   )
   {
-    super(errorCode, errorMessage, errorClass);
+    this.supplier = supplier;
+  }
+
+  @Override
+  public int read() throws IOException
+  {
+    final Exception throwMe = supplier.get();
+    if (throwMe instanceof RuntimeException) {
+      throw (RuntimeException) throwMe;
+    }
+    if (throwMe instanceof IOException) {
+      throw (IOException) throwMe;
+    }
+    throw new RE(throwMe, "wrapped because cannot throw typed exception");
   }
 }
