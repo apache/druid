@@ -352,6 +352,9 @@ Ensure that the GPG key fingerprint used in the `mvn install` command matches yo
 $ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-bin.tar.gz.sha512 ; echo)
 ...
 $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
+...
+$ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512 ; echo)
+...
 ```
 
 ### Verify GPG signatures
@@ -360,6 +363,9 @@ $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apa
 $ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
+...
+$ gpg --verify apache-druid-0.17.0-hadoop3-bin.tar.gz.asc apache-druid-0.17.0-hadoop3-bin.tar.gz
+...
 ```
 
 ### Commit artifacts to SVN repo
