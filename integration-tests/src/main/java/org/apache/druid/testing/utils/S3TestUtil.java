@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class s3TestUtil
+public class S3TestUtil
 {
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
@@ -47,7 +47,7 @@ public class s3TestUtil
   private final String S3_CLOUD_PATH;
   private final String S3_CLOUD_BUCKET;
 
-  public s3TestUtil()
+  public S3TestUtil()
   {
     verifyEnvironment();
     S3_ACCESS_KEY = System.getenv("AWS_ACCESS_KEY_ID");
