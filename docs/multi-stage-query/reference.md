@@ -134,10 +134,6 @@ You must either provide the `baseDir` or the list of `files`. You can provide bo
 the files are assumed relative to the `baseDir`. If you provide a `filter`, you must provide the
 `baseDir`.
 
-Note that, due to [Issue #13359](https://github.com/apache/druid/issues/13359), the functionality
-described above is broken. Until that issue is resolved, you must provide one or more absolute
-file paths in the `files` property and the other two properties are unavailable.
-
 #### Table Function Format
 
 Each of the table functions above requires that you specify a format.
