@@ -63,10 +63,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEvent;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
@@ -820,8 +818,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private void emitUnparseableEvents(TaskToolbox toolbox)
   {
     String taskId = getId();
+    String service = toolbox.getTaskExecutorNode().getServiceName();
+    String host = toolbox.getTaskExecutorNode().getHost();
+    String dataSource = this.getDataSource();
+    String groupId = getGroupId();
+    ImmutableMap.Builder<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
+        .put("supervisorId", dataSource)
+        .put("dataSource", dataSource)
+        .put("groupId", groupId);
     Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEvents(taskId, true);
-    for(Entry<String, Object> unparseableEvents : rowStatsAndUnparseableEvents.rhs.entrySet()) {
+    for (Entry<String, Object> unparseableEvents : rowStatsAndUnparseableEvents.rhs.entrySet()) {
       if (unparseableEvents.getValue() instanceof List) {
         List<Object> buildSegments = (List) unparseableEvents.getValue();
         for (Object buildSegment : buildSegments) {
@@ -832,19 +838,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               Object details = unparseableEventDetails.get("details");
               Long timeOfExceptionMillis = (Long) unparseableEventDetails.get("timeOfExceptionMillis");
               DateTime dateTime = new DateTime(timeOfExceptionMillis);
-              String service = toolbox.getTaskExecutorNode().getServiceName();
-              String host = toolbox.getTaskExecutorNode().getHost();
-              int port = toolbox.getTaskExecutorNode().getPlaintextPort();
-              String dataSource = this.getDataSource();
-              String groupId = getGroupId();
-              Map<String, Object> dataMap = new ImmutableMap.Builder<String, Object>()
-                          .put("supervisorId", dataSource)
-                          .put("dataSource", dataSource)
-                          .put("groupId", groupId)
-                          .put("input", input)
-                          .put("details", details)
-                          .build();
-              Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap);
+              dataMap
+                  .put("input", input)
+                  .put("details", details)
+                  .build();
+              Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMap.build());
               toolbox.getEmitter().emit(event);
             }
           }

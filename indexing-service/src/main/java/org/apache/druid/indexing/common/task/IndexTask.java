@@ -69,7 +69,6 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -553,6 +552,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  /**
+   * Emits details about unparseableEvents from the task completing.
+   * @param toolbox Contains information that the event needs to emit and the emitter.
+   */
   private void emitUnparseableEvents(TaskToolbox toolbox)
   {
     // if (should emit unparseableEvents) { ...
@@ -579,7 +582,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           long timeOfExceptionMillis = parseExceptionReport.getTimeOfExceptionMillis();
           DateTime dateTime = new DateTime(timeOfExceptionMillis);
           dataMapBuilder.put("input", input)
-                        .put("details", details)
+                        .put("details", details);
           Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMapBuilder.build());
           toolbox.getEmitter().emit(event);
         }
