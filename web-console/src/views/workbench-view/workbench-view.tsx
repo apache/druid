@@ -33,7 +33,12 @@ import {
   TabEntry,
   WorkbenchQuery,
 } from '../../druid-models';
-import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
+import {
+  Capabilities,
+  convertSpecToSql,
+  getSpecDatasourceName,
+  getTaskExecution,
+} from '../../helpers';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons';
 import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
@@ -80,6 +85,7 @@ function externalDataTabId(tabId: string | undefined): boolean {
 }
 
 export interface WorkbenchViewProps {
+  capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
   initQueryWithContext: QueryWithContext | undefined;
@@ -628,7 +634,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderCenterPanel() {
-    const { mandatoryQueryContext, queryEngines, allowExplain, goToIngestion } = this.props;
+    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToIngestion } =
+      this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
 
@@ -647,6 +654,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onQueryTab={this.handleNewTab}
           onDetails={this.handleDetails}
           queryEngines={queryEngines}
+          clusterCapacity={capabilities.getClusterCapacity()}
           goToIngestion={goToIngestion}
           runMoreMenu={
             <Menu>

@@ -83,9 +83,9 @@ public class ArrayListRowsAndColumns<RowType> implements RowsAndColumns
         return new ObjectColumnAccessorBase()
         {
           @Override
-          protected Object getVal(int cell)
+          protected Object getVal(int rowNum)
           {
-            return adapterForValue.apply(rows.get(cell));
+            return adapterForValue.apply(rows.get(rowNum));
           }
 
           @Override

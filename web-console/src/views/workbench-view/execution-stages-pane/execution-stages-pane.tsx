@@ -26,6 +26,7 @@ import ReactTable, { Column } from 'react-table';
 import { BracedText, TableClickableCell } from '../../../components';
 import {
   ChannelCounterName,
+  ChannelFields,
   ClusterBy,
   CounterName,
   Execution,
@@ -40,7 +41,8 @@ import {
   capitalizeFirst,
   clamp,
   deepGet,
-  formatBytes,
+  filterMap,
+  formatBytesCompact,
   formatDuration,
   formatDurationWithMs,
   formatInteger,
@@ -54,6 +56,7 @@ import './execution-stages-pane.scss';
 
 const MAX_STAGE_ROWS = 20;
 const MAX_DETAIL_ROWS = 20;
+const NOT_SIZE_ON_DISK = '(does not represent size on disk)';
 
 function formatBreakdown(breakdown: Record<string, number>): string {
   return Object.keys(breakdown)
@@ -63,8 +66,6 @@ function formatBreakdown(breakdown: Record<string, number>): string {
 
 const formatRows = formatInteger;
 const formatRowRate = formatInteger;
-const formatSize = (bytes: number) => `(${formatBytes(bytes)})`;
-const formatByteRate = (byteRate: number) => `(${formatBytes(byteRate)}/s)`;
 const formatFrames = formatInteger;
 const formatDurationDynamic = (n: NumberLike) =>
   n < 1000 ? formatDurationWithMs(n) : formatDuration(n);
@@ -120,9 +121,6 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
   const rowRateValues = stages.stages.map(s =>
     formatRowRate(stages.getRateFromStage(s, 'rows') || 0),
   );
-  const byteRateValues = stages.stages.map(s =>
-    formatByteRate(stages.getRateFromStage(s, 'bytes') || 0),
-  );
 
   const rowsValues = stages.stages.flatMap(stage => [
     ...stages.getInputCountersForStage(stage, 'rows').map(formatRows),
@@ -130,14 +128,10 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     formatRows(stages.getTotalCounterForStage(stage, 'shuffle', 'rows')),
   ]);
 
-  const bytesAndFilesValues = stages.stages.flatMap(stage => {
+  const filesValues = filterMap(stages.stages, stage => {
     const inputFileCount = stages.getTotalInputForStage(stage, 'totalFiles');
-    return [
-      ...stages.getInputCountersForStage(stage, 'bytes').map(formatSize),
-      formatSize(stages.getTotalCounterForStage(stage, 'output', 'bytes')),
-      formatSize(stages.getTotalCounterForStage(stage, 'shuffle', 'bytes')),
-      inputFileCount ? formatFileOfTotalForBrace(inputFileCount, inputFileCount) : '',
-    ];
+    if (!inputFileCount) return;
+    return formatFileOfTotalForBrace(inputFileCount, inputFileCount);
   });
 
   function detailedStats(stage: StageDefinition) {
@@ -164,13 +158,10 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
       bracesRows[counterName] = wideCounters.map(wideCounter =>
         formatRows(wideCounter[counterName]!.rows),
       );
-      bracesExtra[counterName] = wideCounters.map(wideCounter => {
+      bracesExtra[counterName] = filterMap(wideCounters, wideCounter => {
         const totalFiles = wideCounter[counterName]!.totalFiles;
-        if (totalFiles) {
-          return formatFileOfTotalForBrace(totalFiles, totalFiles);
-        } else {
-          return formatSize(wideCounter[counterName]!.bytes);
-        }
+        if (!totalFiles) return;
+        return formatFileOfTotalForBrace(totalFiles, totalFiles);
       });
     }
 
@@ -212,7 +203,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 ) : (
                   stages.getStageCounterTitle(stage, counterName)
                 ),
-                isInput ? <i>rows &nbsp; (size or files)</i> : <i>rows &nbsp; (size)</i>,
+                isInput ? <i>rows &nbsp; (input files)</i> : <i>rows</i>,
               ),
               id: counterName,
               accessor: d => d[counterName]!.rows,
@@ -222,8 +213,16 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 const c = (original as SimpleWideCounter)[counterName]!;
                 return (
                   <>
-                    <BracedText text={formatRows(value)} braces={bracesRows[counterName]} />
-                    {c.totalFiles ? (
+                    <BracedText
+                      text={formatRows(value)}
+                      braces={bracesRows[counterName]}
+                      title={
+                        c.bytes
+                          ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
+                          : undefined
+                      }
+                    />
+                    {Boolean(c.totalFiles) && (
                       <>
                         {' '}
                         &nbsp;{' '}
@@ -232,13 +231,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                           braces={bracesExtra[counterName]}
                         />
                       </>
-                    ) : c.bytes ? (
-                      <>
-                        {' '}
-                        &nbsp;
-                        <BracedText text={formatSize(c.bytes)} braces={bracesExtra[counterName]} />
-                      </>
-                    ) : undefined}
+                    )}
                   </>
                 );
               },
@@ -263,13 +256,9 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     );
 
     const bracesRows: Record<ChannelCounterName, string[]> = {} as any;
-    const bracesBytes: Record<ChannelCounterName, string[]> = {} as any;
     for (const counterName of counterNames) {
       bracesRows[counterName] = wideCounters.map(wideCounter =>
         formatRows(wideCounter[counterName]!.rows),
-      );
-      bracesBytes[counterName] = wideCounters.map(wideCounter =>
-        formatSize(wideCounter[counterName]!.bytes),
       );
     }
 
@@ -305,18 +294,17 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               className: 'padded',
               width: 180,
               Cell({ value, original }) {
-                const c = original[counterName];
+                const c: Record<ChannelFields, number> = original[counterName];
                 return (
-                  <>
-                    <BracedText text={formatRows(value)} braces={bracesRows[counterName]} />
-                    {c.bytes ? (
-                      <>
-                        {' '}
-                        &nbsp;
-                        <BracedText text={formatSize(c.bytes)} braces={bracesBytes[counterName]} />
-                      </>
-                    ) : undefined}
-                  </>
+                  <BracedText
+                    text={formatRows(value)}
+                    braces={bracesRows[counterName]}
+                    title={
+                      c.bytes
+                        ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
+                        : undefined
+                    }
+                  />
                 );
               },
             };
@@ -329,11 +317,21 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
   function dataProcessedInput(stage: StageDefinition, inputNumber: number) {
     const inputCounter: CounterName = `input${inputNumber}`;
     if (!stages.hasCounterForStage(stage, inputCounter)) return;
-    const inputSizeBytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
 
+    const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     return (
-      <div className="data-transfer" key={inputNumber}>
+      <div
+        className="data-transfer"
+        key={inputNumber}
+        title={
+          bytes
+            ? `Input${inputNumber} uncompressed size: ${formatBytesCompact(
+                bytes,
+              )} ${NOT_SIZE_ON_DISK}`
+            : undefined
+        }
+      >
         <BracedText
           text={formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))}
           braces={rowsValues}
@@ -347,13 +345,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 stages.getTotalCounterForStage(stage, inputCounter, 'files'),
                 inputFileCount,
               )}
-              braces={bytesAndFilesValues}
+              braces={filesValues}
             />
-          </>
-        ) : inputSizeBytes ? (
-          <>
-            {' '}
-            &nbsp; <BracedText text={formatSize(inputSizeBytes)} braces={bytesAndFilesValues} />
           </>
         ) : undefined}
       </div>
@@ -383,21 +376,20 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
   function dataProcessedOutput(stage: StageDefinition) {
     if (!stages.hasCounterForStage(stage, 'output')) return;
 
+    const title = stages.getStageCounterTitle(stage, 'output');
     return (
       <div
         className="data-transfer"
-        title={`${stages.getStageCounterTitle(stage, 'output')} frames: ${formatFrames(
+        title={`${title} frames: ${formatFrames(
           stages.getTotalCounterForStage(stage, 'output', 'frames'),
-        )}`}
+        )}
+${title} uncompressed size: ${formatBytesCompact(
+          stages.getTotalCounterForStage(stage, 'output', 'bytes'),
+        )} ${NOT_SIZE_ON_DISK}`}
       >
         <BracedText
           text={formatRows(stages.getTotalCounterForStage(stage, 'output', 'rows'))}
           braces={rowsValues}
-        />{' '}
-        &nbsp;{' '}
-        <BracedText
-          text={formatSize(stages.getTotalCounterForStage(stage, 'output', 'bytes'))}
-          braces={bytesAndFilesValues}
         />
       </div>
     );
@@ -410,26 +402,20 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
 
     const shuffleRows = stages.getTotalCounterForStage(stage, 'shuffle', 'rows');
     const sortProgress = stages.getSortProgressForStage(stage);
+    const title = stages.getStageCounterTitle(stage, 'shuffle');
     return (
       <div
         className="data-transfer"
-        title={`${stages.getStageCounterTitle(stage, 'shuffle')} frames: ${formatFrames(
+        title={`${title} frames: ${formatFrames(
           stages.getTotalCounterForStage(stage, 'shuffle', 'frames'),
-        )}`}
+        )}
+${title} uncompressed size: ${formatBytesCompact(
+          stages.getTotalCounterForStage(stage, 'shuffle', 'bytes'),
+        )} ${NOT_SIZE_ON_DISK}`}
       >
-        {shuffleRows ? (
-          <>
-            <BracedText text={formatRows(shuffleRows)} braces={rowsValues} /> &nbsp;{' '}
-            <BracedText
-              text={formatSize(stages.getTotalCounterForStage(stage, 'shuffle', 'bytes'))}
-              braces={bytesAndFilesValues}
-            />
-            {0 < sortProgress && sortProgress < 1 && (
-              <div className="sort-percent">{`[${formatPercent(sortProgress)}]`}</div>
-            )}
-          </>
-        ) : (
-          <BracedText text={`[${formatPercent(sortProgress)}]`} braces={rowsValues} />
+        <BracedText text={shuffleRows ? formatRows(shuffleRows) : ''} braces={rowsValues} /> &nbsp;{' '}
+        {0 < sortProgress && sortProgress < 1 && (
+          <> &nbsp;{` ${formatPercent(sortProgress)} sorted`}</>
         )}
       </div>
     );
@@ -535,11 +521,11 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
           },
         },
         {
-          Header: twoLines('Data processed', <i>rows &nbsp; (size or files)</i>),
-          id: 'data_processed',
+          Header: twoLines('Rows processed', <i>rows &nbsp; (input files)</i>),
+          id: 'rows_processed',
           accessor: () => null,
           className: 'padded',
-          width: 220,
+          width: 160,
           Cell({ original }) {
             const stage = original as StageDefinition;
             const { input, broadcast } = stage.definition;
@@ -560,26 +546,22 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
           },
         },
         {
-          Header: twoLines('Data processing rate', <i>rows/s &nbsp; (data rate)</i>),
-          id: 'data_processing_rate',
+          Header: twoLines('Processing rate', <i>rows/s</i>),
+          id: 'processing_rate',
           accessor: s => stages.getRateFromStage(s, 'rows'),
           className: 'padded',
-          width: 200,
+          width: 150,
           Cell({ value, original }) {
             const stage = original as StageDefinition;
             if (typeof value !== 'number') return null;
 
             const byteRate = stages.getRateFromStage(stage, 'bytes');
             return (
-              <>
-                <BracedText text={formatRowRate(value)} braces={rowRateValues} />
-                {byteRate ? (
-                  <>
-                    {' '}
-                    &nbsp; <BracedText text={formatByteRate(byteRate)} braces={byteRateValues} />
-                  </>
-                ) : undefined}
-              </>
+              <BracedText
+                text={formatRowRate(value)}
+                braces={rowRateValues}
+                title={byteRate ? `${formatBytesCompact(byteRate)}/s` : undefined}
+              />
             );
           },
         },

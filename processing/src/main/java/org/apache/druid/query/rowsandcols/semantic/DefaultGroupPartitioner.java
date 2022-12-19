@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
@@ -55,7 +56,7 @@ public class DefaultGroupPartitioner implements GroupPartitioner
       int prevGroupVal = 0;
       for (int i = 1; i < retVal.length; ++i) {
         if (retVal[i] == prevGroupVal) {
-          int comparison = accessor.compareCells(i - 1, i);
+          int comparison = accessor.compareRows(i - 1, i);
           if (comparison == 0) {
             retVal[i] = currGroup;
             continue;

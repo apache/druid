@@ -17,12 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.frame;
+package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
