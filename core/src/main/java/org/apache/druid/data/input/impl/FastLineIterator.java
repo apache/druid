@@ -149,7 +149,7 @@ public class FastLineIterator implements CloseableIterator<String>
       nextLine = StringUtils.fromUtf8(buffer);
       buffer.removeElements(0, buffer.size());
 
-    } else if (indexOfLf > 1 && buffer.getByte(indexOfLf - 1) == CR) {
+    } else if (indexOfLf >= 1 && buffer.getByte(indexOfLf - 1) == CR) {
       // CR LF
       nextLine = StringUtils.fromUtf8(buffer.elements(), 0, indexOfLf - 1);
       buffer.removeElements(0, indexOfLf + 1);

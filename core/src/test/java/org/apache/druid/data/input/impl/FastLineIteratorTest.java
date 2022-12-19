@@ -63,6 +63,72 @@ public class FastLineIteratorTest
   }
 
   @Test
+  public void testSoloCr()
+  {
+    byte[] input;
+    FastLineIterator iterator;
+
+    // a single \r
+    // it is expected that this emits a complete line with \r since a return on its own is not a line break
+    input = "\r".getBytes(StandardCharsets.UTF_8);
+    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals("\r", iterator.next());
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSoloLf()
+  {
+    byte[] input;
+    FastLineIterator iterator;
+
+    // a single \n
+    // should emit a single complete 'line' as "", and no trailing line (since EOF)
+    input = "\n".getBytes(StandardCharsets.UTF_8);
+    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals("", iterator.next());
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testBackwardsLfCr()
+  {
+    byte[] input;
+    FastLineIterator iterator;
+
+    // should emit two lines:
+    // first one is an empty line for before the \n,
+    // second is the \r alone
+    input = "\n\r".getBytes(StandardCharsets.UTF_8);
+    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals("", iterator.next());
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals("\r", iterator.next());
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testForwardsSoloCrLf()
+  {
+    byte[] input;
+    FastLineIterator iterator;
+
+    // should emit one (empty) line
+    input = "\r\n".getBytes(StandardCharsets.UTF_8);
+    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals("", iterator.next());
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
   public void testSingleLine()
   {
     byte[] input;
