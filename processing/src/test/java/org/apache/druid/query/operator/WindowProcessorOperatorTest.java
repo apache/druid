@@ -21,9 +21,9 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.operator.window.Processor;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 

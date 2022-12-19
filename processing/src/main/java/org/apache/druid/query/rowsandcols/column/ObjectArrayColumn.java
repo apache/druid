@@ -47,9 +47,9 @@ public class ObjectArrayColumn implements Column
     return new ObjectColumnAccessorBase()
     {
       @Override
-      protected Object getVal(int cell)
+      protected Object getVal(int rowNum)
       {
-        return objects[cell];
+        return objects[rowNum];
       }
 
       @Override

@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.msq.test.CounterSnapshotBuilder;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
@@ -138,6 +139,12 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{1466992800000L, 6L}
                          )
                      )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
                      .verifyResults();
   }
 
@@ -175,6 +182,12 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{1466989200000L, "Guly600"},
                              new Object[]{1466989200000L, "Kolega2357"}
                          )
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
                      )
                      .verifyResults();
   }

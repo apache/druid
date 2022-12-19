@@ -18,7 +18,7 @@
 
 import { Api } from '../singletons';
 
-import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
+import { maybeGetClusterCapacity } from './index';
 
 export type CapabilitiesMode = 'full' | 'no-sql' | 'no-proxy';
 
@@ -33,13 +33,12 @@ export type CapabilitiesModeExtended =
 
 export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
-export interface CapabilitiesOptions {
+export interface CapabilitiesValue {
   queryType: QueryType;
   multiStageQuery: boolean;
   coordinator: boolean;
   overlord: boolean;
-
-  warnings?: string[];
+  clusterCapacity?: number;
 }
 
 export class Capabilities {
@@ -55,6 +54,7 @@ export class Capabilities {
   private readonly multiStageQuery: boolean;
   private readonly coordinator: boolean;
   private readonly overlord: boolean;
+  private readonly clusterCapacity?: number;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
@@ -137,9 +137,6 @@ export class Capabilities {
   }
 
   static async detectCapabilities(): Promise<Capabilities | undefined> {
-    const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
-    if (capabilitiesOverride) return new Capabilities(capabilitiesOverride);
-
     const queryType = await Capabilities.detectQueryType();
     if (typeof queryType === 'undefined') return;
 
@@ -164,11 +161,34 @@ export class Capabilities {
     });
   }
 
-  constructor(options: CapabilitiesOptions) {
-    this.queryType = options.queryType;
-    this.multiStageQuery = options.multiStageQuery;
-    this.coordinator = options.coordinator;
-    this.overlord = options.overlord;
+  static async detectCapacity(capabilities: Capabilities): Promise<Capabilities> {
+    if (!capabilities.hasOverlordAccess()) return capabilities;
+
+    const capacity = await maybeGetClusterCapacity();
+    if (!capacity) return capabilities;
+
+    return new Capabilities({
+      ...capabilities.valueOf(),
+      clusterCapacity: capacity.totalTaskSlots,
+    });
+  }
+
+  constructor(value: CapabilitiesValue) {
+    this.queryType = value.queryType;
+    this.multiStageQuery = value.multiStageQuery;
+    this.coordinator = value.coordinator;
+    this.overlord = value.overlord;
+    this.clusterCapacity = value.clusterCapacity;
+  }
+
+  public valueOf(): CapabilitiesValue {
+    return {
+      queryType: this.queryType,
+      multiStageQuery: this.multiStageQuery,
+      coordinator: this.coordinator,
+      overlord: this.overlord,
+      clusterCapacity: this.clusterCapacity,
+    };
   }
 
   public getMode(): CapabilitiesMode {
@@ -239,6 +259,10 @@ export class Capabilities {
 
   public hasSqlOrOverlordAccess(): boolean {
     return this.hasSql() || this.hasOverlordAccess();
+  }
+
+  public getClusterCapacity(): number | undefined {
+    return this.clusterCapacity;
   }
 }
 Capabilities.FULL = new Capabilities({

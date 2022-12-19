@@ -46,7 +46,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public boolean isNull(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return true;
     }
@@ -56,7 +56,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public Object getObject(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return null;
     }
@@ -66,7 +66,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public double getDouble(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return 0.0D;
     }
@@ -76,7 +76,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public float getFloat(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return 0.0F;
     }
@@ -86,7 +86,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public long getLong(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return 0L;
     }
@@ -96,7 +96,7 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   @Override
   public int getInt(int rowNum)
   {
-    final int actualCell = getActualCell(rowNum);
+    final int actualCell = getActualValue(rowNum);
     if (outsideBounds(actualCell)) {
       return 0;
     }
@@ -104,10 +104,10 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public int compareCells(int lhsRowNum, int rhsRowNum)
+  public int compareRows(int lhsRowNum, int rhsRowNum)
   {
-    int actualLhsCell = getActualCell(lhsRowNum);
-    int actualRhsCell = getActualCell(rhsRowNum);
+    int actualLhsCell = getActualValue(lhsRowNum);
+    int actualRhsCell = getActualValue(rhsRowNum);
     if (outsideBounds(actualLhsCell)) {
       if (outsideBounds(actualRhsCell)) {
         // Both are null
@@ -119,12 +119,12 @@ public abstract class ShiftedColumnAccessorBase implements ColumnAccessor
       if (outsideBounds(actualRhsCell)) {
         return accessor.isNull(actualLhsCell) ? 0 : 1;
       } else {
-        return accessor.compareCells(actualLhsCell, actualRhsCell);
+        return accessor.compareRows(actualLhsCell, actualRhsCell);
       }
     }
   }
 
-  protected abstract int getActualCell(int cell);
+  protected abstract int getActualValue(int rowNum);
 
-  protected abstract boolean outsideBounds(int cell);
+  protected abstract boolean outsideBounds(int rowNum);
 }

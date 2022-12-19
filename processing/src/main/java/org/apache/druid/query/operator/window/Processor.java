@@ -56,6 +56,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
     @JsonSubTypes.Type(name = "last", value = WindowLastProcessor.class),
     @JsonSubTypes.Type(name = "offset", value = WindowOffsetProcessor.class),
     @JsonSubTypes.Type(name = "aggregate", value = WindowAggregateProcessor.class),
+    @JsonSubTypes.Type(name = "framedAgg", value = WindowFramedAggregateProcessor.class)
 })
 public interface Processor
 {

@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.semantic;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.LimitedRowsAndColumns;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
@@ -61,7 +62,7 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
         int start = boundaries.getInt(i - 1);
         int end = boundaries.getInt(i);
         for (int j = start + 1; j < end; ++j) {
-          int comparison = accessor.compareCells(j - 1, j);
+          int comparison = accessor.compareRows(j - 1, j);
           if (comparison < 0) {
             newBoundaries.add(j);
           } else if (comparison > 0) {

@@ -65,7 +65,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -842,7 +841,7 @@ public class DruidQuery
       return true;
     }
 
-    if (DataSourceAnalysis.forDataSource(dataSource).isConcreteTableBased()) {
+    if (dataSource.getAnalysis().isConcreteTableBased()) {
       // Always OK: queries on concrete tables (regular Druid datasources) use segment-based storage adapters
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
       // intervals safer. They do not have special checks for granularity and interval safety.

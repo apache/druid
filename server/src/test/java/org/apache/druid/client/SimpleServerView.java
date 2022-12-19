@@ -140,7 +140,7 @@ public class SimpleServerView implements TimelineServerView
   {
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
 
     return Optional.ofNullable(timelines.get(table.getName()));
   }

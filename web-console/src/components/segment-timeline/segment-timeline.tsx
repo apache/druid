@@ -28,9 +28,9 @@ import { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
+import { Capabilities } from '../../helpers';
 import { Api } from '../../singletons';
 import {
-  Capabilities,
   ceilToUtcDay,
   formatBytes,
   formatInteger,

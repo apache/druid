@@ -35,11 +35,10 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import { QueryWithContext } from '../../druid-models';
+import { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
-  Capabilities,
-  CapabilitiesMode,
   deepGet,
   filterMap,
   formatBytes,

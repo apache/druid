@@ -91,7 +91,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               if (isNaN(v)) return;
               onChange(RuleUtil.addTieredReplicant(rule, tier, v));
             }}
-            min={1}
+            min={0}
             max={256}
           />
           <Button minimal style={{ pointerEvents: 'none' }}>

@@ -84,30 +84,30 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processed
+          Rows processed
           <br />
           <i>
-            rows   (size or files)
+            rows   (input files)
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processed",
-        "width": 220,
+        "id": "rows_processed",
+        "width": 160,
       },
       Object {
         "Cell": [Function],
         "Header": <React.Fragment>
-          Data processing rate
+          Processing rate
           <br />
           <i>
-            rows/s   (data rate)
+            rows/s
           </i>
         </React.Fragment>,
         "accessor": [Function],
         "className": "padded",
-        "id": "data_processing_rate",
-        "width": 200,
+        "id": "processing_rate",
+        "width": 150,
       },
       Object {
         "Header": "Phase",

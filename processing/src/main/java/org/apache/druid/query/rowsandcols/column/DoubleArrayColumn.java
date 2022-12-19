@@ -86,7 +86,7 @@ public class DoubleArrayColumn implements Column
       }
 
       @Override
-      public int compareCells(int lhsRowNum, int rhsRowNum)
+      public int compareRows(int lhsRowNum, int rhsRowNum)
       {
         return Double.compare(lhsRowNum, rhsRowNum);
       }
