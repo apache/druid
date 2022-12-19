@@ -77,7 +77,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
   private final List<AggregatorFactory> commonAggregators;
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
-  
+
   public UnnestTopNQueryRunnerTest(
       QueryRunner<Result<TopNResultValue>> runner,
       boolean specializeGeneric1AggPooledTopN,
@@ -329,7 +329,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .virtualColumns(
             new ExpressionVirtualColumn(
                 "vc",
-                "array(\"market\",\"market\")",
+                "mv_to_array(\"placementish\")",
                 ColumnType.STRING_ARRAY,
                 TestExprMacroTable.INSTANCE
             )
