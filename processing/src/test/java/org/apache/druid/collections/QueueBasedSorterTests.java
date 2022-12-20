@@ -33,6 +33,21 @@ public class QueueBasedSorterTests extends SorterTests
 {
 
   @Test
+  public void toList()
+  {
+    List<String> orderByDirection = ImmutableList.of("DESCENDING");
+    Comparator<Comparable[]> comparator = getMultiColumnSorterElementComparator(orderByDirection, ImmutableList.of(1));
+    QueueBasedSorter queueBasedMultiColumnSorter = new QueueBasedSorter(5, comparator);
+    singleColumnAscSortDatas(queueBasedMultiColumnSorter, new ArrayList<>());
+    Iterator<Comparable[]> it = queueBasedMultiColumnSorter.drainElement();
+    List<Comparable[]> list = queueBasedMultiColumnSorter.toList();
+    int i = 0;
+    while (it.hasNext()) {
+      Assert.assertEquals(list.get(i++), it.next()[0]);
+    }
+  }
+
+  @Test
   public void singleColumnAscSort()
   {
     List<String> orderByDirection = ImmutableList.of("ASCENDING");

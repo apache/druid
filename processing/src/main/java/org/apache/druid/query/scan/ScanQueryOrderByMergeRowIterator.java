@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.collect.Iterators;
 import org.apache.druid.collections.QueueBasedSorter;
 import org.apache.druid.collections.Sorter;
 import org.apache.druid.java.util.common.UOE;
@@ -89,8 +88,7 @@ public class ScanQueryOrderByMergeRowIterator extends ScanQueryLimitRowIterator
       yielder = yielder.next(null);
       count++;
     }
-    final List<Object[]> sortedElements = new ArrayList<>(sorter.size());
-    Iterators.addAll(sortedElements, sorter.drainElement());
+    final List<Object[]> sortedElements = sorter.toList();
 
     if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
       List<Map<String, Object>> events = new ArrayList<>(sortedElements.size());

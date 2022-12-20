@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.QueueBasedSorter;
 import org.apache.druid.collections.Sorter;
@@ -45,7 +44,6 @@ import org.joda.time.Interval;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -207,8 +205,7 @@ public class QueryableIndexOrderbyRunner
                       }
 
 
-                      final List<Object[]> sortedElements = new ArrayList<>(sorter.size());
-                      Iterators.addAll(sortedElements, sorter.drainElement());
+                      final List<Object[]> sortedElements = sorter.toList();
                       MutableRoaringBitmap mutableBitmap = new MutableRoaringBitmap();
                       sortedElements.forEach(sortedElement -> mutableBitmap.add((Integer) sortedElement[0]));
                       ImmutableBitmap bitmap = new WrappedImmutableRoaringBitmap(mutableBitmap.toImmutableRoaringBitmap());

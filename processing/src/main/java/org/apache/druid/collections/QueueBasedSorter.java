@@ -19,12 +19,15 @@
 
 package org.apache.druid.collections;
 
+import com.google.common.collect.Iterators;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.ISE;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * This sorter is applicable to two cases:
@@ -81,6 +84,14 @@ public class QueueBasedSorter<T> implements Sorter<T>
       }
 
     };
+  }
+
+  @Override
+  public List<T[]> toList()
+  {
+    final List<T[]> sortedElements = new ArrayList<>(size());
+    Iterators.addAll(sortedElements, drainElement());
+    return sortedElements;
   }
 
   @Override

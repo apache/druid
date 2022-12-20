@@ -21,7 +21,6 @@ package org.apache.druid.query.scan;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.QueueBasedSorter;
@@ -338,8 +337,7 @@ public class ScanQueryEngine
                         }
                         Sorter<Object> sorter = new QueueBasedSorter<>(limit, query.getGenericResultOrdering());
                         rowsToSorter(sorter);
-                        final List<Object[]> sortedElements = new ArrayList<>(sorter.size());
-                        Iterators.addAll(sortedElements, sorter.drainElement());
+                        final List<Object[]> sortedElements = sorter.toList();
                         return new ScanResultValue(segmentId.toString(), allColumns, sortedElements);
                       }
 

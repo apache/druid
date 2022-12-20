@@ -20,6 +20,7 @@
 package org.apache.druid.collections;
 
 import java.util.Iterator;
+import java.util.List;
 
 public interface Sorter<T>
 {
@@ -32,6 +33,8 @@ public interface Sorter<T>
    * Drain elements in sorted order (least first).
    */
   Iterator<T[]> drainElement();
+
+  List<T[]> toList();
 
   /**
    * Size of elements
