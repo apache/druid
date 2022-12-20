@@ -77,7 +77,7 @@ public class GcsTestUtil
     googleStorageClient.create(blobInfo, Files.readAllBytes(source.toPath()));
   }
 
-  public void deleteFileFromGcs(String gcsObjectName) throws IOException
+  public void deleteFileFromGcs(String gcsObjectName)
   {
     Blob blob = googleStorageClient.get(GOOGLE_BUCKET, gcsObjectName);
     if (blob == null) {

@@ -26,6 +26,12 @@ import org.junit.BeforeClass;
 
 import static org.junit.Assert.fail;
 
+/**
+ * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
+ * The files are uploaded based on the values set for following environment variables.
+ * "AZURE_KEY", "AZURE_ACCOUNT", "AZURE_CONTAINER", "DRUID_CLOUD_PATH"
+ * The test will fail if the above variables are not set.
+ */
 public class AbstractAzureInputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
   private static final Logger LOG = new Logger(AbstractAzureInputSourceParallelIndexTest.class);

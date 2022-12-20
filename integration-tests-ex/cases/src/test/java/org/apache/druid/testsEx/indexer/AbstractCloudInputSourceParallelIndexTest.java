@@ -80,6 +80,13 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
     return Arrays.asList(WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3);
   }
 
+  /**
+   * Runs a sql based ingestion test.
+   * @param inputSource         input source for ingestion query. Values defined in resource method above can be used for this.
+   * @param segmentAvailabilityConfirmationPair   set lhs in the pair to true if you want to confirm that the task waited longer than 0ms for the task to complete.
+   *                                              set rhs to true to verify that the segment is actually available.
+   * @param inputSourceType     Input source type (eg : s3, gcs, azure)
+   */
   void doTest(
       Pair<String, List> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,

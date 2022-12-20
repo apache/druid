@@ -31,7 +31,7 @@ import java.util.List;
 import static junit.framework.Assert.fail;
 
 /**
- * This class defines the uploads and deletes the data files used by the tests which will inherit this class.
+ * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
  * The files are uploaded based on the values set for following environment variables.
  * "DRUID_CLOUD_BUCKET", "DRUID_CLOUD_PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"
  * The test will fail if the above variables are not set.
