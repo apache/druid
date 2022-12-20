@@ -48,6 +48,9 @@ services:
       # long for the coordinator to notice changes.
       - druid_manager_segments_pollDuration=PT5S
       - druid_coordinator_period=PT10S
+    volumes:
+      # Copy credentials file
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
       - metadata
@@ -64,6 +67,9 @@ services:
       - druid_google_bucket=${GOOGLE_BUCKET}
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
+    volumes:
+      # Copy credentials file
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
       - metadata
@@ -79,6 +85,9 @@ services:
       - druid_google_bucket=${GOOGLE_BUCKET}
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
+    volumes:
+      # Copy credentials file
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
@@ -93,6 +102,9 @@ services:
       - druid_google_bucket=${GOOGLE_BUCKET}
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
+    volumes:
+      # Copy credentials file
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
@@ -107,6 +119,9 @@ services:
       - druid_google_bucket=${GOOGLE_BUCKET}
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
+    volumes:
+      # Copy credentials file
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
