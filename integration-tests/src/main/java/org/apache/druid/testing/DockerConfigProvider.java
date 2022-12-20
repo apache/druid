@@ -31,6 +31,7 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.druid.java.util.common.ISE;
 
 /**
  * The values here should be kept in sync with the values used in the docker-compose files used to bring up the
@@ -385,6 +386,13 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudBucket()
       {
         return cloudBucket;
+      }
+
+      // Adding this to fix complilation error
+      @Override
+      public String getCloudBucketwhenDeepStorageTypeIs(String storageType)
+      {
+        throw new ISE("Not implemented");
       }
 
       @Override

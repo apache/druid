@@ -350,6 +350,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-GcsDeepStorage</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>GcsDeepStorage</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

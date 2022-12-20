@@ -97,7 +97,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  public static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
+  private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
@@ -139,7 +139,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   /**
    * Reads file as utf-8 string and replace %%DATASOURCE%% with the provide datasource value.
    */
-  protected String getStringFromFileAndReplaceDatasource(String filePath, String datasource)
+  public String getStringFromFileAndReplaceDatasource(String filePath, String datasource)
   {
     String fileString;
     try {
@@ -175,7 +175,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   }
 
   /**
-   * Sumits a sqlTask, waits for task completion.
+   * Submits a sqlTask, waits for task completion.
    */
   protected void submitMSQTask(String sqlTask, String datasource, Map<String, Object> msqContext) throws Exception
   {
@@ -210,9 +210,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   protected void runMSQTaskandTestQueries(String sqlFilePath,
                                           String queryFilePath,
                                           String datasource,
-                                          Map<String, Object> msqContext) throws Exception
+                                          Map<String, Object> msqContext
+  ) throws Exception
   {
-    LOG.info("Starting MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
+    LOG.info("Starting MSQ test for sql path:%s, query path: %s]", sqlFilePath, queryFilePath);
 
     submitMSQTaskFromFile(sqlFilePath, datasource, msqContext);
     doTestQuery(datasource, queryFilePath);
@@ -226,9 +227,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                                                  String queryFilePath,
                                                  String datasource,
                                                  String reindexDatasource,
-                                                 Map<String, Object> msqContext) throws Exception
+                                                 Map<String, Object> msqContext
+  ) throws Exception
   {
-    LOG.info("Starting Reindex MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
+    LOG.info("Starting Reindex MSQ test for sql path:%s, query path: %s", sqlFilePath, queryFilePath);
 
     String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
     sqlTask = StringUtils.replace(

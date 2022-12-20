@@ -27,6 +27,7 @@ import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import javax.inject.Inject;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -351,6 +352,17 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   public String getCloudBucket()
   {
     return getProperty("cloudBucket");
+  }
+
+  @Override
+  public String getCloudBucketwhenDeepStorageTypeIs(String storageType)
+  {
+    if (Objects.equals(storageType, "s3"))
+      return getProperty("cloudBucket");
+    else if (Objects.equals(storageType, "azure"))
+      return getProperty("azureContainer");
+    else
+      return getProperty("googleBucket");
   }
 
   @Override

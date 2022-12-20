@@ -19,58 +19,56 @@
 
 package org.apache.druid.testsEx.indexer;
 
+import static junit.framework.Assert.fail;
+
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.utils.S3TestUtil;
+import org.apache.druid.testing.utils.GcsTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static junit.framework.Assert.fail;
-
-/**
- * This class defines the uploads and deletes the data files used by the tests which will inherit this class.
- * The files are uploaded based on the values set for following environment variables.
- * "DRUID_CLOUD_BUCKET", "DRUID_CLOUD_PATH", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"
- * The test will fail if the above variables are not set.
- */
-public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
+public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
-  private static final Logger LOG = new Logger(AbstractS3InputSourceParallelIndexTest.class);
-  private static S3TestUtil s3;
+  private static final Logger LOG = new Logger(AbstractGcsInputSourceParallelIndexTest.class);
+  private static GcsTestUtil gcs;
 
   @BeforeClass
-  public static void uploadDataFilesToS3()
+  public static void uploadDataFilesToGcs()
   {
-    List<String> filesToUpload = new ArrayList<>();
+    LOG.info("Uploading data files to GCS");
     String localPath = "resources/data/batch_index/json/";
-    for (String file : fileList()) {
-      filesToUpload.add(localPath + file);
-    }
     try {
-      s3 = new S3TestUtil();
-      s3.uploadDataFilesToS3(filesToUpload);
+      gcs = new GcsTestUtil();
+      for (String file : fileList()) {
+        gcs.uploadFileToGcs(localPath + file);
+      }
     }
     catch (Exception e) {
-      LOG.error(e, "Unable to upload files to s3");
+      LOG.error(e, "Unable to upload files to GCS");
       // Fail if exception
       fail();
     }
   }
 
   @After
-  public void deleteSegmentsFromS3()
+  public void deleteSegmentsFromGcs()
   {
     // Deleting folder created for storing segments (by druid) after test is completed
-    s3.deleteFolderFromS3(indexDatasource);
+    gcs.deletePrefixFolderFromGcs();
   }
 
   @AfterClass
   public static void deleteDataFilesFromS3()
   {
-    // Deleting uploaded data files
-    s3.deleteFilesFromS3(fileList());
+    LOG.info("Deleting data files from GCS");
+    try {
+      for (String file : fileList()) {
+        // Deleting uploaded data files
+        gcs.deleteFileFromGcs(file);
+      }
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Unable to delete files in GCS");
+    }
   }
 }

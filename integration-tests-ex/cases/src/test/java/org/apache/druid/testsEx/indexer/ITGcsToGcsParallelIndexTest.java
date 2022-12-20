@@ -19,36 +19,35 @@
 
 package org.apache.druid.testsEx.indexer;
 
-import junitparams.Parameters;
+import java.util.List;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testsEx.categories.S3DeepStorage;
+import org.apache.druid.testsEx.categories.GcsDeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.List;
+import junitparams.Parameters;
 
 /**
  * IMPORTANT:
- * To run this test, you must set the following env variables in the build environment
- * DRUID_CLOUD_BUCKET -    s3 bucket name (value to be set in druid.storage.bucket)
- * DRUID_CLOUD_PATH -      path inside the bucket where the test data files will be uploaded
- *                         (this will also be used as druid.storage.baseKey for s3 deep storage setup)
- * <p>
- * The AWS key, secret and region should be set in AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_REGION respectively.
- * <p>
- * <a href="https://druid.apache.org/docs/latest/development/extensions-core/s3.html">S3 Deep Storage setup in druid</a>
+ * To run this test, you must:
+ * 1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and
+ *    -Ddruid.test.config.cloudPath or setting "cloud_bucket" and "cloud_path" in the config file.
+ * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+ *    located in integration-tests/src/test/resources/data/batch_index/json to your GCS at the location set in step 1.
+ * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ *    integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
+ * 4) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
-
 @RunWith(DruidTestRunner.class)
-@Category(S3DeepStorage.class)
-public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
+@Category(GcsDeepStorage.class)
+public class ITGcsToGcsParallelIndexTest extends AbstractGcsInputSourceParallelIndexTest
 {
   @Test
   @Parameters(method = "resources")
-  public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
+  public void testGcsIndexData(Pair<String, List> gcsInputSource) throws Exception
   {
-    doTest(s3InputSource, new Pair<>(false, false), "s3");
+    doTest(gcsInputSource, new Pair<>(false, false), "gcs");
   }
 }
