@@ -21,18 +21,16 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 
-public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase<MapOfColumnsRowsAndColumns>
+public class MapOfColumnsRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  @Override
-  public MapOfColumnsRowsAndColumns makeRowsAndColumns(MapOfColumnsRowsAndColumns input)
+  public MapOfColumnsRowsAndColumnsTest()
   {
-    return input;
+    super(MapOfColumnsRowsAndColumns.class);
   }
 
   @Test

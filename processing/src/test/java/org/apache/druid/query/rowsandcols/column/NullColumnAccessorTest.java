@@ -39,7 +39,7 @@ public class NullColumnAccessorTest
       Assert.assertEquals(0.0, accessor.getFloat(i), 0);
       Assert.assertEquals(0.0, accessor.getDouble(i), 0);
       for (int j = 0; j < i; ++j) {
-        Assert.assertEquals(0, accessor.compareCells(j, i));
+        Assert.assertEquals(0, accessor.compareRows(j, i));
       }
     }
   }

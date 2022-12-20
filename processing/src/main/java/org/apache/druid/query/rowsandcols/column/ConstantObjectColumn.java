@@ -88,7 +88,7 @@ public class ConstantObjectColumn implements Column
       }
 
       @Override
-      public int compareCells(int lhsRowNum, int rhsRowNum)
+      public int compareRows(int lhsRowNum, int rhsRowNum)
       {
         return 0;
       }

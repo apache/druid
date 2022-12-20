@@ -22,9 +22,9 @@ package org.apache.druid.query.operator.window.value;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 
 import java.util.function.Function;
 

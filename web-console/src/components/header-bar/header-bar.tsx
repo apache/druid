@@ -40,9 +40,9 @@ import {
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { Capabilities } from '../../helpers';
 import { getLink } from '../../links';
 import {
-  Capabilities,
   localStorageGetJson,
   LocalStorageKeys,
   localStorageRemove,

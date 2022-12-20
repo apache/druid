@@ -60,7 +60,7 @@ public class MultiStageQueryContext
 
   public static final String CTX_ENABLE_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
-  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.AUTO.toString();
+  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.PARALLEL.toString();
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
 
   public static final String CTX_DESTINATION = "destination";

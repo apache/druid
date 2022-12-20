@@ -21,11 +21,11 @@ package org.apache.druid.query.operator.window.ranking;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.SortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.DefaultSortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.SortedGroupPartitioner;
 
 import java.util.List;
 import java.util.function.Function;
