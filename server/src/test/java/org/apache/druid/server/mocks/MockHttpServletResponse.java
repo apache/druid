@@ -22,6 +22,7 @@ package org.apache.druid.server.mocks;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
@@ -34,6 +35,13 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 
+/**
+ * A fake HttpServletResponse used in tests.  A lot of methods are implemented as
+ * {@code throw new UnsupportedOperationException}, this is just an indication that nobody has needed to flesh out
+ * that functionality for the mock yet and is not an indication that calling said method is a problem.  If an
+ * {@code throw new UnsupportedOperationException} gets thrown out from one of these methods in a test, it is expected
+ * that the developer will implement the necessary methods.
+ */
 public class MockHttpServletResponse implements HttpServletResponse
 {
   public static MockHttpServletResponse forRequest(MockHttpServletRequest req)
@@ -223,13 +231,13 @@ public class MockHttpServletResponse implements HttpServletResponse
       }
 
       @Override
-      public void write(byte[] b)
+      public void write(@Nonnull byte[] b)
       {
         baos.write(b, 0, b.length);
       }
 
       @Override
-      public void write(byte[] b, int off, int len)
+      public void write(@Nonnull byte[] b, int off, int len)
       {
         baos.write(b, off, len);
       }

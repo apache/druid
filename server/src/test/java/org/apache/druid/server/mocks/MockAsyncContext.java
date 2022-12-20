@@ -26,6 +26,13 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * A fake AsyncContext used in tests.  A lot of methods are implemented as
+ * {@code throw new UnsupportedOperationException}, this is just an indication that nobody has needed to flesh out
+ * that functionality for the mock yet and is not an indication that calling said method is a problem.  If an
+ * {@code throw new UnsupportedOperationException} gets thrown out from one of these methods in a test, it is expected
+ * that the developer will implement the necessary methods.
+ */
 public class MockAsyncContext implements AsyncContext
 {
   public ServletRequest request;
