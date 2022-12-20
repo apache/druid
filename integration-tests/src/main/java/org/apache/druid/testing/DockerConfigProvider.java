@@ -25,13 +25,13 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.druid.java.util.common.ISE;
 
 /**
  * The values here should be kept in sync with the values used in the docker-compose files used to bring up the

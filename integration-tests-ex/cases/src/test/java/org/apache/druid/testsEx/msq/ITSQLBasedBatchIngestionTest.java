@@ -23,6 +23,7 @@ import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
@@ -38,6 +39,8 @@ import java.util.List;
 public class ITSQLBasedBatchIngestionTest extends AbstractITBatchIndexTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
+
+  private static final Logger LOG = new Logger(ITSQLBasedBatchIngestionTest.class);
 
   public static List<List<String>> test_cases()
   {

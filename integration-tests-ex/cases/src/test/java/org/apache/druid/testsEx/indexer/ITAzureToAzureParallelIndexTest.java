@@ -19,7 +19,7 @@
 
 package org.apache.druid.testsEx.indexer;
 
-import java.util.List;
+import junitparams.Parameters;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testsEx.categories.AzureDeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import junitparams.Parameters;
+import java.util.List;
 
 /**
  * IMPORTANT:

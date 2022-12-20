@@ -24,6 +24,7 @@ import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
@@ -41,6 +42,8 @@ import java.util.Map;
 public class ITMSQReindexTest extends AbstractITBatchIndexTest
 {
   private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
+
+  private static final Logger LOG = new Logger(ITMSQReindexTest.class);
 
   @Inject
   private MsqTestQueryHelper msqHelper;

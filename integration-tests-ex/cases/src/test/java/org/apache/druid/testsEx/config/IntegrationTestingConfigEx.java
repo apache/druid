@@ -357,12 +357,13 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Override
   public String getCloudBucketwhenDeepStorageTypeIs(String storageType)
   {
-    if (Objects.equals(storageType, "s3"))
+    if (Objects.equals(storageType, "s3")) {
       return getProperty("cloudBucket");
-    else if (Objects.equals(storageType, "azure"))
+    } else if (Objects.equals(storageType, "azure")) {
       return getProperty("azureContainer");
-    else
+    } else {
       return getProperty("googleBucket");
+    }
   }
 
   @Override

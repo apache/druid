@@ -19,13 +19,13 @@
 
 package org.apache.druid.testsEx.indexer;
 
-import static junit.framework.Assert.fail;
-
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.utils.GcsTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+
+import static junit.framework.Assert.fail;
 
 public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {

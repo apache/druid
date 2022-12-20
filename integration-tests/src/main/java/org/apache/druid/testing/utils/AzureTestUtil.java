@@ -1,24 +1,46 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.testing.utils;
 
-import com.microsoft.azure.storage.*;
-import com.microsoft.azure.storage.blob.*;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import org.apache.druid.java.util.common.logger.Logger;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
 import java.util.Arrays;
-import org.apache.druid.java.util.common.logger.Logger;
 
 public class AzureTestUtil
 {
   public static final Logger LOG = new Logger(AzureTestUtil.class);
-
   private final CloudBlobClient azureStorageClient;
   private final String AZURE_ACCOUNT;
-  String AZURE_CONTAINER;
-  String AZURE_KEY;
-  String DRUID_CLOUD_PATH;
+  private final String AZURE_CONTAINER;
+  private final String AZURE_KEY;
+  private final String DRUID_CLOUD_PATH;
 
   public AzureTestUtil() throws URISyntaxException, InvalidKeyException
   {
@@ -54,7 +76,7 @@ public class AzureTestUtil
     String storageConnectionString =
         "DefaultEndpointsProtocol=https;" +
         "AccountName=" + AZURE_ACCOUNT + ";" +
-        "AccountKey=" + AZURE_KEY ;
+        "AccountKey=" + AZURE_KEY;
     CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
     return storageAccount.createCloudBlobClient();
   }
