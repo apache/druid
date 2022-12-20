@@ -82,9 +82,9 @@ function category {
 		"InputSource")
 			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
 			;;
-	  "InputFormat")
-  			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
-  			;;
+		"InputFormat")
+			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
+			;;
 		"Catalog")
 			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
 			;;
