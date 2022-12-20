@@ -412,6 +412,7 @@ public class ThreadingTaskRunner
     }
 
     appenderatorsManager.shutdown();
+    super.stop();
   }
 
   @Override

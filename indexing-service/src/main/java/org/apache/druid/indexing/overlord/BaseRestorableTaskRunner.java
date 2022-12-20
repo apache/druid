@@ -198,11 +198,34 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       try {
         Files.createParentDirs(restoreFile);
         jsonMapper.writeValue(restoreFile, taskRestoreInfo);
-        LOG.info("Save restore file at [%s] for tasks [%s]",
+        LOG.debug("Save restore file at [%s] for tasks [%s]",
                  restoreFile.getAbsoluteFile(), Arrays.toString(theTasks.get(restoreFile).toArray()));
       }
       catch (Exception e) {
         LOG.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
+      }
+    }
+  }
+
+  @Override
+  public void stop()
+  {
+    if (!taskConfig.isRestoreTasksOnRestart()) {
+      return;
+    }
+
+    for (File baseDir : taskConfig.getBaseTaskDirs()) {
+      File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
+      if (restoreFile.exists()) {
+        try {
+          TaskRestoreInfo taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
+          for (final String taskId : taskRestoreInfo.getRunningTasks()) {
+            LOG.info("Saving task[%s] at path[%s] for restore", taskId, baseDir);
+          }
+        }
+        catch (Exception e) {
+          LOG.error(e, "Failed to read task restore info from file[%s].", restoreFile);
+        }
       }
     }
   }

@@ -574,6 +574,7 @@ public class ForkingTaskRunner
     } else {
       LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
+    super.stop();
   }
 
   @Override

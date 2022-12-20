@@ -224,7 +224,7 @@ public class TaskConfig
     return tracker.getBaseTaskDirs();
   }
 
-  public synchronized File getBaseTaskDir(String taskId)
+  public File getBaseTaskDir(String taskId)
   {
     return tracker.getOrSelectTaskDir(taskId);
   }
@@ -320,12 +320,12 @@ public class TaskConfig
     return encapsulatedTask;
   }
 
-  public synchronized void addTask(final String taskId, final File taskDir)
+  public void addTask(final String taskId, final File taskDir)
   {
     tracker.addTask(taskId, taskDir);
   }
 
-  public synchronized void removeTask(final String taskId)
+  public void removeTask(final String taskId)
   {
     tracker.removeTask(taskId);
   }

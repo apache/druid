@@ -47,7 +47,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesPeonClient;
@@ -62,10 +61,13 @@ import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.joda.time.Period;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -91,6 +93,9 @@ import static org.mockito.Mockito.when;
 public class KubernetesTaskRunnerTest
 {
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private TaskQueueConfig taskQueueConfig;
   private StartupLoggingConfig startupLoggingConfig;
   private ObjectMapper jsonMapper;
@@ -100,6 +105,7 @@ public class KubernetesTaskRunnerTest
   private DruidNode node;
 
   private final boolean useMultipleBaseTaskDirPaths;
+
 
   public KubernetesTaskRunnerTest(boolean useMultipleBaseTaskDirPaths)
   {
@@ -127,13 +133,13 @@ public class KubernetesTaskRunnerTest
   }
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
     List<String> baseTaskDirPaths = null;
     if (useMultipleBaseTaskDirPaths) {
       baseTaskDirPaths = ImmutableList.of(
-          FileUtils.createTempDir().toString(),
-          FileUtils.createTempDir().toString()
+          temporaryFolder.newFolder().toString(),
+          temporaryFolder.newFolder().toString()
       );
     }
     taskConfig = new TaskConfig(
