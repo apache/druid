@@ -65,6 +65,19 @@ import java.util.List;
 
 /**
  * Maps onto a {@link org.apache.druid.query.operator.WindowOperatorQuery}.
+ *
+ * Known sharp-edges/limitations:
+ *   1. The support is not yet fully aware of the difference between RANGE and ROWS when evaluating peers. (Note: The
+ *     built-in functions are all implemented with the correctly defined semantics, so ranking functions that are
+ *     defined to use RANGE do the right thing)
+ *   2. All window functions in one query must use the same windowing definition (the code cannot currently support 2
+ *     different PARTITION BY X clauses)
+ *   3. The windowing logic will not re-sort the data. It assumes that the sub-query was written such that data is
+ *     pre-sorted in the way that the windowing logic expects.
+ *   4. No support for framing last/first functions
+ *   5. No nth function
+ *   6. No finalization, meaning that aggregators like sketches that rely on finalization might return surprising results
+ *   7. No big big test suite of loveliness
  */
 public class Windowing
 {

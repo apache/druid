@@ -95,6 +95,7 @@ public interface RowsAndColumns
    * @param name the name of the column to find
    * @return the Column, if found.  null if not found.
    */
+  @Nullable
   Column findColumn(String name);
 
   /**

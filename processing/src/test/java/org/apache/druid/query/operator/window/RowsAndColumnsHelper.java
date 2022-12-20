@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RowsAndColumnsHelper
 {
@@ -70,6 +71,7 @@ public class RowsAndColumnsHelper
 
   private final Map<String, ColumnHelper> helpers = new LinkedHashMap<>();
   private Set<String> fullColumnSet;
+  private AtomicReference<Integer> expectedSize = new AtomicReference<>();
 
   public RowsAndColumnsHelper()
   {
@@ -112,6 +114,10 @@ public class RowsAndColumnsHelper
 
   public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)
   {
+    if (this.expectedSize.get() == null) {
+      this.expectedSize.set(expectedSize);
+    }
+    Assert.assertEquals("Columns should be defined with same size", this.expectedSize.get().intValue(), expectedSize);
     ColumnHelper retVal = helpers.get(column);
     if (retVal == null) {
       retVal = new ColumnHelper(expectedSize, expectedType);

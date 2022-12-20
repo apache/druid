@@ -65,6 +65,10 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     super(dataSource, new LegacySegmentSpec(Intervals.ETERNITY), false, context);
     this.rowSignature = rowSignature;
     this.operators = operators;
+
+    // TODO: let's do some deeper validation of the query.  Reach in and look at the first operator to figure
+    // TODO: out which partition dimensions it is going to look at and validate that the sub-query will be sorted
+    // TODO: on those partition dimensions.
     if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
