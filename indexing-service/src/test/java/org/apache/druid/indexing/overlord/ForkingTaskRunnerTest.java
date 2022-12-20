@@ -24,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import net.spy.memcached.internal.ImmediateFuture;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -33,6 +36,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
@@ -49,7 +53,10 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -568,5 +575,84 @@ public class ForkingTaskRunnerTest
     );
     Assert.assertEquals(1L, (long) forkingTaskRunner.getWorkerFailedTaskCount());
     Assert.assertEquals(0L, (long) forkingTaskRunner.getWorkerSuccessfulTaskCount());
+  }
+
+  @Test
+  public void testTaskRestore()
+  {
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            ImmutableList.of(),
+            true,
+            new Period("PT0S"),
+            new Period("PT10S"),
+            ImmutableList.of(),
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null,
+            false,
+            null
+        ),
+        new WorkerConfig(),
+        new Properties(),
+        new NoopTaskLogs(),
+        new DefaultObjectMapper(),
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig()
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        ProcessHolder processHolder = Mockito.mock(ProcessHolder.class);
+        Mockito.doNothing().when(processHolder).registerWithCloser(ArgumentMatchers.any());
+        Mockito.doNothing().when(processHolder).shutdown();
+        return processHolder;
+      }
+
+      @Override
+      public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+      {
+        final Map<File, TaskRestoreInfo> taskRestoreInfos = new HashMap<>();
+        for (File baseDir : taskConfig.getBaseTaskDirs()) {
+          File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
+          if (restoreFile.exists()) {
+            try {
+              taskRestoreInfos.put(baseDir, jsonMapper.readValue(restoreFile, TaskRestoreInfo.class));
+            }
+            catch (Exception e) {
+              LOG.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
+            }
+          }
+        }
+
+        List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
+        for (Map.Entry<File, TaskRestoreInfo> entry : taskRestoreInfos.entrySet()) {
+          final TaskRestoreInfo taskRestoreInfo = entry.getValue();
+          for (final String taskId : taskRestoreInfo.getRunningTasks()) {
+            retVal.add(Pair.of(NoopTask.create(taskId, 0), Futures.immediateFuture(TaskStatus.running(taskId))));
+          }
+        }
+
+        if (!retVal.isEmpty()) {
+          LOG.info("Restored %,d tasks: %s", retVal.size(), Joiner.on(", ").join(retVal));
+        }
+
+        return retVal;
+      }
+
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    Task task = NoopTask.create();
+    forkingTaskRunner.run(task);
+    forkingTaskRunner.saveRunningTasks();
+    Assert.assertEquals(task.getId(), forkingTaskRunner.restore().get(0).lhs.getId());
   }
 }
