@@ -1468,7 +1468,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
-  void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
+  @VisibleForTesting
+  public void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
   {
     final String taskId = announcement.getTaskId();
     final Worker worker = workerHolder.getWorker();

@@ -1607,6 +1607,10 @@ public class HttpRemoteTaskRunnerTest
     );
   }
 
+  /**
+   * Validate the internal state of tasks withing the task runner
+   * when shutdown is called on pending / running tasks and completed tasks
+   */
   @Test
   public void testShutdown()
   {
@@ -1664,7 +1668,7 @@ public class HttpRemoteTaskRunnerTest
 
   }
 
-  private HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
+  public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
       TaskStorage taskStorage,
       List<Object> listenerNotificationsAccumulator
   )
@@ -1895,7 +1899,7 @@ public class HttpRemoteTaskRunnerTest
     };
   }
 
-  private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
+  public static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
     private List<Listener> listeners;
 
@@ -1930,7 +1934,7 @@ public class HttpRemoteTaskRunnerTest
     }
   }
 
-  private interface CustomFunction
+  public interface CustomFunction
   {
     WorkerHolder apply(
         ObjectMapper smileMapper,
