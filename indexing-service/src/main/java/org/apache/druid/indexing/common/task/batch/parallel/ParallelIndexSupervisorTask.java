@@ -57,6 +57,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -817,6 +818,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private void emitUnparseableEvents(TaskToolbox toolbox)
   {
+    // if (should emit unparseableEvents) { ...
     String taskId = getId();
     String service = toolbox.getTaskExecutorNode().getServiceName();
     String host = toolbox.getTaskExecutorNode().getHost();
@@ -837,7 +839,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
               Object input = unparseableEventDetails.get("input");
               Object details = unparseableEventDetails.get("details");
               Long timeOfExceptionMillis = (Long) unparseableEventDetails.get("timeOfExceptionMillis");
-              DateTime dateTime = new DateTime(timeOfExceptionMillis);
+              DateTime dateTime = DateTimes.utc(timeOfExceptionMillis);
               dataMap
                   .put("input", input)
                   .put("details", details)

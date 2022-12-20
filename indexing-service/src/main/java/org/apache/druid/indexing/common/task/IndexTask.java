@@ -66,6 +66,7 @@ import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalys
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -580,7 +581,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           Object input = parseExceptionReport.getInput();
           Object details = parseExceptionReport.getDetails();
           long timeOfExceptionMillis = parseExceptionReport.getTimeOfExceptionMillis();
-          DateTime dateTime = new DateTime(timeOfExceptionMillis);
+          DateTime dateTime = DateTimes.utc(timeOfExceptionMillis);
           dataMapBuilder.put("input", input)
                         .put("details", details);
           Event event = new ServiceEvent(dateTime, service, host, AlertEvent.Severity.DEFAULT, "Unparseable Ingestion Error", dataMapBuilder.build());
