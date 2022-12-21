@@ -238,12 +238,12 @@ public class DruidJdbcResultSet implements Closeable
       // Execute the first step: plan the query and return a sequence to use
       // to get values.
       final Sequence<Object[]> sequence = queryExecutor.submit(stmt::execute).get().getResults();
-
+      final Yielder<Object[]> yielder = queryExecutor.submit(() -> Yielders.each(sequence)).get();
       // Subsequent fetch steps are done via the async "fetcher".
       fetcher = fetcherFactory.newFetcher(
           // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
           maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE ? (int) maxRowCount : Integer.MAX_VALUE,
-          Yielders.each(sequence)
+          yielder
       );
       signature = AbstractDruidJdbcStatement.createSignature(
           stmt.prepareResult(),
