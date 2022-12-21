@@ -115,8 +115,7 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
         RowSignatures.fromRelDataType(uncollect.getRowType().getFieldNames(), uncollect.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        finalizeAggregations,
-        virtualColumnRegistry
+        finalizeAggregations
     );
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(null);
     return query;

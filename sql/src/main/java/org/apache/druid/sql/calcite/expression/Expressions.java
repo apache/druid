@@ -233,13 +233,12 @@ public class Expressions
     final RexFieldAccess ref = (RexFieldAccess) rexNode;
     // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
     // while the underlying datasource is the scan stub created from LogicalValuesRule
-    // In such a case we throw an exception as the query cannot be built
+    // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
+    // This exception is caught while returning false from isValidDruidQuery() method
     if (ref.getField().getIndex() > rowSignature.size()) {
-      throw new CannotBuildQueryException(String.format(
-          "Cannot build query as index[%d] is higher than row size[%d]",
-          ref.getField().getIndex(),
-          rowSignature.size()
-      ));
+      throw new CannotBuildQueryException(
+          "Cannot build query as index is higher than row size"
+      );
     }
     final String columnName = rowSignature.getColumnName(ref.getField().getIndex());
     final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getField().getIndex());

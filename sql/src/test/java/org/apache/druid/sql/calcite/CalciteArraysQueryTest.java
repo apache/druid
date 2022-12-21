@@ -2716,19 +2716,20 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                   new TableDataSource(CalciteTests.DATASOURCE3)
                               )
                               .intervals(querySegmentSpec(Filtration.eternity()))
+                              .virtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                               .legacy(false)
+                              .filters(new SelectorDimFilter("dim2", "a", null))
+                              .columns("__time", "cnt", "d1", "d2", "dim1", "dim3", "dim4", "dim5", "dim6", "f1", "f2", "l1", "l2", "m1", "m2", "unique_dim1", "v0")
                               .context(QUERY_CONTEXT_DEFAULT)
-                              .columns(ImmutableList.of(
-                                  "EXPR$0"
-                              ))
                               .build()
                       ),
-                      "dim3",
+                      "v0",
                       "EXPR$0",
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "mv_to_array(\"dim3\")", ColumnType.STRING_ARRAY))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -2740,11 +2741,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{""},
             new Object[]{""}
         )
     );
@@ -2760,7 +2756,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT longs FROM druid.numfoo, UNNEST(ARRAY[dim4, dim5]) as unnested (longs)",
+        "SELECT strings FROM druid.numfoo, UNNEST(ARRAY[dim4, dim5]) as unnested (strings)",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(

@@ -403,7 +403,7 @@ public class DruidQuery
     final Project project = Preconditions.checkNotNull(partialQuery.getUnnestProject(), "unnestProject");
 
     if (partialQuery.getAggregate() != null) {
-      throw new ISE("Cannot have both 'selectProject' and 'aggregate', how can this be?");
+      throw new ISE("Cannot have both 'unnestProject' and 'aggregate', how can this be?");
     } else {
       return Projection.preAggregation(project, plannerContext, rowSignature, virtualColumnRegistry);
     }
