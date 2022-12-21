@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.Transform;
-import org.apache.parquet.Log;
 import org.apache.parquet.hadoop.api.InitContext;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
@@ -80,7 +79,8 @@ public class DruidParquetReadSupport extends GroupReadSupport
           String parsedPath;
           try {
             parsedPath = JsonPath.compile(fields.getExpr()).getPath();
-          } catch (Exception e) {
+          }
+          catch (Exception e) {
             // We can skip columns used in this path as the path is invalid
             LOG.debug("Ignoring columns from JSON path [%s] as path expression is invalid", fields.getExpr());
             continue;
@@ -100,7 +100,7 @@ public class DruidParquetReadSupport extends GroupReadSupport
           if ("*".equals(matchedGroup)) {
             // If the first level is a wildcard, then we need all columns
             return fullSchema;
-          } else if (matchedGroup.length() > 2 && matchedGroup.charAt(0) == '\'' &&  matchedGroup.charAt(matchedGroup.length() - 1) == '\'') {
+          } else if (matchedGroup.length() > 2 && matchedGroup.charAt(0) == '\'' && matchedGroup.charAt(matchedGroup.length() - 1) == '\'') {
             // Get name of the column
             columnsInFlattenSpec.add(matchedGroup.substring(1, matchedGroup.length() - 1));
           } else {
