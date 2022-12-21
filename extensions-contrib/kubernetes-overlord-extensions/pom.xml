@@ -88,6 +88,7 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
+      <version>4.1.86.Final</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
