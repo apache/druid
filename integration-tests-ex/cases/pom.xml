@@ -447,6 +447,33 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-Query</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>Query</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-QueryError</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>QueryError</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-QueryRetry</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>QueryRetry</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -474,10 +501,10 @@
                             </goals>
                             <configuration>
                                 <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
-                                <redirectTestOutputToFile>False</redirectTestOutputToFile>
+                                <redirectTestOutputToFile>false</redirectTestOutputToFile>
                                 <!-- Can run only one test category per Maven run. -->
                                 <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
-                             </configuration>
+                            </configuration>
                           </execution>
                           <execution>
                             <id>verify</id>
