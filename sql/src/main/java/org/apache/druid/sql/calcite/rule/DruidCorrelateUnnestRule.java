@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -27,7 +26,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
-import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
@@ -70,8 +68,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     final RexBuilder rexBuilder = logicalCorrelate.getCluster().getRexBuilder();
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
-    if (druidQueryRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && (druidQueryRel.getPartialDruidQuery().getWhereFilter() == null)) {
+    if (druidQueryRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
       // Swap the left-side projection above the correlate, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode leftScan = druidQueryRel.getPartialDruidQuery().getScan();

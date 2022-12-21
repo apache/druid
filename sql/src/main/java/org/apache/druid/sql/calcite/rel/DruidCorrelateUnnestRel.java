@@ -24,21 +24,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexFieldAccess;
-import org.apache.calcite.rex.RexNode;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnnestDataSource;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -47,14 +39,13 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
-
+  // This may be needed for the explain plan later
+  // private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
   private final PartialDruidQuery partialQuery;
   private final PlannerConfig plannerConfig;
   private final LogicalCorrelate logicalCorrelate;
@@ -115,6 +106,14 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         logicalCorrelate.getRowType()
     );
 
+    final DruidQuery leftQuery = Preconditions.checkNotNull((druidQueryRel).toDruidQuery(false), "leftQuery");
+    final DataSource leftDataSource;
+
+    if (DruidJoinQueryRel.computeLeftRequiresSubquery(druidQueryRel)) {
+      leftDataSource = new QueryDataSource(leftQuery.getQuery());
+    } else {
+      leftDataSource = leftQuery.getDataSource();
+    }
 
     final DruidExpression expression = Expressions.toDruidExpression(
         getPlannerContext(),
@@ -122,13 +121,15 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         unnestDatasourceRel.getUnnestProject().getProjects().get(0)
     );
 
+    LogicalProject unnestProject = LogicalProject.create(
+        this,
+        ImmutableList.of(unnestDatasourceRel.getUnnestProject()
+                                            .getProjects()
+                                            .get(0)),
+        unnestDatasourceRel.getUnnestProject().getRowType()
+    );
+
     String dimensionToUnnest;
-    /*if (expression.getArguments().get(0).isDirectColumnAccess()) {
-      dimensionToUnnest = expression.getArguments().get(0).getDirectColumn();
-    } else {
-      // to be checked later
-      dimensionToUnnest = "dummy";
-    }*/
 
     final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         rowSignature,
@@ -137,25 +138,28 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
-    if(expression.isDirectColumnAccess()) {
+    if (expression.isDirectColumnAccess()) {
       dimensionToUnnest = expression.getDirectColumn();
     } else {
       // buckle up time to create virtual columns on expressions
-      dimensionToUnnest = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(expression, expression.getDruidType());
+      dimensionToUnnest = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          expression,
+          expression.getDruidType()
+      );
     }
 
-    DataSource unnestDataSource =
+    // create the unnest data source to use in the partial query
+    UnnestDataSource unnestDataSource =
         UnnestDataSource.create(
-            baseDataSource,
+            leftDataSource,
             dimensionToUnnest,
-            // check how this would come from the as alias
             unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
             null
         );
 
-
-
-    return partialQuery.build(
+    // add the unnest project to the partial query
+    // This is necessary to handle the virtual columns on the unnestProject
+    return partialQuery.withUnnest(unnestProject).build(
         unnestDataSource,
         rowSignature,
         getPlannerContext(),
@@ -175,16 +179,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   public DruidQuery toDruidQueryForExplaining()
   {
     return toDruidQuery(false);
-    /*return partialQuery.build(
-        DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            logicalCorrelate.getRowType().getFieldNames(),
-            logicalCorrelate.getRowType()
-        ),
-        getPlannerContext(),
-        getCluster().getRexBuilder(),
-        false
-    );*/
   }
 
   @Override

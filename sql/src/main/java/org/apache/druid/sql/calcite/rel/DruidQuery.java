@@ -141,6 +141,9 @@ public class DruidQuery
   private final Projection selectProjection;
 
   @Nullable
+  private final Projection unnestProjection;
+
+  @Nullable
   private final Grouping grouping;
 
   @Nullable
@@ -160,6 +163,7 @@ public class DruidQuery
       final PlannerContext plannerContext,
       @Nullable final DimFilter filter,
       @Nullable final Projection selectProjection,
+      @Nullable final Projection unnestProjection,
       @Nullable final Grouping grouping,
       @Nullable final Sorting sorting,
       @Nullable final Windowing windowing,
@@ -172,6 +176,7 @@ public class DruidQuery
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.filter = filter;
     this.selectProjection = selectProjection;
+    this.unnestProjection = unnestProjection;
     this.grouping = grouping;
     this.sorting = sorting;
     this.windowing = windowing;
@@ -211,6 +216,7 @@ public class DruidQuery
     // Now the fun begins.
     final DimFilter filter;
     final Projection selectProjection;
+    final Projection unnestProjection;
     final Grouping grouping;
     final Sorting sorting;
     final Windowing windowing;
@@ -291,11 +297,25 @@ public class DruidQuery
       windowing = null;
     }
 
+    if (partialQuery.getUnnestProject() != null) {
+      unnestProjection = Preconditions.checkNotNull(
+          computeUnnestProjection(
+              partialQuery,
+              plannerContext,
+              computeOutputRowSignature(sourceRowSignature, null, null, null, null),
+              virtualColumnRegistry
+          )
+      );
+    } else {
+      unnestProjection = null;
+    }
+
     return new DruidQuery(
         dataSource,
         plannerContext,
         filter,
         selectProjection,
+        unnestProjection,
         grouping,
         sorting,
         windowing,
@@ -364,6 +384,23 @@ public class DruidQuery
   )
   {
     final Project project = Preconditions.checkNotNull(partialQuery.getSelectProject(), "selectProject");
+
+    if (partialQuery.getAggregate() != null) {
+      throw new ISE("Cannot have both 'selectProject' and 'aggregate', how can this be?");
+    } else {
+      return Projection.preAggregation(project, plannerContext, rowSignature, virtualColumnRegistry);
+    }
+  }
+
+  @Nonnull
+  private static Projection computeUnnestProjection(
+      final PartialDruidQuery partialQuery,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry
+  )
+  {
+    final Project project = Preconditions.checkNotNull(partialQuery.getUnnestProject(), "unnestProject");
 
     if (partialQuery.getAggregate() != null) {
       throw new ISE("Cannot have both 'selectProject' and 'aggregate', how can this be?");
@@ -762,6 +799,16 @@ public class DruidQuery
         }
       }
     }
+
+
+    if (unnestProjection != null) {
+      for (String columnName : unnestProjection.getVirtualColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+        }
+      }
+    }
+
 
     for (String columnName : specialized) {
       if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {

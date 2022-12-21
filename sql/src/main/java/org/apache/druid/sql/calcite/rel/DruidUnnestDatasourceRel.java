@@ -57,11 +57,6 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
     this.unnestProject = unnestProject;
   }
 
-  public Uncollect getUncollect()
-  {
-    return uncollect;
-  }
-
   public LogicalProject getUnnestProject()
   {
     return unnestProject;
