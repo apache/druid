@@ -1921,6 +1921,8 @@
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
+                                <exclude>.github/workflows/codeql.yml</exclude>
+                                <exclude>.github/workflows/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
