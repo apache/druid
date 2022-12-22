@@ -155,11 +155,10 @@ public class PreResponseAuthorizationCheckFilter implements Filter
        .addData("queryId", queryId)
        .emit();
 
-    if (servletResponse.isCommitted()) {
-      log.warn("%s for queryId[%s]", errorMsg, queryId);
-    } else {
+    if (!servletResponse.isCommitted()) {
       try {
-        servletResponse.sendError(HttpServletResponse.SC_FORBIDDEN);
+        servletResponse.reset();
+        servletResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -169,7 +168,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
   private static boolean statusNotForbidden(int status)
   {
-    return status != 503;
+    return status != HttpServletResponse.SC_FORBIDDEN;
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)
