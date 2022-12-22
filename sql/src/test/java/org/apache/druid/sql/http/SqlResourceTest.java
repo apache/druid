@@ -2101,6 +2101,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     MockHttpServletRequest req = new MockHttpServletRequest();
     req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+    req.remoteAddr = "1.2.3.4";
     return req;
   }
 
