@@ -667,17 +667,17 @@ Copy the release notes and create the release from the tag.
 
 ### Announce the release
 
-Announce the release to all the lists, announce@apache.org, dev@druid.apache.org, druid-user@googlegroups.com (general announcement list, druid dev list, druid user group).
+Announce the release to all the lists, dev@druid.apache.org, druid-user@googlegroups.com (Druid dev list, Druid user group).
 
 Additionally, announce it to the Druid official ASF Slack channel, https://druid.apache.org/community/join-slack.
 
-##### subject
+##### Subject
 
 ```plaintext
 [ANNOUNCE] Apache Druid 0.17.0 release
 ```
 
-##### body
+##### Body
 
 ```plaintext
 The Apache Druid team is proud to announce the release of Apache Druid 0.17.0. 
