@@ -204,7 +204,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
                         String ingestSQLFilePath,
                         String testQueriesFilePath,
                         String inputSourceType
-  ) throws Exception
+  )
   {
     try {
       indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
