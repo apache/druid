@@ -451,27 +451,26 @@ ${title} uncompressed size: ${formatBytesCompact(
                 <div>{stage.definition.processor.type}</div>
                 {stage.sort && <div className="sort-marker">(with sort)</div>}
                 {(myError || warnings > 0) && (
-                  <div>
+                  <div className="error-warning">
                     {myError && (
-                      <>
-                        <Tooltip2
-                          content={
-                            <div>
-                              {(error.error.errorCode ? `${error.error.errorCode}: ` : '') +
-                                error.error.errorMessage}
-                            </div>
-                          }
-                        >
-                          <Button
-                            minimal
-                            small
-                            icon={IconNames.ERROR}
-                            intent={Intent.DANGER}
-                            onClick={onErrorClick}
-                          />
-                        </Tooltip2>{' '}
-                      </>
+                      <Tooltip2
+                        content={
+                          <div>
+                            {(error.error.errorCode ? `${error.error.errorCode}: ` : '') +
+                              error.error.errorMessage}
+                          </div>
+                        }
+                      >
+                        <Button
+                          minimal
+                          small
+                          icon={IconNames.ERROR}
+                          intent={Intent.DANGER}
+                          onClick={onErrorClick}
+                        />
+                      </Tooltip2>
                     )}
+                    {myError && warnings > 0 && ' '}
                     {warnings > 0 && (
                       <Tooltip2
                         content={
