@@ -30,6 +30,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
@@ -216,21 +217,8 @@ public class QueryResource implements QueryCountStatsProvider
         throw new ForbiddenException(authResult.toString());
       }
 
-      // We use an async context not because we are actually going to run this async, but because we want to delay
-      // the decision of what the response code should be until we have gotten the first few data points to return.
-      // Returning a Response object from this point forward requires that object to know the status code, which we
-      // don't actually know until we are in the accumulator, but if we try to return a Response object from the
-      // accumulator, we cannot properly stream results back, because the accumulator won't release control of the
-      // Response until it has consumed the underlying Sequence.
-      final AsyncContext asyncContext = req.startAsync();
-
-      try {
-        new QueryResourceQueryResultPusher(req, queryLifecycle, io, (HttpServletResponse) asyncContext.getResponse())
-            .push();
-      }
-      finally {
-        asyncContext.complete();
-      }
+      final QueryResourceQueryResultPusher pusher = new QueryResourceQueryResultPusher(req, queryLifecycle, io);
+      return pusher.push();
     }
     catch (Exception e) {
       if (e instanceof ForbiddenException && !req.isAsyncStarted()) {
@@ -258,6 +246,7 @@ public class QueryResource implements QueryCountStatsProvider
             out.write(jsonMapper.writeValueAsBytes(responseException));
           }
         }
+        return null;
       }
       finally {
         asyncContext.complete();
@@ -266,7 +255,6 @@ public class QueryResource implements QueryCountStatsProvider
     finally {
       Thread.currentThread().setName(currThreadName);
     }
-    return null;
   }
 
   public interface QueryMetricCounter
@@ -538,18 +526,18 @@ public class QueryResource implements QueryCountStatsProvider
     public QueryResourceQueryResultPusher(
         HttpServletRequest req,
         QueryLifecycle queryLifecycle,
-        ResourceIOReaderWriter io,
-        HttpServletResponse response
+        ResourceIOReaderWriter io
     )
     {
       super(
-          response,
+          req,
           QueryResource.this.jsonMapper,
           QueryResource.this.responseContextConfig,
           QueryResource.this.selfNode,
           QueryResource.this.counter,
           queryLifecycle.getQueryId(),
-          MediaType.valueOf(io.getResponseWriter().getResponseType())
+          MediaType.valueOf(io.getResponseWriter().getResponseType()),
+          ImmutableMap.of()
       );
       this.req = req;
       this.queryLifecycle = queryLifecycle;
@@ -561,20 +549,27 @@ public class QueryResource implements QueryCountStatsProvider
     {
       return new ResultsWriter()
       {
+        private QueryResponse<Object> queryResponse;
+
         @Override
-        public QueryResponse<Object> start(HttpServletResponse response)
+        public Response.ResponseBuilder start()
         {
-          final QueryResponse<Object> queryResponse = queryLifecycle.execute();
+          queryResponse = queryLifecycle.execute();
           final ResponseContext responseContext = queryResponse.getResponseContext();
           final String prevEtag = getPreviousEtag(req);
 
           if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
             queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
             counter.incrementSuccess();
-            response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
-            return null;
+            return Response.status(Status.NOT_MODIFIED);
           }
 
+          return null;
+        }
+
+        @Override
+        public QueryResponse<Object> getQueryResponse()
+        {
           return queryResponse;
         }
 

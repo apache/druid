@@ -152,7 +152,12 @@ public class QueryException extends RuntimeException implements SanitizableExcep
 
   protected QueryException(Throwable cause, String errorCode, String errorClass, String host)
   {
-    super(cause == null ? null : cause.getMessage(), cause);
+    this(cause, errorCode, cause == null ? null : cause.getMessage(), errorClass, host);
+  }
+
+  protected QueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
+  {
+    super(errorMessage, cause);
     this.errorCode = errorCode;
     this.errorClass = errorClass;
     this.host = host;

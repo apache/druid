@@ -20,11 +20,11 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResource;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -83,7 +83,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     filterChain.doFilter(servletRequest, servletResponse);
 
     Boolean authInfoChecked = (Boolean) servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED);
-    if (authInfoChecked == null && statusIsSuccess(response.getStatus())) {
+    if (authInfoChecked == null && statusNotForbidden(response.getStatus())) {
       // Note: rather than throwing an exception here, it would be nice to blank out the original response
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
@@ -136,7 +136,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     OutputStream out = response.getOutputStream();
     sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, jsonMapper.writeValueAsString(unauthorizedError), out);
     out.close();
-    return;
   }
 
   private void handleAuthorizationCheckError(
@@ -145,16 +144,19 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       HttpServletResponse servletResponse
   )
   {
+    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
+
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
     log.makeAlert(errorMsg)
        .addData("uri", servletRequest.getRequestURI())
        .addData("method", servletRequest.getMethod())
        .addData("remoteAddr", servletRequest.getRemoteAddr())
        .addData("remoteHost", servletRequest.getRemoteHost())
+       .addData("queryId", queryId)
        .emit();
 
     if (servletResponse.isCommitted()) {
-      throw new ISE(errorMsg);
+      log.warn("%s for queryId[%s]", errorMsg, queryId);
     } else {
       try {
         servletResponse.sendError(HttpServletResponse.SC_FORBIDDEN);
@@ -165,9 +167,9 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     }
   }
 
-  private static boolean statusIsSuccess(int status)
+  private static boolean statusNotForbidden(int status)
   {
-    return 200 <= status && status < 300;
+    return status != 503;
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)

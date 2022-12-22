@@ -36,45 +36,54 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.ForbiddenException;
 
 import javax.annotation.Nullable;
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Map;
 
 public abstract class QueryResultPusher
 {
   private static final Logger log = new Logger(QueryResultPusher.class);
 
-  private final HttpServletResponse response;
+  private final HttpServletRequest request;
   private final String queryId;
   private final ObjectMapper jsonMapper;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
+  private final Map<String, String> extraHeaders;
 
   private StreamingHttpResponseAccumulator accumulator = null;
+  private AsyncContext asyncContext = null;
+  private HttpServletResponse response = null;
 
   public QueryResultPusher(
-      HttpServletResponse response,
+      HttpServletRequest request,
       ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
       DruidNode selfNode,
       QueryResource.QueryMetricCounter counter,
       String queryId,
-      MediaType contentType
+      MediaType contentType,
+      Map<String, String> extraHeaders
   )
   {
-    this.response = response;
+    this.request = request;
     this.queryId = queryId;
     this.jsonMapper = jsonMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
     this.counter = counter;
     this.contentType = contentType;
+    this.extraHeaders = extraHeaders;
   }
 
   /**
@@ -92,22 +101,44 @@ public abstract class QueryResultPusher
 
   public abstract void writeException(Exception e, OutputStream out) throws IOException;
 
-  public void push()
+  /**
+   * Pushes results out.  Can sometimes return a JAXRS Response object instead of actually pushing to the output
+   * stream, primarily for error handling that occurs before switching the servlet to asynchronous mode.
+   *
+   * @return null if the response has already been handled and pushed out, or a non-null Response object if it expects
+   * the container to put the bytes on the wire.
+   */
+  @Nullable
+  public Response push()
   {
-    response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
-
     ResultsWriter resultsWriter = null;
     try {
       resultsWriter = start();
 
-
-      final QueryResponse<Object> queryResponse = resultsWriter.start(response);
-      if (queryResponse == null) {
-        // It's already been handled...
-        return;
+      final Response.ResponseBuilder startResponse = resultsWriter.start();
+      if (startResponse != null) {
+        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+        for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+          startResponse.header(entry.getKey(), entry.getValue());
+        }
+        return startResponse.build();
       }
 
+      final QueryResponse<Object> queryResponse = resultsWriter.getQueryResponse();
       final Sequence<Object> results = queryResponse.getResults();
+
+      // We use an async context not because we are actually going to run this async, but because we want to delay
+      // the decision of what the response code should be until we have gotten the first few data points to return.
+      // Returning a Response object from this point forward requires that object to know the status code, which we
+      // don't actually know until we are in the accumulator, but if we try to return a Response object from the
+      // accumulator, we cannot properly stream results back, because the accumulator won't release control of the
+      // Response until it has consumed the underlying Sequence.
+      asyncContext = request.startAsync();
+      response = (HttpServletResponse) asyncContext.getResponse();
+      response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+      for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+        response.setHeader(entry.getKey(), entry.getValue());
+      }
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
 
@@ -119,8 +150,7 @@ public abstract class QueryResultPusher
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
     catch (QueryException e) {
-      handleQueryException(resultsWriter, e);
-      return;
+      return handleQueryException(resultsWriter, e);
     }
     catch (RuntimeException re) {
       if (re instanceof ForbiddenException) {
@@ -128,17 +158,15 @@ public abstract class QueryResultPusher
         // has been committed because the response is committed after results are returned.  And, if we started
         // returning results before a ForbiddenException gets thrown, that means that we've already leaked stuff
         // that should not have been leaked.  I.e. it means, we haven't validated the authorization early enough.
-        if (response.isCommitted()) {
+        if (response != null && response.isCommitted()) {
           log.error(re, "Got a forbidden exception for query[%s] after the response was already committed.", queryId);
         }
         throw re;
       }
-      handleQueryException(resultsWriter, new QueryInterruptedException(re));
-      return;
+      return handleQueryException(resultsWriter, new QueryInterruptedException(re));
     }
     catch (IOException ioEx) {
-      handleQueryException(resultsWriter, new QueryInterruptedException(ioEx));
-      return;
+      return handleQueryException(resultsWriter, new QueryInterruptedException(ioEx));
     }
     finally {
       if (accumulator != null) {
@@ -159,10 +187,15 @@ public abstract class QueryResultPusher
           log.warn(e, "Suppressing exception closing accumulator for query[%s]", queryId);
         }
       }
+      if (asyncContext != null) {
+        asyncContext.complete();
+      }
     }
+    return null;
   }
 
-  private void handleQueryException(ResultsWriter resultsWriter, QueryException e)
+  @Nullable
+  private Response handleQueryException(ResultsWriter resultsWriter, QueryException e)
   {
     if (accumulator != null && accumulator.isInitialized()) {
       // We already started sending a response when we got the error message.  In this case we just give up
@@ -176,11 +209,7 @@ public abstract class QueryResultPusher
       // This case is always a failure because the error happened mid-stream of sending results back.  Therefore,
       // we do not believe that the response stream was actually useable
       counter.incrementFailed();
-      return;
-    }
-
-    if (response.isCommitted()) {
-      QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
+      return null;
     }
 
     final QueryException.FailType failType = e.getFailType();
@@ -206,40 +235,71 @@ public abstract class QueryResultPusher
         );
         counter.incrementFailed();
     }
-    final int responseStatus = failType.getExpectedStatus();
-
-    response.setStatus(responseStatus);
-    response.setHeader("Content-Type", contentType.toString());
-    try (ServletOutputStream out = response.getOutputStream()) {
-      writeException(e, out);
-    }
-    catch (IOException ioException) {
-      log.warn(
-          ioException,
-          "Suppressing IOException thrown sending error response for query[%s]",
-          queryId
-      );
-    }
 
     resultsWriter.recordFailure(e);
+
+    final int responseStatus = failType.getExpectedStatus();
+
+    if (response == null) {
+      // No response object yet, so assume we haven't started the async context and is safe to return Response
+      final Response.ResponseBuilder bob = Response
+          .status(responseStatus)
+          .type(contentType)
+          .entity((StreamingOutput) output -> {
+            writeException(e, output);
+            output.close();
+          });
+
+      bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+      for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+        bob.header(entry.getKey(), entry.getValue());
+      }
+
+      return bob.build();
+    } else {
+      if (response.isCommitted()) {
+        QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
+      }
+
+      response.setStatus(responseStatus);
+      response.setHeader("Content-Type", contentType.toString());
+      try (ServletOutputStream out = response.getOutputStream()) {
+        writeException(e, out);
+      }
+      catch (IOException ioException) {
+        log.warn(
+            ioException,
+            "Suppressing IOException thrown sending error response for query[%s]",
+            queryId
+        );
+      }
+      return null;
+    }
   }
 
   public interface ResultsWriter extends Closeable
   {
     /**
-     * Runs the query and returns a ResultsWriter from running the query.
+     * Runs the query and prepares the QueryResponse to be returned
      * <p>
      * This also serves as a hook for any logic that runs on the metadata from a QueryResponse.  If this method
-     * returns {@code null} then the Pusher believes that the response was already handled and skips the rest
-     * of its logic.  As such, any implementation that returns null must make sure that the response has been set
-     * with a meaningful status, etc.
+     * returns {@code null} then the Pusher can continue with normal logic.  If this method chooses to return
+     * a ResponseBuilder, then the Pusher will attach any extra metadata it has to the Response and return
+     * the response built from the Builder without attempting to process the results of the query.
      * <p>
-     * Even if this method returns null, close() should still be called on this object.
+     * In all cases, {@link #close()} should be called on this object.
      *
      * @return QueryResponse or null if no more work to do.
      */
     @Nullable
-    QueryResponse<Object> start(HttpServletResponse response);
+    Response.ResponseBuilder start();
+
+    /**
+     * Gets the results of running the query.  {@link #start} must be called before this method is called.
+     *
+     * @return the results of running the query as preparted by the {@link #start()} method
+     */
+    QueryResponse<Object> getQueryResponse();
 
     Writer makeWriter(OutputStream out) throws IOException;
 
@@ -301,9 +361,7 @@ public abstract class QueryResultPusher
      * Initializes the response.  This is done lazily so that we can put various metadata that we only get once
      * we have some of the response stream into the result.
      * <p>
-     * This is called once for each result object, but should only actually happen once.
-     *
-     * @return boolean if initialization occurred.  False most of the team because initialization only happens once.
+     * It is okay for this to be called multiple times.
      */
     public void initialize()
     {
@@ -332,7 +390,7 @@ public abstract class QueryResultPusher
           );
         }
         catch (JsonProcessingException e) {
-          QueryResource.log.info(e, "Problem serializing to JSON!?");
+          log.info(e, "Problem serializing to JSON!?");
           serializationResult = new ResponseContext.SerializationResult("Could not serialize", "Could not serialize");
         }
 
@@ -343,7 +401,7 @@ public abstract class QueryResultPusher
               serializationResult.getFullResult()
           );
           if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-            QueryResource.log.error(logToPrint);
+            log.error(logToPrint);
             throw new QueryInterruptedException(
                 new TruncatedResponseContextException(
                     "Serialized response context exceeds the max size[%s]",
@@ -352,12 +410,12 @@ public abstract class QueryResultPusher
                 selfNode.getHostAndPortToUse()
             );
           } else {
-            QueryResource.log.warn(logToPrint);
+            log.warn(logToPrint);
           }
         }
 
         response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
-        response.setHeader("Content-Type", contentType.toString());
+        response.setContentType(contentType.toString());
 
         try {
           out = new CountingOutputStream(response.getOutputStream());
@@ -379,6 +437,7 @@ public abstract class QueryResultPusher
     }
 
     @Override
+    @Nullable
     public Response accumulate(Response retVal, Object in)
     {
       if (!initialized) {
