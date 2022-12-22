@@ -58,8 +58,6 @@ dedicated user account for running Druid.
 ## Install Druid
 
 Download the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz) from Apache Druid. 
-For this quickstart, you need Druid version 24.0 or higher.
-For versions earlier than 24.0 (0.23 and below), see [Load data with native batch ingestion](tutorial-batch-native.md).
 
 In your terminal, extract the file and change directories to the distribution directory:
 
@@ -83,7 +81,7 @@ From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 ./bin/start-druid
 ```
 
-This brings up instances of ZooKeeper and the Druid services:
+This brings up instances of ZooKeeper and the Druid services and may use up to 80% of the total available system memory. To explicitly set the total memory available to Druid, pass a value for the memory parameter, e.g. `./bin/start-druid -m 16g` or `./bin/start-druid --memory 16g`.
 
 ```bash
 $ ./bin/start-druid
