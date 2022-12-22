@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.mocks;
 
+import org.apache.druid.java.util.common.ISE;
+
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -41,8 +43,18 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * A fake HttpServletRequest used in tests.  A lot of methods are implemented as
+ * {@code throw new UnsupportedOperationException}, this is just an indication that nobody has needed to flesh out
+ * that functionality for the mock yet and is not an indication that calling said method is a problem.  If an
+ * {@code throw new UnsupportedOperationException} gets thrown out from one of these methods in a test, it is expected
+ * that the developer will implement the necessary methods.
+ *
+ * Also, there is a mimic method.  If you add fields to this class, be certain to adjust the mimic method as well.
+ */
 public class MockHttpServletRequest implements HttpServletRequest
 {
+  public String method = null;
   public String contentType = null;
   public String remoteAddr = null;
 
@@ -98,7 +110,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public String getMethod()
   {
-    throw new UnsupportedOperationException();
+    return method;
   }
 
   @Override
@@ -435,7 +447,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   public AsyncContext startAsync()
   {
     if (asyncContextSupplier == null) {
-      throw new UnsupportedOperationException();
+      throw new ISE("Start Async called, but no context supplier set.");
     } else {
       if (currAsyncContext == null) {
         currAsyncContext = asyncContextSupplier.get();
@@ -493,6 +505,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   {
     MockHttpServletRequest retVal = new MockHttpServletRequest();
 
+    retVal.method = method;
     retVal.asyncContextSupplier = asyncContextSupplier;
     retVal.attributes.putAll(attributes);
     retVal.headers.putAll(headers);
