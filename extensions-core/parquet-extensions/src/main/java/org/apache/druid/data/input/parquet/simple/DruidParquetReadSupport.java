@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 public class DruidParquetReadSupport extends GroupReadSupport
 {
   private static final Logger LOG = new Logger(DruidParquetReadSupport.class);
-  private static final Pattern JSON_PATH_PATTERN = Pattern.compile("\\[(.*?)\\]");
+  private static final Pattern JSON_PATH_PATTERN = Pattern.compile("\\[(.*?)]");
   private static final Pattern BRACKET_NOTATED_CHILD_PATTERN = Pattern.compile("'(.*?)'");
 
 
