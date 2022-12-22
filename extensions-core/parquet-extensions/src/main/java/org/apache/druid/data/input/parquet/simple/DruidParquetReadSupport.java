@@ -44,6 +44,7 @@ public class DruidParquetReadSupport extends GroupReadSupport
 {
   private static final Logger LOG = new Logger(DruidParquetReadSupport.class);
   private static final Pattern JSON_PATH_PATTERN = Pattern.compile("\\[(.*?)\\]");
+  private static final Pattern BRACKET_NOTATED_CHILD_PATTERN = Pattern.compile("'(.*?)'");
 
 
   /**
@@ -91,18 +92,24 @@ public class DruidParquetReadSupport extends GroupReadSupport
           if (parsedPath.length() >= 2 && "..".equals(parsedPath.substring(0, 2))) {
             return fullSchema;
           }
-          Matcher matcher = JSON_PATH_PATTERN.matcher(parsedPath);
-          if (!matcher.find()) {
+          Matcher jsonPathMatcher = JSON_PATH_PATTERN.matcher(parsedPath);
+          if (!jsonPathMatcher.find()) {
             LOG.warn("Failed to parse JSON path for required column from path [%s]", fields.getExpr());
             return fullSchema;
           }
-          String matchedGroup = matcher.group();
-          if ("*".equals(matchedGroup)) {
+          String matchedGroup = jsonPathMatcher.group();
+          Matcher childMatcher = BRACKET_NOTATED_CHILD_PATTERN.matcher(matchedGroup);
+          if (childMatcher.find()) {
+            // Get name of the column from bracket-notated child i.e. ['region']
+            childMatcher.reset();
+            while (childMatcher.find()) {
+              String columnName = childMatcher.group();
+              // Remove the quote around column name
+              columnsInFlattenSpec.add(columnName.substring(1, columnName.length() - 1));
+            }
+          } else if ("[*]".equals(matchedGroup)) {
             // If the first level is a wildcard, then we need all columns
             return fullSchema;
-          } else if (matchedGroup.length() > 2 && matchedGroup.charAt(0) == '\'' && matchedGroup.charAt(matchedGroup.length() - 1) == '\'') {
-            // Get name of the column
-            columnsInFlattenSpec.add(matchedGroup.substring(1, matchedGroup.length() - 1));
           } else {
             // This can happen if it is a filter expression, slice operator, or index / indexes
             // We just return all columns...
