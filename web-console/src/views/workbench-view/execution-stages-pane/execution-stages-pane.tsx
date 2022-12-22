@@ -449,7 +449,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <span className="stage">{`Stage${stage.stageNumber}`}</span>
                 </div>
                 <div>{stage.definition.processor.type}</div>
-                {stage.sort && <div className="sort-marker">+sort</div>}
+                {stage.sort && <div className="sort-marker">(with sort)</div>}
                 {(myError || warnings > 0) && (
                   <div>
                     {myError && (
