@@ -178,7 +178,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -239,8 +239,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected2)
             }
         )
     );
@@ -288,7 +288,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
 
@@ -335,7 +335,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected3)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected3)}
         )
     );
   }
@@ -388,7 +388,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -442,7 +442,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -496,7 +496,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -540,8 +540,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected2)
             }
         )
     );
@@ -596,8 +596,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] {
                 "a",
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected2)
             }
         )
     );
