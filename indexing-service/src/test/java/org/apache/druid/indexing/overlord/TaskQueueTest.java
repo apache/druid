@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,7 +54,6 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -77,15 +75,11 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -379,7 +373,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testHttpRemoteTaskRunnerTaskShutdownMetricsEmission() throws EntryExistsException, InterruptedException
+  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));
@@ -448,7 +442,6 @@ public class TaskQueueTest extends IngestionTestBase
       EasyMock.expect(taskStorageMock.getStatus(taskId)).andReturn(Optional.of(TaskStatus.running(taskId)));
     }
     EasyMock.replay(taskStorageMock);
-    ConcurrentMap<String, HttpRemoteTaskRunnerTest.CustomFunction> workerHolders = new ConcurrentHashMap<>();
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
         new HttpRemoteTaskRunnerConfig()
@@ -467,38 +460,9 @@ public class TaskQueueTest extends IngestionTestBase
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new StubServiceEmitter("druid/overlord", "testHost")
-    )
-    {
-      @Override
-      protected WorkerHolder createWorkerHolder(
-          ObjectMapper smileMapper,
-          HttpClient httpClient,
-          HttpRemoteTaskRunnerConfig config,
-          ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
-          Worker worker,
-          List<TaskAnnouncement> knownAnnouncements
-      )
-      {
-        if (workerHolders.containsKey(worker.getHost())) {
-          return workerHolders.get(worker.getHost()).apply(
-              smileMapper,
-              httpClient,
-              config,
-              workersSyncExec,
-              listener,
-              worker,
-              knownAnnouncements
-          );
-        } else {
-          throw new ISE("No WorkerHolder for [%s].", worker.getHost());
-        }
-      }
-    };
+    );
 
     taskRunner.start();
-    List<Object> listenerNotificationsAccumulator = new ArrayList<>();
-
     taskRunner.registerListener(
         new TaskRunnerListener()
         {
@@ -511,13 +475,13 @@ public class TaskQueueTest extends IngestionTestBase
           @Override
           public void locationChanged(String taskId, TaskLocation newLocation)
           {
-            listenerNotificationsAccumulator.add(ImmutableList.of(taskId, newLocation));
+            // do nothing
           }
 
           @Override
           public void statusChanged(String taskId, TaskStatus status)
           {
-            listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
+            // do nothing
           }
         },
         Execs.directExecutor()
