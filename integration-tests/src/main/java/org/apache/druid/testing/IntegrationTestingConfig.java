@@ -167,8 +167,6 @@ public interface IntegrationTestingConfig
 
   String getCloudBucket();
 
-  String getCloudBucketwhenDeepStorageTypeIs(String storageType);
-
   String getCloudPath();
 
   String getCloudRegion();

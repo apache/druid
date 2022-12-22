@@ -48,8 +48,8 @@ public class ITGcsSQLBasedIngestionTest extends AbstractGcsInputSourceParallelIn
   @Test
   @Parameters(method = "resources")
   @TestCaseName("Test_{index} ({0})")
-  public void testSQLBasedBatchIngestion(Pair<String, List> GcsInputSource)
+  public void testSQLBasedBatchIngestion(Pair<String, List> GcsInputSource) throws Exception
   {
-    doMSQTest(GcsInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "gcs");
+    doMSQTest(GcsInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "google");
   }
 }

@@ -20,7 +20,7 @@
 package org.apache.druid.testsEx.indexer;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.utils.GcsTestUtil;
+import org.apache.druid.testsEx.utils.GcsTestUtil;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,7 +46,7 @@ public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputS
     try {
       gcs = new GcsTestUtil();
       for (String file : fileList()) {
-        gcs.uploadFileToGcs(localPath + file);
+        gcs.uploadFileToGcs(localPath + file, "application/json");
       }
     }
     catch (Exception e) {
@@ -60,11 +60,16 @@ public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputS
   public void deleteSegmentsFromGcs()
   {
     // Deleting folder created for storing segments (by druid) after test is completed
-    gcs.deletePrefixFolderFromGcs();
+    try {
+      gcs.deletePrefixFolderFromGcs(indexDatasource);
+    }
+    catch (Exception e) {
+      LOG.warn(e, "Unable to delete segments from GCS");
+    }
   }
 
   @AfterClass
-  public static void deleteDataFilesFromS3()
+  public static void deleteDataFilesFromGcs()
   {
     LOG.info("Deleting data files from GCS");
     try {

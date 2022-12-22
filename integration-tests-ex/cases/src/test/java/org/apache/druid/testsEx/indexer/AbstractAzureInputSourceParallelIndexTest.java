@@ -20,7 +20,7 @@
 package org.apache.druid.testsEx.indexer;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.utils.AzureTestUtil;
+import org.apache.druid.testsEx.utils.AzureTestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 

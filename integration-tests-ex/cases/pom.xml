@@ -191,6 +191,19 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-google-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+         <dependency>
+             <groupId>org.apache.druid</groupId>
+             <artifactId>druid-gcp-common</artifactId>
+             <version>${project.parent.version}</version>
+             <scope>provided</scope>
+         </dependency>
+
+        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-sql</artifactId>
             <version>${project.parent.version}</version>

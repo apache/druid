@@ -80,6 +80,43 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
     return Arrays.asList(WIKIPEDIA_DATA_1, WIKIPEDIA_DATA_2, WIKIPEDIA_DATA_3);
   }
 
+  public String setInputSourceInPath(String inputSourceType, String inputSourcePath)
+  {
+    if ("google".equals(inputSourceType)) {
+      return StringUtils.replace(
+          inputSourcePath,
+          "%%INPUT_SOURCE_TYPE%%",
+          "gs"
+      );
+    } else {
+      return StringUtils.replace(
+          inputSourcePath,
+          "%%INPUT_SOURCE_TYPE%%",
+          inputSourceType
+      );
+    }
+  }
+
+  public String getCloudPath(String inputSourceType)
+  {
+    if ("google".equals(inputSourceType)) {
+      return config.getProperty("googlePrefix");
+    } else {
+      return config.getCloudPath();
+    }
+  }
+
+  public String getCloudBucket(String inputSourceType)
+  {
+    if ("google".equals(inputSourceType)) {
+      return config.getProperty("googleBucket");
+    } else if ("azure".equals(inputSourceType)) {
+      return config.getProperty("azureContainer");
+    } else {
+      return config.getCloudBucket();
+    }
+  }
+
   /**
    * Runs a sql based ingestion test.
    * @param inputSource         input source for ingestion query. Values defined in resource method above can be used for this.
@@ -100,20 +137,16 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
       final Function<String, String> azurePropsTransform = spec -> {
         try {
           String inputSourceValue = jsonMapper.writeValueAsString(inputSource.rhs);
-          inputSourceValue = StringUtils.replace(
-              inputSourceValue,
-              "%%INPUT_SOURCE_TYPE%%",
-              inputSourceType
-          );
+          inputSourceValue = setInputSourceInPath(inputSourceType, inputSourceValue);
           inputSourceValue = StringUtils.replace(
               inputSourceValue,
               "%%BUCKET%%",
-              config.getCloudBucketwhenDeepStorageTypeIs(inputSourceType)
+              getCloudBucket(inputSourceType)
           );
           inputSourceValue = StringUtils.replace(
               inputSourceValue,
               "%%PATH%%",
-              config.getCloudPath()
+              getCloudPath(inputSourceType)
           );
           spec = StringUtils.replace(
               spec,
@@ -171,7 +204,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
                         String ingestSQLFilePath,
                         String testQueriesFilePath,
                         String inputSourceType
-  )
+  ) throws Exception
   {
     try {
       indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
@@ -181,6 +214,11 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
                                                     "maxNumTasks", 5,
                                                     "groupByEnableMultiValueUnnesting", false);
 
+      sqlTask = StringUtils.replace(
+          sqlTask,
+          "%%INPUT_SOURCE_TYPE%%",
+          inputSourceType
+      );
       sqlTask = StringUtils.replace(
           sqlTask,
           "%%INPUT_SOURCE_PROPERTY_KEY%%",
@@ -193,20 +231,16 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
       );
 
       // Setting the correct object path in the sqlTask.
-      sqlTask = StringUtils.replace(
-          sqlTask,
-          "%%INPUT_SOURCE_TYPE%%",
-          inputSourceType
-      );
+      sqlTask = setInputSourceInPath(inputSourceType, sqlTask);
       sqlTask = StringUtils.replace(
           sqlTask,
           "%%BUCKET%%",
-          config.getCloudBucketwhenDeepStorageTypeIs(inputSourceType)
+          getCloudBucket(inputSourceType)
       );
       sqlTask = StringUtils.replace(
           sqlTask,
           "%%PATH%%",
-          config.getCloudPath() // Getting from DRUID_CLOUD_PATH env variable
+          getCloudPath(inputSourceType)
       );
 
       submitMSQTask(sqlTask, indexDatasource, context);

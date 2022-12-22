@@ -22,7 +22,6 @@ package org.apache.druid.testing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -476,13 +475,6 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getCloudBucket()
       {
         return cloudBucket;
-      }
-
-      // Adding this to fix complilation error
-      @Override
-      public String getCloudBucketwhenDeepStorageTypeIs(String storageType)
-      {
-        throw new ISE("Not implemented");
       }
 
       @Override

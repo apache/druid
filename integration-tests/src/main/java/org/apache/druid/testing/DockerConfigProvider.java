@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -386,13 +385,6 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudBucket()
       {
         return cloudBucket;
-      }
-
-      // Adding this to fix complilation error
-      @Override
-      public String getCloudBucketwhenDeepStorageTypeIs(String storageType)
-      {
-        throw new ISE("Not implemented");
       }
 
       @Override
