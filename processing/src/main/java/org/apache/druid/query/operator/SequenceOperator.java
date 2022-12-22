@@ -43,5 +43,6 @@ public class SequenceOperator implements Operator
           return accumulated;
         }
     );
+    receiver.completed();
   }
 }

@@ -26,10 +26,10 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
  * other databases would also tend to be implemented using.  While a lot of Operator interfaces tend to use a
  * pull-based orientation, we use a push-based interface.  This is to give us good stacktraces.  Because of the
  * organization of the go() method, the stack traces thrown out of an Operator will be
- *   1. All of the go() calls from the top-level Operator down to the leaf Operator, this part of the stacktrace gives
- *      visibility into what all of the actions that we expect to happen from the operator chain are
- *   2. All of the push() calls up until the exception happens, this part of the stack trace gives us a view of all
- *      of the things that have happened to the data up until the exception was thrown.
+ * 1. All of the go() calls from the top-level Operator down to the leaf Operator, this part of the stacktrace gives
+ * visibility into what all of the actions that we expect to happen from the operator chain are
+ * 2. All of the push() calls up until the exception happens, this part of the stack trace gives us a view of all
+ * of the things that have happened to the data up until the exception was thrown.
  * <p>
  * This "hour glass" structure of the stacktrace is by design.  It is very important that implementations of this
  * interface never resort to a fluent style, inheritance or other code structuring that removes the name of the active
@@ -44,11 +44,13 @@ public interface Operator
 {
   /**
    * Tells the Operation to start doing its work.  Data will be pushed into the Receiver.
+   *
    * @param receiver a receiver that will receive data
    */
   void go(Receiver receiver);
 
-  interface Receiver {
+  interface Receiver
+  {
     /**
      * Used to push data.  Return value indicates if more data will be accepted.  If false, push should not
      * be called anymore.

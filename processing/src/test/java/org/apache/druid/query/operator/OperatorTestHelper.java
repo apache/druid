@@ -47,6 +47,7 @@ public class OperatorTestHelper
         new JustPushMe()
         {
           int index = 0;
+
           @Override
           public boolean push(RowsAndColumns rac)
           {
@@ -68,7 +69,8 @@ public class OperatorTestHelper
     return this;
   }
 
-  public OperatorTestHelper withFinalValidation(Consumer<TestReceiver> validator) {
+  public OperatorTestHelper withFinalValidation(Consumer<TestReceiver> validator)
+  {
     if (finalValidation == null) {
       this.finalValidation = validator;
     } else {
