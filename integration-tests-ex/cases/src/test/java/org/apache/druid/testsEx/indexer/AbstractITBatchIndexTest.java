@@ -42,7 +42,6 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
-import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;

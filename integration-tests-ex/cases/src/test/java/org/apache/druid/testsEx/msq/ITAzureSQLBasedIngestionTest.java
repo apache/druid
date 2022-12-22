@@ -19,11 +19,8 @@
 
 package org.apache.druid.testsEx.msq;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testsEx.categories.S3DeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
