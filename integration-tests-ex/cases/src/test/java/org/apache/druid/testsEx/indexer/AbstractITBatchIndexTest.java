@@ -109,9 +109,6 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   private MsqTestQueryHelper msqHelper;
 
   @Inject
-  protected TestQueryHelper queryHelper;
-
-  @Inject
   private DataLoaderHelper dataLoaderHelper;
 
   @Rule

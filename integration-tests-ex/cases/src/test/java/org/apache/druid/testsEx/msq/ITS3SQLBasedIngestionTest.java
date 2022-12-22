@@ -54,10 +54,6 @@ public class ITS3SQLBasedIngestionTest extends AbstractS3InputSourceParallelInde
   private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
   private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
 
-  @Inject
-  @Json
-  protected ObjectMapper jsonMapper;
-
   @Test
   @Parameters(method = "resources")
   @TestCaseName("Test_{index} ({0})")
