@@ -50,6 +50,6 @@ public class AWSModule implements DruidModule
   @LazySingleton
   public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
   {
-    return AmazonEC2ClientBuilder.defaultClient();
+    return AmazonEC2ClientBuilder.standard().withCredentials(credentials).build();
   }
 }
