@@ -402,6 +402,7 @@ ${title} uncompressed size: ${formatBytesCompact(
 
     const shuffleRows = stages.getTotalCounterForStage(stage, 'shuffle', 'rows');
     const sortProgress = stages.getSortProgressForStage(stage);
+    const showSortedPercent = 0 < sortProgress && sortProgress < 1;
     const title = stages.getStageCounterTitle(stage, 'shuffle');
     return (
       <div
@@ -413,10 +414,9 @@ ${title} uncompressed size: ${formatBytesCompact(
           stages.getTotalCounterForStage(stage, 'shuffle', 'bytes'),
         )} ${NOT_SIZE_ON_DISK}`}
       >
-        <BracedText text={shuffleRows ? formatRows(shuffleRows) : ''} braces={rowsValues} /> &nbsp;{' '}
-        {0 < sortProgress && sortProgress < 1 && (
-          <> &nbsp;{` ${formatPercent(sortProgress)} sorted`}</>
-        )}
+        {Boolean(shuffleRows) && <BracedText text={formatRows(shuffleRows)} braces={rowsValues} />}
+        {Boolean(shuffleRows && showSortedPercent) && <>&nbsp; : &nbsp;</>}
+        {showSortedPercent && `${formatPercent(sortProgress)} sorted`}
       </div>
     );
   }
@@ -449,6 +449,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <span className="stage">{`Stage${stage.stageNumber}`}</span>
                 </div>
                 <div>{stage.definition.processor.type}</div>
+                {stage.sort && <div className="sort-marker">+sort</div>}
                 {(myError || warnings > 0) && (
                   <div>
                     {myError && (
