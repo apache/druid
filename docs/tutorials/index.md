@@ -81,7 +81,7 @@ From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 ./bin/start-druid
 ```
 
-This brings up instances of ZooKeeper and the Druid services:
+This brings up instances of ZooKeeper and the Druid services and may use up to 80% of the total available system memory. You may also explicitly specify the total memory for Druid to use by passing a value for the memory parameter, e.g. `./bin/start-druid -m 16g` or `./bin/start-druid --memory 16g`.
 
 ```bash
 $ ./bin/start-druid
