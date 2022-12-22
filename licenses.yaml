@@ -1282,6 +1282,7 @@ libraries:
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
   - io.netty: netty-transport
+  - io.netty: netty-transport-classes-epoll
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
