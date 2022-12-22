@@ -30,7 +30,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -128,7 +127,7 @@ public class ArrayListSegment<RowType> implements Segment
   {
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }

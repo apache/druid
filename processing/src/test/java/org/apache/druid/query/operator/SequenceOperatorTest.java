@@ -38,7 +38,7 @@ public class SequenceOperatorTest
         MapOfColumnsRowsAndColumns.of("hi", new IntArrayColumn(new int[]{1}))
     )));
 
-    new OperatorTestHelper(op)
+    new OperatorTestHelper()
         .withPushFn(
             rac -> {
               new RowsAndColumnsHelper()
@@ -49,6 +49,6 @@ public class SequenceOperatorTest
             }
         )
         .withFinalValidation(testReceiver -> Assert.assertEquals(2, testReceiver.getNumPushed()))
-        .runToCompletion();
+        .runToCompletion(op);
   }
 }

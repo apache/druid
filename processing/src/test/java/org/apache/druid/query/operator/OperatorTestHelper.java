@@ -27,19 +27,12 @@ import org.junit.Assert;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class OperatorTestHelper
 {
-  private final Operator op;
-  private TestReceiver receiver;
+  private Supplier<TestReceiver> receiverSupply;
   private Consumer<TestReceiver> finalValidation;
-
-  public OperatorTestHelper(
-      Operator op
-  )
-  {
-    this.op = op;
-  }
 
   public OperatorTestHelper expectRowsAndColumns(RowsAndColumnsHelper... helpers)
   {
@@ -56,16 +49,35 @@ public class OperatorTestHelper
           }
         }
     ).withFinalValidation(
-        testReceiver -> Assert.assertEquals(helpers.length, receiver.getNumPushed())
+        testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
     );
   }
 
-  public OperatorTestHelper withReceiver(TestReceiver receiver)
+  public OperatorTestHelper expectAndStopAfter(RowsAndColumnsHelper... helpers)
   {
-    if (this.receiver != null) {
-      throw new ISE("Receiver[%s] already set, cannot set it again[%s].", this.receiver, receiver);
+    return withPushFn(
+        new JustPushMe()
+        {
+          int index = 0;
+
+          @Override
+          public boolean push(RowsAndColumns rac)
+          {
+            helpers[index++].validate(rac);
+            return index < helpers.length;
+          }
+        }
+    ).withFinalValidation(
+        testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
+    );
+  }
+
+  public OperatorTestHelper withReceiver(Supplier<TestReceiver> receiver)
+  {
+    if (this.receiverSupply != null) {
+      throw new ISE("Receiver[%s] already set, cannot set it again[%s].", this.receiverSupply, receiver);
     }
-    this.receiver = receiver;
+    this.receiverSupply = receiver;
     return this;
   }
 
@@ -74,8 +86,9 @@ public class OperatorTestHelper
     if (finalValidation == null) {
       this.finalValidation = validator;
     } else {
+      final Consumer<TestReceiver> subValidator = finalValidation;
       this.finalValidation = (receiver) -> {
-        finalValidation.accept(receiver);
+        subValidator.accept(receiver);
         validator.accept(receiver);
       };
     }
@@ -84,16 +97,18 @@ public class OperatorTestHelper
 
   public OperatorTestHelper withPushFn(JustPushMe fn)
   {
-    return withReceiver(new TestReceiver(fn));
+    return withReceiver(() -> new TestReceiver(fn));
   }
 
-  public void runToCompletion()
+  public OperatorTestHelper runToCompletion(Operator op)
   {
+    TestReceiver receiver = this.receiverSupply.get();
     op.go(receiver);
     Assert.assertTrue(receiver.isCompleted());
     if (finalValidation != null) {
       finalValidation.accept(receiver);
     }
+    return this;
   }
 
   public interface JustPushMe

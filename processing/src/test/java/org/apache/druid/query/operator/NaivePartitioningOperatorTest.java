@@ -46,7 +46,7 @@ public class NaivePartitioningOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    new OperatorTestHelper(op)
+    new OperatorTestHelper()
         .expectRowsAndColumns(
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{0, 0, 0})
@@ -61,7 +61,34 @@ public class NaivePartitioningOperatorTest
                 .expectColumn("sorted", new int[]{4, 4, 4})
                 .expectColumn("unsorted", new int[]{2, 3, 92})
         )
-        .runToCompletion();
+        .runToCompletion(op);
+  }
+
+  @Test
+  public void testStopMidStream()
+  {
+    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
+            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+        )
+    );
+
+    NaivePartitioningOperator op = new NaivePartitioningOperator(
+        ImmutableList.of("sorted"),
+        InlineScanOperator.make(rac)
+    );
+
+    new OperatorTestHelper()
+        .expectAndStopAfter(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{0, 0, 0})
+                .expectColumn("unsorted", new int[]{3, 54, 21}),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1})
+                .expectColumn("unsorted", new int[]{1, 5})
+        )
+        .runToCompletion(op);
   }
 
   @Test
@@ -82,14 +109,14 @@ public class NaivePartitioningOperatorTest
 
     boolean exceptionThrown = false;
     try {
-      new OperatorTestHelper(op)
+      new OperatorTestHelper()
           .withPushFn(
               rac1 -> {
                 Assert.fail("I shouldn't be called, an exception should've been thrown.");
                 return true;
               }
           )
-          .runToCompletion();
+          .runToCompletion(op);
     }
     catch (ISE ex) {
       Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());

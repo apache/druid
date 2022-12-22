@@ -54,7 +54,7 @@ public class SegmentToRowsAndColumnsOperator implements Operator
       receiver.completed();
     }
     catch (IOException e) {
-      throw new RE(e, "Problem closing resources for segment[%s]", segment);
+      throw new RE(e, "Problem closing resources for segment[%s]", segment.getId());
     }
   }
 }

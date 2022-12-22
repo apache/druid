@@ -57,13 +57,13 @@ public class WindowProcessorOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    new OperatorTestHelper(op)
+    new OperatorTestHelper()
         .withPushFn(
             rowsAndColumns -> {
               Assert.assertSame(rac, rowsAndColumns);
               return true;
             }
         )
-        .runToCompletion();
+        .runToCompletion(op);
   }
 }

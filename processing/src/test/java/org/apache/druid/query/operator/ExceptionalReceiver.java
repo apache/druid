@@ -17,30 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.operator;
 
-import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
-import java.util.Collection;
-
-public abstract class AsOnlyTestRowsAndColumns implements RowsAndColumns
+public class ExceptionalReceiver implements Operator.Receiver
 {
   @Override
-  public Collection<String> getColumnNames()
+  public boolean push(RowsAndColumns rac)
   {
-    throw new UOE("not called");
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public int numRows()
+  public void completed()
   {
-    throw new UOE("not called");
-  }
-
-  @Override
-  public Column findColumn(String name)
-  {
-    throw new UOE("not called");
+    throw new UnsupportedOperationException();
   }
 }
