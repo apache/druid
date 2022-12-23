@@ -35,6 +35,7 @@ import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -66,9 +67,10 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     this.rowSignature = rowSignature;
     this.operators = operators;
 
-    // TODO: let's do some deeper validation of the query.  Reach in and look at the first operator to figure
-    // TODO: out which partition dimensions it is going to look at and validate that the sub-query will be sorted
-    // TODO: on those partition dimensions.
+    // At this point, we can also reach into a QueryDataSource and validate that the ordering expected by the
+    // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
+    // have enough information to validate that the underlying ordering aligns with expectations for the actual
+    // window operator queries, but maybe we could get that and validate it here too.
     if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
@@ -93,6 +95,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   }
 
   @Override
+  @Nullable
   public DimFilter getFilter()
   {
     return null;
