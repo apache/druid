@@ -1363,26 +1363,6 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
-  @Test
-  public void testCannotConvert() throws Exception
-  {
-    // SELECT + ORDER unsupported
-    final QueryException exception = doPost(
-        createSimpleQueryWithId("id", "SELECT dim1 FROM druid.foo ORDER BY dim1")
-    ).lhs;
-
-    Assert.assertNotNull(exception);
-    Assert.assertEquals("SQL query is unsupported", exception.getErrorCode());
-    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
-    Assert.assertTrue(
-        exception.getMessage()
-                 .contains("Query not supported. " +
-                           "Possible error: SQL query requires order by non-time column [dim1 ASC] that is not supported.")
-    );
-    checkSqlRequestLog(false);
-    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
-  }
-
   /**
    * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
    * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages

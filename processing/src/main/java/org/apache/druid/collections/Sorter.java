@@ -35,11 +35,4 @@ public interface Sorter<T>
   Iterator<T[]> drainElement();
 
   List<T[]> toList();
-
-  /**
-   * Size of elements
-   */
-  int size();
-
-
 }

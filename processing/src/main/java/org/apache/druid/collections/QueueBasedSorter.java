@@ -89,14 +89,8 @@ public class QueueBasedSorter<T> implements Sorter<T>
   @Override
   public List<T[]> toList()
   {
-    final List<T[]> sortedElements = new ArrayList<>(size());
+    final List<T[]> sortedElements = new ArrayList<>(queue.size());
     Iterators.addAll(sortedElements, drainElement());
     return sortedElements;
-  }
-
-  @Override
-  public int size()
-  {
-    return queue.size();
   }
 }
