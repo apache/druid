@@ -19,42 +19,19 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
-/**
- * An Operator that applies a {@link Processor}, see javadoc on that interface for an explanation.
- */
-public class WindowProcessorOperator implements Operator
+public class ExceptionalReceiver implements Operator.Receiver
 {
-  private final Processor windowProcessor;
-  private final Operator child;
-
-  public WindowProcessorOperator(
-      Processor windowProcessor,
-      Operator child
-  )
+  @Override
+  public boolean push(RowsAndColumns rac)
   {
-    this.windowProcessor = windowProcessor;
-    this.child = child;
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public void go(Receiver receiver)
+  public void completed()
   {
-    child.go(new Receiver()
-    {
-      @Override
-      public boolean push(RowsAndColumns rac)
-      {
-        return receiver.push(windowProcessor.process(rac));
-      }
-
-      @Override
-      public void completed()
-      {
-        receiver.completed();
-      }
-    });
+    throw new UnsupportedOperationException();
   }
 }
