@@ -117,7 +117,7 @@ public class NaivePartitioningOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    new OperatorTestHelper(op)
+    new OperatorTestHelper()
         .expectRowsAndColumns(
             singleHelperMaker.apply(0, 3),
             singleHelperMaker.apply(0, 54),
@@ -129,6 +129,6 @@ public class NaivePartitioningOperatorTest
             singleHelperMaker.apply(4, 3),
             singleHelperMaker.apply(4, 92)
         )
-        .runToCompletion();
+        .runToCompletion(op);
   }
 }
