@@ -173,7 +173,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     // when the authorization fails, then there is no information about whether the thing existed.  If we return
     // a 403 when fails authorization and a 404 when authorization succeeds, but it doesn't exist.  Then we have
     // leaked that it could maybe exist, if the authentication credentials were good.
-    return ! (status == HttpServletResponse.SC_FORBIDDEN || status == HttpServletResponse.SC_NOT_FOUND);
+    return !(status == HttpServletResponse.SC_FORBIDDEN || status == HttpServletResponse.SC_NOT_FOUND);
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)
