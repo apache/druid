@@ -92,6 +92,7 @@ public class PreResponseAuthorizationCheckFilterTest
     req.remoteHost = "aHost";
 
     MockHttpServletResponse resp = new MockHttpServletResponse();
+    resp.setStatus(200);
 
     req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
 
@@ -125,5 +126,26 @@ public class PreResponseAuthorizationCheckFilterTest
     });
 
     Assert.assertEquals(403, resp.getStatus());
+  }
+  @Test
+  public void testMissingAuthorizationCheckWith404Keeps404() throws Exception
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null, null);
+
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+
+    MockHttpServletResponse resp = new MockHttpServletResponse();
+    resp.setStatus(404);
+
+    PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
+        authenticators,
+        new DefaultObjectMapper()
+    );
+    filter.doFilter(req, resp, (request, response) -> {
+    });
+
+    Assert.assertEquals(404, resp.getStatus());
   }
 }
