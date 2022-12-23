@@ -19,7 +19,10 @@
 
 package org.apache.druid.query.operator;
 
-import java.util.List;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
+
+import java.util.ArrayList;
 
 /**
  * A naive sort operator is an operation that sorts a stream of data in-place.  Generally speaking this means
@@ -29,12 +32,13 @@ import java.util.List;
 public class NaiveSortOperator implements Operator
 {
   private final Operator child;
-  private final List<String> sortColumns;
+  private final ArrayList<ColumnWithDirection> sortColumns;
 
   public NaiveSortOperator(
       Operator child,
-      List<String> sortColumns
-  ) {
+      ArrayList<ColumnWithDirection> sortColumns
+  )
+  {
     this.child = child;
     this.sortColumns = sortColumns;
   }
@@ -42,6 +46,29 @@ public class NaiveSortOperator implements Operator
   @Override
   public void go(Receiver receiver)
   {
-    throw new UnsupportedOperationException();
+    child.go(
+        new Receiver()
+        {
+          NaiveSortMaker.NaiveSorter sorter = null;
+
+          @Override
+          public boolean push(RowsAndColumns rac)
+          {
+            if (sorter == null) {
+              sorter = NaiveSortMaker.fromRAC(rac).make(sortColumns);
+            } else {
+              sorter.moreData(rac);
+            }
+            return true;
+          }
+
+          @Override
+          public void completed()
+          {
+            receiver.push(sorter.complete());
+            receiver.completed();
+          }
+        }
+    );
   }
 }

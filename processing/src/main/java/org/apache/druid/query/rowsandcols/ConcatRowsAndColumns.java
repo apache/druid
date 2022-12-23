@@ -43,7 +43,8 @@ public class ConcatRowsAndColumns implements RowsAndColumns
 
   public ConcatRowsAndColumns(
       ArrayList<RowsAndColumns> racBuffer
-  ) {
+  )
+  {
     this.racBuffer = racBuffer;
 
     int numRows = 0;
@@ -56,7 +57,7 @@ public class ConcatRowsAndColumns implements RowsAndColumns
     int index = 0;
     for (int i = 0; i < racBuffer.size(); ++i) {
       final RowsAndColumns rac = racBuffer.get(i);
-      Arrays.fill(rowPointers[0], index, index+rac.numRows(), i);
+      Arrays.fill(rowPointers[0], index, index + rac.numRows(), i);
       for (int j = 0; j < rac.numRows(); ++j) {
         rowPointers[1][index + j] = j;
       }
@@ -102,7 +103,7 @@ public class ConcatRowsAndColumns implements RowsAndColumns
           RowsAndColumns rac = racBuffer.get(i);
           final Column col = rac.findColumn(name);
           final ColumnAccessor accessor = col.toAccessor();
-          if (!type.equals(accessor.getType())){
+          if (!type.equals(accessor.getType())) {
             throw new ISE("Type mismatch, expected[%s], got[%s] on entry[%,d]", type, accessor.getType(), i);
           }
           accessors.add(accessor);
@@ -122,7 +123,8 @@ public class ConcatRowsAndColumns implements RowsAndColumns
     return null;
   }
 
-  private class ConcatedidColumn implements Column {
+  private class ConcatedidColumn implements Column
+  {
 
     private final ArrayList<ColumnAccessor> accessors;
     private final ColumnType type;
@@ -132,7 +134,8 @@ public class ConcatRowsAndColumns implements RowsAndColumns
         ColumnType type,
         Comparator<Object> comp,
         ArrayList<ColumnAccessor> accessors
-    ) {
+    )
+    {
       this.accessors = accessors;
       this.type = type;
       this.comp = comp;

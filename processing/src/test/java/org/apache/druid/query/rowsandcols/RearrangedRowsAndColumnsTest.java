@@ -100,7 +100,6 @@ public class RearrangedRowsAndColumnsTest extends RowsAndColumnsTestBase
                     "int",
                     new IntArrayColumn(new int[]{2, 4, 1, 3, 0})
                 )
-            )
-        );
+            ));
   }
 }

@@ -21,13 +21,13 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.function.BiFunction;
 
 public class NaivePartitioningOperatorTest
 {
@@ -50,16 +50,20 @@ public class NaivePartitioningOperatorTest
         .expectRowsAndColumns(
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21}),
+                .expectColumn("unsorted", new int[]{3, 54, 21})
+                .allColumnsRegistered(),
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5}),
+                .expectColumn("unsorted", new int[]{1, 5})
+                .allColumnsRegistered(),
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{2})
-                .expectColumn("unsorted", new int[]{54}),
+                .expectColumn("unsorted", new int[]{54})
+                .allColumnsRegistered(),
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{4, 4, 4})
                 .expectColumn("unsorted", new int[]{2, 3, 92})
+                .allColumnsRegistered()
         )
         .runToCompletion(op);
   }
@@ -92,8 +96,15 @@ public class NaivePartitioningOperatorTest
   }
 
   @Test
-  public void testFailUnsorted()
+  public void testDoesNotValidateSort()
   {
+    BiFunction<Integer, Integer, RowsAndColumnsHelper> singleHelperMaker =
+        (sorted, unsorted) ->
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{sorted})
+                .expectColumn("unsorted", new int[]{unsorted})
+                .allColumnsRegistered();
+
     RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
             "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
@@ -106,22 +117,18 @@ public class NaivePartitioningOperatorTest
         InlineScanOperator.make(rac)
     );
 
-
-    boolean exceptionThrown = false;
-    try {
-      new OperatorTestHelper()
-          .withPushFn(
-              rac1 -> {
-                Assert.fail("I shouldn't be called, an exception should've been thrown.");
-                return true;
-              }
-          )
-          .runToCompletion(op);
-    }
-    catch (ISE ex) {
-      Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    new OperatorTestHelper(op)
+        .expectRowsAndColumns(
+            singleHelperMaker.apply(0, 3),
+            singleHelperMaker.apply(0, 54),
+            singleHelperMaker.apply(0, 21),
+            singleHelperMaker.apply(1, 1),
+            singleHelperMaker.apply(1, 5),
+            singleHelperMaker.apply(2, 54),
+            singleHelperMaker.apply(4, 2),
+            singleHelperMaker.apply(4, 3),
+            singleHelperMaker.apply(4, 92)
+        )
+        .runToCompletion();
   }
 }

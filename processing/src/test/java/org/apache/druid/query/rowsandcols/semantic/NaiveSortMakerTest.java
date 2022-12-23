@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -54,10 +54,16 @@ public class NaiveSortMakerTest extends SemanticTestBase
     }
 
     final NaiveSortMaker.NaiveSorter intSorter = maker.make(
-        new OrderByColumnSpec("ints", OrderByColumnSpec.Direction.ASCENDING)
+        new ColumnWithDirection("ints", ColumnWithDirection.Direction.ASC)
     );
     final NaiveSortMaker.NaiveSorter stringSorter = maker.make(
-        new OrderByColumnSpec("ints", OrderByColumnSpec.Direction.ASCENDING)
+        new ColumnWithDirection("strs", ColumnWithDirection.Direction.ASC)
+    );
+    final NaiveSortMaker.NaiveSorter intSorterDesc = maker.make(
+        new ColumnWithDirection("ints", ColumnWithDirection.Direction.DESC)
+    );
+    final NaiveSortMaker.NaiveSorter stringSorterDesc = maker.make(
+        new ColumnWithDirection("strs", ColumnWithDirection.Direction.DESC)
     );
 
     RowsAndColumns intermediate = make(MapOfColumnsRowsAndColumns.of(
@@ -66,6 +72,8 @@ public class NaiveSortMakerTest extends SemanticTestBase
     ));
     intSorter.moreData(intermediate);
     stringSorter.moreData(intermediate);
+    intSorterDesc.moreData(intermediate);
+    stringSorterDesc.moreData(intermediate);
 
     intermediate = make(MapOfColumnsRowsAndColumns.of(
         "ints", new IntArrayColumn(new int[]{10, 17, 12, 8, 14, 15}),
@@ -73,6 +81,8 @@ public class NaiveSortMakerTest extends SemanticTestBase
     ));
     intSorter.moreData(intermediate);
     stringSorter.moreData(intermediate);
+    intSorterDesc.moreData(intermediate);
+    stringSorterDesc.moreData(intermediate);
 
     intermediate = make(MapOfColumnsRowsAndColumns.of(
         "ints", new IntArrayColumn(new int[]{6, 18, 11, 14, 9}),
@@ -80,6 +90,8 @@ public class NaiveSortMakerTest extends SemanticTestBase
     ));
     intSorter.moreData(intermediate);
     stringSorter.moreData(intermediate);
+    intSorterDesc.moreData(intermediate);
+    stringSorterDesc.moreData(intermediate);
 
     final RowsAndColumnsHelper helper = new RowsAndColumnsHelper()
         .expectColumn("ints", new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 14, 15, 16, 17, 18, 19})
@@ -97,6 +109,23 @@ public class NaiveSortMakerTest extends SemanticTestBase
 
     final RowsAndColumns strSorted = stringSorter.complete();
     helper.validate(strSorted);
+
+    final RowsAndColumnsHelper descendingHelper = new RowsAndColumnsHelper()
+        .expectColumn("ints", new int[]{19, 18, 17, 16, 15, 14, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0})
+        .expectColumn(
+            "strs",
+            new Object[]{
+                "t", "s", "r", "q", "p", "o", "o", "n", "m", "l", "k", "j", "i", "h", "g", "f", "e", "d", "c", "b", "a"
+            },
+            ColumnType.STRING
+        )
+        .allColumnsRegistered();
+
+    final RowsAndColumns intSortedDesc = intSorterDesc.complete();
+    descendingHelper.validate(intSortedDesc);
+
+    final RowsAndColumns strSortedDesc = stringSorterDesc.complete();
+    descendingHelper.validate(strSortedDesc);
   }
 
   @Test
@@ -113,12 +142,17 @@ public class NaiveSortMakerTest extends SemanticTestBase
     }
 
     final NaiveSortMaker.NaiveSorter sorter = maker.make(
-        new OrderByColumnSpec("ints", OrderByColumnSpec.Direction.ASCENDING)
+        new ColumnWithDirection("ints", ColumnWithDirection.Direction.ASC)
     );
     final NaiveSortMaker.NaiveSorter stringSorter = maker.make(
-        new OrderByColumnSpec("ints", OrderByColumnSpec.Direction.ASCENDING)
+        new ColumnWithDirection("strs", ColumnWithDirection.Direction.ASC)
     );
-
+    final NaiveSortMaker.NaiveSorter sorterDesc = maker.make(
+        new ColumnWithDirection("ints", ColumnWithDirection.Direction.DESC)
+    );
+    final NaiveSortMaker.NaiveSorter stringSorterDesc = maker.make(
+        new ColumnWithDirection("strs", ColumnWithDirection.Direction.DESC)
+    );
 
     final RowsAndColumnsHelper helper = new RowsAndColumnsHelper()
         .expectColumn("ints", new int[]{0, 1, 7, 13, 19})
@@ -130,5 +164,16 @@ public class NaiveSortMakerTest extends SemanticTestBase
 
     final RowsAndColumns stringSorted = stringSorter.complete();
     helper.validate(stringSorted);
+
+    final RowsAndColumnsHelper descendingHelper = new RowsAndColumnsHelper()
+        .expectColumn("ints", new int[]{19, 13, 7, 1, 0})
+        .expectColumn("strs", new Object[]{"t", "n", "h", "b", "a"}, ColumnType.STRING)
+        .allColumnsRegistered();
+
+    final RowsAndColumns sortedDesc = sorterDesc.complete();
+    descendingHelper.validate(sortedDesc);
+
+    final RowsAndColumns stringSortedDesc = stringSorterDesc.complete();
+    descendingHelper.validate(stringSortedDesc);
   }
 }

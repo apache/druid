@@ -20,7 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import it.unimi.dsi.fastutil.Arrays;
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.EmptyRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RearrangedRowsAndColumns;
@@ -42,7 +42,7 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
   }
 
   @Override
-  public NaiveSorter make(ArrayList<OrderByColumnSpec> ordering)
+  public NaiveSorter make(ArrayList<ColumnWithDirection> ordering)
   {
     final NaiveSorter retVal = new DefaultNaiveSorter(ordering);
     retVal.moreData(rac);
@@ -52,9 +52,9 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
   private static class DefaultNaiveSorter implements NaiveSorter
   {
     final ArrayList<RowsAndColumns> racBuffer;
-    private final ArrayList<OrderByColumnSpec> ordering;
+    private final ArrayList<ColumnWithDirection> ordering;
 
-    public DefaultNaiveSorter(ArrayList<OrderByColumnSpec> ordering)
+    public DefaultNaiveSorter(ArrayList<ColumnWithDirection> ordering)
     {
       this.ordering = ordering;
       racBuffer = new ArrayList<>();
@@ -86,12 +86,12 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
       int index = 0;
       int[] direction = new int[ordering.size()];
       ColumnAccessor[] accessors = new ColumnAccessor[ordering.size()];
-      for (OrderByColumnSpec orderByColumnSpec : ordering) {
-        final Column col = rac.findColumn(orderByColumnSpec.getDimension());
+      for (ColumnWithDirection orderByColumnSpec : ordering) {
+        final Column col = rac.findColumn(orderByColumnSpec.getColumn());
         // Null columns are all the same value: null.  Therefore, it is already sorted, so just ignore
         if (col != null) {
           accessors[index] = col.toAccessor();
-          direction[index] = orderByColumnSpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING ? 1 : -1;
+          direction[index] = orderByColumnSpec.getDirection().getDirectionInt();
           ++index;
         }
       }

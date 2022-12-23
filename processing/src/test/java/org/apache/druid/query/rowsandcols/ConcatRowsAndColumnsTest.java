@@ -32,7 +32,7 @@ public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
   }
 
   public static Function<MapOfColumnsRowsAndColumns, ConcatRowsAndColumns> MAKER = input -> {
-    int rowsPerChunk = input.numRows() / 4;
+    int rowsPerChunk = Math.max(1, input.numRows() / 4);
 
     ArrayList<RowsAndColumns> theRac = new ArrayList<>();
 

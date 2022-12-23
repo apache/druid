@@ -25,17 +25,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A semantic interface used to partition a data set based on a given set of dimensions.
+ * A semantic interface used to partition a data set based on a given set of columns.
  * <p>
- * This specifically assumes that it is working with sorted data and, as such, the groups returned
+ * This specifically assumes that it is working with pre-clustered data and, as such, the groups returned
  * should be contiguous and unique (that is, all rows for a given combination of values exist in only one grouping)
  */
-public interface SortedGroupPartitioner
+public interface ClusteredGroupPartitioner
 {
   /**
    * Computes and returns a list of contiguous boundaries for independent groups.  All rows in a specific grouping
    * should have the same values for the identified columns.  Additionally, as this is assuming it is dealing with
-   * sorted data, there should only be a single entry in the return value for a given set of values of the columns.
+   * clustered data, there should only be a single entry in the return value for a given set of values of the columns.
+   * <p>
+   * Note that implementations are not expected to do any validation that the data is pre-clustered.  There is no
+   * expectation that an implementation will identify that the same cluster existed non-contiguously.  It is up to
+   * the caller to ensure that data is clustered correctly before invoking this method.
    *
    * @param columns the columns to partition on
    * @return an int[] representing the start (inclusive) and stop (exclusive) offsets of boundaries.  Boundaries are

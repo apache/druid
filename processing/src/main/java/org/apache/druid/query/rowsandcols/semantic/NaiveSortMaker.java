@@ -20,7 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.util.ArrayList;
@@ -29,12 +29,21 @@ import java.util.ArrayList;
  * A NaiveSorter sorts a stream of data in-place.  In the worst case, that means it needs to buffer up all
  * RowsAndColumns received before it can return anything.  This semantic interface is setup to allow an
  * implementation of RowsAndColumns to know that it is pre-sorted and potentially return sorted data early.
- *
+ * <p>
  * The default implementation cannot actually do this, however, so it is up to the specific concrete RowsAndColumns
  * classes to provide their own implementations that can do this.
  */
 public interface NaiveSortMaker
 {
+  static NaiveSortMaker fromRAC(RowsAndColumns rac)
+  {
+    NaiveSortMaker retVal = rac.as(NaiveSortMaker.class);
+    if (retVal == null) {
+      retVal = new DefaultNaiveSortMaker(rac);
+    }
+    return retVal;
+  }
+
   interface NaiveSorter
   {
     /**
@@ -64,9 +73,10 @@ public interface NaiveSortMaker
    * @param ordering a specification of which columns to sort in which direction
    * @return a NaiveSorter that will sort according to the provided spec
    */
-  NaiveSorter make(ArrayList<OrderByColumnSpec> ordering);
+  NaiveSorter make(ArrayList<ColumnWithDirection> ordering);
 
-  default NaiveSorter make(OrderByColumnSpec... ordering) {
+  default NaiveSorter make(ColumnWithDirection... ordering)
+  {
     return make(Lists.newArrayList(ordering));
   }
 }
