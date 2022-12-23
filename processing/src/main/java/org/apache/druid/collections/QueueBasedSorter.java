@@ -22,7 +22,6 @@ package org.apache.druid.collections;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.ISE;
 
 import java.util.ArrayList;
 import java.util.Comparator;
