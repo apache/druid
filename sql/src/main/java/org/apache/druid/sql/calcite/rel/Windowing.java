@@ -74,14 +74,10 @@ import java.util.List;
  * 1. The support is not yet fully aware of the difference between RANGE and ROWS when evaluating peers. (Note: The
  * built-in functions are all implemented with the correctly defined semantics, so ranking functions that are
  * defined to use RANGE do the right thing)
- * 2. All window functions in one query must use the same windowing definition (the code cannot currently support 2
- * different PARTITION BY X clauses)
- * 3. The windowing logic will not re-sort the data. It assumes that the sub-query was written such that data is
- * pre-sorted in the way that the windowing logic expects.
- * 4. No support for framing last/first functions
- * 5. No nth function
- * 6. No finalization, meaning that aggregators like sketches that rely on finalization might return surprising results
- * 7. No big big test suite of loveliness
+ * 2. No support for framing last/first functions
+ * 3. No nth function
+ * 4. No finalization, meaning that aggregators like sketches that rely on finalization might return surprising results
+ * 5. No big big test suite of loveliness
  */
 public class Windowing
 {
@@ -155,9 +151,7 @@ public class Windowing
         final String aggName = outputNamePrefix + outputNameCounter++;
         expectedOutputColumns.add(aggName);
 
-        final AggregateCall aggCall = aggregateCall;
-
-        ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggCall.getAggregation().getName());
+        ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
@@ -167,7 +161,7 @@ public class Windowing
               partialQuery.getSelectProject(),
               Collections.emptyList(),
               aggName,
-              aggCall,
+              aggregateCall,
               false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
           );
 
@@ -175,9 +169,9 @@ public class Windowing
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
             if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggCall);
+              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
             }
-            throw new CannotBuildQueryException(window, aggCall);
+            throw new CannotBuildQueryException(window, aggregateCall);
           }
 
           aggregations.add(Iterables.getOnlyElement(aggregation.getAggregatorFactories()));
@@ -185,7 +179,7 @@ public class Windowing
           processors.add(maker.make(
               new WindowAggregate(
                   aggName,
-                  aggCall,
+                  aggregateCall,
                   rowSignature,
                   plannerContext,
                   partialQuery.getSelectProject(),
