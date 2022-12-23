@@ -148,7 +148,6 @@ public class SorterTests
   {
     sorter.add(getDatas(1, 0, 0, 1));
     sorter.add(getDatas(2, 0, 0, 2));
-    ISE ise = null;
     try {
       sorter.add(getDatas(3, 0, 0, 3L));
       sorter.drainElement();

@@ -58,12 +58,7 @@ public class QueueBasedSorter<T> implements Sorter<T>
   @Override
   public void add(T[] sorterElement)
   {
-    try {
-      queue.offer(sorterElement);
-    }
-    catch (ClassCastException e) {
-      throw new ISE("The sorted column cannot have different types of values.");
-    }
+    queue.offer(sorterElement);
   }
 
   @Override

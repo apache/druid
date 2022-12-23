@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -534,7 +535,7 @@ public class ScanQueryResultOrderingTest
                                    )
                                    {
                                      return queryRunnerFactory.mergeRunners(
-                                         Execs.directExecutor(),
+                                         DirectQueryProcessingPool.INSTANCE,
                                          runners.stream().map(p -> p.rhs).collect(Collectors.toList())
                                      ).run(
                                          queryPlus.withQuery(
