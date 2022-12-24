@@ -162,7 +162,7 @@ public class NestedPathFinder
   public static String toNormalizedJqPath(List<NestedPathPart> paths)
   {
     if (paths.isEmpty()) {
-      return StructuredDataProcessor.ROOT_LITERAL;
+      return ".";
     }
     StringBuilder bob = new StringBuilder();
     boolean first = true;

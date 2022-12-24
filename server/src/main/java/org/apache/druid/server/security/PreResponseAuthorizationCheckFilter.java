@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
 
@@ -126,7 +127,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       response.addHeader("WWW-Authenticate", authScheme);
     }
     QueryInterruptedException unauthorizedError = new QueryInterruptedException(
-        QueryInterruptedException.UNAUTHORIZED,
+        QueryException.UNAUTHORIZED_ERROR_CODE,
         null,
         null,
         DruidNode.getDefaultHost()

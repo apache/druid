@@ -116,7 +116,8 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
-              readableInput.getChannelFrameReader()
+              readableInput.getChannelFrameReader(),
+              frameContext.jsonMapper()
           );
         }
     );

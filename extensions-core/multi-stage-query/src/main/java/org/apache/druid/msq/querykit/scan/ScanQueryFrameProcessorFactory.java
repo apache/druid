@@ -91,7 +91,8 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         outputChannelHolder,
         new LazyResourceHolder<>(() -> Pair.of(frameWriterFactoryHolder.get(), frameWriterFactoryHolder)),
         runningCountForLimit,
-        frameContext.memoryParameters().getBroadcastJoinMemory()
+        frameContext.memoryParameters().getBroadcastJoinMemory(),
+        frameContext.jsonMapper()
     );
   }
 }

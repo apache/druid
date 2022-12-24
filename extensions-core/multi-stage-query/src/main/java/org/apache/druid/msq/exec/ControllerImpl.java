@@ -264,6 +264,7 @@ public class ControllerImpl implements Controller
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final ConcurrentHashMap<Integer, Integer> stagePartitionCountsForLiveReports = new ConcurrentHashMap<>();
 
+
   private WorkerSketchFetcher workerSketchFetcher;
   // Time at which the query started.
   // For live reports. Written by the main controller thread, read by HTTP threads.
@@ -625,14 +626,21 @@ public class ControllerImpl implements Controller
                 workerSketchFetcher.submitFetcherTask(
                     completeKeyStatisticsInformation,
                     workerTaskIds,
-                    stageDef
+                    stageDef,
+                    queryKernel.getWorkerInputsForStage(stageId).workers()
+                    // we only need tasks which are active for this stage.
                 );
 
             // Add the listener to handle completion.
             clusterByPartitionsCompletableFuture.whenComplete((clusterByPartitionsEither, throwable) -> {
               addToKernelManipulationQueue(holder -> {
                 if (throwable != null) {
-                  holder.failStageForReason(stageId, UnknownFault.forException(throwable));
+                  log.error("Error while fetching stats for stageId[%s]", stageId);
+                  if (throwable instanceof MSQException) {
+                    holder.failStageForReason(stageId, ((MSQException) throwable).getFault());
+                  } else {
+                    holder.failStageForReason(stageId, UnknownFault.forException(throwable));
+                  }
                 } else if (clusterByPartitionsEither.isError()) {
                   holder.failStageForReason(stageId, new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
                 } else {
@@ -990,7 +998,7 @@ public class ControllerImpl implements Controller
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
-                    .put(GroupByQuery.class, new GroupByQueryKit())
+                    .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
                     .build();
 
     return new MultiQueryKit(kitMap);

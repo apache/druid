@@ -25,7 +25,6 @@ import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -77,15 +76,16 @@ public class QueryKitUtils
    */
   public static final String CTX_TIME_COLUMN_NAME = "__timeColumn";
 
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-
-  public static Granularity getSegmentGranularityFromContext(@Nullable final Map<String, Object> context)
+  public static Granularity getSegmentGranularityFromContext(
+      final ObjectMapper objectMapper,
+      @Nullable final Map<String, Object> context
+  )
   {
     final Object o = context == null ? null : context.get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
 
     if (o instanceof String) {
       try {
-        return OBJECT_MAPPER.readValue((String) o, Granularity.class);
+        return objectMapper.readValue((String) o, Granularity.class);
       }
       catch (JsonProcessingException e) {
         throw new ISE("Invalid segment granularity [%s]", o);
@@ -189,9 +189,10 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final Query<?> query)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
   {
-    final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(query.getContext());
+    final Granularity segmentGranularity =
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
     final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {

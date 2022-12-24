@@ -20,13 +20,15 @@
 package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ParameterizedDefn;
+import org.apache.druid.catalog.model.PropertyAttributes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.table.ExternalTableDefn.FormattedExternalTableDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
@@ -40,16 +42,17 @@ import org.junit.experimental.categories.Category;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
 @Category(CatalogTest.class)
-public class HttpInputTableTest
+public class HttpInputTableTest extends BaseExternTableTest
 {
-  private final ObjectMapper mapper = new ObjectMapper();
   private final HttpTableDefn tableDefn = new HttpTableDefn();
   private final TableBuilder baseBuilder = TableBuilder.of(tableDefn)
       .description("http input")
@@ -84,16 +87,16 @@ public class HttpInputTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
+    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
     assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
     assertEquals("http://foo.com/my.csv", sourceSpec.getUris().get(0).toString());
 
     // Just a sanity check: details of CSV conversion are tested elsewhere.
-    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat();
+    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat;
     assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
 
-    RowSignature sig = externSpec.signature();
+    RowSignature sig = externSpec.signature;
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
@@ -114,7 +117,7 @@ public class HttpInputTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
+    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
     assertEquals("SECRET", ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable());
   }
@@ -134,17 +137,17 @@ public class HttpInputTableTest
     // Parameters
     ParameterizedDefn parameterizedTable = tableDefn;
     assertEquals(1, parameterizedTable.parameters().size());
-    assertNotNull(parameterizedTable.parameter(HttpTableDefn.URIS_PARAMETER));
+    assertNotNull(findProperty(parameterizedTable.parameters(), HttpTableDefn.URIS_PROPERTY));
 
     // Apply parameters
     Map<String, Object> params = ImmutableMap.of(
-        HttpTableDefn.URIS_PARAMETER, "foo.csv,bar.csv"
+        HttpTableDefn.URIS_PROPERTY, "foo.csv,bar.csv"
     );
 
     // Convert to an external spec
     ExternalTableSpec externSpec = parameterizedTable.applyParameters(table, params);
 
-    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource();
+    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
     assertEquals("SECRET", ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable());
     assertEquals(
@@ -165,7 +168,7 @@ public class HttpInputTableTest
 
     // Apply parameters
     Map<String, Object> params = ImmutableMap.of(
-        HttpTableDefn.URIS_PARAMETER, "foo.csv,bar.csv"
+        HttpTableDefn.URIS_PROPERTY, "foo.csv,bar.csv"
     );
 
     // Convert to an external spec
@@ -193,7 +196,7 @@ public class HttpInputTableTest
         .buildResolved(mapper);
 
     Map<String, Object> params = ImmutableMap.of(
-        HttpTableDefn.URIS_PARAMETER, "foo.csv"
+        HttpTableDefn.URIS_PROPERTY, "foo.csv"
     );
     assertThrows(IAE.class, () -> tableDefn.applyParameters(table, params));
   }
@@ -208,5 +211,49 @@ public class HttpInputTableTest
         .buildResolved(mapper);
 
     assertThrows(IAE.class, () -> table.validate());
+  }
+
+  @Test
+  public void testSqlFunction()
+  {
+    List<PropertyDefn<?>> params = tableDefn.tableFunctionParameters();
+
+    // Ensure the relevant properties are available as SQL function parameters
+    PropertyDefn<?> userProp = findProperty(params, HttpTableDefn.USER_PROPERTY);
+    assertNotNull(userProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(userProp));
+
+    PropertyDefn<?> pwdProp = findProperty(params, HttpTableDefn.PASSWORD_PROPERTY);
+    assertNotNull(pwdProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(pwdProp));
+
+    PropertyDefn<?> urisProp = findProperty(params, HttpTableDefn.URIS_PROPERTY);
+    assertNotNull(urisProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(urisProp));
+
+    assertNull(findProperty(params, HttpTableDefn.URI_TEMPLATE_PROPERTY));
+
+    PropertyDefn<?> formatProp = findProperty(params, FormattedExternalTableDefn.FORMAT_PROPERTY);
+    assertNotNull(formatProp);
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(formatProp));
+
+    // Pretend to accept values for the SQL parameters.
+    final ResolvedTable table = TableBuilder.of(tableDefn)
+        .property(userProp.name(), userProp.decodeSqlValue("bob", mapper))
+        .property(pwdProp.name(), pwdProp.decodeSqlValue("secret", mapper))
+        .property(urisProp.name(), urisProp.decodeSqlValue("http://foo.com/foo.csv, http://foo.com/bar.csv", mapper))
+        .property(formatProp.name(), formatProp.decodeSqlValue(InputFormats.CSV_FORMAT_TYPE, mapper))
+        .column("x", Columns.VARCHAR)
+        .column("y", Columns.BIGINT)
+        .buildResolved(mapper);
+
+    ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
+    HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
+    assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
+    assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
+    assertEquals(
+        HttpTableDefn.convertUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
+        sourceSpec.getUris()
+    );
   }
 }

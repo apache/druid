@@ -71,7 +71,7 @@ public class SegmentAllocationQueueTest
       }
 
       @Override
-      public long getBatchAllocationMaxWaitTime()
+      public long getBatchAllocationWaitTime()
       {
         return 0;
       }
@@ -247,6 +247,23 @@ public class SegmentAllocationQueueTest
         + "to determine if metadata operations are slow.",
         t.getMessage()
     );
+  }
+
+  @Test
+  public void testMaxBatchSize()
+  {
+    for (int i = 0; i < 500; ++i) {
+      SegmentAllocateRequest request =
+          allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+      allocationQueue.add(request);
+    }
+
+    // Verify that next request is added to a new batch
+    Assert.assertEquals(1, allocationQueue.size());
+    SegmentAllocateRequest request =
+        allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+    allocationQueue.add(request);
+    Assert.assertEquals(2, allocationQueue.size());
   }
 
   @Test

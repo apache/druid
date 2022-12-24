@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -112,6 +113,19 @@ public class QueryDataSource implements DataSource
     return null;
   }
 
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    final Query<?> subQuery = this.getQuery();
+    if (!(subQuery instanceof BaseQuery)) {
+      // We must verify that the subQuery is a BaseQuery, because it is required to make
+      // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
+      // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+      throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+    }
+    final DataSource current = subQuery.getDataSource();
+    return current.getAnalysis().maybeWithBaseQuery(subQuery);
+  }
 
   @Override
   public String toString()
