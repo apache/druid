@@ -78,6 +78,12 @@ public class ClusterByTest
   }
 
   @Test
+  public void test_sortable()
+  {
+    // TODO(gianm): add test
+  }
+
+  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(ClusterBy.class)
