@@ -39,18 +39,18 @@ public class AdjustedRuntimeInfo extends RuntimeInfo
   @Override
   public int getAvailableProcessors()
   {
-    return Math.max(1, super.getAvailableProcessors() / numTasksInJvm);
+    return Math.max(1, base.getAvailableProcessors() / numTasksInJvm);
   }
 
   @Override
   public long getMaxHeapSizeBytes()
   {
-    return super.getMaxHeapSizeBytes() / numTasksInJvm;
+    return base.getMaxHeapSizeBytes() / numTasksInJvm;
   }
 
   @Override
   public long getDirectMemorySizeBytes()
   {
-    return super.getDirectMemorySizeBytes() / numTasksInJvm;
+    return base.getDirectMemorySizeBytes() / numTasksInJvm;
   }
 }

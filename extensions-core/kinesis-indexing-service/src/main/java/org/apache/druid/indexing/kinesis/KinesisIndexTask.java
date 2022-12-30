@@ -97,25 +97,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   {
     KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
-    final int fetchThreads = tuningConfig.getFetchThreads() != null
-                             ? tuningConfig.getFetchThreads()
-                             : runtimeInfo.getAvailableProcessors() * 2;
-
-    Preconditions.checkArgument(
-        fetchThreads > 0,
-        "Must have at least one background fetch thread for the record supplier"
-    );
-
-    final int recordsPerFetch = ioConfig.getRecordsPerFetchOrDefault(
-        runtimeInfo.getMaxHeapSizeBytes(),
-        fetchThreads
-    );
-
-    final int recordBufferSize = tuningConfig.getRecordBufferSizeOrDefault(
-        runtimeInfo.getMaxHeapSizeBytes(),
-        ioConfig.isDeaggregate()
-    );
-
+    final int fetchThreads = computeFetchThreads(runtimeInfo, tuningConfig.getFetchThreads());
+    final int recordsPerFetch = ioConfig.getRecordsPerFetchOrDefault(runtimeInfo.getMaxHeapSizeBytes(), fetchThreads);
+    final int recordBufferSize =
+        tuningConfig.getRecordBufferSizeOrDefault(runtimeInfo.getMaxHeapSizeBytes(), ioConfig.isDeaggregate());
     final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate());
 
     log.info(
@@ -172,5 +157,23 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   AWSCredentialsConfig getAwsCredentialsConfig()
   {
     return awsCredentialsConfig;
+  }
+
+  @VisibleForTesting
+  static int computeFetchThreads(final RuntimeInfo runtimeInfo, final Integer configuredFetchThreads)
+  {
+    final int fetchThreads;
+    if (configuredFetchThreads != null) {
+      fetchThreads = configuredFetchThreads;
+    } else {
+      fetchThreads = runtimeInfo.getAvailableProcessors() * 2;
+    }
+
+    Preconditions.checkArgument(
+        fetchThreads > 0,
+        "Must have at least one background fetch thread for the record supplier"
+    );
+
+    return fetchThreads;
   }
 }
