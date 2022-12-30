@@ -315,7 +315,7 @@ public class KerberosAuthenticator implements Authenticator
               // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
               request.setAttribute(
                   AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                  new AuthenticationResult(token.getName(), authorizerName, name, null)
+                  new AuthenticationResult(token.getUserName(), authorizerName, name, null)
               );
               doFilter(filterChain, httpRequest, httpResponse);
             }
