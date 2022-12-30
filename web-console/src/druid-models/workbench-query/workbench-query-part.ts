@@ -65,9 +65,11 @@ export class WorkbenchQueryPart {
     const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/i)?.index;
     if (typeof matchInsertReplaceIndex !== 'number') return;
 
-    const matchEnd = queryFragment.match(/\b(?:SELECT|WITH)\b|$/i);
+    const queryStartingWithInsertOrReplace = queryFragment.substring(matchInsertReplaceIndex);
+
+    const matchEnd = queryStartingWithInsertOrReplace.match(/\b(?:SELECT|WITH)\b|$/i);
     const fragmentQuery = SqlQuery.maybeParse(
-      queryFragment.substring(matchInsertReplaceIndex, matchEnd?.index) + ' SELECT * FROM t',
+      queryStartingWithInsertOrReplace.substring(0, matchEnd?.index) + ' SELECT * FROM t',
     );
     if (!fragmentQuery) return;
 

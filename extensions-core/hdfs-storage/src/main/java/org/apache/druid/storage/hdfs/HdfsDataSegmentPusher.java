@@ -54,7 +54,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
   private final Configuration hadoopConfig;
-  private final ObjectMapper jsonMapper;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
   // Please see https://github.com/apache/druid/pull/5684
@@ -68,7 +67,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   )
   {
     this.hadoopConfig = hadoopConfig;
-    this.jsonMapper = jsonMapper;
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
         () -> {

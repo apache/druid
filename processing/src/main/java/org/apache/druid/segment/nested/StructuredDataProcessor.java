@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.collect.ImmutableSet;
-
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,29 +30,23 @@ import java.util.Set;
 
 public abstract class StructuredDataProcessor
 {
-  public static final String ROOT_LITERAL = ".";
-  private static final Set<String> ROOT_LITERAL_FIELDS = ImmutableSet.of(ROOT_LITERAL);
-
-  public abstract int processLiteralField(String fieldName, Object fieldValue);
+  public abstract int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
 
   /**
-   * Process fields, returning a list of all "normalized" 'jq' paths to literal fields, consistent with the output of
-   * {@link NestedPathFinder#toNormalizedJqPath(List)}.
-   *
-   * Note: in the future, {@link ProcessResults#getLiteralFields()} should instead probably be modified to deal in
-   * lists of {@link NestedPathPart} instead so that callers can decide how to represent the path instead of assuing
-   * 'jq' syntax.
+   * Process fields, returning a list of all paths to literal fields, represented as an ordered sequence of
+   * {@link NestedPathPart}.
    */
   public ProcessResults processFields(Object raw)
   {
     Queue<Field> toProcess = new ArrayDeque<>();
     raw = StructuredData.unwrap(raw);
+    ArrayList<NestedPathPart> newPath = new ArrayList<>();
     if (raw instanceof Map) {
-      toProcess.add(new MapField("", (Map<String, ?>) raw));
+      toProcess.add(new MapField(newPath, (Map<String, ?>) raw));
     } else if (raw instanceof List) {
-      toProcess.add(new ListField(ROOT_LITERAL, (List<?>) raw));
+      toProcess.add(new ListField(newPath, (List<?>) raw));
     } else {
-      return new ProcessResults().withFields(ROOT_LITERAL_FIELDS).withSize(processLiteralField(ROOT_LITERAL, raw));
+      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw));
     }
 
     ProcessResults accumulator = new ProcessResults();
@@ -76,17 +69,18 @@ public abstract class StructuredDataProcessor
     for (Map.Entry<String, ?> entry : map.getMap().entrySet()) {
       // add estimated size of string key
       processResults.addSize(estimateStringSize(entry.getKey()));
-      final String fieldName = map.getName() + ".\"" + entry.getKey() + "\"";
       Object value = StructuredData.unwrap(entry.getValue());
       // lists and maps go back in the queue
+      final ArrayList<NestedPathPart> newPath = new ArrayList<>(map.getPath());
+      newPath.add(new NestedPathField(entry.getKey()));
       if (value instanceof List) {
         List<?> theList = (List<?>) value;
-        toProcess.add(new ListField(fieldName, theList));
+        toProcess.add(new ListField(newPath, theList));
       } else if (value instanceof Map) {
-        toProcess.add(new MapField(fieldName, (Map<String, ?>) value));
+        toProcess.add(new MapField(newPath, (Map<String, ?>) value));
       } else {
         // literals get processed
-        processResults.addLiteralField(fieldName, processLiteralField(fieldName, value));
+        processResults.addLiteralField(newPath, processLiteralField(newPath, value));
       }
     }
     return processResults;
@@ -98,16 +92,17 @@ public abstract class StructuredDataProcessor
     ProcessResults results = new ProcessResults().withSize(8);
     final List<?> theList = list.getList();
     for (int i = 0; i < theList.size(); i++) {
-      final String listFieldName = list.getName() + "[" + i + "]";
+      final ArrayList<NestedPathPart> newPath = new ArrayList<>(list.getPath());
+      newPath.add(new NestedPathArrayElement(i));
       final Object element = StructuredData.unwrap(theList.get(i));
       // maps and lists go back into the queue
       if (element instanceof Map) {
-        toProcess.add(new MapField(listFieldName, (Map<String, ?>) element));
+        toProcess.add(new MapField(newPath, (Map<String, ?>) element));
       } else if (element instanceof List) {
-        toProcess.add(new ListField(listFieldName, (List<?>) element));
+        toProcess.add(new ListField(newPath, (List<?>) element));
       } else {
         // literals get processed
-        results.addLiteralField(listFieldName, processLiteralField(listFieldName, element));
+        results.addLiteralField(newPath, processLiteralField(newPath, element));
       }
     }
     return results;
@@ -115,16 +110,16 @@ public abstract class StructuredDataProcessor
 
   abstract static class Field
   {
-    private final String name;
+    private final ArrayList<NestedPathPart> path;
 
-    protected Field(String name)
+    protected Field(ArrayList<NestedPathPart> path)
     {
-      this.name = name;
+      this.path = path;
     }
 
-    public String getName()
+    public ArrayList<NestedPathPart> getPath()
     {
-      return name;
+      return path;
     }
   }
 
@@ -132,9 +127,9 @@ public abstract class StructuredDataProcessor
   {
     private final List<?> list;
 
-    ListField(String name, List<?> list)
+    ListField(ArrayList<NestedPathPart> path, List<?> list)
     {
-      super(name);
+      super(path);
       this.list = list;
     }
 
@@ -148,9 +143,9 @@ public abstract class StructuredDataProcessor
   {
     private final Map<String, ?> map;
 
-    MapField(String name, Map<String, ?> map)
+    MapField(ArrayList<NestedPathPart> path, Map<String, ?> map)
     {
-      super(name);
+      super(path);
       this.map = map;
     }
 
@@ -165,7 +160,7 @@ public abstract class StructuredDataProcessor
    */
   public static class ProcessResults
   {
-    private Set<String> literalFields;
+    private Set<ArrayList<NestedPathPart>> literalFields;
     private int estimatedSize;
 
     public ProcessResults()
@@ -174,7 +169,7 @@ public abstract class StructuredDataProcessor
       estimatedSize = 0;
     }
 
-    public Set<String> getLiteralFields()
+    public Set<ArrayList<NestedPathPart>> getLiteralFields()
     {
       return literalFields;
     }
@@ -190,16 +185,10 @@ public abstract class StructuredDataProcessor
       return this;
     }
 
-    public ProcessResults addLiteralField(String fieldName, int sizeOfValue)
+    public ProcessResults addLiteralField(ArrayList<NestedPathPart> fieldPath, int sizeOfValue)
     {
-      literalFields.add(fieldName);
+      literalFields.add(fieldPath);
       this.estimatedSize += sizeOfValue;
-      return this;
-    }
-
-    public ProcessResults withFields(Set<String> fields)
-    {
-      this.literalFields = fields;
       return this;
     }
 

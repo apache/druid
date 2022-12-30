@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 
 import java.util.Arrays;
 

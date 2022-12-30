@@ -81,9 +81,9 @@ public class LimitedRowsAndColumns implements RowsAndColumns
           }
 
           @Override
-          protected int getActualCell(int cell)
+          protected int getActualValue(int rowNum)
           {
-            int retVal = start + cell;
+            int retVal = start + rowNum;
             if (retVal >= end) {
               throw new ISE("Index out of bounds[%d] >= [%d], start[%s]", retVal, end, start);
             }
@@ -91,7 +91,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
           }
 
           @Override
-          protected boolean outsideBounds(int cell)
+          protected boolean outsideBounds(int rowNum)
           {
             return false;
           }

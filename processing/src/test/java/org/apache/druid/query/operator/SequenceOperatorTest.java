@@ -21,8 +21,8 @@ package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,19 +38,17 @@ public class SequenceOperatorTest
         MapOfColumnsRowsAndColumns.of("hi", new IntArrayColumn(new int[]{1}))
     )));
 
-    op.open();
-
-    RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
-        .expectColumn("hi", new int[]{1})
-        .allColumnsRegistered();
-
-    expectations.validate(op.next());
-    Assert.assertTrue(op.hasNext());
-
-    expectations.validate(op.next());
-    Assert.assertFalse(op.hasNext());
-
-    op.close(true);
-    op.close(false);
+    new OperatorTestHelper()
+        .withPushFn(
+            rac -> {
+              new RowsAndColumnsHelper()
+                  .expectColumn("hi", new int[]{1})
+                  .allColumnsRegistered()
+                  .validate(rac);
+              return true;
+            }
+        )
+        .withFinalValidation(testReceiver -> Assert.assertEquals(2, testReceiver.getNumPushed()))
+        .runToCompletion(op);
   }
 }

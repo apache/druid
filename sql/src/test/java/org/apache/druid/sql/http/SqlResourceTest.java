@@ -26,11 +26,11 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.commons.io.output.NullOutputStream;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,7 +54,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -67,6 +67,8 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
@@ -97,7 +99,6 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -107,13 +108,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.StreamingOutput;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -160,7 +160,7 @@ public class SqlResourceTest extends CalciteTestBase
   private SpecificSegmentsQuerySegmentWalker walker;
   private TestRequestLogger testRequestLogger;
   private SqlResource resource;
-  private HttpServletRequest req;
+  private MockHttpServletRequest req;
   private ListeningExecutorService executorService;
   private SqlLifecycleManager lifecycleManager;
   private NativeSqlEngine engine;
@@ -223,7 +223,7 @@ public class SqlResourceTest extends CalciteTestBase
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
-    req = request(true);
+    req = request();
 
     testRequestLogger = new TestRequestLogger();
 
@@ -310,9 +310,9 @@ public class SqlResourceTest extends CalciteTestBase
     );
   }
 
-  HttpServletRequest request(boolean ok)
+  MockHttpServletRequest request()
   {
-    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT, ok);
+    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
   }
 
   @After
@@ -326,21 +326,19 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnauthorized() throws Exception
+  public void testUnauthorized()
   {
-    HttpServletRequest testRequest = request(false);
-
     try {
-      resource.doPost(
+      postForResponse(
           createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
-          testRequest
+          request()
       );
       Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
     }
     catch (ForbiddenException e) {
       // expected
     }
-    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -382,10 +380,10 @@ public class SqlResourceTest extends CalciteTestBase
     mockRespContext.put(ResponseContext.Keys.instance().keyOf("uncoveredIntervalsOverflowed"), "true");
     responseContextSupplier.set(mockRespContext);
 
-    final Response response = resource.doPost(sqlQuery, makeRegularUserReq());
+    final MockHttpServletResponse response = postForResponse(sqlQuery, makeRegularUserReq());
 
     Map responseContext = JSON_MAPPER.readValue(
-        (String) response.getMetadata().getFirst("X-Druid-Response-Context"),
+        Iterables.getOnlyElement(response.headers.get("X-Druid-Response-Context")),
         Map.class
     );
     Assert.assertEquals(
@@ -396,9 +394,7 @@ public class SqlResourceTest extends CalciteTestBase
         responseContext
     );
 
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    Object results = JSON_MAPPER.readValue(baos.toByteArray(), Object.class);
+    Object results = JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class);
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -648,7 +644,7 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testArrayResultFormatWithErrorAfterFirstRow() throws Exception
+  public void testArrayResultFormatWithErrorAfterSecondRow() throws Exception
   {
     sequenceMapFnSupplier.set(errorAfterSecondRowMapFn());
 
@@ -723,41 +719,100 @@ public class SqlResourceTest extends CalciteTestBase
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
-    Assert.assertEquals(
-        ImmutableList.of(
-            EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS,
-            EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS,
-            EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS,
-            Arrays.asList(
-                "2000-01-01T00:00:00.000Z",
-                "",
-                "a",
-                "[\"a\",\"b\"]",
-                1,
-                1.0,
-                1.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
-            ),
-            Arrays.asList(
-                "2000-01-02T00:00:00.000Z",
-                "10.1",
-                nullStr,
-                "[\"b\",\"c\"]",
-                1,
-                2.0,
-                2.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
-            )
-        ),
-        doPost(
-            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>()
-            {
-            }
-        ).rhs
+    final String hllStr = "org.apache.druid.hll.VersionOneHyperLogLogCollector";
+    List[] expectedQueryResults = new List[]{
+        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, hllStr, nullStr),
+        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", nullStr, "[\"b\",\"c\"]", 1, 2.0, 2.0, hllStr, nullStr)
+    };
+
+    MockHttpServletResponse response = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        req.mimic()
     );
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {
+          {
+            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
+            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
+            addAll(Arrays.asList(expectedQueryResults));
+          }
+        },
+        JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoSqlTypesHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoSqlTypesHeader.getStatus());
+    Assert.assertEquals("yes", responseNoSqlTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {
+          {
+            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
+            addAll(Arrays.asList(expectedQueryResults));
+          }
+        },
+        JSON_MAPPER.readValue(responseNoSqlTypesHeader.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoTypesHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, false, true, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoTypesHeader.getStatus());
+    Assert.assertEquals("yes", responseNoTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {
+          {
+            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
+            addAll(Arrays.asList(expectedQueryResults));
+          }
+        },
+        JSON_MAPPER.readValue(responseNoTypesHeader.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoTypes = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, false, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoTypes.getStatus());
+    Assert.assertEquals("yes", responseNoTypes.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        new ArrayList<Object>()
+        {
+          {
+            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
+            addAll(Arrays.asList(expectedQueryResults));
+          }
+        },
+        JSON_MAPPER.readValue(responseNoTypes.baos.toByteArray(), Object.class)
+    );
+
+    MockHttpServletResponse responseNoHeader = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
+        req.mimic()
+    );
+
+    Assert.assertEquals(200, responseNoHeader.getStatus());
+    Assert.assertNull(responseNoHeader.getHeader("X-Druid-SQL-Header-Included"));
+    Assert.assertEquals(
+        Arrays.asList(expectedQueryResults),
+        JSON_MAPPER.readValue(responseNoHeader.baos.toByteArray(), Object.class)
+    );
+
   }
 
   @Test
@@ -765,6 +820,15 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // Test a query that returns null header for some of the columns
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
+
+    MockHttpServletResponse response = postForResponse(
+        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        req
+    );
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
+
     Assert.assertEquals(
         ImmutableList.of(
             Collections.singletonList("EXPR$0"),
@@ -777,12 +841,7 @@ public class SqlResourceTest extends CalciteTestBase
                 )
             )
         ),
-        doPost(
-            new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
-            new TypeReference<List<List<Object>>>()
-            {
-            }
-        ).rhs
+        JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
     );
   }
 
@@ -1313,7 +1372,7 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorCode(), exception.getErrorCode());
+    Assert.assertEquals("SQL query is unsupported", exception.getErrorCode());
     Assert.assertEquals(PlanningError.UNSUPPORTED_SQL_ERROR.getErrorClass(), exception.getErrorClass());
     Assert.assertTrue(
         exception.getMessage()
@@ -1365,7 +1424,7 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(exception.getErrorCode(), ResourceLimitExceededException.ERROR_CODE);
+    Assert.assertEquals(exception.getErrorCode(), QueryException.RESOURCE_LIMIT_EXCEEDED_ERROR_CODE);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1396,18 +1455,18 @@ public class SqlResourceTest extends CalciteTestBase
     ).lhs;
 
     Assert.assertNotNull(exception);
-    Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, exception.getErrorCode());
+    Assert.assertEquals(QueryException.QUERY_UNSUPPORTED_ERROR_CODE, exception.getErrorCode());
     Assert.assertEquals(QueryUnsupportedException.class.getName(), exception.getErrorClass());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
-  public void testErrorResponseReturnSameQueryIdWhenSetInContext() throws Exception
+  public void testErrorResponseReturnSameQueryIdWhenSetInContext()
   {
     String queryId = "id123";
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = resource.doPost(
+    final MockHttpServletResponse response = postForResponse(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
             ResultFormat.OBJECT,
@@ -1420,18 +1479,18 @@ public class SqlResourceTest extends CalciteTestBase
         req
     );
     Assert.assertNotEquals(200, response.getStatus());
-    final MultivaluedMap<String, Object> headers = response.getMetadata();
-    Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
-    Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
-    Assert.assertEquals(queryId, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0));
+    Assert.assertEquals(
+        queryId,
+        Iterables.getOnlyElement(response.headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER))
+    );
   }
 
   @Test
-  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext() throws Exception
+  public void testErrorResponseReturnNewQueryIdWhenNotSetInContext()
   {
     String errorMessage = "This will be supported in Druid 9999";
     failOnExecute(errorMessage);
-    final Response response = resource.doPost(
+    final MockHttpServletResponse response = postForResponse(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
             ResultFormat.OBJECT,
@@ -1444,10 +1503,9 @@ public class SqlResourceTest extends CalciteTestBase
         req
     );
     Assert.assertNotEquals(200, response.getStatus());
-    final MultivaluedMap<String, Object> headers = response.getMetadata();
-    Assert.assertTrue(headers.containsKey(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER));
-    Assert.assertEquals(1, headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).size());
-    Assert.assertFalse(Strings.isNullOrEmpty(headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER).get(0).toString()));
+    Assert.assertFalse(
+        Strings.isNullOrEmpty(Iterables.getOnlyElement(response.headers.get(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER)))
+    );
   }
 
   @Test
@@ -1493,7 +1551,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertNull(exception.getMessage());
     Assert.assertNull(exception.getHost());
-    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertEquals(exception.getErrorCode(), QueryException.QUERY_UNSUPPORTED_ERROR_CODE);
     Assert.assertNull(exception.getErrorClass());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
@@ -1527,7 +1585,7 @@ public class SqlResourceTest extends CalciteTestBase
     String errorMessage = "could not assert";
     failOnExecute(errorMessage);
     onExecute = s -> {
-      throw new Error(errorMessage);
+      throw new AssertionError(errorMessage);
     };
     final QueryException exception = doPost(
         new SqlQuery(
@@ -1544,7 +1602,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertNull(exception.getMessage());
     Assert.assertNull(exception.getHost());
-    Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
+    Assert.assertEquals("Unknown exception", exception.getErrorCode());
     Assert.assertNull(exception.getErrorClass());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
@@ -1589,7 +1647,7 @@ public class SqlResourceTest extends CalciteTestBase
         success++;
       } else {
         QueryException interruped = result.lhs;
-        Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, interruped.getErrorCode());
+        Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, interruped.getErrorCode());
         Assert.assertEquals(
             QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 2),
             interruped.getMessage()
@@ -1625,7 +1683,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     ).lhs;
     Assert.assertNotNull(timeoutException);
-    Assert.assertEquals(timeoutException.getErrorCode(), QueryTimeoutException.ERROR_CODE);
+    Assert.assertEquals(timeoutException.getErrorCode(), QueryException.QUERY_TIMEOUT_ERROR_CODE);
     Assert.assertEquals(timeoutException.getErrorClass(), QueryTimeoutException.class.getName());
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
@@ -1639,27 +1697,24 @@ public class SqlResourceTest extends CalciteTestBase
     validateAndAuthorizeLatchSupplier.set(new NonnullPair<>(validateAndAuthorizeLatch, true));
     CountDownLatch planLatch = new CountDownLatch(1);
     planLatchSupplier.set(new NonnullPair<>(planLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
+    Future<MockHttpServletResponse> future = executorService.submit(
+        () -> postForResponse(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeRegularUserReq()
         )
     );
     Assert.assertTrue(validateAndAuthorizeLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     Assert.assertTrue(lifecycleAddLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
     planLatch.countDown();
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
-    response = future.get();
-    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELED,
-        exception.getErrorCode()
-    );
+    MockHttpServletResponse queryResponse = future.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), queryResponse.getStatus());
+    QueryException exception = JSON_MAPPER.readValue(queryResponse.baos.toByteArray(), QueryException.class);
+    Assert.assertEquals("Query cancelled", exception.getErrorCode());
   }
 
   @Test
@@ -1670,26 +1725,23 @@ public class SqlResourceTest extends CalciteTestBase
     planLatchSupplier.set(new NonnullPair<>(planLatch, true));
     CountDownLatch execLatch = new CountDownLatch(1);
     executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
+    Future<MockHttpServletResponse> future = executorService.submit(
+        () -> postForResponse(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
     execLatch.countDown();
-    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
-    response = future.get();
-    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-    QueryException exception = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(
-        QueryInterruptedException.QUERY_CANCELED,
-        exception.getErrorCode()
-    );
+    MockHttpServletResponse queryResponse = future.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), queryResponse.getStatus());
+    QueryException exception = JSON_MAPPER.readValue(queryResponse.baos.toByteArray(), QueryException.class);
+    Assert.assertEquals("Query cancelled", exception.getErrorCode());
   }
 
   @Test
@@ -1700,39 +1752,21 @@ public class SqlResourceTest extends CalciteTestBase
     planLatchSupplier.set(new NonnullPair<>(planLatch, true));
     CountDownLatch execLatch = new CountDownLatch(1);
     executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
+    Future<MockHttpServletResponse> future = executorService.submit(
+        () -> postForResponse(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM foo"),
             makeRegularUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery("invalidQuery", mockRequestForCancel());
-    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    Response cancelResponse = resource.cancelQuery("invalidQuery", makeRequestForCancel());
+    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
     execLatch.countDown();
-    response = future.get();
-    // The response that we get is the actual object created by the SqlResource.  The StreamingOutput object that
-    // the SqlResource returns at the time of writing has resources opened up (the query is already running) which
-    // need to be closed.  As such, the StreamingOutput needs to actually be called in order to cause that close
-    // to occur, so we must get the entity out and call `.write(OutputStream)` on it to invoke the code.
-    try {
-      ((StreamingOutput) response.getEntity()).write(NullOutputStream.NULL_OUTPUT_STREAM);
-    }
-    catch (IllegalStateException e) {
-      // When we actually attempt to write to the output stream, we seem to run into multi-threading issues likely
-      // with our test setup.  Instead of figuring out how to make the thing work, given that we don't actually
-      // care about the response, we are going to just ensure that it was the expected exception and ignore it.
-      // It's possible that this test starts failing suddenly if someone changes the message of the exception, it
-      // should be safe to just update the expected message here too if that happens.
-      Assert.assertEquals(
-          "DefaultQueryMetrics must not be modified from multiple threads. If it is needed to gather dimension or metric information from multiple threads or from an async thread, this information should explicitly be passed between threads (e. g. using Futures), or this DefaultQueryMetrics's ownerThread should be reassigned explicitly",
-          e.getMessage()
-      );
-    }
-    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    MockHttpServletResponse queryResponse = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), queryResponse.getStatus());
   }
 
   @Test
@@ -1743,21 +1777,21 @@ public class SqlResourceTest extends CalciteTestBase
     planLatchSupplier.set(new NonnullPair<>(planLatch, true));
     CountDownLatch execLatch = new CountDownLatch(1);
     executeLatchSupplier.set(new NonnullPair<>(execLatch, false));
-    Future<Response> future = executorService.submit(
-        () -> resource.doPost(
+    Future<MockHttpServletResponse> future = executorService.submit(
+        () -> postForResponse(
             createSimpleQueryWithId(sqlQueryId, "SELECT DISTINCT dim1 FROM forbiddenDatasource"),
             makeSuperUserReq()
         )
     );
     Assert.assertTrue(planLatch.await(3, TimeUnit.SECONDS));
-    Response response = resource.cancelQuery(sqlQueryId, mockRequestForCancel());
-    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    Response cancelResponse = resource.cancelQuery(sqlQueryId, makeRequestForCancel());
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), cancelResponse.getStatus());
 
     Assert.assertFalse(lifecycleManager.getAll(sqlQueryId).isEmpty());
 
     execLatch.countDown();
-    response = future.get();
-    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    MockHttpServletResponse queryResponse = future.get();
+    Assert.assertEquals(Status.OK.getStatusCode(), queryResponse.getStatus());
   }
 
   @Test
@@ -1782,7 +1816,7 @@ public class SqlResourceTest extends CalciteTestBase
         )
     ).lhs;
     Assert.assertNotNull(queryContextException);
-    Assert.assertEquals(BadQueryContextException.ERROR_CODE, queryContextException.getErrorCode());
+    Assert.assertEquals(QueryException.BAD_QUERY_CONTEXT_ERROR_CODE, queryContextException.getErrorCode());
     Assert.assertEquals(BadQueryContextException.ERROR_CLASS, queryContextException.getErrorClass());
     Assert.assertTrue(queryContextException.getMessage().contains("2000'"));
     checkSqlRequestLog(false);
@@ -1859,7 +1893,7 @@ public class SqlResourceTest extends CalciteTestBase
     return doPostRaw(query, req);
   }
 
-  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, HttpServletRequest req)
+  private Pair<QueryException, List<Map<String, Object>>> doPost(final SqlQuery query, MockHttpServletRequest req)
       throws Exception
   {
     return doPost(query, req, new TypeReference<List<Map<String, Object>>>()
@@ -1871,7 +1905,7 @@ public class SqlResourceTest extends CalciteTestBase
   @SuppressWarnings("unchecked")
   private <T> Pair<QueryException, T> doPost(
       final SqlQuery query,
-      final HttpServletRequest req,
+      final MockHttpServletRequest req,
       final TypeReference<T> typeReference
   ) throws Exception
   {
@@ -1885,83 +1919,48 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   // Returns either an error or a result.
-  private Pair<QueryException, String> doPostRaw(final SqlQuery query, final HttpServletRequest req) throws Exception
+  private Pair<QueryException, String> doPostRaw(final SqlQuery query, final MockHttpServletRequest req)
+      throws Exception
   {
-    final Response response = resource.doPost(query, req);
-    if (response.getStatus() == 200) {
-      final StreamingOutput output = (StreamingOutput) response.getEntity();
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      try {
-        output.write(baos);
-      }
-      catch (Exception ignored) {
-        // Suppress errors and return the response so far. Similar to what the real web server would do, if it
-        // started writing a 200 OK and then threw an exception in the middle.
-      }
+    MockHttpServletResponse response = postForResponse(query, req);
 
-      return Pair.of(
-          null,
-          new String(baos.toByteArray(), StandardCharsets.UTF_8)
-      );
+    if (response.getStatus() == 200) {
+      return Pair.of(null, new String(response.baos.toByteArray(), StandardCharsets.UTF_8));
     } else {
-      return Pair.of(
-          JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryException.class),
-          null
-      );
+      return Pair.of(JSON_MAPPER.readValue(response.baos.toByteArray(), QueryException.class), null);
     }
   }
 
-  private HttpServletRequest makeSuperUserReq()
+  @Nonnull
+  private MockHttpServletResponse postForResponse(SqlQuery query, MockHttpServletRequest req)
+  {
+    MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
+
+    Assert.assertNull(resource.doPost(query, req));
+    return response;
+  }
+
+  private MockHttpServletRequest makeSuperUserReq()
   {
     return makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT);
   }
 
-  private HttpServletRequest makeRegularUserReq()
+  private MockHttpServletRequest makeRegularUserReq()
   {
     return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
   }
 
-  private HttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
+  private MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
   {
-    return makeExpectedReq(authenticationResult, true);
-  }
-
-  private HttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult, boolean ok)
-  {
-    HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .anyTimes();
-    EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, ok);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .anyTimes();
-    EasyMock.replay(req);
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
     return req;
   }
 
-  private HttpServletRequest mockRequestForCancel()
+  private MockHttpServletRequest makeRequestForCancel()
   {
-    HttpServletRequest req = EasyMock.createNiceMock(HttpServletRequest.class);
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
-            .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-    EasyMock.replay(req);
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, CalciteTests.REGULAR_USER_AUTH_RESULT);
     return req;
   }
 
@@ -1969,13 +1968,30 @@ public class SqlResourceTest extends CalciteTestBase
   {
     return results -> {
       final AtomicLong rows = new AtomicLong();
-      return results.map(row -> {
-        if (rows.incrementAndGet() == 3) {
-          throw new ISE("Oh no!");
-        } else {
-          return row;
-        }
-      });
+      return results
+          .flatMap(
+              row -> Sequences.simple(new AbstractList<Object[]>()
+              {
+                @Override
+                public Object[] get(int index)
+                {
+                  return row;
+                }
+
+                @Override
+                public int size()
+                {
+                  return 1000;
+                }
+              })
+          )
+          .map(row -> {
+            if (rows.incrementAndGet() == 3) {
+              throw new ISE("Oh no!");
+            } else {
+              return row;
+            }
+          });
     };
   }
 

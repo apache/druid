@@ -21,36 +21,64 @@ package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class OperatorSequenceTest
 {
   @Test
-  public void testSanity()
+  public void testAccumulateButNoYielder()
   {
     OperatorSequence seq = new OperatorSequence(
         () -> InlineScanOperator.make(MapOfColumnsRowsAndColumns.of("hi", new IntArrayColumn(new int[]{1})))
     );
 
-    Assert.assertEquals(1, seq.accumulate(0, (accumulated, in) -> accumulated + 1).intValue());
+    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper()
+        .expectColumn("hi", new int[]{1})
+        .allColumnsRegistered();
 
-    Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
-    {
-      @Override
-      public Integer accumulate(Integer accumulated, RowsAndColumns in)
+    Assert.assertEquals(
+        1,
+        seq.accumulate(
+            0,
+            (accumulated, in) -> {
+              helper.validate(in);
+              return accumulated + 1;
+            }
+        ).intValue()
+    );
+
+    boolean exceptionThrown = false;
+    try {
+      Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
       {
-        yield();
-        return accumulated + 1;
-      }
-    });
-    Assert.assertFalse(yielder.isDone());
-    Assert.assertEquals(1, yielder.get().intValue());
+        @Override
+        public Integer accumulate(Integer accumulated, RowsAndColumns in)
+        {
+          Assert.fail("This should never be called, because we expect a UOE before this point");
+          this.yield();
+          helper.validate(in);
+          return accumulated + 1;
+        }
+      });
 
-    yielder = yielder.next(0);
-    Assert.assertTrue(yielder.isDone());
+      // The exception will have been thrown before this point, in which case one might wonder why the code here
+      // remains.  It is because this code is a correct validation of what should happen if OperatorSequence *did*
+      // implement the Yielder.  It's kept for posterity in case we ever choose to implement it using threads.
+      Assert.assertFalse(yielder.isDone());
+      Assert.assertEquals(1, yielder.get().intValue());
+
+      yielder = yielder.next(0);
+      Assert.assertTrue(yielder.isDone());
+    }
+    catch (UnsupportedOperationException ex) {
+      Assert.assertEquals("Cannot convert an Operator to a Yielder", ex.getMessage());
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
   }
 }

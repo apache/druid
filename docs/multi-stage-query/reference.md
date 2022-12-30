@@ -134,10 +134,6 @@ You must either provide the `baseDir` or the list of `files`. You can provide bo
 the files are assumed relative to the `baseDir`. If you provide a `filter`, you must provide the
 `baseDir`.
 
-Note that, due to [Issue #13359](https://github.com/apache/druid/issues/13359), the functionality
-described above is broken. Until that issue is resolved, you must provide one or more absolute
-file paths in the `files` property and the other two properties are unavailable.
-
 #### Table Function Format
 
 Each of the table functions above requires that you specify a format.
@@ -325,7 +321,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1.| 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
-| `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `AUTO` |
+| `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `PARALLEL` |
 
 ## Sketch Merging Mode
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.
