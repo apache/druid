@@ -295,6 +295,7 @@ public class TaskToolboxTest
         adjustedRuntimeInfo.getDirectMemorySizeBytes()
     );
 
+    Mockito.verify(appenderatorsManager).getWorkerConfig();
     Mockito.verifyNoMoreInteractions(appenderatorsManager);
   }
 }
