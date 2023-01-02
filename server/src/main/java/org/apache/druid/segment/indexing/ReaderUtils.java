@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.Transform;
+import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -46,9 +47,10 @@ public class ReaderUtils
 
   public static Set<String> getColumnsRequiredForIngestion(
       Set<String> fullInputSchema,
-      DataSchema dataSchema,
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
+      TransformSpec transformSpec,
+      AggregatorFactory[] aggregators,
       @Nullable JSONPathSpec flattenSpec
   )
   {
@@ -68,7 +70,7 @@ public class ReaderUtils
           // Parse PATH type to determine columns needed
           String parsedPath;
           try {
-            parsedPath = JsonPath.compile(fields.getExpr()).getPath();
+            parsedPath = JSONPathFieldSpec.getCompilePath(fields.getExpr());
           }
           catch (Exception e) {
             // We can skip columns used in this path as the path is invalid
@@ -119,7 +121,7 @@ public class ReaderUtils
     }
 
     // Determine any fields we need to read from parquet file that is used in the transformSpec
-    List<Transform> transforms = dataSchema.getTransformSpec().getTransforms();
+    List<Transform> transforms = transformSpec.getTransforms();
     for (Transform transform : transforms) {
       fieldsRequired.addAll(transform.getRequiredColumns());
     }
@@ -131,7 +133,7 @@ public class ReaderUtils
     }
 
     // Determine any fields we need to read from parquet file that is used in the metricsSpec
-    for (AggregatorFactory agg : dataSchema.getAggregators()) {
+    for (AggregatorFactory agg : aggregators) {
       fieldsRequired.addAll(agg.requiredFields());
     }
 

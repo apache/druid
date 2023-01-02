@@ -62,9 +62,10 @@ public class DruidParquetReadSupport extends GroupReadSupport
 
     Set<String> requiredFields = ReaderUtils.getColumnsRequiredForIngestion(
         fullSchemaFields,
-        config.getSchema().getDataSchema(),
         parseSpec.getTimestampSpec(),
         parseSpec.getDimensionsSpec(),
+        config.getSchema().getDataSchema().getTransformSpec(),
+        config.getSchema().getDataSchema().getAggregators(),
         flattenSpec
     );
 
