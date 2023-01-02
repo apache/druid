@@ -19,29 +19,19 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import com.jayway.jsonpath.JsonPath;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
-import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.ReaderUtils;
-import org.apache.druid.segment.transform.Transform;
 import org.apache.parquet.hadoop.api.InitContext;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
-import org.mortbay.log.Log;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class DruidParquetReadSupport extends GroupReadSupport
