@@ -26,12 +26,15 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.indexing.ReaderUtils;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.parquet.hadoop.api.InitContext;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
+import org.mortbay.log.Log;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,13 +42,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DruidParquetReadSupport extends GroupReadSupport
 {
   private static final Logger LOG = new Logger(DruidParquetReadSupport.class);
-  private static final Pattern JSON_PATH_PATTERN = Pattern.compile("\\[(.*?)]");
-  private static final Pattern BRACKET_NOTATED_CHILD_PATTERN = Pattern.compile("'(.*?)'");
-
 
   /**
    * Select the columns from the parquet schema that are used in the schema of the ingestion job
@@ -63,108 +64,27 @@ public class DruidParquetReadSupport extends GroupReadSupport
 
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     ParseSpec parseSpec = config.getParser().getParseSpec();
-
-    // We need to read timestamp column for Druid timestamp field
-    String tsField = parseSpec.getTimestampSpec().getTimestampColumn();
-
-    // Find columns of parquet file we need to read from the flattenSpec
-    Set<String> columnsInFlattenSpec = new HashSet<>();
+    JSONPathSpec flattenSpec = null;
     if (parseSpec instanceof ParquetParseSpec && ((ParquetParseSpec) parseSpec).getFlattenSpec() != null) {
-      // Parse columns needed from flattenSpec
-      for (JSONPathFieldSpec fields : ((ParquetParseSpec) parseSpec).getFlattenSpec().getFields()) {
-        if (fields.getType() == JSONPathFieldType.ROOT) {
-          // ROOT type just get top level field using the expr as the key
-          columnsInFlattenSpec.add(fields.getExpr());
-        } else if (fields.getType() == JSONPathFieldType.PATH) {
-          // Parse PATH type to determine columns needed
-          String parsedPath;
-          try {
-            parsedPath = JsonPath.compile(fields.getExpr()).getPath();
-          }
-          catch (Exception e) {
-            // We can skip columns used in this path as the path is invalid
-            LOG.debug("Ignoring columns from JSON path [%s] as path expression is invalid", fields.getExpr());
-            continue;
-          }
-          // Remove the $
-          parsedPath = parsedPath.substring(1);
-          // If the first level is a deep scan, then we need all columns
-          if (parsedPath.length() >= 2 && "..".equals(parsedPath.substring(0, 2))) {
-            return fullSchema;
-          }
-          Matcher jsonPathMatcher = JSON_PATH_PATTERN.matcher(parsedPath);
-          if (!jsonPathMatcher.find()) {
-            LOG.warn("Failed to parse JSON path for required column from path [%s]", fields.getExpr());
-            return fullSchema;
-          }
-          String matchedGroup = jsonPathMatcher.group();
-          Matcher childMatcher = BRACKET_NOTATED_CHILD_PATTERN.matcher(matchedGroup);
-          if (childMatcher.find()) {
-            // Get name of the column from bracket-notated child i.e. ['region']
-            childMatcher.reset();
-            while (childMatcher.find()) {
-              String columnName = childMatcher.group();
-              // Remove the quote around column name
-              columnsInFlattenSpec.add(columnName.substring(1, columnName.length() - 1));
-            }
-          } else if ("[*]".equals(matchedGroup)) {
-            // If the first level is a wildcard, then we need all columns
-            return fullSchema;
-          } else {
-            // This can happen if it is a filter expression, slice operator, or index / indexes
-            // We just return all columns...
-            return fullSchema;
-          }
-        } else {
-          // Others type aren't supported but returning full schema just in case...
-          LOG.warn("Got unexpected JSONPathFieldType [%s]", fields.getType());
-          return fullSchema;
-        }
-      }
-      // If useFieldDiscovery is false then we have already determined all the columns we need to read from
-      // (as only explicitly specified fields will be available to use in the other specs)
-      if (!((ParquetParseSpec) parseSpec).getFlattenSpec().isUseFieldDiscovery()) {
-        for (Type type : fullSchema.getFields()) {
-          if (tsField.equals(type.getName())
-              || columnsInFlattenSpec.size() > 0 && columnsInFlattenSpec.contains(type.getName())) {
-            partialFields.add(type);
-          }
-        }
-        return new MessageType(name, partialFields);
-      }
+      flattenSpec = ((ParquetParseSpec) parseSpec).getFlattenSpec();
     }
+    Set<String> fullSchemaFields = fullSchema.getFields().stream().map(Type::getName).collect(Collectors.toSet());
 
-    // Determine any fields we need to read from parquet file that is used in the transformSpec
-    Set<String> transformColumns = new HashSet<>();
-    List<Transform> transforms = config.getSchema().getDataSchema().getTransformSpec().getTransforms();
-    for (Transform transform : transforms) {
-      transformColumns.addAll(transform.getRequiredColumns());
-    }
-
-    // Determine any fields we need to read from parquet file that is used in the dimensionsSpec
-    List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
-    Set<String> dimensions = new HashSet<>();
-    for (DimensionSchema dim : dimensionSchema) {
-      dimensions.add(dim.getName());
-    }
-
-    // Determine any fields we need to read from parquet file that is used in the metricsSpec
-    Set<String> metricsFields = new HashSet<>();
-    for (AggregatorFactory agg : config.getSchema().getDataSchema().getAggregators()) {
-      metricsFields.addAll(agg.requiredFields());
-    }
-
+    Set<String> requiredFields = ReaderUtils.getColumnsRequiredForIngestion(
+        fullSchemaFields,
+        config.getSchema().getDataSchema(),
+        parseSpec.getTimestampSpec(),
+        parseSpec.getDimensionsSpec(),
+        flattenSpec
+    );
 
     for (Type type : fullSchema.getFields()) {
-      if (tsField.equals(type.getName())
-          || metricsFields.contains(type.getName())
-          || columnsInFlattenSpec.size() > 0 && columnsInFlattenSpec.contains(type.getName())
-          || transformColumns.size() > 0 && transformColumns.contains(type.getName())
-          || dimensions.size() > 0 && dimensions.contains(type.getName())
-          || dimensions.size() == 0) {
+      if (requiredFields.contains(type.getName())) {
         partialFields.add(type);
       }
     }
+
+    LOG.info("Parquet schema name[%s] with full schema[%s] requires fields[%s]", name, fullSchemaFields, requiredFields);
 
     return new MessageType(name, partialFields);
   }
