@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.indexing;
 
-import com.jayway.jsonpath.JsonPath;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
