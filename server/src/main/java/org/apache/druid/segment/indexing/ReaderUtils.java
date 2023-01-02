@@ -1,4 +1,4 @@
-package org.apache.druid.segment.indexing;/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -15,10 +15,11 @@ package org.apache.druid.segment.indexing;/*
  * limitations under the License.
  */
 
+package org.apache.druid.segment.indexing;
+
 import com.jayway.jsonpath.JsonPath;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -47,7 +48,8 @@ public class ReaderUtils
       TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       @Nullable JSONPathSpec flattenSpec
-  ) {
+  )
+  {
     Set<String> fieldsRequired = new HashSet<>();
 
     // We need to read timestamp column for Druid timestamp field
