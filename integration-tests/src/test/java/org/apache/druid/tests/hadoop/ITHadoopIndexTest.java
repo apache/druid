@@ -65,6 +65,9 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   private static final String BATCH_QUERIES_RESOURCE = "/hadoop/batch_hadoop_queries.json";
   private static final String BATCH_DATASOURCE = "batchLegacyHadoop";
 
+  private static final String BATCH_TASK_WITH_PARQUET_PARSER_RENAME = "/hadoop/wikipedia_hadoop_paquet_parser_index_data.json";
+  private static final String BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME = "/hadoop/wikipedia_hadoop_paquet_parser_query_data.json";
+
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_DATASOURCE = "wikipedia_hadoop_index_test";
@@ -125,6 +128,42 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           BATCH_TASK,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE,
+          false,
+          true,
+          true,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  @Test
+  public void testHadoopParquetParserWithRenameIndexTest() throws Exception
+  {
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
+    try (
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/parquet";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
+          specPathsTransform,
+          BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
           false,
           true,
           true,
