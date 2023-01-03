@@ -32,11 +32,12 @@ import org.apache.druid.query.BadQueryException;
  */
 public class SqlPlanningException extends BadQueryException
 {
+
   public enum PlanningError
   {
-    SQL_PARSE_ERROR("SQL parse failed", SqlParseException.class.getName()),
-    VALIDATION_ERROR("Plan validation failed", ValidationException.class.getName()),
-    UNSUPPORTED_SQL_ERROR("SQL query is unsupported", RelOptPlanner.CannotPlanException.class.getName());
+    SQL_PARSE_ERROR(SQL_PARSE_FAILED_ERROR_CODE, SqlParseException.class.getName()),
+    VALIDATION_ERROR(PLAN_VALIDATION_FAILED_ERROR_CODE, ValidationException.class.getName()),
+    UNSUPPORTED_SQL_ERROR(SQL_QUERY_UNSUPPORTED_ERROR_CODE, RelOptPlanner.CannotPlanException.class.getName());
 
     private final String errorCode;
     private final String errorClass;

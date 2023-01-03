@@ -34,9 +34,9 @@ public interface FrameWriter extends Closeable
 {
   /**
    * Write the current row to the frame that is under construction, if there is enough space to do so.
-   *
+   * <p>
    * If this method returns false on an empty frame, or in a situation where starting a new frame is impractical,
-   * it is conventional (although not required) for the caller to throw {@link FrameRowTooLargeException}.
+   * it is conventional (although not required) for the caller to throw {@link org.apache.druid.frame.processor.FrameRowTooLargeException}.
    *
    * @return true if the row was written, false if there was not enough space
    */

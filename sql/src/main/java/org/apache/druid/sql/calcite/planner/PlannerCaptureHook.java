@@ -27,19 +27,13 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class PlannerCaptureHook implements PlannerHook
 {
-  // Uncomment the various fields, and add getter, when
-  // needed by tests. Code won't pass SpotBugs otherwise.
-  //private String sql;
   private RelRoot relRoot;
-  //private DruidRel<?> druidRel;
-  //private RelDataType parameterTypes;
-  //private BindableRel bindableRel;
   private SqlInsert insertNode;
 
   @Override
   public void captureSql(String sql)
   {
-    //this.sql = sql;
+    // Not used at present. Add a field to capture this if you need it.
   }
 
   @Override
@@ -51,19 +45,19 @@ public class PlannerCaptureHook implements PlannerHook
   @Override
   public void captureDruidRel(DruidRel<?> druidRel)
   {
-    //this.druidRel = druidRel;
+    // Not used at present. Add a field to capture this if you need it.
   }
 
   @Override
   public void captureBindableRel(BindableRel bindableRel)
   {
-    //this.bindableRel = bindableRel;
+    // Not used at present. Add a field to capture this if you need it.
   }
 
   @Override
   public void captureParameterTypes(RelDataType parameterTypes)
   {
-    //this.parameterTypes = parameterTypes;
+    // Not used at present. Add a field to capture this if you need it.
   }
 
   @Override

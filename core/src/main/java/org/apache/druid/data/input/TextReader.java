@@ -20,14 +20,13 @@
 package org.apache.druid.data.input;
 
 import com.google.common.base.Strings;
-import org.apache.commons.io.LineIterator;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.data.input.impl.FastLineIterator;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,15 +54,13 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   @Override
   public CloseableIteratorWithMetadata<String> intermediateRowIteratorWithMetadata() throws IOException
   {
-    final LineIterator delegate = new LineIterator(
-        new InputStreamReader(source.open(), StringUtils.UTF8_STRING)
-    );
+    final CloseableIterator<String> delegate = new FastLineIterator(source.open());
     final int numHeaderLines = getNumHeaderLinesToSkip();
     for (int i = 0; i < numHeaderLines && delegate.hasNext(); i++) {
-      delegate.nextLine(); // skip lines
+      delegate.next(); // skip lines
     }
     if (needsToProcessHeaderLine() && delegate.hasNext()) {
-      processHeaderLine(delegate.nextLine());
+      processHeaderLine(delegate.next());
     }
 
     return new CloseableIteratorWithMetadata<String>()
@@ -87,7 +84,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       public String next()
       {
         currentLineNumber++;
-        return delegate.nextLine();
+        return delegate.next();
       }
 
       @Override

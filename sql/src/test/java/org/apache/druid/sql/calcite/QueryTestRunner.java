@@ -314,7 +314,6 @@ public class QueryTestRunner
     }
   }
 
-
   /**
    * Verify query results.
    */
@@ -475,24 +474,17 @@ public class QueryTestRunner
     }
   }
 
-  public abstract static class BaseVerifyExecStep implements QueryVerifyStep
-  {
-    protected final BaseExecuteQuery execStep;
-
-    public BaseVerifyExecStep(BaseExecuteQuery execStep)
-    {
-      this.execStep = execStep;
-    }
-  }
 
   /**
    * Verify resources for a prepared query against the expected list.
    */
-  public static class VerifyExecuteSignature extends BaseVerifyExecStep
+  public static class VerifyExecuteSignature implements QueryVerifyStep
   {
+    private final BaseExecuteQuery execStep;
+
     public VerifyExecuteSignature(BaseExecuteQuery execStep)
     {
-      super(execStep);
+      this.execStep = execStep;
     }
 
     @Override
@@ -508,11 +500,13 @@ public class QueryTestRunner
     }
   }
 
-  public static class VerifyLogicalPlan extends BaseVerifyExecStep
+  public static class VerifyLogicalPlan implements QueryVerifyStep
   {
+    private final BaseExecuteQuery execStep;
+
     public VerifyLogicalPlan(BaseExecuteQuery execStep)
     {
-      super(execStep);
+      this.execStep = execStep;
     }
 
     @Override
@@ -572,11 +566,14 @@ public class QueryTestRunner
    * after the first failure. It would be better to check all three
    * runs, but that's an exercise for later.
    */
-  public static class VerifyExpectedException extends BaseVerifyExecStep
+
+  public static class VerifyExpectedException implements QueryVerifyStep
   {
+    protected final BaseExecuteQuery execStep;
+
     public VerifyExpectedException(BaseExecuteQuery execStep)
     {
-      super(execStep);
+      this.execStep = execStep;
     }
 
     @Override
@@ -611,8 +608,9 @@ public class QueryTestRunner
     }
   }
 
-  private final List<QueryRunStep> runSteps = new ArrayList<>();
-  private final List<QueryVerifyStep> verifySteps = new ArrayList<>();
+
+  private final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
+  private final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();
 
   /**
    * Create a test runner based on the options set in the builder.

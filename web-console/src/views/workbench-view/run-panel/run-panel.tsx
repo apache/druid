@@ -33,6 +33,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 import { MenuCheckbox, MenuTristate } from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
+import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
 import {
   changeDurableShuffleStorage,
   changeFinalizeAggregations,
@@ -51,9 +52,12 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
+  IndexSpec,
+  QueryContext,
+  summarizeIndexSpec,
   WorkbenchQuery,
 } from '../../../druid-models';
-import { pluralIfNeeded, tickIcon } from '../../../utils';
+import { deepGet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 
 import './run-panel.scss';
@@ -87,13 +91,16 @@ export interface RunPanelProps {
   small?: boolean;
   onRun(preview: boolean): void;
   queryEngines: DruidEngine[];
+  clusterCapacity: number | undefined;
   moreMenu?: JSX.Element;
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines } = props;
+  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
+    props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
+  const [indexSpecDialogSpec, setIndexSpecDialogSpec] = useState<IndexSpec | undefined>();
 
   const emptyQuery = query.isEmptyQuery();
   const ingestMode = query.isIngestQuery();
@@ -104,6 +111,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
+  const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
   const useApproximateTopN = getUseApproximateTopN(queryContext);
   const useCache = getUseCache(queryContext);
@@ -157,6 +165,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     );
   }
 
+  function changeQueryContext(queryContext: QueryContext) {
+    onQueryChange(query.changeQueryContext(queryContext));
+  }
+
   const availableEngines = ([undefined] as (DruidEngine | undefined)[]).concat(queryEngines);
 
   function offsetOptions(): JSX.Element[] {
@@ -170,9 +182,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           icon={tickIcon(offset === timezone)}
           text={offset}
           shouldDismissPopover={false}
-          onClick={() => {
-            onQueryChange(query.changeQueryContext(changeTimezone(queryContext, offset)));
-          }}
+          onClick={() => changeQueryContext(changeTimezone(queryContext, offset))}
         />,
       );
     }
@@ -233,11 +243,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       icon={tickIcon(!timezone)}
                       text="Default"
                       shouldDismissPopover={false}
-                      onClick={() => {
-                        onQueryChange(
-                          query.changeQueryContext(changeTimezone(queryContext, undefined)),
-                        );
-                      }}
+                      onClick={() => changeQueryContext(changeTimezone(queryContext, undefined))}
                     />
                     <MenuItem icon={tickIcon(String(timezone).includes('/'))} text="Named">
                       {NAMED_TIMEZONES.map(namedTimezone => (
@@ -246,11 +252,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           icon={tickIcon(namedTimezone === timezone)}
                           text={namedTimezone}
                           shouldDismissPopover={false}
-                          onClick={() => {
-                            onQueryChange(
-                              query.changeQueryContext(changeTimezone(queryContext, namedTimezone)),
-                            );
-                          }}
+                          onClick={() =>
+                            changeQueryContext(changeTimezone(queryContext, namedTimezone))
+                          }
                         />
                       ))}
                     </MenuItem>
@@ -276,11 +280,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           key={String(v)}
                           icon={tickIcon(v === maxParseExceptions)}
                           text={v === -1 ? '∞ (-1)' : String(v)}
-                          onClick={() => {
-                            onQueryChange(
-                              query.changeQueryContext(changeMaxParseExceptions(queryContext, v)),
-                            );
-                          }}
+                          onClick={() =>
+                            changeQueryContext(changeMaxParseExceptions(queryContext, v))
+                          }
                           shouldDismissPopover={false}
                         />
                       ))}
@@ -290,35 +292,36 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Finalize aggregations"
                       value={finalizeAggregations}
                       undefinedEffectiveValue={!ingestMode}
-                      onValueChange={v => {
-                        onQueryChange(
-                          query.changeQueryContext(changeFinalizeAggregations(queryContext, v)),
-                        );
-                      }}
+                      onValueChange={v =>
+                        changeQueryContext(changeFinalizeAggregations(queryContext, v))
+                      }
                     />
                     <MenuTristate
                       icon={IconNames.FORK}
                       text="Enable GroupBy multi-value unnesting"
                       value={groupByEnableMultiValueUnnesting}
                       undefinedEffectiveValue={!ingestMode}
-                      onValueChange={v => {
-                        onQueryChange(
-                          query.changeQueryContext(
-                            changeGroupByEnableMultiValueUnnesting(queryContext, v),
-                          ),
-                        );
+                      onValueChange={v =>
+                        changeQueryContext(changeGroupByEnableMultiValueUnnesting(queryContext, v))
+                      }
+                    />
+                    <MenuItem
+                      icon={IconNames.TH_DERIVED}
+                      text="Edit index spec"
+                      label={summarizeIndexSpec(indexSpec)}
+                      shouldDismissPopover={false}
+                      onClick={() => {
+                        setIndexSpecDialogSpec(indexSpec || {});
                       }}
                     />
                     <MenuCheckbox
                       checked={durableShuffleStorage}
                       text="Durable shuffle storage"
-                      onChange={() => {
-                        onQueryChange(
-                          query.changeQueryContext(
-                            changeDurableShuffleStorage(queryContext, !durableShuffleStorage),
-                          ),
-                        );
-                      }}
+                      onChange={() =>
+                        changeQueryContext(
+                          changeDurableShuffleStorage(queryContext, !durableShuffleStorage),
+                        )
+                      }
                     />
                   </>
                 ) : (
@@ -326,22 +329,16 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuCheckbox
                       checked={useCache}
                       text="Use cache"
-                      onChange={() => {
-                        onQueryChange(
-                          query.changeQueryContext(changeUseCache(queryContext, !useCache)),
-                        );
-                      }}
+                      onChange={() => changeQueryContext(changeUseCache(queryContext, !useCache))}
                     />
                     <MenuCheckbox
                       checked={useApproximateTopN}
                       text="Use approximate TopN"
-                      onChange={() => {
-                        onQueryChange(
-                          query.changeQueryContext(
-                            changeUseApproximateTopN(queryContext, !useApproximateTopN),
-                          ),
-                        );
-                      }}
+                      onChange={() =>
+                        changeQueryContext(
+                          changeUseApproximateTopN(queryContext, !useApproximateTopN),
+                        )
+                      }
                     />
                   </>
                 )}
@@ -349,16 +346,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   <MenuCheckbox
                     checked={useApproximateCountDistinct}
                     text="Use approximate COUNT(DISTINCT)"
-                    onChange={() => {
-                      onQueryChange(
-                        query.changeQueryContext(
-                          changeUseApproximateCountDistinct(
-                            queryContext,
-                            !useApproximateCountDistinct,
-                          ),
+                    onChange={() =>
+                      changeQueryContext(
+                        changeUseApproximateCountDistinct(
+                          queryContext,
+                          !useApproximateCountDistinct,
                         ),
-                      );
-                    }}
+                      )
+                    }
                   />
                 )}
                 <MenuCheckbox
@@ -383,10 +378,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           </Popover2>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
+              clusterCapacity={clusterCapacity}
               queryContext={queryContext}
-              changeQueryContext={queryContext =>
-                onQueryChange(query.changeQueryContext(queryContext))
-              }
+              changeQueryContext={changeQueryContext}
             />
           )}
         </ButtonGroup>
@@ -399,10 +393,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       {editContextDialogOpen && (
         <EditContextDialog
           queryContext={queryContext}
-          onQueryContextChange={newContext => {
-            if (!onQueryChange) return;
-            onQueryChange(query.changeQueryContext(newContext));
-          }}
+          onQueryContextChange={changeQueryContext}
           onClose={() => {
             setEditContextDialogOpen(false);
           }}
@@ -413,8 +404,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           title="Custom timezone"
           placeholder="Etc/UTC"
           maxLength={50}
-          onSubmit={tz => onQueryChange(query.changeQueryContext(changeTimezone(queryContext, tz)))}
+          onSubmit={tz => changeQueryContext(changeTimezone(queryContext, tz))}
           onClose={() => setCustomTimezoneDialogOpen(false)}
+        />
+      )}
+      {indexSpecDialogSpec && (
+        <IndexSpecDialog
+          onClose={() => setIndexSpecDialogSpec(undefined)}
+          onSave={indexSpec => changeQueryContext({ ...queryContext, indexSpec })}
+          indexSpec={indexSpecDialogSpec}
         />
       )}
     </div>

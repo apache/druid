@@ -77,6 +77,7 @@ export interface HelperQueryProps {
   onDelete(): void;
   onDetails(id: string, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
+  clusterCapacity: number | undefined;
   goToIngestion(taskId: string): void;
 }
 
@@ -90,6 +91,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     onDelete,
     onDetails,
     queryEngines,
+    clusterCapacity,
     goToIngestion,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
@@ -252,15 +254,14 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
       return;
     }
 
-    const effectiveQuery = preview ? query.makePreview() : query;
+    const effectiveQuery = preview
+      ? query.makePreview()
+      : query.setMaxNumTasksIfUnset(clusterCapacity);
 
     const capacityInfo = await maybeGetClusterCapacity();
 
     const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
-    if (
-      capacityInfo &&
-      capacityInfo.totalTaskSlots - capacityInfo.usedTaskSlots < effectiveMaxNumTasks
-    ) {
+    if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
       setAlertElement(
         <CapacityAlert
           maxNumTasks={effectiveMaxNumTasks}
@@ -367,6 +368,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
               loading={executionState.loading}
               small
               queryEngines={queryEngines}
+              clusterCapacity={clusterCapacity}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel

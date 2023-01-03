@@ -36,7 +36,6 @@ import javax.annotation.Nullable;
 public class QueryTimeoutException extends QueryException
 {
   private static final String ERROR_CLASS = QueryTimeoutException.class.getName();
-  public static final String ERROR_CODE = "Query timeout";
   public static final String ERROR_MESSAGE = "Query Timed Out!";
   public static final int STATUS_CODE = 504;
 
@@ -53,16 +52,16 @@ public class QueryTimeoutException extends QueryException
 
   public QueryTimeoutException()
   {
-    super(ERROR_CODE, ERROR_MESSAGE, ERROR_CLASS, resolveHostname());
+    super(QUERY_TIMEOUT_ERROR_CODE, ERROR_MESSAGE, ERROR_CLASS, resolveHostname());
   }
 
   public QueryTimeoutException(String errorMessage)
   {
-    super(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
   }
 
   public QueryTimeoutException(String errorMessage, String host)
   {
-    super(ERROR_CODE, errorMessage, ERROR_CLASS, host);
+    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, host);
   }
 }

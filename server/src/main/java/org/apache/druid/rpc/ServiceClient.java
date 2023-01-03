@@ -49,8 +49,10 @@ public interface ServiceClient
    * encountered error.
    *
    * Redirects from 3xx responses are followed up to a chain length of {@link #MAX_REDIRECTS} and do not consume
-   * attempts. Redirects are validated against the targets returned by {@link ServiceLocator}: the client will not
-   * follow a redirect to a target that does not appear in the returned {@link ServiceLocations}.
+   * attempts. Redirects are validated against the targets returned by {@link ServiceLocator}: the client will only
+   * follow redirects to targets that appear in {@link ServiceLocations}. If the client encounters a redirect to an
+   * unknown target, or if a redirect loop or self-redirect is detected, it is treated as an unavailable service and
+   * an attempt is consumed.
    *
    * If the service is unavailable at the time an attempt is made, the client will automatically retry based on
    * {@link ServiceRetryPolicy#retryNotAvailable()}. If true, an attempt is consumed and the client will try to locate

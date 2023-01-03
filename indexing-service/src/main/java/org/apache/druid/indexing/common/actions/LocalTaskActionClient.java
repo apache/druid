@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
@@ -76,9 +77,26 @@ public class LocalTaskActionClient implements TaskActionClient
     }
 
     final long performStartTime = System.currentTimeMillis();
-    final RetType result = taskAction.perform(task, toolbox);
+    final RetType result = performAction(taskAction);
     emitTimerMetric("task/action/run/time", taskAction, System.currentTimeMillis() - performStartTime);
     return result;
+  }
+
+  private <R> R performAction(TaskAction<R> taskAction)
+  {
+    try {
+      final R result;
+      if (taskAction.canPerformAsync(task, toolbox)) {
+        result = taskAction.performAsync(task, toolbox).get(5, TimeUnit.MINUTES);
+      } else {
+        result = taskAction.perform(task, toolbox);
+      }
+
+      return result;
+    }
+    catch (Throwable t) {
+      throw new RuntimeException(t);
+    }
   }
 
   private void emitTimerMetric(final String metric, final TaskAction<?> action, final long time)

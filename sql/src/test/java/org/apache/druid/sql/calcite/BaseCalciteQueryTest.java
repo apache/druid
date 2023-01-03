@@ -114,7 +114,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -861,11 +860,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
-
-    public CalciteTestConfig()
-    {
-    }
-
     @Override
     public QueryLogHook queryLogHook()
     {

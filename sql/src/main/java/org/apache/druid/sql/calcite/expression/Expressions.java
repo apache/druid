@@ -93,7 +93,12 @@ public class Expressions
   )
   {
     if (project == null) {
-      // I don't think the factory impl matters here.
+      // Gian doesn't think the factory impl matters here, he's likely correct.  But, upon reading what this is doing,
+      // we are re-building the list of things in the RelDataType for every single call to `fromFieldAccess`.
+      // `fromFieldAccess` is called pretty regularly in pretty low-level areas of the code, so it would make sense
+      // that we are perhaps re-creating the exact same object over and over and over and over again and wasting CPU
+      // cycles.  It would likely be good to refactor the code such that we ensure we only ever compute the thing
+      // once and then reuse it.
       return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);

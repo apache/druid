@@ -116,7 +116,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       signatureToUse = scanSignature;
     } else {
       final RowSignature.Builder signatureBuilder = RowSignature.builder().addAll(scanSignature);
-      final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(queryToRun.getContext());
+      final Granularity segmentGranularity =
+          QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
       final List<SortColumn> clusterByColumns = new ArrayList<>();
 
       // Add regular orderBys.

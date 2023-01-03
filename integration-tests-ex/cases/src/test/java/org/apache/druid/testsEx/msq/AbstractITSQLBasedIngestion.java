@@ -28,6 +28,9 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.indexer.AbstractITBatchIndexTest;
+import org.junit.Rule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +39,9 @@ import java.util.Map;
 
 public class AbstractITSQLBasedIngestion
 {
+  String DATASOURCE_STRING_IN_TASK = "%%DATASOURCE%%";
+  String REINDEX_DATASOURCE_STRING_IN_TASK = "%%REINDEX_DATASOURCE%%";
+
   public static final Logger LOG = new Logger(TestQueryHelper.class);
   @Inject
   private MsqTestQueryHelper msqHelper;
@@ -45,6 +51,28 @@ public class AbstractITSQLBasedIngestion
 
   @Inject
   private DataLoaderHelper dataLoaderHelper;
+
+  @Rule
+  public TestWatcher watchman = new TestWatcher()
+  {
+    @Override
+    public void starting(Description d)
+    {
+      LOG.info("RUNNING %s", d.getDisplayName());
+    }
+
+    @Override
+    public void failed(Throwable e, Description d)
+    {
+      LOG.error("FAILED %s", d.getDisplayName());
+    }
+
+    @Override
+    public void finished(Description d)
+    {
+      LOG.info("FINISHED %s", d.getDisplayName());
+    }
+  };
 
   /**
    * Reads file as utf-8 string and replace %%DATASOURCE%% with the provide datasource value.
@@ -62,7 +90,7 @@ public class AbstractITSQLBasedIngestion
 
     fileString = StringUtils.replace(
         fileString,
-        "%%DATASOURCE%%",
+        DATASOURCE_STRING_IN_TASK,
         datasource
     );
 
@@ -85,10 +113,9 @@ public class AbstractITSQLBasedIngestion
   }
 
   /**
-   * Sumits a sqlTask, waits for task completion and then runs test queries on ingested datasource.
+   * Sumits a sqlTask, waits for task completion.
    */
-  protected void submitTaskAnddoTestQuery(String sqlTask, String queryFilePath, String datasource,
-                                          Map<String, Object> msqContext) throws Exception
+  protected void submitTask(String sqlTask, String datasource, Map<String, Object> msqContext) throws Exception
   {
     LOG.info("SqlTask - \n %s", sqlTask);
 
@@ -99,23 +126,55 @@ public class AbstractITSQLBasedIngestion
     );
 
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-    doTestQuery(queryFilePath, datasource);
   }
 
   /**
-   * Runs a MSQ ingest sql test.
+   * Sumits a sqlTask, waits for task completion.
+   */
+  protected void submitTaskFromFile(String sqlFilePath, String datasource, Map<String, Object> msqContext) throws Exception
+  {
+    String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
+    submitTask(sqlTask, datasource, msqContext);
+  }
+
+  /**
+   * Runs a SQL ingest test.
    *
    * @param  sqlFilePath path of file containing the sql query.
    * @param  queryFilePath path of file containing the native test queries to be run on the ingested datasource.
    * @param  datasource name of the datasource. %%DATASOURCE%% in the sql and queries will be replaced with this value.
    * @param  msqContext context parameters to be passed with MSQ API call.
    */
-  protected void runMSQTaskandTestQueries(String sqlFilePath, String queryFilePath, String datasource,
+  protected void runMSQTaskandTestQueries(String sqlFilePath,
+                                          String queryFilePath,
+                                          String datasource,
                                           Map<String, Object> msqContext) throws Exception
   {
     LOG.info("Starting MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
 
+    submitTaskFromFile(sqlFilePath, datasource, msqContext);
+    doTestQuery(queryFilePath, datasource);
+  }
+
+  /**
+   * Runs a reindex SQL ingest test.
+   * Same as runMSQTaskandTestQueries, but replaces both %%DATASOURCE%% and %%REINDEX_DATASOURCE%% in the SQL Task.
+   */
+  protected void runReindexMSQTaskandTestQueries(String sqlFilePath,
+                                                 String queryFilePath,
+                                                 String datasource,
+                                                 String reindexDatasource,
+                                                 Map<String, Object> msqContext) throws Exception
+  {
+    LOG.info("Starting Reindex MSQ test for [%s, %s]", sqlFilePath, queryFilePath);
+
     String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
-    submitTaskAnddoTestQuery(sqlTask, queryFilePath, datasource, msqContext);
+    sqlTask = StringUtils.replace(
+        sqlTask,
+        REINDEX_DATASOURCE_STRING_IN_TASK,
+        reindexDatasource
+    );
+    submitTask(sqlTask, reindexDatasource, msqContext);
+    doTestQuery(queryFilePath, reindexDatasource);
   }
 }

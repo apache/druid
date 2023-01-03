@@ -23,7 +23,9 @@ import { MaxTasksButton } from './max-tasks-button';
 
 describe('MaxTasksButton', () => {
   it('matches snapshot', () => {
-    const comp = shallow(<MaxTasksButton queryContext={{}} changeQueryContext={() => {}} />);
+    const comp = shallow(
+      <MaxTasksButton clusterCapacity={6} queryContext={{}} changeQueryContext={() => {}} />,
+    );
 
     expect(comp).toMatchSnapshot();
   });

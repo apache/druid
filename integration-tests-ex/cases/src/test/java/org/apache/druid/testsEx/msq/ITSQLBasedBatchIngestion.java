@@ -20,6 +20,7 @@
 package org.apache.druid.testsEx.msq;
 
 import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
@@ -35,7 +36,7 @@ import java.util.List;
 @Category(MultiStageQuery.class)
 public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedIngestion
 {
-  private static final String BATCH_INDEX_TASKS_DIR = "/multi-stage-query/batch-index/";
+  private static final String MSQ_TASKS_DIR = "/multi-stage-query/";
 
   public static List<List<String>> test_cases()
   {
@@ -44,7 +45,7 @@ public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedIngestion
         Arrays.asList("sparse_column_msq.sql", "sparse_column_msq.json"),
         Arrays.asList("wikipedia_http_inputsource_msq.sql", "wikipedia_http_inputsource_queries.json"),
         Arrays.asList("wikipedia_index_msq.sql", "wikipedia_index_queries.json"),
-        Arrays.asList("wikipedia_merge_index_task.sql", "wikipedia_index_queries.json"),
+        Arrays.asList("wikipedia_merge_index_msq.sql", "wikipedia_merge_index_queries.json"),
         Arrays.asList("wikipedia_index_task_with_transform.sql", "wikipedia_index_queries_with_transform.json")
     );
 
@@ -52,16 +53,17 @@ public class ITSQLBasedBatchIngestion extends AbstractITSQLBasedIngestion
 
   @Test
   @Parameters(method = "test_cases")
+  @TestCaseName("Test_{index} ({0}, {1})")
   public void testSQLBasedBatchIngestion(String sqlFileName, String queryFileName)
   {
     try {
-      runMSQTaskandTestQueries(BATCH_INDEX_TASKS_DIR + sqlFileName,
-                               BATCH_INDEX_TASKS_DIR + queryFileName,
-                               FilenameUtils.removeExtension(sqlFileName),
-                               ImmutableMap.of("finalizeAggregations", false,
-                                               "maxNumTasks", 5,
-                                               "groupByEnableMultiValueUnnesting", false
-                               ));
+      runMSQTaskandTestQueries(
+          MSQ_TASKS_DIR + sqlFileName,
+          MSQ_TASKS_DIR + queryFileName,
+          FilenameUtils.removeExtension(sqlFileName),
+          ImmutableMap.of("finalizeAggregations", false,
+                          "maxNumTasks", 5,
+                          "groupByEnableMultiValueUnnesting", false));
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing [%s, %s]", sqlFileName, queryFileName);

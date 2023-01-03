@@ -24,6 +24,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 
+  &.disabled {
+    cursor: not-allowed;
+  }
+
   .hover-icon {
     position: absolute;
     top: $table-cell-v-padding;

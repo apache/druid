@@ -39,6 +39,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -50,9 +51,11 @@ public class PropertyDefnTest
   @Test
   public void testString()
   {
-    StringPropertyDefn prop = new StringPropertyDefn("prop");
+    StringPropertyDefn prop = new StringPropertyDefn("prop", ImmutableMap.of("foo", "bar"));
     assertEquals("prop", prop.name());
     assertEquals("String", prop.typeName());
+    assertEquals("bar", prop.attributes.get("foo"));
+    assertEquals(String.class, PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     assertEquals("value", prop.decode("value", mapper));
@@ -68,11 +71,20 @@ public class PropertyDefnTest
   }
 
   @Test
+  public void testCustomTypeName()
+  {
+    // Custom type name
+    StringPropertyDefn prop = new StringPropertyDefn("prop", ImmutableMap.of(PropertyAttributes.TYPE_NAME, "MyType"));
+    assertEquals("MyType", prop.typeName());
+  }
+
+  @Test
   public void testBoolean()
   {
-    BooleanPropertyDefn prop = new BooleanPropertyDefn("prop");
+    BooleanPropertyDefn prop = new BooleanPropertyDefn("prop", null);
     assertEquals("prop", prop.name());
     assertEquals("Boolean", prop.typeName());
+    assertEquals(Boolean.class, PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     assertTrue(prop.decode("true", mapper));
@@ -86,9 +98,10 @@ public class PropertyDefnTest
   @Test
   public void testInt()
   {
-    IntPropertyDefn prop = new IntPropertyDefn("prop");
+    IntPropertyDefn prop = new IntPropertyDefn("prop", null);
     assertEquals("prop", prop.name());
     assertEquals("Integer", prop.typeName());
+    assertEquals(Integer.class, PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     assertEquals((Integer) 0, prop.decode(0, mapper));
@@ -101,9 +114,10 @@ public class PropertyDefnTest
   @Test
   public void testStringList()
   {
-    StringListPropertyDefn prop = new StringListPropertyDefn("prop");
+    StringListPropertyDefn prop = new StringListPropertyDefn("prop", null);
     assertEquals("prop", prop.name());
     assertEquals("string list", prop.typeName());
+    assertSame(String.class, PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     prop.validate(null, mapper);
@@ -120,10 +134,12 @@ public class PropertyDefnTest
     ListPropertyDefn<ClusterKeySpec> prop = new ListPropertyDefn<ClusterKeySpec>(
         "prop",
         "cluster key list",
-        new TypeReference<List<ClusterKeySpec>>() { }
+        new TypeReference<List<ClusterKeySpec>>() { },
+        null
     );
     assertEquals("prop", prop.name());
     assertEquals("cluster key list", prop.typeName());
+    assertNull(PropertyAttributes.sqlParameterType(prop));
 
     assertNull(prop.decode(null, mapper));
     List<Map<String, Object>> value = Arrays.asList(
