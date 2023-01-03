@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,16 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 set -e
 
 unset _JAVA_OPTIONS
 
-# Set MAVEN_OPTS for Surefire launcher. Skip remoteresources to avoid intermittent connection timeouts when
-# resolving the SIGAR dependency.
+# Set MAVEN_OPTS for Surefire launcher.
 MAVEN_OPTS='-Xmx2048m' ${MVN} test -pl ${MAVEN_PROJECTS} \
-${MAVEN_SKIP} -Dremoteresources.skip=true -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
+${MAVEN_SKIP} -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
 sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
 free -m
 ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
@@ -33,6 +32,7 @@ ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
 # so that the coverage check is skipped.
 all_files="$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep "\.java$" || [[ $? == 1 ]])"
 
+echo "Changed files:"
 for f in ${all_files}
 do
   echo $f # for debugging
@@ -48,6 +48,7 @@ else
   project_files="$(echo "${all_files}" | grep "${regex}" || [[ $? == 1 ]])"
 fi
 
+echo "Changed files in current project:"
 for f in ${project_files}
 do
   echo $f # for debugging
