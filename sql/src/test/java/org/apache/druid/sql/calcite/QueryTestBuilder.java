@@ -76,8 +76,6 @@ public class QueryTestBuilder
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
     ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
-
-    boolean runUsingMSQEngine();
   }
 
   protected final QueryTestConfig config;
@@ -88,6 +86,7 @@ public class QueryTestBuilder
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   protected List<Query<?>> expectedQueries;
   protected List<Object[]> expectedResults;
+  protected List<QueryTestRunner.QueryRunStepFactory> customRunners = new ArrayList<>();
   protected List<QueryTestRunner.QueryVerifyStepFactory> customVerifications = new ArrayList<>();
   protected RowSignature expectedResultSignature;
   protected List<ResourceAction> expectedResources;
@@ -158,9 +157,20 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder sql(String sql)
+  public QueryTestBuilder addCustomRunner(
+      QueryTestRunner.QueryRunStepFactory factory
+  )
   {
-    this.sql = sql;
+    this.customRunners.add(factory);
+    return this;
+  }
+
+  public QueryTestBuilder setCustomRunners(
+      List<QueryTestRunner.QueryRunStepFactory> factories
+  )
+  {
+    this.customRunners = new ArrayList<>();
+    this.customRunners.addAll(factories);
     return this;
   }
 

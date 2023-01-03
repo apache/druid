@@ -87,7 +87,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -107,6 +106,8 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
 {
+
+  private MSQTestOverlordServiceClient indexingServiceClient;
 
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
@@ -198,7 +199,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
             2
         )
     );
-    MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
+    indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
@@ -336,7 +337,6 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
         "SELECT dim1 FROM "
         + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
         + "WHERE dim1 IN ('abc', 'def')",
-//        "select dim3 from foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -362,7 +362,8 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"abc"},
             new Object[]{"def"}
-        )
+        ),
+        new MSQTestBase.ExtractResults(indexingServiceClient)
     );
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -692,13 +691,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQueryWithMSQ(
       final String sql,
       final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults
+      final List<Object[]> expectedResults,
+      final QueryTestRunner.QueryRunStepFactory msqExtractionStepFactory
   )
   {
     testBuilderMSQ()
         .sql(sql)
         .expectedQueries(expectedQueries)
         .expectedResults(expectedResults)
+        .addCustomRunner(msqExtractionStepFactory)
+        .skipVectorize(true)
         .run();
   }
 
@@ -845,38 +847,23 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(new CalciteTestConfig(false))
+    return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
 
   protected QueryTestBuilder testBuilderMSQ()
   {
-    return new QueryTestBuilder(new CalciteTestConfig(true))
+    return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize)
-        .setCustomVerifications(ImmutableList.of(
-            new QueryTestRunner.QueryVerifyStepFactory()
-            {
-              @Override
-              public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.BaseExecuteQuery execStep)
-              {
-                return () -> {
-
-                };
-              }
-            }
-        ));
+        .skipVectorize(skipVectorize);
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
 
-    final boolean runUsingMSQEngine;
-
-    public CalciteTestConfig(boolean runUsingMSQEngine)
+    public CalciteTestConfig()
     {
-      this.runUsingMSQEngine = runUsingMSQEngine;
     }
 
     @Override
@@ -913,12 +900,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           expectedResults,
           expectedResultSignature
       );
-    }
-
-    @Override
-    public boolean runUsingMSQEngine()
-    {
-      return runUsingMSQEngine;
     }
   }
 
@@ -1055,28 +1036,31 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
+
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
    */
-  public static <T> Query<T> recursivelyOverrideContext(final Query<T> query, final Map<String, Object> context)
+  public static <T> Query<T> recursivelyClearContext(final Query<T> query)
   {
-    return query.withDataSource(recursivelyOverrideContext(query.getDataSource(), context))
-                .withOverriddenContext(context);
+    Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource()));
+    newQuery.context().clear();
+    return newQuery;
   }
 
   /**
    * Override the contexts of all subqueries of a particular datasource.
    */
-  private static DataSource recursivelyOverrideContext(final DataSource dataSource, final Map<String, Object> context)
+  private static DataSource recursivelyClearContext(final DataSource dataSource)
   {
     if (dataSource instanceof QueryDataSource) {
       final Query<?> subquery = ((QueryDataSource) dataSource).getQuery();
-      return new QueryDataSource(recursivelyOverrideContext(subquery, context));
+      subquery.context().clear();
+      return new QueryDataSource(subquery);
     } else {
       return dataSource.withChildren(
           dataSource.getChildren()
                     .stream()
-                    .map(ds -> recursivelyOverrideContext(ds, context))
+                    .map(ds -> recursivelyClearContext(ds))
                     .collect(Collectors.toList())
       );
     }

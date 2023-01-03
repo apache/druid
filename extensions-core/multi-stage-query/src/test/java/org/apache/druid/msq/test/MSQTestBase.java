@@ -129,6 +129,8 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.QueryTestRunner;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -268,7 +270,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       public void configure(Binder binder)
       {
         // We want this module to bring InputSourceModule along for the ride.
-//        binder.install(new InputSourceModule());
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
 
         // Requirements of JoinableFactoryModule
@@ -365,44 +366,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ));
     });
 
-//    builder.addModule(binder -> {
-//      binder.bind(DataSegmentProvider.class)
-//            .toInstance((dataSegment, channelCounters) ->
-//                            new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-//      binder.bind(IndexIO.class).toInstance(indexIO);
-//
-//      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-//      try {
-//        config.storageDirectory = tmpFolder.newFolder("localsegments");
-//      }
-//      catch (IOException e) {
-//        throw new ISE(e, "Unable to create folder");
-//      }
-//      binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-//          new LocalDataSegmentPusher(config),
-//          segmentManager
-//      ));
-//    });
-
-//    builder.addModule(binder -> {
-//      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-//      try {
-//        config.storageDirectory = tmpFolder.newFolder("localsegments");
-//      }
-//      catch (IOException e) {
-//        throw new ISE(e, "Unable to create folder");
-//      }
-//      binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
-//          new LocalDataSegmentPusher(config),
-//          segmentManager
-//      ));
-//      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-//      binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
-//      // Client is not used in tests
-//      binder.bind(Key.get(ServiceClientFactory.class, EscalatedGlobal.class))
-//            .toProvider(Providers.of(null));
-//    });
-
 
     builder.addModule(new DruidModule()
     {
@@ -440,7 +403,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     groupByBuffers.close();
     emptyFolder(tmpFolder.getRoot());
-//    EasyMock.reset();
   }
 
   @BeforeClass
@@ -490,38 +452,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     log.error("SETUP2 GUICE CALLED");
     groupByBuffers = TestGroupByBuffers.createDefault();
 
-//    ObjectMapper testMapper = new DefaultObjectMapper();
-//    Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
-//        ImmutableList.of(
-//            binder -> {
-//              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-//              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-//            }
-//        )
-//    );
-//    ObjectMapper testMapper = setupObjectMapper(dummyInjector);
-//    InjectableValues.Std injectables = new InjectableValues.Std();
-//    injectables.addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller());
-//    injectables.addValue(DataSegmentProvider.class,
-//                         (DataSegmentProvider) (segmentId, channelCounters) -> new LazyResourceHolder<>(
-//                             getSupplierForSegment(segmentId)));
-//    testMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
-//    testMapper.setInjectableValues(injectables);
-
     /**
     SqlTestFramework qf = queryFramework();
     ObjectMapper testMapper = qf.queryJsonMapper();
      **/
-
-//    indexIO = new IndexIO(testMapper, () -> 0);
-//    try {
-//      segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(tmpFolder.newFolder("test"));
-//    }
-//    catch (IOException exception) {
-//      throw new ISE(exception, "Unable to create segmentCacheManager");
-//    }
-//    segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
-//
 
     try {
       localFileStorageDir = tmpFolder.newFolder("fault");
@@ -536,23 +470,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     List<Module> modules = ImmutableList.of(
         binder -> {
-//          binder.bind(DataSegmentProvider.class)
-//                .toInstance((dataSegment, channelCounters) ->
-//                                new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-//          binder.bind(IndexIO.class).toProvider(() -> indexIO);
-//
-//          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-//          try {
-//            config.storageDirectory = tmpFolder.newFolder("localsegments");
-//          }
-//          catch (IOException e) {
-//            throw new ISE(e, "Unable to create folder");
-//          }
-//          binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
-//              new LocalDataSegmentPusher(config),
-//              segmentManager
-//          ));
-
           // fault tolerance module
         }
     );
@@ -598,7 +515,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   @Override
   public SqlEngine createEngine(
-      QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper,
+      QueryLifecycleFactory qlf,
+      ObjectMapper queryJsonMapper,
       Injector injector
   )
   {
@@ -871,7 +789,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
+  public static Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
   {
     if (resultsReport == null) {
       return Optional.empty();
@@ -1310,6 +1228,71 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql);
       }
+    }
+  }
+
+
+  public static class ExtractResults implements QueryTestRunner.QueryRunStepFactory
+  {
+    private final MSQTestOverlordServiceClient overlordClient;
+
+    public ExtractResults(MSQTestOverlordServiceClient overlordClient)
+    {
+      this.overlordClient = overlordClient;
+    }
+
+    @Override
+    public QueryTestRunner.QueryRunStep make(QueryTestBuilder builder, QueryTestRunner.BaseExecuteQuery execStep)
+    {
+      return new QueryTestRunner.BaseExecuteQuery(builder)
+      {
+        final List<QueryTestRunner.QueryResults> extractedResults = new ArrayList<>();
+
+        @Override
+        public void run()
+        {
+          for (QueryTestRunner.QueryResults results : execStep.results()) {
+            List<Object[]> queryResults = results.results;
+            Assert.assertEquals(
+                "Found multiple rows, cannot extract the actual results from the reports",
+                1,
+                queryResults.size()
+            );
+            Object[] row = queryResults.get(0);
+            Assert.assertEquals(
+                "Found multiple taskIds, cannot extract the actual results from the reports",
+                1,
+                row.length
+            );
+            String taskId = row[0].toString();
+            MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)
+                                                                                .get(MSQTaskReport.REPORT_KEY)
+                                                                                .getPayload();
+            if (payload.getStatus().getStatus().isFailure()) {
+              throw new ISE(
+                  "Query task [%s] failed due to %s",
+                  taskId,
+                  payload.getStatus().getErrorReport().toString()
+              );
+            }
+
+            if (!payload.getStatus().getStatus().isComplete()) {
+              throw new ISE("Query task [%s] should have finished", taskId);
+            }
+            Optional<Pair<RowSignature, List<Object[]>>> signatureListPair = MSQTestBase.getSignatureWithRows(payload.getResults());
+            if (!signatureListPair.isPresent()) {
+              throw new ISE("Results report not present in the task's report payload");
+            }
+            extractedResults.add(results.withResults(signatureListPair.get().rhs));
+          }
+        }
+
+        @Override
+        public List<QueryTestRunner.QueryResults> results()
+        {
+          return extractedResults;
+        }
+      };
     }
   }
 }

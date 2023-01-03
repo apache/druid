@@ -54,7 +54,7 @@ public class QueryContext
 {
   private static final QueryContext EMPTY = new QueryContext(null);
 
-  private final Map<String, Object> context;
+  private Map<String, Object> context;
 
   public QueryContext(Map<String, Object> context)
   {
@@ -64,6 +64,16 @@ public class QueryContext
     this.context = context == null
         ? Collections.emptyMap()
         : Collections.unmodifiableMap(new TreeMap<>(context));
+  }
+
+  /**
+   * Clears out the keys present in the context map. Useful for testing where the context map
+   * doesn't need to be checked for equality. This goes against the principle of the immutability of QueryContext
+   * where the query context shouldn't be modified by the coller therefore it is advisable to use this with caution
+   */
+  public void clear()
+  {
+    this.context = Collections.emptyMap();
   }
 
   public static QueryContext empty()

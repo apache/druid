@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
@@ -72,6 +73,11 @@ public class QueryTestRunner
   public interface QueryVerifyStepFactory
   {
     QueryVerifyStep make(BaseExecuteQuery execStep);
+  }
+
+  public interface QueryRunStepFactory
+  {
+    QueryRunStep make(QueryTestBuilder builder, QueryTestRunner.BaseExecuteQuery execStep);
   }
 
   /**
@@ -152,6 +158,11 @@ public class QueryTestRunner
       this.exception = exception;
       this.capture = null;
       this.sqlSignature = null;
+    }
+
+    public QueryResults withResults(List<Object[]> newResults)
+    {
+      return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
     }
   }
 
@@ -303,6 +314,7 @@ public class QueryTestRunner
     }
   }
 
+
   /**
    * Verify query results.
    */
@@ -379,10 +391,14 @@ public class QueryTestRunner
         // we could have validations of query objects that are a bit more intelligent.  That is, instead of relying on
         // equals, perhaps we could have a context validator that only validates that keys set on the expected query
         // are set, allowing any other context keys to also be set?
-        expectedQueries.add(BaseCalciteQueryTest.recursivelyOverrideContext(query, queryResults.queryContext));
+        expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query));
       }
 
-      final List<Query<?>> recordedQueries = queryResults.recordedQueries;
+      final List<Query<?>> recordedQueries = queryResults.recordedQueries
+          .stream()
+          .map(BaseCalciteQueryTest::recursivelyClearContext)
+          .collect(Collectors.toList());
+
       Assert.assertEquals(
           StringUtils.format("query count: %s", builder.sql),
           expectedQueries.size(),
@@ -628,34 +644,40 @@ public class QueryTestRunner
     } else {
       BaseExecuteQuery execStep = new ExecuteQuery(builder);
       runSteps.add(execStep);
+      if (!builder.customRunners.isEmpty()) {
+        for (QueryRunStepFactory factory : builder.customRunners) {
+          runSteps.add(factory.make(builder, (BaseExecuteQuery) runSteps.get(runSteps.size() - 1)));
+        }
+      }
+      BaseExecuteQuery finalExecStep = (BaseExecuteQuery) runSteps.get(runSteps.size() - 1);
 
       // Verify the logical plan, if requested.
       if (builder.expectedLogicalPlan != null) {
-        verifySteps.add(new VerifyLogicalPlan(execStep));
+        verifySteps.add(new VerifyLogicalPlan(finalExecStep));
       }
 
       if (builder.expectedSqlSchema != null) {
-        verifySteps.add(new VerifyExecuteSignature(execStep));
+        verifySteps.add(new VerifyExecuteSignature(finalExecStep));
       }
 
       // Verify native queries before results. (Note: change from prior pattern
       // that reversed the steps.
       if (builder.expectedQueries != null) {
-        verifySteps.add(new VerifyNativeQueries(execStep));
+        verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
-        verifySteps.add(new VerifyResults(execStep));
+        verifySteps.add(new VerifyResults(finalExecStep));
       }
 
       if (!builder.customVerifications.isEmpty()) {
         for (QueryVerifyStepFactory customVerification : builder.customVerifications) {
-          verifySteps.add(customVerification.make(execStep));
+          verifySteps.add(customVerification.make(finalExecStep));
         }
       }
 
       // The exception is always verified: either there should be no exception
       // (the other steps ran), or there should be the defined exception.
-      verifySteps.add(new VerifyExpectedException(execStep));
+      verifySteps.add(new VerifyExpectedException(finalExecStep));
     }
   }
 
