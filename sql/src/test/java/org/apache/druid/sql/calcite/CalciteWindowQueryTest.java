@@ -194,7 +194,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       Function<Object, String> toStrFn, List<Object[]> results
   )
   {
-    if (DUMP_ACTUAL_RESULTS || true) {
+    if (DUMP_ACTUAL_RESULTS) {
       for (Object[] result : results) {
         System.out.println("  - " + toStrFn.apply(result));
       }
