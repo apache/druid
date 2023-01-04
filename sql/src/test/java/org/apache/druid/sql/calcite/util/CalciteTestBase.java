@@ -23,6 +23,10 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.http.SqlParameter;
@@ -99,5 +103,20 @@ public abstract class CalciteTestBase
         (args) -> staticExpression,
         Collections.emptyList()
     );
+  }
+
+  protected static ResourceAction viewRead(final String viewName)
+  {
+    return new ResourceAction(new Resource(viewName, ResourceType.VIEW), Action.READ);
+  }
+
+  protected static ResourceAction dataSourceRead(final String dataSource)
+  {
+    return new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ);
+  }
+
+  protected static ResourceAction dataSourceWrite(final String dataSource)
+  {
+    return new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE);
   }
 }

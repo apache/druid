@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.java.util.common.IAE;
 
@@ -47,13 +46,13 @@ public class TableDefn extends ObjectDefn
    */
   public static final String DESCRIPTION_PROPERTY = "description";
 
-  private final Map<String, ColumnDefn> columnDefns;
+  private final Map<String, PropertyDefn<?>> columnProperties;
 
   public TableDefn(
       final String name,
       final String typeValue,
       final List<PropertyDefn<?>> properties,
-      final List<ColumnDefn> columnDefns
+      final List<PropertyDefn<?>> columnProperties
   )
   {
     super(
@@ -61,23 +60,17 @@ public class TableDefn extends ObjectDefn
         typeValue,
         CatalogUtils.concatLists(
             Collections.singletonList(
-                new ModelProperties.StringPropertyDefn(DESCRIPTION_PROPERTY, null)
+                new ModelProperties.StringPropertyDefn(DESCRIPTION_PROPERTY)
             ),
             properties
         )
     );
-    this.columnDefns = columnDefns == null ? Collections.emptyMap() : toColumnMap(columnDefns);
+    this.columnProperties = toPropertyMap(columnProperties);
   }
 
-  public static Map<String, ColumnDefn> toColumnMap(final List<ColumnDefn> colTypes)
+  public void bind(TableDefnRegistry registry)
   {
-    ImmutableMap.Builder<String, ColumnDefn> builder = ImmutableMap.builder();
-    for (ColumnDefn colType : colTypes) {
-      builder.put(colType.typeValue(), colType);
-    }
-    return builder.build();
   }
-
   /**
    * Validate a table spec using the table, field and column definitions defined
    * here. The column definitions validate the type of each property value using
@@ -99,26 +92,13 @@ public class TableDefn extends ObjectDefn
       if (!names.add(colSpec.name())) {
         throw new IAE("Duplicate column name: " + colSpec.name());
       }
-      ColumnDefn.ResolvedColumn resolvedCol = resolveColumn(colSpec);
-      resolvedCol.validate(jsonMapper);
+      colSpec.validate();
+      validateColumn(colSpec);
     }
   }
 
-  /**
-   * Resolve the column type to produce a composite object that holds
-   * both the definition and the column spec.
-   */
-  public ColumnDefn.ResolvedColumn resolveColumn(ColumnSpec spec)
+  protected void validateColumn(ColumnSpec colSpec)
   {
-    String type = spec.type();
-    if (Strings.isNullOrEmpty(type)) {
-      throw new IAE("The column type is required.");
-    }
-    ColumnDefn defn = columnDefns.get(type);
-    if (defn == null) {
-      throw new IAE("Column type [%s] is not valid for tables of type [%s].", type, typeValue());
-    }
-    return new ColumnDefn.ResolvedColumn(defn, spec);
   }
 
   /**
@@ -162,15 +142,19 @@ public class TableDefn extends ObjectDefn
       }
       Integer index = original.get(col.name());
       if (index == null) {
-        if (Strings.isNullOrEmpty(col.type())) {
-          throw new IAE("Column %d must have a type", i + 1);
-        }
         merged.add(col);
       } else {
-        ColumnDefn.ResolvedColumn resolvedCol = resolveColumn(columns.get(index));
-        merged.set(index, resolvedCol.merge(col).spec());
+        merged.set(index, mergeColumn(columns.get(index), col));
       }
     }
     return merged;
+  }
+
+  private ColumnSpec mergeColumn(ColumnSpec existingCol, ColumnSpec update)
+  {
+    ColumnSpec revised = existingCol.merge(columnProperties, update);
+    revised.validate();
+    validateColumn(revised);
+    return revised;
   }
 }

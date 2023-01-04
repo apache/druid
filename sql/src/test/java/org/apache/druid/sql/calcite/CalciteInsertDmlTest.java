@@ -41,7 +41,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.IngestHandler;
@@ -293,7 +293,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -391,7 +391,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testInsertWithClusteredBy()
   {
-    // Test correctness of the query when only CLUSTERED BY clause is present
+    // Test correctness of the query when only the CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
                                                   .add("floor_m1", ColumnType.FLOAT)
@@ -696,7 +696,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", RowSignature.builder().add("xy", ColumnType.STRING).add("z", ColumnType.LONG).build())
-        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -734,7 +734,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                         .add("cnt", ColumnType.LONG)
                         .build()
         )
-        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             GroupByQuery.builder()
                         .setDataSource(externalDataSource)
@@ -768,7 +768,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                         .add("cnt", ColumnType.LONG)
                         .build()
         )
-        .expectResources(dataSourceWrite("dst"), ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             GroupByQuery.builder()
                         .setDataSource(externalDataSource)

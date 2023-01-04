@@ -32,12 +32,11 @@ import org.apache.druid.query.BadQueryException;
  */
 public class SqlPlanningException extends BadQueryException
 {
-
   public enum PlanningError
   {
-    SQL_PARSE_ERROR(SQL_PARSE_FAILED_ERROR_CODE, SqlParseException.class.getName()),
-    VALIDATION_ERROR(PLAN_VALIDATION_FAILED_ERROR_CODE, ValidationException.class.getName()),
-    UNSUPPORTED_SQL_ERROR(SQL_QUERY_UNSUPPORTED_ERROR_CODE, RelOptPlanner.CannotPlanException.class.getName());
+    SQL_PARSE_ERROR("SQL parse failed", SqlParseException.class.getName()),
+    VALIDATION_ERROR("Plan validation failed", ValidationException.class.getName()),
+    UNSUPPORTED_SQL_ERROR("SQL query is unsupported", RelOptPlanner.CannotPlanException.class.getName());
 
     private final String errorCode;
     private final String errorClass;
@@ -61,22 +60,53 @@ public class SqlPlanningException extends BadQueryException
 
   public SqlPlanningException(SqlParseException e)
   {
-    this(PlanningError.SQL_PARSE_ERROR, e.getMessage());
+    this(e, PlanningError.SQL_PARSE_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(ValidationException e)
   {
-    this(PlanningError.VALIDATION_ERROR, e.getMessage());
+    this(e, PlanningError.VALIDATION_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(CalciteContextException e)
   {
-    this(PlanningError.VALIDATION_ERROR, e.getMessage());
+    this(e, PlanningError.VALIDATION_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(PlanningError planningError, String errorMessage)
   {
-    this(planningError.errorCode, errorMessage, planningError.errorClass);
+    this(
+        null,
+        planningError.errorCode,
+        errorMessage,
+        planningError.errorClass
+    );
+  }
+
+  /**
+   * Constructor which preserves the source exception. Essential during debugging
+   * to see what really failed. If we don't want to show the user the underlying
+   * error, then don't serialize it out to the user. We must still preserve the
+   * cause internally to save time and sanity for developers.
+   */
+  public SqlPlanningException(Exception e, PlanningError planningError, String errorMessage)
+  {
+    this(
+        e,
+        planningError.errorCode,
+        errorMessage,
+        planningError.errorClass
+    );
+  }
+
+  private SqlPlanningException(
+      Exception e,
+      String errorCode,
+      String errorMessage,
+      String errorClass
+  )
+  {
+    super(errorCode, errorMessage, errorClass);
   }
 
   @JsonCreator

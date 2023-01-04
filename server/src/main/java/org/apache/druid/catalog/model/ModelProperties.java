@@ -21,17 +21,12 @@ package org.apache.druid.catalog.model;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.Period;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -53,13 +48,6 @@ public interface ModelProperties
      * the {@code properties} object within a catalog spec.
      */
     String name();
-
-    /**
-     * Metadata about properties, such as how they apply to SQL table functions.
-     *
-     * @see {@link PropertyAttributes} for details.
-     */
-    Map<String, Object> attributes();
 
     /**
      * The name of the type of this property to be displayed in error messages.
@@ -84,27 +72,15 @@ public interface ModelProperties
      * Decodes a JSON-encoded value into a corresponding Java value.
      */
     T decode(Object value, ObjectMapper jsonMapper);
-
-    /**
-     * Decodes a SQL-encoded value into a corresponding Java value.
-     */
-    T decodeSqlValue(Object value, ObjectMapper jsonMapper);
   }
 
   abstract class BasePropertyDefn<T> implements PropertyDefn<T>
   {
     protected final String name;
-    protected final Map<String, Object> attributes;
-
-    public BasePropertyDefn(final String name, Map<String, Object> attributes)
-    {
-      this.name = name;
-      this.attributes = attributes == null ? ImmutableMap.of() : attributes;
-    }
 
     public BasePropertyDefn(final String name)
     {
-      this(name, null);
+      this.name = name;
     }
 
     @Override
@@ -114,27 +90,9 @@ public interface ModelProperties
     }
 
     @Override
-    public Map<String, Object> attributes()
-    {
-      return attributes;
-    }
-
-    @Override
-    public String typeName()
-    {
-      return PropertyAttributes.typeName(this);
-    }
-
-    @Override
     public Object merge(Object existing, Object update)
     {
       return update == null ? existing : update;
-    }
-
-    @Override
-    public T decodeSqlValue(Object value, ObjectMapper jsonMapper)
-    {
-      return decode(value, jsonMapper);
     }
 
     @Override
@@ -142,32 +100,28 @@ public interface ModelProperties
     {
       return getClass().getSimpleName() + "{"
           + "name: " + name
-          + ", attributes: " + attributes()
+          + ", type: " + typeName()
           + "}";
     }
   }
 
-  abstract class SimplePropertyDefn<T> extends BasePropertyDefn<T>
+  public static class SimplePropertyDefn<T> extends BasePropertyDefn<T>
   {
     public final Class<T> valueClass;
 
     public SimplePropertyDefn(
         final String name,
-        final Class<T> valueClass,
-        final Map<String, Object> attribs
+        final Class<T> valueClass
     )
     {
-      super(
-          name,
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                PropertyAttributes.TYPE_NAME,
-                valueClass.getSimpleName()
-              ),
-              attribs
-          )
-      );
+      super(name);
       this.valueClass = valueClass;
+    }
+
+    @Override
+    public String typeName()
+    {
+      return valueClass.getSimpleName();
     }
 
     /**
@@ -205,13 +159,13 @@ public interface ModelProperties
       decode(value, jsonMapper);
     }
 
-    protected T decodeJson(Object value, ObjectMapper jsonMapper)
+    public T decodeJson(String value, ObjectMapper jsonMapper)
     {
       if (value == null) {
         return null;
       }
       try {
-        return jsonMapper.readValue((String) value, valueClass);
+        return jsonMapper.readValue(value, valueClass);
       }
       catch (Exception e) {
         throw new IAE(
@@ -223,28 +177,68 @@ public interface ModelProperties
     }
   }
 
+
+  public static class ObjectPropertyDefn<T> extends BasePropertyDefn<T>
+  {
+    public final Class<T> valueClass;
+
+    public ObjectPropertyDefn(
+        final String name,
+        final Class<T> valueClass
+    )
+    {
+      super(name);
+      this.valueClass = valueClass;
+    }
+
+    @Override
+    public String typeName()
+    {
+      return valueClass.getSimpleName();
+    }
+
+    /**
+     * Convert the value from the deserialized JSON format to the type
+     * required by this field data type. Also used to decode values from
+     * SQL parameters. As a side effect, verifies that the value is of
+     * the correct type.
+     */
+    @Override
+    public T decode(Object value, ObjectMapper jsonMapper)
+    {
+      return CatalogUtils.safeCast(value, valueClass, "JSON object");
+    }
+
+    /**
+     * Validate that the given value is valid for this property.
+     * By default, does a value conversion and discards the value.
+     */
+    @Override
+    public void validate(Object value, ObjectMapper jsonMapper)
+    {
+    }
+  }
+
   class TypeRefPropertyDefn<T> extends BasePropertyDefn<T>
   {
+    public final String typeName;
     public final TypeReference<T> valueType;
 
     public TypeRefPropertyDefn(
         final String name,
         final String typeName,
-        final TypeReference<T> valueType,
-        final Map<String, Object> attribs
+        final TypeReference<T> valueType
     )
     {
-      super(
-          name,
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                PropertyAttributes.TYPE_NAME,
-                typeName
-              ),
-              attribs
-          )
-      );
+      super(name);
+      this.typeName = Preconditions.checkNotNull(typeName);
       this.valueType = valueType;
+    }
+
+    @Override
+    public String typeName()
+    {
+      return typeName;
     }
 
     @Override
@@ -281,84 +275,40 @@ public interface ModelProperties
 
   class StringPropertyDefn extends SimplePropertyDefn<String>
   {
-    public StringPropertyDefn(String name, Map<String, Object> attribs)
+    public StringPropertyDefn(String name)
     {
-      super(
-          name,
-          String.class,
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                  PropertyAttributes.SQL_JAVA_TYPE,
-                  String.class
-              ),
-              attribs
-          )
-      );
+      super(name, String.class);
     }
   }
 
   class GranularityPropertyDefn extends StringPropertyDefn
   {
-    public GranularityPropertyDefn(String name, Map<String, Object> attribs)
+    public GranularityPropertyDefn(String name)
     {
-      super(name, attribs);
+      super(name);
     }
 
     @Override
     public void validate(Object value, ObjectMapper jsonMapper)
     {
       String gran = decode(value, jsonMapper);
-      validateGranularity(gran);
-    }
-
-    public void validateGranularity(String value)
-    {
-      if (value == null) {
-        return;
-      }
-      try {
-        //noinspection ResultOfObjectAllocationIgnored
-        new PeriodGranularity(new Period(value), null, null);
-      }
-      catch (IllegalArgumentException e) {
-        throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
-      }
+      CatalogUtils.validateGranularity(gran);
     }
   }
 
   class IntPropertyDefn extends SimplePropertyDefn<Integer>
   {
-    public IntPropertyDefn(String name, Map<String, Object> attribs)
+    public IntPropertyDefn(String name)
     {
-      super(
-          name,
-          Integer.class,
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                  PropertyAttributes.SQL_JAVA_TYPE,
-                  Integer.class
-              ),
-              attribs
-          )
-      );
+      super(name, Integer.class);
     }
   }
 
   class BooleanPropertyDefn extends SimplePropertyDefn<Boolean>
   {
-    public BooleanPropertyDefn(String name, Map<String, Object> attribs)
+    public BooleanPropertyDefn(String name)
     {
-      super(
-          name,
-          Boolean.class,
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                  PropertyAttributes.SQL_JAVA_TYPE,
-                  Boolean.class
-              ),
-              attribs
-          )
-      );
+      super(name, Boolean.class);
     }
   }
 
@@ -367,11 +317,10 @@ public interface ModelProperties
     public ListPropertyDefn(
         final String name,
         final String typeName,
-        final TypeReference<List<T>> valueType,
-        final Map<String, Object> attribs
+        final TypeReference<List<T>> valueType
     )
     {
-      super(name, typeName, valueType, attribs);
+      super(name, typeName, valueType);
     }
 
     @SuppressWarnings("unchecked")
@@ -410,33 +359,13 @@ public interface ModelProperties
 
   class StringListPropertyDefn extends ListPropertyDefn<String>
   {
-    public StringListPropertyDefn(
-        final String name,
-        final Map<String, Object> attribs
-    )
+    public StringListPropertyDefn(String name)
     {
       super(
           name,
           "string list",
-          new TypeReference<List<String>>() {},
-          PropertyAttributes.merge(
-              ImmutableMap.of(
-                  PropertyAttributes.SQL_JAVA_TYPE,
-                  String.class
-              ),
-              attribs
-          )
+          new TypeReference<List<String>>() {}
       );
-    }
-
-    @Override
-    public List<String> decodeSqlValue(Object value, ObjectMapper jsonMapper)
-    {
-      if (!(value instanceof String)) {
-        throw new IAE(StringUtils.format("Argument [%s] is not a VARCHAR", value));
-      }
-      String[] values = ((String) value).split(",\\s*");
-      return Arrays.asList(values);
     }
   }
 }

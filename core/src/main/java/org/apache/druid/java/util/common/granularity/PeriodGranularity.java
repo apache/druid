@@ -192,7 +192,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       return false;
     }
     return chronology.equals(that.chronology);
-
   }
 
   @Override

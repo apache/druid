@@ -23,14 +23,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.catalog.model.table.HttpTableDefn;
-import org.apache.druid.catalog.model.table.InlineTableDefn;
-import org.apache.druid.catalog.model.table.LocalTableDefn;
+import org.apache.druid.catalog.model.table.ExternalTableDefn;
+import org.apache.druid.catalog.model.table.HttpInputSourceDefn;
+import org.apache.druid.catalog.model.table.InlineInputSourceDefn;
+import org.apache.druid.catalog.model.table.InputFormatDefn;
+import org.apache.druid.catalog.model.table.InputFormats;
+import org.apache.druid.catalog.model.table.InputSourceDefn;
+import org.apache.druid.catalog.model.table.LocalInputSourceDefn;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
-
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,27 +61,63 @@ public class TableDefnRegistry
 {
   // Temporary list of Druid-define table definitions. This should come from
   // Guice later to allow extensions to define table types.
-  private static final TableDefn[] TABLE_DEFNS = {
+  private static final List<TableDefn> BUILTIN_TABLE_DEFNS = Arrays.asList(
       new DatasourceDefn(),
-      new InlineTableDefn(),
-      new HttpTableDefn(),
-      new LocalTableDefn()
-  };
+      new ExternalTableDefn()
+  );
+  private static final List<InputSourceDefn> BUILTIN_INPUT_SOURCE_DEFNS = Arrays.asList(
+      new InlineInputSourceDefn(),
+      new HttpInputSourceDefn(),
+      new LocalInputSourceDefn()
+  );
+  private static final List<InputFormatDefn> BUILTIN_INPUT_FORMAT_DEFNS = Arrays.asList(
+      new InputFormats.CsvFormatDefn(),
+      new InputFormats.DelimitedFormatDefn(),
+      new InputFormats.JsonFormatDefn()
+  );
 
-  private final Map<String, TableDefn> defns;
+  private final Map<String, TableDefn> tableDefns;
+  private final Map<String, InputSourceDefn> inputSourceDefns;
+  private final Map<String, InputFormatDefn> inputFormatDefns;
   private final ObjectMapper jsonMapper;
 
   public TableDefnRegistry(
-      final TableDefn[] defns,
+      @Nullable final List<TableDefn> tableDefnExtns,
+      @Nullable final List<InputSourceDefn> inputSourceDefnExtns,
+      @Nullable final List<InputFormatDefn> inputFormatDefnExtns,
       final ObjectMapper jsonMapper
   )
   {
-    ImmutableMap.Builder<String, TableDefn> builder = ImmutableMap.builder();
-    for (TableDefn defn : defns) {
-      builder.put(defn.typeValue(), defn);
-    }
-    this.defns = builder.build();
     this.jsonMapper = jsonMapper;
+    final List<TableDefn> tableDefns = CatalogUtils.concatLists(tableDefnExtns, BUILTIN_TABLE_DEFNS);
+    final List<InputSourceDefn> inputSourceDefns = CatalogUtils.concatLists(inputSourceDefnExtns, BUILTIN_INPUT_SOURCE_DEFNS);
+    final List<InputFormatDefn> inputFormatDefns = CatalogUtils.concatLists(inputFormatDefnExtns, BUILTIN_INPUT_FORMAT_DEFNS);
+
+    ImmutableMap.Builder<String, TableDefn> tableBuilder = ImmutableMap.builder();
+    for (TableDefn defn : tableDefns) {
+      tableBuilder.put(defn.typeValue(), defn);
+    }
+    this.tableDefns = tableBuilder.build();
+
+    ImmutableMap.Builder<String, InputSourceDefn> sourceBuilder = ImmutableMap.builder();
+    for (InputSourceDefn defn : inputSourceDefns) {
+      sourceBuilder.put(defn.typeValue(), defn);
+    }
+    this.inputSourceDefns = sourceBuilder.build();
+
+    ImmutableMap.Builder<String, InputFormatDefn> formatBuilder = ImmutableMap.builder();
+    for (InputFormatDefn defn : inputFormatDefns) {
+      formatBuilder.put(defn.typeValue(), defn);
+    }
+    this.inputFormatDefns = formatBuilder.build();
+
+    // Initialize all items once the entire set of bindings is defined.
+    for (InputSourceDefn defn : inputSourceDefns) {
+      defn.bind(this);
+    }
+    for (TableDefn defn : tableDefns) {
+      defn.bind(this);
+    }
   }
 
   @Inject
@@ -83,12 +125,12 @@ public class TableDefnRegistry
       @Json ObjectMapper jsonMapper
   )
   {
-    this(TABLE_DEFNS, jsonMapper);
+    this(null, null, null, jsonMapper);
   }
 
-  public TableDefn defnFor(String type)
+  public TableDefn tableDefnFor(String type)
   {
-    return defns.get(type);
+    return tableDefns.get(type);
   }
 
   public ObjectMapper jsonMapper()
@@ -102,10 +144,25 @@ public class TableDefnRegistry
     if (Strings.isNullOrEmpty(type)) {
       throw new IAE("The table type is required.");
     }
-    TableDefn defn = defns.get(type);
+    TableDefn defn = tableDefns.get(type);
     if (defn == null) {
       throw new IAE("Table type [%s] is not valid.", type);
     }
     return new ResolvedTable(defn, spec, jsonMapper);
+  }
+
+  public InputSourceDefn inputSourceDefnFor(String type)
+  {
+    return type == null ? null : inputSourceDefns.get(type);
+  }
+
+  public InputFormatDefn inputFormatDefnFor(String type)
+  {
+    return type == null ? null : inputFormatDefns.get(type);
+  }
+
+  public Map<String, InputFormatDefn> formats()
+  {
+    return inputFormatDefns;
   }
 }
