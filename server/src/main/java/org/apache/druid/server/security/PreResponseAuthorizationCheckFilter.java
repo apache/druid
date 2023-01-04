@@ -88,7 +88,10 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
-          "Request did not have an authorization check performed.",
+          String.format(
+              "Request did not have an authorization check performed, origin response status[%s].",
+              response.getStatus()
+          ),
           request,
           response
       );
@@ -171,7 +174,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
     // We allow 404s to not be rewritten to forbidden because consistently returning 404s is a way to leak less
     // information when something wasn't able to be done anyway.  I.e. if we pretend that the thing didn't exist
     // when the authorization fails, then there is no information about whether the thing existed.  If we return
-    // a 403 when fails authorization and a 404 when authorization succeeds, but it doesn't exist.  Then we have
+    // a 403 when authorization fails and a 404 when authorization succeeds, but it doesn't exist, then we have
     // leaked that it could maybe exist, if the authentication credentials were good.
     return !(status == HttpServletResponse.SC_FORBIDDEN || status == HttpServletResponse.SC_NOT_FOUND);
   }
