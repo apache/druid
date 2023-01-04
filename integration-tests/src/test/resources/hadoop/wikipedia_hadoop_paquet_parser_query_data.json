@@ -110,7 +110,11 @@
         "timestamp" : "2013-08-31T00:00:00.000Z",
         "result" : {
           "first_user":"nuclear",
-          "last_user":"stringer"
+          "last_user":"stringer",
+          "first_countryFlat":"United States",
+          "first_continentFlat":"North America",
+          "first_namespace":"article",
+          "first_regionAndCity":"Bay AreaSan Francisco"
         }
       }
     ]
