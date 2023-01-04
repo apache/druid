@@ -159,22 +159,27 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
   {
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
-          "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
-          keyColumn,
-          valueColumn,
-          table,
-          valueColumn
+          "SELECT \"%s\", \"%s\" FROM \"%s\" WHERE \"%s\" IS NOT NULL",
+          escapeQuotedIdentifier(keyColumn),
+          escapeQuotedIdentifier(valueColumn),
+          escapeQuotedIdentifier(table),
+          escapeQuotedIdentifier(valueColumn)
       );
     }
 
     return StringUtils.format(
-        "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
-        keyColumn,
-        valueColumn,
-        table,
+        "SELECT \"%s\", \"%s\" FROM \"%s\" WHERE %s AND \"%s\" IS NOT NULL",
+        escapeQuotedIdentifier(keyColumn),
+        escapeQuotedIdentifier(valueColumn),
+        escapeQuotedIdentifier(table),
         filter,
-        valueColumn
+        escapeQuotedIdentifier(valueColumn)
     );
+  }
+
+  private static String escapeQuotedIdentifier(String identifier)
+  {
+    return identifier.replace("\"", "\"\"");
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
