@@ -29,14 +29,13 @@ import javax.annotation.Nullable;
  * This exception is for the query engine to surface when a query cannot be run. This can be due to the
  * following reasons: 1) The query is not supported yet. 2) The query is not something Druid would ever supports.
  * For these cases, the exact causes and details should also be documented in Druid user facing documents.
- *
+ * <p>
  * As a {@link QueryException} it is expected to be serialized to a json response with a proper HTTP error code
  * ({@link #STATUS_CODE}).
  */
 public class QueryUnsupportedException extends QueryException
 {
   private static final String ERROR_CLASS = QueryUnsupportedException.class.getName();
-  public static final String ERROR_CODE = "Unsupported query";
   public static final int STATUS_CODE = 501;
 
   @JsonCreator
@@ -52,6 +51,6 @@ public class QueryUnsupportedException extends QueryException
 
   public QueryUnsupportedException(String errorMessage)
   {
-    super(ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+    super(QUERY_UNSUPPORTED_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
   }
 }

@@ -37,6 +37,9 @@ import org.apache.druid.catalog.model.table.InputFormats;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.junit.After;
 import org.junit.Before;
@@ -44,16 +47,12 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.druid.server.http.catalog.DummyRequest.deleteBy;
-import static org.apache.druid.server.http.catalog.DummyRequest.getBy;
-import static org.apache.druid.server.http.catalog.DummyRequest.postBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -64,6 +63,10 @@ import static org.junit.Assert.assertTrue;
  */
 public class CatalogResourceTest
 {
+  public static final String GET = "GET";
+  public static final String POST = "POST";
+  public static final String DELETE = "DELETE";
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -693,5 +696,33 @@ public class CatalogResourceTest
         Collections.singletonList("b"),
         CatalogUtils.columnNames(read.spec().columns())
     );
+  }
+
+  private static MockHttpServletRequest makeRequest(String method, String user, String contentType)
+  {
+    final MockHttpServletRequest retVal = new MockHttpServletRequest();
+    retVal.method = method;
+    retVal.attributes.put(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT,
+        new AuthenticationResult(user, CatalogTests.TEST_AUTHORITY, null, null
+        )
+    );
+    retVal.contentType = contentType;
+    return retVal;
+  }
+
+  private static MockHttpServletRequest postBy(String user)
+  {
+    return makeRequest(POST, user, null);
+  }
+
+  private static MockHttpServletRequest getBy(String user)
+  {
+    return makeRequest(GET, user, null);
+  }
+
+  private static MockHttpServletRequest deleteBy(String user)
+  {
+    return makeRequest(DELETE, user, null);
   }
 }

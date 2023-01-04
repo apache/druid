@@ -106,6 +106,7 @@ function getUsageInfoFromStatusPayload(status: any): UsageInfo | undefined {
 }
 
 export interface CapacityInfo {
+  availableTaskSlots: number;
   usedTaskSlots: number;
   totalTaskSlots: number;
 }
@@ -125,8 +126,7 @@ function formatPendingMessage(
     return baseMessage;
   }
 
-  const { usedTaskSlots, totalTaskSlots } = capacityInfo;
-  const availableTaskSlots = totalTaskSlots - usedTaskSlots;
+  const { availableTaskSlots, usedTaskSlots, totalTaskSlots } = capacityInfo;
 
   // If there are enough slots free: "Launched 2/4 tasks." (It will resolve very soon, no need to make it complicated.)
   if (pendingTasks <= availableTaskSlots) {

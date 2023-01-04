@@ -26,14 +26,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.loading.CacheTestSegmentCacheManager;
 import org.apache.druid.segment.loading.CacheTestSegmentLoader;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -84,13 +85,12 @@ public class SegmentLoadDropHandlerTest
   private TestStorageLocation testStorageLocation;
   private AtomicInteger announceCount;
   private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
-  private CacheTestSegmentCacheManager segmentCacheManager;
-  private SegmentLoader segmentLoader;
+  private SegmentCacheManager segmentCacheManager;
+  private Set<DataSegment> segmentsRemovedFromCache;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
   private SegmentLoaderConfig segmentLoaderConfig;
   private SegmentLoaderConfig noAnnouncerSegmentLoaderConfig;
-  private SegmentLoaderConfig segmentLoaderConfigNoLocations;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private List<StorageLocationConfig> locations;
 
@@ -122,9 +122,24 @@ public class SegmentLoadDropHandlerTest
 
     scheduledRunnable = new ArrayList<>();
 
-    segmentCacheManager = new CacheTestSegmentCacheManager();
-    segmentLoader = new CacheTestSegmentLoader();
-    segmentManager = new SegmentManager(segmentLoader);
+    segmentsRemovedFromCache = new HashSet<>();
+    segmentCacheManager = new NoopSegmentCacheManager()
+    {
+      @Override
+      public boolean isSegmentCached(DataSegment segment)
+      {
+        Map<String, Object> loadSpec = segment.getLoadSpec();
+        return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
+      }
+
+      @Override
+      public void cleanup(DataSegment segment)
+      {
+        segmentsRemovedFromCache.add(segment);
+      }
+    };
+
+    segmentManager = new SegmentManager(new CacheTestSegmentLoader());
     segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
     announceCount = new AtomicInteger(0);
 
@@ -230,28 +245,6 @@ public class SegmentLoadDropHandlerTest
       }
     };
 
-    segmentLoaderConfigNoLocations = new SegmentLoaderConfig()
-    {
-      @Override
-      public int getNumLoadingThreads()
-      {
-        return 5;
-      }
-
-      @Override
-      public int getAnnounceIntervalMillis()
-      {
-        return 50;
-      }
-
-
-      @Override
-      public int getDropSegmentDelayMillis()
-      {
-        return 0;
-      }
-    };
-
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
       @Override
@@ -314,7 +307,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentsRemovedFromCache.contains(segment));
 
     segmentLoadDropHandler.stop();
   }
@@ -353,7 +346,7 @@ public class SegmentLoadDropHandlerTest
     }
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
-    Assert.assertFalse("segment files shouldn't be deleted", segmentCacheManager.getSegmentsInTrash().contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentsRemovedFromCache.contains(segment));
 
     segmentLoadDropHandler.stop();
   }

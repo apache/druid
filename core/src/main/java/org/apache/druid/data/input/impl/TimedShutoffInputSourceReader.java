@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -47,10 +48,10 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read() throws IOException
+  public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
     final ScheduledExecutorService shutdownExec = Execs.scheduledSingleThreaded("timed-shutoff-reader-%d");
-    final CloseableIterator<InputRow> delegateIterator = delegate.read();
+    final CloseableIterator<InputRow> delegateIterator = delegate.read(inputStats);
     return decorateShutdownTimeout(shutdownExec, delegateIterator);
   }
 
