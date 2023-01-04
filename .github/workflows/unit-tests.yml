@@ -74,6 +74,9 @@ jobs:
           # This is not needed for build triggered by tags, since there will be no code diff.
           git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
 
+      - name: Setup diff-test-coverage
+        run: npm install @connectis/diff-test-coverage@1.5.3
+
       - name: "(openjdk8) indexing modules test"
         env:
           MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
