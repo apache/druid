@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
@@ -88,7 +89,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // since the request didn't have any authorization checks performed. However, this breaks proxying
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
-          String.format(
+          StringUtils.format(
               "Request did not have an authorization check performed, origin response status[%s].",
               response.getStatus()
           ),
