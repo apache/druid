@@ -37,6 +37,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -65,7 +66,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
@@ -418,7 +418,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
   )
   {
     ListeningExecutorService executor = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(EXECUTOR_NUM_THREADS)
+        Execs.multiThreaded(EXECUTOR_NUM_THREADS, "Test-%d")
     );
 
     List<ListenableFuture<?>> futures = new ArrayList<>();

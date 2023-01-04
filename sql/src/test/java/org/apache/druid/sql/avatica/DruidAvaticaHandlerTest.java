@@ -122,7 +122,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -820,7 +819,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();
     final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Executors.newFixedThreadPool(AVATICA_CONFIG.getMaxStatementsPerConnection())
+        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "Test-%d")
     );
     for (int i = 0; i < 2000; i++) {
       final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +34,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,7 +61,10 @@ public class LifecycleTest
   public void testConcurrentStartStopOnce() throws Exception
   {
     final int numThreads = 10;
-    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(numThreads));
+    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+        numThreads,
+        "Test-%d"
+    ));
 
     final Lifecycle lifecycle = new Lifecycle();
     final AtomicLong handlerFailedCount = new AtomicLong(0L);

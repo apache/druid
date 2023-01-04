@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -44,7 +45,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -161,7 +161,7 @@ public class BalanceSegmentsTest
     druidServers = ImmutableList.of(druidServer1, druidServer2, druidServer3, druidServer4);
     peons = ImmutableList.of(peon1, peon2, peon3, peon4);
 
-    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(balancerStrategyExecutor);
 
     broadcastDatasources = Collections.singleton("datasourceBroadcast");

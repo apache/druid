@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -119,7 +120,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -147,7 +147,7 @@ public class ServerManagerTest
     queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
-    serverManagerExec = Executors.newFixedThreadPool(2);
+    serverManagerExec = Execs.multiThreaded(2, "Test-%d");
     segmentManager = new SegmentManager(
         new SegmentLoader()
         {
