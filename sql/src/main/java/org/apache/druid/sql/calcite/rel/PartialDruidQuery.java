@@ -611,6 +611,7 @@ public class PartialDruidQuery
            ", aggregateProject=" + aggregateProject +
            ", sort=" + sort +
            ", sortProject=" + sortProject +
+           ", unnestProject=" + unnestProject +
            '}';
   }
 }

@@ -43,6 +43,7 @@ import java.util.List;
 public class DruidCorrelateUnnestRule extends RelOptRule
 {
   private final PlannerContext plannerContext;
+  private final boolean enableLeftScanDirect;
 
   public DruidCorrelateUnnestRule(final PlannerContext plannerContext)
   {
@@ -55,20 +56,24 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     );
 
     this.plannerContext = plannerContext;
+    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
   }
 
   @Override
   public void onMatch(RelOptRuleCall call)
   {
     LogicalCorrelate logicalCorrelate = call.rel(0);
-    DruidQueryRel druidQueryRel = call.rel(1);
+    final DruidRel<?> druidQueryRel = call.rel(1);
     DruidUnnestDatasourceRel unnestDatasourceRel = call.rel(2);
     final Filter leftFilter;
     final DruidRel<?> newLeft;
     final RexBuilder rexBuilder = logicalCorrelate.getCluster().getRexBuilder();
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
-    if (druidQueryRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
+    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (druidQueryRel instanceof DruidQueryRel);
+
+    if (druidQueryRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
+        && (isLeftDirectAccessPossible || druidQueryRel.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the correlate, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
       final RelNode leftScan = druidQueryRel.getPartialDruidQuery().getScan();
@@ -129,7 +134,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         lc.getTraitSet(),
         lc,
         PartialDruidQuery.create(lc),
-        druidQueryRel,
+        (DruidQueryRel) druidQueryRel,
         unnestDatasourceRel,
         leftFilter,
         plannerContext
@@ -142,7 +147,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
             .project(RexUtil.fixUp(
                 rexBuilder,
                 newProjectExprs,
-                RelOptUtil.getFieldTypeList(logicalCorrelate.getRowType())
+                RelOptUtil.getFieldTypeList(lc.getRowType())
             ));
 
     call.transformTo(relBuilder.build());

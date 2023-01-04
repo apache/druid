@@ -44,8 +44,6 @@ import java.util.stream.Collectors;
 
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
-  // This may be needed for the explain plan later
-  // private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__unnest__");
   private final PartialDruidQuery partialQuery;
   private final PlannerConfig plannerConfig;
   private final LogicalCorrelate logicalCorrelate;
@@ -129,37 +127,48 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         unnestDatasourceRel.getUnnestProject().getRowType()
     );
 
-    String dimensionToUnnest;
-
+    // placeholder for dimension or expression to be unnested
+    final String dimOrExpToUnnest;
     final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         rowSignature,
         getPlannerContext().getExprMacroTable(),
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
+
+    boolean unnestProjectNeeded = false;
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
-    if (expression.isDirectColumnAccess()) {
-      dimensionToUnnest = expression.getDirectColumn();
+    // handling for case when mv_to_array is used
+    // if used and has only 1 argument it can be consumed as a column
+    // No need to use virtual column in such a case
+    if (expression.getArguments().size() == 1 && expression.getExpression().toLowerCase().contains("mv_to_array")) {
+      dimOrExpToUnnest = expression.getArguments().get(0).getSimpleExtraction().getColumn();
     } else {
-      // buckle up time to create virtual columns on expressions
-      dimensionToUnnest = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          expression,
-          expression.getDruidType()
-      );
+      if (expression.isDirectColumnAccess()) {
+        dimOrExpToUnnest = expression.getDirectColumn();
+      } else {
+        // buckle up time to create virtual columns on expressions
+        unnestProjectNeeded = true;
+        dimOrExpToUnnest = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+            expression,
+            expression.getDruidType()
+        );
+      }
     }
 
     // create the unnest data source to use in the partial query
     UnnestDataSource unnestDataSource =
         UnnestDataSource.create(
             leftDataSource,
-            dimensionToUnnest,
+            dimOrExpToUnnest,
             unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
             null
         );
 
     // add the unnest project to the partial query
     // This is necessary to handle the virtual columns on the unnestProject
-    return partialQuery.withUnnest(unnestProject).build(
+    PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
+    return partialDruidQuery.build(
         unnestDataSource,
         rowSignature,
         getPlannerContext(),

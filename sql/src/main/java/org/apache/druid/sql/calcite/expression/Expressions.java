@@ -35,6 +35,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -235,15 +236,19 @@ public class Expressions
     // while the underlying datasource is the scan stub created from LogicalValuesRule
     // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
     // This exception is caught while returning false from isValidDruidQuery() method
+
+    //use this index to return
+    final int index = rowSignature.getColumnNames().indexOf(ref.getField().getName());
     if (ref.getField().getIndex() > rowSignature.size()) {
-      throw new CannotBuildQueryException(
-          "Cannot build query as index is higher than row size"
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Cannot build query as column name [%s] does not exist in row [%s]", ref.getField().getName(), rowSignature)
       );
     }
-    final String columnName = rowSignature.getColumnName(ref.getField().getIndex());
-    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getField().getIndex());
+
+    final String columnName = rowSignature.getColumnName(index);
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
     if (columnName == null) {
-      throw new ISE("Expression referred to nonexistent index[%d]", ref.getField().getIndex());
+      throw new ISE("Expression referred to nonexistent index [%d] in row [%s]", index, rowSignature);
     }
 
     return DruidExpression.ofColumn(columnType.orElse(null), columnName);
