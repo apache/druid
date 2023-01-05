@@ -77,9 +77,7 @@ public class JdbcExtractionNamespaceTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private static final Logger log = new Logger(JdbcExtractionNamespaceTest.class);
-  private static final String TABLE_NAME = "abstractDbRenameTest";
-  private static final String KEY_NAME = "keyName";
-  private static final String VAL_NAME = "valName";
+
   private static final String TS_COLUMN = "tsColumn";
   private static final String FILTER_COLUMN = "filterColumn";
   private static final Map<String, String[]> RENAMES = ImmutableMap.of(
@@ -90,23 +88,37 @@ public class JdbcExtractionNamespaceTest
   );
 
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "table name={0}, key column={1}, val column={2}, tsColumn={3}")
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.of(
-        new Object[]{"tsColumn"},
-        new Object[]{null}
+        new Object[]{"table", "select", "foo \" column;", "tsColumn"}, // reserved identifiers as table, key and value columnns.
+        new Object[]{"abstractDbRenameTest", "keyName", "valName", "tsColumn"},
+        new Object[]{"abstractDbRenameTest", "keyName", "valName", null}
     );
   }
 
   public JdbcExtractionNamespaceTest(
+      String tableName,
+      String keyName,
+      String valueName,
       String tsColumn
   )
   {
+    this.tableName = tableName;
+    this.keyName = keyName;
+    this.valName = valueName;
     this.tsColumn = tsColumn;
   }
 
+  private final String tableName;
+
+  private final String keyName;
+
+  private final String valName;
+
   private final String tsColumn;
+
   private CacheScheduler scheduler;
   private Lifecycle lifecycle;
   private AtomicLong updates;
@@ -132,20 +144,20 @@ public class JdbcExtractionNamespaceTest
               handle.createStatement(
                   StringUtils.format(
                       "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
-                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName),
                       JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TS_COLUMN),
                       JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
-                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(KEY_NAME),
-                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(VAL_NAME)
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.keyName),
+                      JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.valName)
                   )
               ).setQueryTimeout(1).execute()
           );
           handle.createStatement(StringUtils.format("TRUNCATE TABLE %s",
-              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME))).setQueryTimeout(1).execute();
+              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName))).setQueryTimeout(1).execute();
           handle.commit();
           closer.register(() -> {
             handle.createStatement(StringUtils.format("DROP TABLE %s",
-                JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME))).setQueryTimeout(1).execute();
+                JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName))).setQueryTimeout(1).execute();
             final ListenableFuture future = setupTeardownService.submit(new Runnable()
             {
               @Override
@@ -294,25 +306,25 @@ public class JdbcExtractionNamespaceTest
     final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
-          StringUtils.format("DELETE FROM %s WHERE %s='%s'", JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME),
-              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(KEY_NAME), key)
+          StringUtils.format("DELETE FROM %s WHERE %s='%s'", JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName),
+              JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.keyName), key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName),
           JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(KEY_NAME),
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(VAL_NAME),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.keyName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.valName),
           filter, key, val
       );
     } else {
       query = StringUtils.format(
           "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(TABLE_NAME),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.tableName),
           JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(tsColumn),
           JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN),
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(KEY_NAME),
-          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(VAL_NAME),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.keyName),
+          JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(this.valName),
           updateTs, filter, key, val
       );
     }
@@ -329,10 +341,10 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
-        tsColumn,
+        this.tableName,
+        this.keyName,
+        this.valName,
+        this.tsColumn,
         null,
         new Period(0),
         null,
@@ -362,10 +374,10 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
-        tsColumn,
+        this.tableName,
+        this.keyName,
+        this.valName,
+        this.tsColumn,
         JdbcCacheGenerator.toDoublyQuotedEscapedIdentifier(FILTER_COLUMN) + "='1'",
         new Period(0),
         null,
@@ -400,7 +412,7 @@ public class JdbcExtractionNamespaceTest
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
-      if (tsColumn != null) {
+      if (this.tsColumn != null) {
         insertValues(handleRef, "foo", "baz", null, "1900-01-01 00:00:00");
       }
       assertUpdated(entry, "foo", "bar");
@@ -437,10 +449,10 @@ public class JdbcExtractionNamespaceTest
     final JdbcAccessSecurityConfig securityConfig = new JdbcAccessSecurityConfig();
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
-        tsColumn,
+        this.tableName,
+        this.keyName,
+        this.valName,
+        this.tsColumn,
         "some filter",
         new Period(10),
         null,
@@ -462,10 +474,10 @@ public class JdbcExtractionNamespaceTest
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
-        TABLE_NAME,
-        KEY_NAME,
-        VAL_NAME,
-        tsColumn,
+        this.tableName,
+        this.keyName,
+        this.valName,
+        this.tsColumn,
         null,
         new Period(10),
         null,
