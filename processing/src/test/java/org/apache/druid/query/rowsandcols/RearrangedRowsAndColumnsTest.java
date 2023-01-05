@@ -61,6 +61,7 @@ public class RearrangedRowsAndColumnsTest extends RowsAndColumnsTestBase
     return new RearrangedRowsAndColumns(pointers, new MapOfColumnsRowsAndColumns(shuffledMap, pointers.length));
   };
 
+  @SuppressWarnings("UnusedCollectionModifiedInPlace")
   private static void shuffleArray(int[] pointers)
   {
     Collections.shuffle(new AbstractList<Object>()
