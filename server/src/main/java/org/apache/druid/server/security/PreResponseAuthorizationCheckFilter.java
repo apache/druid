@@ -90,7 +90,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
           StringUtils.format(
-              "Request did not have an authorization check performed, origin response status[%s].",
+              "Request did not have an authorization check performed, original response status[%s].",
               response.getStatus()
           ),
           request,
