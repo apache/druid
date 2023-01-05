@@ -36,11 +36,13 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -55,14 +57,14 @@ public class OpenCensusProtobufReader implements InputEntityReader
   private static final String VALUE_COLUMN = "value";
 
   private final DimensionsSpec dimensionsSpec;
-  private final ByteEntity source;
+  private final SettableByteEntity<? extends ByteEntity> source;
   private final String metricDimension;
   private final String metricLabelPrefix;
   private final String resourceLabelPrefix;
 
   public OpenCensusProtobufReader(
       DimensionsSpec dimensionsSpec,
-      ByteEntity source,
+      SettableByteEntity<? extends ByteEntity> source,
       String metricDimension,
       String metricLabelPrefix,
       String resourceLabelPrefix
@@ -101,7 +103,12 @@ public class OpenCensusProtobufReader implements InputEntityReader
   List<InputRow> readAsList()
   {
     try {
-      return parseMetric(Metric.parseFrom(source.getBuffer()));
+      ByteBuffer buffer = source.getEntity().getBuffer();
+      List<InputRow> rows = parseMetric(Metric.parseFrom(buffer));
+      // Explicitly move the position assuming that all the remaining bytes have been consumed because the protobuf
+      // parser does not update the position itself
+      buffer.position(buffer.limit());
+      return rows;
     }
     catch (InvalidProtocolBufferException e) {
       throw new ParseException(null, e, "Protobuf message could not be parsed");

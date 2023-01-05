@@ -25,12 +25,14 @@ import io.opentelemetry.proto.common.v1.KeyValue;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -41,9 +43,7 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -51,6 +51,7 @@ import java.nio.ByteOrder;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class OpenCensusProtobufReaderTest
@@ -96,11 +97,6 @@ public class OpenCensusProtobufReaderTest
   private static final Header HEADERV1 = new RecordHeader("v", V0_HEADER_BYTES);
   private static final Headers HEADERS = new RecordHeaders(new Header[]{HEADERV1});
 
-
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Before
   public void setUp()
   {
@@ -124,40 +120,46 @@ public class OpenCensusProtobufReaderTest
   public void testSumWithAttributes() throws IOException
   {
     metricBuilder
-      .setName("example_sum")
-      .getSumBuilder()
-      .addDataPointsBuilder()
-      .setAsInt(6)
-      .setTimeUnixNano(TIMESTAMP)
-      .addAttributesBuilder() // test sum with attributes
-      .setKey(METRIC_ATTRIBUTE_COLOR)
-      .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_VALUE_RED).build());
+        .setName("example_sum")
+        .getSumBuilder()
+        .addDataPointsBuilder()
+        .setAsInt(6)
+        .setTimeUnixNano(TIMESTAMP)
+        .addAttributesBuilder() // test sum with attributes
+        .setKey(METRIC_ATTRIBUTE_COLOR)
+        .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_VALUE_RED).build());
+
 
     MetricsData metricsData = metricsDataBuilder.build();
-    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
-         -1L, -1, -1, null, metricsData.toByteArray(), HEADERS);
-    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
-    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
+    ConsumerRecord<byte[], byte[]> consumerRecord = new ConsumerRecord<>(TOPIC, PARTITION, OFFSET, TS, TSTYPE, -1, -1,
+        null, metricsData.toByteArray(), HEADERS, Optional.empty());
+    OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat(
+        "metric.name",
         null,
         "descriptor.",
-        "custom.");
+        "custom."
+    );
 
-    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+    SettableByteEntity<KafkaRecordEntity> entity = new SettableByteEntity<>();
+    InputEntityReader reader = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
         ColumnsFilter.all()
-      ), kafkaRecordEntity, null).read();
+    ), entity, null);
 
-    List<InputRow> rowList = new ArrayList<>();
-    rows.forEachRemaining(rowList::add);
-    Assert.assertEquals(1, rowList.size());
+    entity.setEntity(new KafkaRecordEntity(consumerRecord));
+    try (CloseableIterator<InputRow> rows = reader.read()) {
+      List<InputRow> rowList = new ArrayList<>();
+      rows.forEachRemaining(rowList::add);
+      Assert.assertEquals(1, rowList.size());
 
-    InputRow row = rowList.get(0);
-    Assert.assertEquals(4, row.getDimensions().size());
-    assertDimensionEquals(row, "metric.name", "example_sum");
-    assertDimensionEquals(row, "custom.country", "usa");
-    assertDimensionEquals(row, "descriptor.color", "red");
-    assertDimensionEquals(row, "value", "6");
+      InputRow row = rowList.get(0);
+      Assert.assertEquals(4, row.getDimensions().size());
+      assertDimensionEquals(row, "metric.name", "example_sum");
+      assertDimensionEquals(row, "custom.country", "usa");
+      assertDimensionEquals(row, "descriptor.color", "red");
+      assertDimensionEquals(row, "value", "6");
+    }
   }
 
   @Test
@@ -173,27 +175,30 @@ public class OpenCensusProtobufReaderTest
       .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_VALUE_RED).build());
 
     MetricsData metricsData = metricsDataBuilder.build();
-    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
-        -1L, -1, -1, null, metricsData.toByteArray(), HEADERS);
-    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
+    ConsumerRecord<byte[], byte[]> consumerRecord = new ConsumerRecord<>(TOPIC, PARTITION, OFFSET, TS, TSTYPE, -1, -1,
+        null, metricsData.toByteArray(), HEADERS, Optional.empty());
     OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
         null,
         "descriptor.",
         "custom.");
-    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+    SettableByteEntity<KafkaRecordEntity> entity = new SettableByteEntity<>();
+    InputEntityReader reader = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
         ColumnsFilter.all()
-    ), kafkaRecordEntity, null).read();
+    ), entity, null);
 
-    Assert.assertTrue(rows.hasNext());
-    InputRow row = rows.next();
+    entity.setEntity(new KafkaRecordEntity(consumerRecord));
+    try (CloseableIterator<InputRow> rows = reader.read()) {
+      Assert.assertTrue(rows.hasNext());
+      InputRow row = rows.next();
 
-    Assert.assertEquals(4, row.getDimensions().size());
-    assertDimensionEquals(row, "metric.name", "example_gauge");
-    assertDimensionEquals(row, "custom.country", "usa");
-    assertDimensionEquals(row, "descriptor.color", "red");
-    assertDimensionEquals(row, "value", "6");
+      Assert.assertEquals(4, row.getDimensions().size());
+      assertDimensionEquals(row, "metric.name", "example_gauge");
+      assertDimensionEquals(row, "custom.country", "usa");
+      assertDimensionEquals(row, "descriptor.color", "red");
+      assertDimensionEquals(row, "value", "6");
+    }
   }
 
   @Test
@@ -236,38 +241,38 @@ public class OpenCensusProtobufReaderTest
       .setValue(AnyValue.newBuilder().setStringValue(METRIC_ATTRIBUTE_FOO_VAL).build());
 
     MetricsData metricsData = metricsDataBuilder.build();
-    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
-        -1L, -1, -1, null, metricsData.toByteArray(), HEADERS);
-    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
+    ConsumerRecord<byte[], byte[]> consumerRecord = new ConsumerRecord<>(TOPIC, PARTITION, OFFSET, TS, TSTYPE, -1, -1,
+        null, metricsData.toByteArray(), HEADERS, Optional.empty());
     OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
         null,
          "descriptor.",
         "custom.");
-
-    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+    SettableByteEntity<KafkaRecordEntity> entity = new SettableByteEntity<>();
+    InputEntityReader reader = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
         ColumnsFilter.all()
-    ), kafkaRecordEntity, null).read();
+    ), entity, null);
 
+    entity.setEntity(new KafkaRecordEntity(consumerRecord));
+    try (CloseableIterator<InputRow> rows = reader.read()) {
+      Assert.assertTrue(rows.hasNext());
+      InputRow row = rows.next();
 
-    Assert.assertTrue(rows.hasNext());
-    InputRow row = rows.next();
+      Assert.assertEquals(4, row.getDimensions().size());
+      assertDimensionEquals(row, "metric.name", "example_sum");
+      assertDimensionEquals(row, "custom.country", "usa");
+      assertDimensionEquals(row, "descriptor.color", "red");
+      assertDimensionEquals(row, "value", "6");
 
-    Assert.assertEquals(4, row.getDimensions().size());
-    assertDimensionEquals(row, "metric.name", "example_sum");
-    assertDimensionEquals(row, "custom.country", "usa");
-    assertDimensionEquals(row, "descriptor.color", "red");
-    assertDimensionEquals(row, "value", "6");
-
-    Assert.assertTrue(rows.hasNext());
-    row = rows.next();
-    Assert.assertEquals(4, row.getDimensions().size());
-    assertDimensionEquals(row, "metric.name", "example_gauge");
-    assertDimensionEquals(row, "custom.env", "devel");
-    assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
-    assertDimensionEquals(row, "value", "8");
-
+      Assert.assertTrue(rows.hasNext());
+      row = rows.next();
+      Assert.assertEquals(4, row.getDimensions().size());
+      assertDimensionEquals(row, "metric.name", "example_gauge");
+      assertDimensionEquals(row, "custom.env", "devel");
+      assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
+      assertDimensionEquals(row, "value", "8");
+    }
   }
 
   @Test
@@ -299,53 +304,58 @@ public class OpenCensusProtobufReaderTest
         )).build();
 
     MetricsData metricsData = metricsDataBuilder.build();
-    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
-        -1L, -1, -1, null, metricsData.toByteArray(), HEADERS);
-    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
+    ConsumerRecord<byte[], byte[]> consumerRecord = new ConsumerRecord<>(TOPIC, PARTITION, OFFSET, TS, TSTYPE, -1, -1,
+        null, metricsData.toByteArray(), HEADERS, Optional.empty());
     OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
         null,
         "descriptor.",
         "custom.");
 
-    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+    SettableByteEntity<KafkaRecordEntity> entity = new SettableByteEntity<>();
+    InputEntityReader reader = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpecWithExclusions,
         ColumnsFilter.all()
-    ), kafkaRecordEntity, null).read();
+    ), entity, null);
 
+    entity.setEntity(new KafkaRecordEntity(consumerRecord));
+    try (CloseableIterator<InputRow> rows = reader.read()) {
+      Assert.assertTrue(rows.hasNext());
+      InputRow row = rows.next();
 
-    Assert.assertTrue(rows.hasNext());
-    InputRow row = rows.next();
-
-    Assert.assertEquals(4, row.getDimensions().size());
-    assertDimensionEquals(row, "metric.name", "example_gauge");
-    assertDimensionEquals(row, "value", "6");
-    assertDimensionEquals(row, "custom.env", "devel");
-    assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
-    Assert.assertFalse(row.getDimensions().contains("custom.country"));
-    Assert.assertFalse(row.getDimensions().contains("descriptor.color"));
+      Assert.assertEquals(4, row.getDimensions().size());
+      assertDimensionEquals(row, "metric.name", "example_gauge");
+      assertDimensionEquals(row, "value", "6");
+      assertDimensionEquals(row, "custom.env", "devel");
+      assertDimensionEquals(row, "descriptor.foo_key", "foo_value");
+      Assert.assertFalse(row.getDimensions().contains("custom.country"));
+      Assert.assertFalse(row.getDimensions().contains("descriptor.color"));
+    }
   }
 
   @Test
   public void testInvalidProtobuf() throws IOException
   {
     byte[] invalidProtobuf = new byte[] {0x00, 0x01};
-    ConsumerRecord consumerRecord = new ConsumerRecord(TOPIC, PARTITION, OFFSET, TS, TSTYPE,
-        -1L, -1, -1, null, invalidProtobuf, HEADERS);
-    KafkaRecordEntity kafkaRecordEntity = new KafkaRecordEntity(consumerRecord);
+    ConsumerRecord<byte[], byte[]> consumerRecord = new ConsumerRecord<>(TOPIC, PARTITION, OFFSET, TS, TSTYPE, -1, -1,
+        null, invalidProtobuf, HEADERS, Optional.empty());
     OpenCensusProtobufInputFormat inputFormat = new OpenCensusProtobufInputFormat("metric.name",
         null,
         "descriptor.",
         "custom.");
 
-    CloseableIterator<InputRow> rows = inputFormat.createReader(new InputRowSchema(
+    SettableByteEntity<KafkaRecordEntity> entity = new SettableByteEntity<>();
+    InputEntityReader reader = inputFormat.createReader(new InputRowSchema(
         new TimestampSpec("timestamp", "iso", null),
         dimensionsSpec,
         ColumnsFilter.all()
-    ), kafkaRecordEntity, null).read();
+    ), entity, null);
 
-    Assert.assertThrows(ParseException.class, () -> rows.hasNext());
-    Assert.assertThrows(ParseException.class, () -> rows.next());
+    entity.setEntity(new KafkaRecordEntity(consumerRecord));
+    try (CloseableIterator<InputRow> rows = reader.read()) {
+      Assert.assertThrows(ParseException.class, () -> rows.hasNext());
+      Assert.assertThrows(ParseException.class, () -> rows.next());
+    }
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
