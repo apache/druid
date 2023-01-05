@@ -307,10 +307,6 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
-    - <<: *integration_input_format
-      name: "(Compile=openjdk8, Run=openjdk8) input format integration test with Indexer"
-      env: TESTNG_GROUPS='-Dgroups=input-format' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
-
     - &integration_input_source
       name: "(Compile=openjdk8, Run=openjdk8) input source integration test"
       stage: Tests - phase 2
@@ -319,10 +315,6 @@ jobs:
       env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='middleManager'
       script: *run_integration_test
       after_failure: *integration_test_diags
-
-    - <<: *integration_input_source
-      name: "(Compile=openjdk8, Run=openjdk8) input source integration test with Indexer"
-      env: TESTNG_GROUPS='-Dgroups=input-source' JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
 
     - &integration_perfect_rollup_parallel_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) perfect rollup parallel batch index integration test"
@@ -548,6 +540,22 @@ jobs:
       services: *integration_test_services
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
       script: ./it.sh travis BatchIndex
+
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) input source integration test with Indexer (new)"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      script: ./it.sh travis InputSource
+
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk8) input format integration test with Indexer (new)"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
+      script: ./it.sh travis InputFormat
 
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
