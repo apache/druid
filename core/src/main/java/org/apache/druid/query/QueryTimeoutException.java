@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
  * As a {@link QueryException}, it is expected to be serialized to a json response, but will be mapped to
  * {@link #STATUS_CODE} instead of the default HTTP 500 status.
  */
+
 public class QueryTimeoutException extends QueryException
 {
   private static final String ERROR_CLASS = QueryTimeoutException.class.getName();

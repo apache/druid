@@ -123,11 +123,11 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   @Override
   public void validate(ResolvedExternalTable table)
   {
-    final Map<String, Object> sourceMap = table.sourceMap();
+    final Map<String, Object> sourceMap = table.inputSourceMap;
     final boolean hasUri = sourceMap.containsKey(URIS_FIELD);
     final String uriTemplate = table.resolvedTable().stringProperty(URI_TEMPLATE_PROPERTY);
     final boolean hasTemplate = uriTemplate != null;
-    final boolean hasFormat = table.formatMap() != null;
+    final boolean hasFormat = table.inputFormatMap != null;
     final boolean hasColumns = !CollectionUtils.isNullOrEmpty(table.resolvedTable().spec().columns());
 
     if (!hasUri && !hasTemplate) {
@@ -206,7 +206,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     List<ParameterDefn> params = Collections.emptyList();
 
     // Does the table define URIs?
-    Map<String, Object> sourceMap = table.sourceMap();
+    Map<String, Object> sourceMap = table.inputSourceMap;
     if (!sourceMap.containsKey(URIS_FIELD)) {
       params = CatalogUtils.concatLists(params, URI_PARAMS);
     }
@@ -217,7 +217,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     }
 
     // Does the table define a format?
-    if (table.formatMap() == null) {
+    if (table.inputFormatMap == null) {
       params = addFormatParameters(params);
     }
     return new PartialTableFunction(table, params);
@@ -231,7 +231,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   )
   {
     // Get URIs from table if defined, else from arguments.
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
     final String uriTemplate = table.resolvedTable().stringProperty(URI_TEMPLATE_PROPERTY);
     if (uriTemplate != null) {
       convertUriTemplateArgs(sourceMap, uriTemplate, args);

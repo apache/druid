@@ -28,6 +28,11 @@ public abstract class BadQueryException extends QueryException
 {
   public static final int STATUS_CODE = 400;
 
+  protected BadQueryException(Exception e, String errorCode, String errorMessage, String errorClass)
+  {
+    super(e, errorCode, errorMessage, errorClass, null);
+  }
+
   protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
     super(errorCode, errorMessage, errorClass, null);

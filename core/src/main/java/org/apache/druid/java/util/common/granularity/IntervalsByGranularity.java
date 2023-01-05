@@ -60,7 +60,7 @@ public class IntervalsByGranularity
     if (sortedNonOverlappingIntervals.isEmpty()) {
       return Collections.emptyIterator();
     } else {
-      // The filter after transform & concat is to remove duplicates.
+      // The filter after transform & concat is to remove duplicats.
       // This can happen when condense left intervals that did not overlap but
       // when a larger granularity is applied then they become equal
       // imagine input are 2013-01-01T00Z/2013-01-10T00Z, 2013-01-15T00Z/2013-01-20T00Z.

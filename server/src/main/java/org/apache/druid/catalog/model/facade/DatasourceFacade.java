@@ -22,15 +22,11 @@ package org.apache.druid.catalog.model.facade;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
-import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.catalog.model.TypeParser;
-import org.apache.druid.catalog.model.TypeParser.ParsedType;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
@@ -57,17 +53,10 @@ public class DatasourceFacade extends TableFacade
     }
 
     private final ColumnSpec spec;
-    private final ParsedType type;
 
     public ColumnFacade(ColumnSpec spec)
     {
       this.spec = spec;
-      if (Columns.isTimeColumn(spec.name()) && spec.sqlType() == null) {
-        // For __time only, force a type if type is null.
-        this.type = TypeParser.TIME_TYPE;
-      } else {
-        this.type = TypeParser.parse(spec.sqlType());
-      }
     }
 
     public ColumnSpec spec()
@@ -75,55 +64,10 @@ public class DatasourceFacade extends TableFacade
       return spec;
     }
 
-    public ParsedType type()
-    {
-      return type;
-    }
-
-    public boolean hasType()
-    {
-      return type.kind() != ParsedType.Kind.ANY;
-    }
-
-    public boolean isTime()
-    {
-      return type.kind() == ParsedType.Kind.TIME;
-    }
-
-    public boolean isMeasure()
-    {
-      return type.kind() == ParsedType.Kind.MEASURE;
-    }
-
-    public ColumnType druidType()
-    {
-      switch (type.kind()) {
-        case DIMENSION:
-          return Columns.druidType(spec.sqlType());
-        case TIME:
-          return ColumnType.LONG;
-        case MEASURE:
-          return type.measure().storageType;
-        default:
-          return null;
-      }
-    }
-
-    public String sqlStorageType()
-    {
-      if (isTime()) {
-        // Time is special: its storage type is BIGINT, but SQL requires the
-        // type of TIMESTAMP to allow insertion validation.
-        return Columns.TIMESTAMP;
-      } else {
-        return Columns.sqlType(druidType());
-      }
-    }
-
     @Override
     public String toString()
     {
-      return "{spec=" + spec + ", type=" + type + "}";
+      return "{spec=" + spec + "}";
     }
   }
 
@@ -138,14 +82,7 @@ public class DatasourceFacade extends TableFacade
         .stream()
         .map(col -> new ColumnFacade(col))
         .collect(Collectors.toList());
-    boolean hasMeasure = false;
-    for (ColumnFacade col : columns) {
-      if (col.isMeasure()) {
-        hasMeasure = true;
-        break;
-      }
-    }
-    this.hasRollup = hasMeasure;
+    this.hasRollup = false;
     ImmutableMap.Builder<String, ColumnFacade> builder = ImmutableMap.builder();
     for (ColumnFacade col : columns) {
       builder.put(col.spec.name(), col);
@@ -212,11 +149,5 @@ public class DatasourceFacade extends TableFacade
   public boolean hasRollup()
   {
     return hasRollup;
-  }
-
-  public String rollupGrain()
-  {
-    ColumnFacade col = columnIndex.get(Columns.TIME_COLUMN);
-    return col == null ? null : col.type().timeGrain();
   }
 }

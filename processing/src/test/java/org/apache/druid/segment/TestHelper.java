@@ -99,6 +99,7 @@ public class TestHelper
     final AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
 
+
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -113,6 +114,7 @@ public class TestHelper
     final ObjectMapper mapper = new DefaultObjectMapper();
     AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
 
     mapper.setInjectableValues(
         new InjectableValues.Std()

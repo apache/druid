@@ -41,6 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
+
   public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
@@ -235,6 +236,7 @@ public abstract class Granularity implements Cacheable
     {
       return new IntervalIterator(inputInterval);
     }
+
   }
 
   private class IntervalIterator implements Iterator<Interval>

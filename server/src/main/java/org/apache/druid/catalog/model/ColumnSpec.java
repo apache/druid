@@ -108,7 +108,7 @@ public class ColumnSpec
     if (Strings.isNullOrEmpty(name)) {
       throw new IAE("Column name is required");
     }
-    TypeParser.parse(sqlType);
+    // Validate type in the next PR
   }
 
   /**

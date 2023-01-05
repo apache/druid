@@ -219,7 +219,7 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
   protected InputSource convertTableToSource(ResolvedExternalTable table)
   {
     return convertSource(
-        new HashMap<>(table.sourceMap()),
+        new HashMap<>(table.inputSourceMap),
         table.resolvedTable().jsonMapper()
     );
   }

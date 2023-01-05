@@ -45,7 +45,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
   public static final ColumnType STRING = new ColumnType(ValueType.STRING, null, null);
 
   /**
-   * Druid 64-bit integer number primitive type. Values will be represented as Java long or {@link Long}.
+   * Druid 64-bit integer number primitve type. Values will be represented as Java long or {@link Long}.
    *
    * @see ValueType#LONG
    */

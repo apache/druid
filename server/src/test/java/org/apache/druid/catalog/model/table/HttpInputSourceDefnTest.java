@@ -194,7 +194,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
-    args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"http://foo.com/my.csv"});
+    args.put(HttpInputSourceDefn.URIS_PARAMETER, Collections.singletonList("http://foo.com/my.csv"));
     args.put(HttpInputSourceDefn.USER_PARAMETER, "bob");
     args.put(HttpInputSourceDefn.PASSWORD_PARAMETER, "secret");
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
@@ -284,7 +284,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         "x",
         ImmutableMap.of(
             HttpInputSourceDefn.URIS_PARAMETER,
-            new String[] {"my.csv"}
+            Collections.singletonList("my.csv")
         ),
         Collections.emptyList(),
         mapper
@@ -323,7 +323,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
-    args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"my.csv"});
+    args.put(HttpInputSourceDefn.URIS_PARAMETER, Collections.singletonList("my.csv"));
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
     ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
     validateHappyPath(externSpec);
@@ -391,7 +391,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     ExternalTableSpec externSpec = fn.apply(
         "x",
         ImmutableMap.of(
-            HttpInputSourceDefn.URIS_PARAMETER, new String[] {"my.csv", "bar.csv"}),
+            HttpInputSourceDefn.URIS_PARAMETER, Arrays.asList("my.csv", "bar.csv")),
         Collections.emptyList(),
         mapper
     );
@@ -415,7 +415,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
-    args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"http://foo.com/foo.csv", "http://foo.com/bar.csv"});
+    args.put(HttpInputSourceDefn.URIS_PARAMETER, Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv"));
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
     ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
 

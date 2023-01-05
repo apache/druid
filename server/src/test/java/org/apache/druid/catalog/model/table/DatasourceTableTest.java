@@ -25,19 +25,16 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
-import org.apache.druid.catalog.model.MeasureTypes;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.TypeParser.ParsedType;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.column.ColumnType;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -255,11 +252,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-      assertEquals(ParsedType.Kind.ANY, col.type().kind());
-      assertFalse(col.isTime());
-      assertFalse(col.hasType());
-      assertFalse(col.isMeasure());
-      assertNull(col.druidType());
     }
 
     // Can have a legal scalar type
@@ -273,12 +265,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-      assertEquals(ParsedType.Kind.DIMENSION, col.type().kind());
-      assertEquals(Columns.VARCHAR, col.type().type());
-      assertFalse(col.isTime());
-      assertTrue(col.hasType());
-      assertFalse(col.isMeasure());
-      assertSame(ColumnType.STRING, col.druidType());
     }
 
     // Reject an unknown SQL type
@@ -336,11 +322,6 @@ public class DatasourceTableTest
     assertTrue(facade.hasRollup());
     assertEquals(4, facade.columnFacades().size());
     ColumnFacade col = facade.columnFacades().get(3);
-    assertFalse(col.isTime());
-    assertTrue(col.hasType());
-    assertTrue(col.isMeasure());
-    assertSame(MeasureTypes.SUM_BIGINT_TYPE, col.type().measure());
-    assertSame(ColumnType.LONG, col.druidType());
   }
 
   @Test
@@ -361,12 +342,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-      assertEquals(ParsedType.Kind.TIME, col.type().kind());
-      assertNull(col.type().timeGrain());
-      assertTrue(col.isTime());
-      assertTrue(col.hasType());
-      assertFalse(col.isMeasure());
-      assertSame(ColumnType.LONG, col.druidType());
     }
 
     // Time column can only have TIMESTAMP type
@@ -380,12 +355,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-      assertEquals(ParsedType.Kind.TIME, col.type().kind());
-      assertNull(col.type().timeGrain());
-      assertTrue(col.isTime());
-      assertTrue(col.hasType());
-      assertFalse(col.isMeasure());
-      assertSame(ColumnType.LONG, col.druidType());
     }
 
     {
@@ -398,12 +367,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-      assertEquals(ParsedType.Kind.TIME, col.type().kind());
-      assertEquals("PT5M", col.type().timeGrain());
-      assertTrue(col.isTime());
-      assertTrue(col.hasType());
-      assertFalse(col.isMeasure());
-      assertSame(ColumnType.LONG, col.druidType());
     }
 
     {

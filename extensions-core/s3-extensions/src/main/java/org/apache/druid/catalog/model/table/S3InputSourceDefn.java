@@ -123,7 +123,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
   @Override
   public void validate(ResolvedExternalTable table)
   {
-    final boolean hasFormat = table.formatMap() != null;
+    final boolean hasFormat = table.inputFormatMap != null;
     final boolean hasColumns = !CollectionUtils.isNullOrEmpty(table.resolvedTable().spec().columns());
 
     if (hasFormat && !hasColumns) {
@@ -135,7 +135,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
     // The user can either provide a bucket, or can provide one of the valid items.
     final String bucket = table.resolvedTable().stringProperty(BUCKET_PROPERTY);
     final boolean hasBucket = bucket != null;
-    final Map<String, Object> sourceMap = table.sourceMap();
+    final Map<String, Object> sourceMap = table.inputSourceMap;
     final boolean hasUris = sourceMap.containsKey(URIS_FIELD);
     final boolean hasPrefix = sourceMap.containsKey(PREFIXES_FIELD);
     final boolean hasObjects = sourceMap.containsKey(OBJECTS_FIELD);
@@ -262,7 +262,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
   public TableFunction partialTableFn(final ResolvedExternalTable table)
   {
     // Allow parameters depending on what is available.
-    final Map<String, Object> sourceMap = table.sourceMap();
+    final Map<String, Object> sourceMap = table.inputSourceMap;
     List<ParameterDefn> params = new ArrayList<>();
 
     // If a bucket is provided, then the user can specify objects.
@@ -280,7 +280,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
     }
 
     // Does the table define a format?
-    if (table.formatMap() == null) {
+    if (table.inputFormatMap == null) {
       params = addFormatParameters(params);
     }
     return new PartialTableFunction(table, params);
@@ -293,7 +293,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
       final List<ColumnSpec> columns
   )
   {
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
 
     // If a bucket parameter is provided, user provides the objects. Else, use the
     // catalog input source definition.

@@ -52,7 +52,7 @@ public interface InputSourceDefn
    * @throws org.apache.druid.java.util.common.IAE if the spec
    *         properties are invalid
    */
-  void validate(ResolvedExternalTable resolvedExternalTable);
+  void validate(ResolvedExternalTable table);
 
   /**
    * Provide a definition for a SQL table function that defines an ad-hoc external

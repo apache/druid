@@ -81,7 +81,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
   @Override
   public void validate(ResolvedExternalTable table)
   {
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
     final boolean hasBaseDir = sourceMap.containsKey(BASE_DIR_FIELD);
     final boolean hasFiles = !CollectionUtils.isNullOrEmpty(CatalogUtils.safeGet(sourceMap, FILES_FIELD, List.class));
     final boolean hasFilter = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, FILTER_FIELD));
@@ -182,7 +182,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
   @Override
   public TableFunction partialTableFn(ResolvedExternalTable table)
   {
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
     final boolean hasFiles = !CollectionUtils.isNullOrEmpty(CatalogUtils.safeGet(sourceMap, FILES_FIELD, List.class));
     final boolean hasFilter = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, FILTER_FIELD));
     List<ParameterDefn> params = new ArrayList<>();
@@ -192,7 +192,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
     }
 
     // Does the table define a format?
-    if (table.formatMap() == null) {
+    if (table.inputFormatMap == null) {
       params = addFormatParameters(params);
     }
     return new PartialTableFunction(table, params);
@@ -205,7 +205,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
       final List<ColumnSpec> columns
   )
   {
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
     final boolean hasFiles = !CollectionUtils.isNullOrEmpty(CatalogUtils.safeGet(sourceMap, FILES_FIELD, List.class));
     if (hasFiles) {
       if (!args.isEmpty()) {
@@ -266,7 +266,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
   @Override
   public ExternalTableSpec convertTable(ResolvedExternalTable table)
   {
-    final Map<String, Object> sourceMap = new HashMap<>(table.sourceMap());
+    final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
     final boolean hasFiles = !CollectionUtils.isNullOrEmpty(CatalogUtils.safeGet(sourceMap, FILES_FIELD, List.class));
     final boolean hasFilter = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, FILTER_FIELD));
     if (!hasFiles && !hasFilter) {

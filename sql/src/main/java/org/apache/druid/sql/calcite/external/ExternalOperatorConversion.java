@@ -99,7 +99,7 @@ public class ExternalOperatorConversion extends CatalogExternalTableOperatorConv
         }
         if (sigValue != null && columns != null) {
           throw new IAE(
-              "EXTERN requires either a $s value or an EXTEND clause, but not both",
+              "EXTERN requires either a %s value or an EXTEND clause, but not both",
               SIGNATURE_PARAM
           );
         }

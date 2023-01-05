@@ -83,7 +83,7 @@ public class InputFormats
       // Bare-bones validation: the format has to convert to the proper object.
       // Subclasses should replace this with something fancier where needed.
 
-      if (table.formatMap() != null) {
+      if (table.inputFormatMap != null) {
         convertFromTable(table);
       }
     }
@@ -120,7 +120,7 @@ public class InputFormats
     @Override
     public InputFormat convertFromTable(ResolvedExternalTable table)
     {
-      return convert(table.formatMap(), table.resolvedTable().jsonMapper());
+      return convert(table.inputFormatMap, table.resolvedTable().jsonMapper());
     }
   }
 
@@ -163,7 +163,7 @@ public class InputFormats
     @Override
     public void validate(ResolvedExternalTable table)
     {
-      if (table.formatMap() == null) {
+      if (table.inputFormatMap == null) {
         return;
       }
       ResolvedTable resolvedTable = table.resolvedTable();
@@ -178,7 +178,7 @@ public class InputFormats
     protected Map<String, Object> toMap(ResolvedExternalTable table)
     {
       ResolvedTable resolvedTable = table.resolvedTable();
-      Map<String, Object> jsonMap = new HashMap<>(table.formatMap());
+      Map<String, Object> jsonMap = new HashMap<>(table.inputFormatMap);
       if (!CollectionUtils.isNullOrEmpty(resolvedTable.spec().columns())) {
         convertColumns(jsonMap, resolvedTable.spec().columns());
       }

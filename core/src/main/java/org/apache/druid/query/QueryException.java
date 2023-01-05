@@ -158,6 +158,20 @@ public class QueryException extends RuntimeException implements SanitizableExcep
     this.host = host;
   }
 
+  public QueryException(
+      Throwable cause,
+      @Nullable String errorCode,
+      String errorMessage,
+      @Nullable String errorClass,
+      @Nullable String host
+  )
+  {
+    super(errorMessage, cause);
+    this.errorCode = errorCode;
+    this.errorClass = errorClass;
+    this.host = host;
+  }
+
   @JsonCreator
   public QueryException(
       @JsonProperty("error") @Nullable String errorCode,

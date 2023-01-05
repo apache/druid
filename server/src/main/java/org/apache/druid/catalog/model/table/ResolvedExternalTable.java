@@ -39,8 +39,8 @@ import java.util.Map;
 public class ResolvedExternalTable
 {
   private final ResolvedTable table;
-  private Map<String, Object> inputSourceMap;
-  private Map<String, Object> inputFormatMap;
+  protected final Map<String, Object> inputSourceMap;
+  protected final Map<String, Object> inputFormatMap;
   private InputSourceDefn inputSourceDefn;
   private InputFormatDefn inputFormatDefn;
 
@@ -62,9 +62,6 @@ public class ResolvedExternalTable
       throw new IAE("%s property is required", ExternalTableDefn.SOURCE_PROPERTY);
     }
     this.inputSourceMap = new HashMap<>(map);
-    if (this.inputSourceMap == null || this.inputSourceMap.isEmpty()) {
-      throw new IAE("%s property is required", ExternalTableDefn.SOURCE_PROPERTY);
-    }
     map = table.mapProperty(ExternalTableDefn.FORMAT_PROPERTY);
     this.inputFormatMap = map == null ? null : new HashMap<>(map);
   }
@@ -72,16 +69,6 @@ public class ResolvedExternalTable
   public ResolvedTable resolvedTable()
   {
     return table;
-  }
-
-  public Map<String, Object> formatMap()
-  {
-    return inputFormatMap;
-  }
-
-  public Map<String, Object> sourceMap()
-  {
-    return inputSourceMap;
   }
 
   /**

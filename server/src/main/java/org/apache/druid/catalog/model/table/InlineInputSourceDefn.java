@@ -75,7 +75,7 @@ public class InlineInputSourceDefn extends FormattedInputSourceDefn
   public void validate(ResolvedExternalTable table)
   {
     // For inline, format is required to match the data
-    if (table.formatMap() == null) {
+    if (table.inputFormatMap == null) {
       throw new IAE("An inline input source must provide a format.");
     }
     if (CollectionUtils.isNullOrEmpty(table.resolvedTable().spec().columns())) {

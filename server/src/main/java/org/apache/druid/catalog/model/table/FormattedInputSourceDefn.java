@@ -60,7 +60,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   public void validate(ResolvedExternalTable table)
   {
     final boolean hasColumns = !CollectionUtils.isNullOrEmpty(table.resolvedTable().spec().columns());
-    final boolean hasFormat = table.formatMap() != null;
+    final boolean hasFormat = table.inputFormatMap != null;
     if (hasColumns && !hasFormat) {
       throw new IAE("If an external table provides columns, it must also provide a format");
     }
@@ -120,7 +120,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   @Override
   protected InputFormat convertTableToFormat(ResolvedExternalTable table)
   {
-    final String formatTag = CatalogUtils.getString(table.formatMap(), InputFormat.TYPE_PROPERTY);
+    final String formatTag = CatalogUtils.getString(table.inputFormatMap, InputFormat.TYPE_PROPERTY);
     if (formatTag == null) {
       throw new IAE("%s property must be set", InputFormat.TYPE_PROPERTY);
     }
@@ -181,7 +181,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
 
     // Get the format from the table, if defined, else from arguments.
     final InputFormat inputFormat;
-    if (table.formatMap() == null) {
+    if (table.inputFormatMap == null) {
       inputFormat = convertArgsToFormat(args, completedCols, jsonMapper);
     } else {
       inputFormat = convertTableToFormat(table);
