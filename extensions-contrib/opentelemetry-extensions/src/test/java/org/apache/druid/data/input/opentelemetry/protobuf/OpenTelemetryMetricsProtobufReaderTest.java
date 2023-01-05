@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
@@ -37,6 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,9 +112,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
@@ -145,9 +149,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
@@ -205,9 +211,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
@@ -262,9 +270,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
             "custom." + RESOURCE_ATTRIBUTE_COUNTRY
     )).build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpecWithExclusions,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
@@ -315,9 +325,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
@@ -347,18 +359,24 @@ public class OpenTelemetryMetricsProtobufReaderTest
   public void testInvalidProtobuf()
   {
     byte[] invalidProtobuf = new byte[] {0x00, 0x01};
-    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(invalidProtobuf));
+    try (CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(invalidProtobuf),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
         "custom."
-    ).read();
-    Assert.assertThrows(ParseException.class, () -> rows.hasNext());
-    Assert.assertThrows(ParseException.class, () -> rows.next());
+    ).read()) {
+      Assert.assertThrows(ParseException.class, () -> rows.hasNext());
+      Assert.assertThrows(ParseException.class, () -> rows.next());
+    }
+    catch (IOException e) {
+      // Comes from the implicit call to close. Ignore
+    }
   }
-  
+
   @Test
   public void testInvalidMetricType()
   {
@@ -370,9 +388,11 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     MetricsData metricsData = metricsDataBuilder.build();
 
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
     CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
         dimensionsSpec,
-        new ByteEntity(metricsData.toByteArray()),
+        settableByteEntity,
         "metric.name",
         "raw.value",
         "descriptor.",
