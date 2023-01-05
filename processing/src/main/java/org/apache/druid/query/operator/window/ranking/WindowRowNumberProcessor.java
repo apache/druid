@@ -22,10 +22,10 @@ package org.apache.druid.query.operator.window.ranking;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 
 public class WindowRowNumberProcessor implements Processor
@@ -105,7 +105,7 @@ public class WindowRowNumberProcessor implements Processor
               }
 
               @Override
-              public int compareCells(int lhsRowNum, int rhsRowNum)
+              public int compareRows(int lhsRowNum, int rhsRowNum)
               {
                 return Integer.compare(lhsRowNum, rhsRowNum);
               }

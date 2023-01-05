@@ -19,170 +19,85 @@
 
 package org.apache.druid.query.rowsandcols;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
-import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
-import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.AppendableMapOfColumns;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
- * This base class is intended to serve as a common set of tests to validate specific RowsAndColumns implementations.
+ * This test base exists to enable testing of RowsAndColumns objects.  When an implementation adds itself to this test
+ * it will automatically be tested against every semantic interface that also participates in this test suite (should
+ * be all of them).
  * <p>
- * Different RowsAndColumns implementations will implement different of the semantic interfaces, this base class should
- * test all of the possible semantic interfaces that can be implemented.  By doing it this way, we can ensure that
- * new RowsAndColumns implementations meet all of the corners cases and other issues that have been previously found.
+ * These test suites are combined a bit precariously, so there is work that the developer needs to do to make sure
+ * that things are wired up correctly.  Specifically, a developer must register their RowsAndColumns implementation
+ * by adding an entry to the static {@link #getMakers()} method on this base class.  The developer should *also*
+ * create a test class for their RowsAndColumns object that extends this class.  By creating the test class that
+ * extends this class, there will be an extra validation done that ensures that the list of makers includes their
+ * RowsAndColumns class.
  * <p>
- * It is expected that this base class is going to grow quite large.  As it gets extra large, we could perhaps look
- * into whether one of the JUnit test runners could allow us to further sub-divide the test functionality into
- * semantic-interface-specific tests.  The ultimate goal, however, should be that a new RowsAndColumns implementation
- * can very simply take advantage of all of the tests by implementing the abstract
- * {@link #makeRowsAndColumns(MapOfColumnsRowsAndColumns)} method and be done.
- *
- * @param <T>
+ * The semantic interfaces, on the other hand, should all create a test that extends
+ * {@link org.apache.druid.query.rowsandcols.semantic.SemanticTestBase}.  That test sets up a parameterized test,
+ * using the results of {@link #getMakers()} to do the parameterization.
  */
-public abstract class RowsAndColumnsTestBase<T extends RowsAndColumns>
+public abstract class RowsAndColumnsTestBase
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  public abstract T makeRowsAndColumns(MapOfColumnsRowsAndColumns input);
+  private final Class<?> expectedClass;
 
-  @Test
-  public void testDefaultSortedGroupPartitioner()
+  private static final AtomicReference<Iterable<Object[]>> MAKERS = new AtomicReference<>();
+
+  public static Iterable<Object[]> getMakers()
   {
-    T rac = makeRowsAndColumns(MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
-        )
-    ));
+    Iterable<Object[]> retVal = MAKERS.get();
+    if (retVal == null) {
+      retVal = Lists.newArrayList(
+          new Object[]{MapOfColumnsRowsAndColumns.class, Function.identity()},
+          new Object[]{ArrayListRowsAndColumns.class, ArrayListRowsAndColumnsTest.MAKER}
+      );
+      for (Object[] objects : retVal) {
+        Class<?> aClazz = (Class<?>) objects[0];
+        final String expectedName = aClazz.getName() + "Test";
+        try {
+          final Class<?> testClass = Class.forName(expectedName);
+          if (!RowsAndColumnsTestBase.class.isAssignableFrom(testClass)) {
+            throw new ISE("testClass[%s] doesn't extend RowsAndColumnsTestBase, please extend it.", testClass);
+          }
+        }
+        catch (ClassNotFoundException e) {
+          throw new ISE("aClazz[%s] didn't have test class[%s], please make it", aClazz, expectedName);
+        }
+      }
 
-    validateSortedGroupPartitioner("default", new DefaultSortedGroupPartitioner(rac));
-
-    SortedGroupPartitioner specialized = rac.as(SortedGroupPartitioner.class);
-    if (specialized != null) {
-      validateSortedGroupPartitioner("specialized", specialized);
+      MAKERS.set(retVal);
     }
+    return retVal;
   }
 
-  private void validateSortedGroupPartitioner(String name, SortedGroupPartitioner parter)
+  public RowsAndColumnsTestBase(
+      Class<?> expectedClass
+  )
   {
-
-    int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
-
-    List<RowsAndColumnsHelper> expectations = Arrays.asList(
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{0, 0, 0})
-            .expectColumn("unsorted", new int[]{3, 54, 21})
-            .allColumnsRegistered(),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{1, 1})
-            .expectColumn("unsorted", new int[]{1, 5})
-            .allColumnsRegistered(),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{2})
-            .expectColumn("unsorted", new int[]{54})
-            .allColumnsRegistered(),
-        new RowsAndColumnsHelper()
-            .expectColumn("sorted", new int[]{4, 4, 4})
-            .expectColumn("unsorted", new int[]{2, 3, 92})
-            .allColumnsRegistered()
-    );
-
-    final List<String> partCols = Collections.singletonList("sorted");
-    Assert.assertArrayEquals(name, expectedBounds, parter.computeBoundaries(partCols));
-
-    final Iterator<RowsAndColumns> partedChunks = parter.partitionOnBoundaries(partCols).iterator();
-    for (RowsAndColumnsHelper expectation : expectations) {
-      Assert.assertTrue(name, partedChunks.hasNext());
-      expectation.validate(name, partedChunks.next());
-    }
-    Assert.assertFalse(name, partedChunks.hasNext());
-
-    boolean exceptionThrown = false;
-    try {
-      parter.partitionOnBoundaries(Collections.singletonList("unsorted"));
-    }
-    catch (ISE ex) {
-      Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    this.expectedClass = expectedClass;
   }
 
   @Test
-  public void testOnHeapAggregatable()
+  public void testInListOfMakers()
   {
-    T rac = makeRowsAndColumns(MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "incremented", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-            "zeroesOut", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
-        )
-    ));
-
-    validateOnHeapAggregatable("default", new DefaultOnHeapAggregatable(rac));
-
-    OnHeapAggregatable specialized = rac.as(OnHeapAggregatable.class);
-    if (specialized != null) {
-      validateOnHeapAggregatable("specialized", specialized);
+    boolean inList = false;
+    for (Object[] objs : getMakers()) {
+      if (expectedClass.equals(objs[0])) {
+        inList = true;
+        break;
+      }
     }
-  }
-
-  private void validateOnHeapAggregatable(String name, OnHeapAggregatable agger)
-  {
-    final ArrayList<Object> results = agger.aggregateAll(Arrays.asList(
-        new LongSumAggregatorFactory("incremented", "incremented"),
-        new LongMaxAggregatorFactory("zeroesOutMax", "zeroesOut"),
-        new LongMinAggregatorFactory("zeroesOutMin", "zeroesOut")
-    ));
-
-    Assert.assertEquals(name, 3, results.size());
-    Assert.assertEquals(name, 55L, results.get(0));
-    Assert.assertEquals(name, 82L, results.get(1));
-    Assert.assertEquals(name, -90L, results.get(2));
-  }
-
-  @Test
-  public void testAppendableRowsAndColumns()
-  {
-    T rac = makeRowsAndColumns(MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
-        )
-    ));
-
-    validateAppendableRowsAndColumns("default", new AppendableMapOfColumns(rac));
-
-    AppendableRowsAndColumns specialized = rac.as(AppendableRowsAndColumns.class);
-    if (specialized != null) {
-      validateAppendableRowsAndColumns("specialized", specialized);
-    }
-  }
-
-  public void validateAppendableRowsAndColumns(String name, AppendableRowsAndColumns appender)
-  {
-    appender.addColumn("newCol", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
-
-    new RowsAndColumnsHelper()
-        .expectColumn("colA", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-        .expectColumn("colB", new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
-        .expectColumn("newCol", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-        .allColumnsRegistered()
-        .validate(name, appender);
+    Assert.assertTrue(inList);
   }
 }

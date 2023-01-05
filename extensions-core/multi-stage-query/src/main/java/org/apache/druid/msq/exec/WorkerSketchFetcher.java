@@ -40,6 +40,7 @@ import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;

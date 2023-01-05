@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
+import org.apache.druid.msq.test.CounterSnapshotBuilder;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -106,6 +107,12 @@ public class MSQInsertTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
                      .verifyResults();
 
   }
@@ -120,6 +127,32 @@ public class MSQInsertTest extends MSQTestBase
 
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedResultRows(expectedFooRows())
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeFunctionWithSequential()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(
+                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                                                  ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                                              )
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setQueryContext(context)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())

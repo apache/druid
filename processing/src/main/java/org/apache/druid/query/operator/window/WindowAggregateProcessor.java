@@ -22,13 +22,13 @@ package org.apache.druid.query.operator.window;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.DefaultOnHeapAggregatable;
-import org.apache.druid.query.rowsandcols.OnHeapAggregatable;
 import org.apache.druid.query.rowsandcols.OnHeapCumulativeAggregatable;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.DefaultOnHeapAggregatable;
+import org.apache.druid.query.rowsandcols.semantic.OnHeapAggregatable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

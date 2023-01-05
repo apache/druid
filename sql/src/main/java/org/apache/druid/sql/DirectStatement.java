@@ -24,6 +24,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
@@ -271,7 +272,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   {
     if (state == State.CANCELLED) {
       throw new QueryInterruptedException(
-          QueryInterruptedException.QUERY_CANCELED,
+          QueryException.QUERY_CANCELED_ERROR_CODE,
           StringUtils.format("Query is canceled [%s]", sqlQueryId()),
           null,
           null

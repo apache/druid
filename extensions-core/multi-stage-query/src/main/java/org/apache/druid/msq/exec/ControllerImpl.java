@@ -1053,7 +1053,7 @@ public class ControllerImpl implements Controller
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
-                    .put(GroupByQuery.class, new GroupByQueryKit())
+                    .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
                     .build();
 
     return new MultiQueryKit(kitMap);

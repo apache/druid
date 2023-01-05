@@ -40,7 +40,6 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
-import java.util.Locale;
 import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
@@ -525,7 +524,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     );
     for (Pair<String, String> argAndType : invalidArguments) {
       try {
-        assertExpr(String.format(Locale.ENGLISH, "round(d, %s)", argAndType.lhs), null);
+        assertExpr(StringUtils.format("round(d, %s)", argAndType.lhs), null);
         Assert.fail("Did not throw IllegalArgumentException");
       }
       catch (ExpressionValidationException e) {
