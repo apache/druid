@@ -59,7 +59,7 @@ public class TableFacade extends ObjectFacade
     return spec().columns();
   }
 
-  public ColumnType druidType(ColumnSpec col)
+  public static ColumnType druidType(ColumnSpec col)
   {
     if (Columns.isTimeColumn(col.name())) {
       return ColumnType.LONG;

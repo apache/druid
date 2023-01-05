@@ -71,6 +71,7 @@ public class TableDefn extends ObjectDefn
   public void bind(TableDefnRegistry registry)
   {
   }
+
   /**
    * Validate a table spec using the table, field and column definitions defined
    * here. The column definitions validate the type of each property value using
@@ -79,10 +80,10 @@ public class TableDefn extends ObjectDefn
   public void validate(ResolvedTable table)
   {
     validate(table.properties(), table.jsonMapper());
-    validateColumns(table.spec().columns(), table.jsonMapper());
+    validateColumns(table.spec().columns());
   }
 
-  public void validateColumns(List<ColumnSpec> columns, ObjectMapper jsonMapper)
+  public void validateColumns(List<ColumnSpec> columns)
   {
     if (columns == null) {
       return;

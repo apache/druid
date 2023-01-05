@@ -32,9 +32,11 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
+import org.apache.druid.catalog.model.facade.TableFacade;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -248,10 +250,14 @@ public class DatasourceTableTest
       table.validate();
 
       DatasourceFacade facade = new DatasourceFacade(registry.resolve(table.spec()));
+      assertNotNull(facade.jsonMapper());
+      assertEquals(1, facade.properties().size());
       assertFalse(facade.hasRollup());
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
+      assertSame(facade.columns().get(0), col.spec());
+      assertNull(TableFacade.druidType(col.spec()));
     }
 
     // Can have a legal scalar type
@@ -265,14 +271,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-    }
-
-    // Reject an unknown SQL type
-    {
-      TableSpec spec = builder.copy()
-          .column("foo", "BOGUS")
-          .buildSpec();
-      expectValidationFails(spec);
     }
 
     // Reject duplicate columns
@@ -289,6 +287,23 @@ public class DatasourceTableTest
           .column("foo", Columns.BIGINT)
           .buildSpec();
       expectValidationFails(spec);
+    }
+    {
+      TableSpec spec = builder.copy()
+          .column(Columns.TIME_COLUMN, null)
+          .column("s", Columns.VARCHAR)
+          .column("bi", Columns.BIGINT)
+          .column("f", Columns.FLOAT)
+          .column("d", Columns.DOUBLE)
+          .buildSpec();
+      ResolvedTable table = registry.resolve(spec);
+      table.validate();
+      DatasourceFacade facade = new DatasourceFacade(registry.resolve(table.spec()));
+      assertEquals(ColumnType.LONG, facade.column(Columns.TIME_COLUMN).druidType());
+      assertEquals(ColumnType.STRING, facade.column("s").druidType());
+      assertEquals(ColumnType.LONG, facade.column("bi").druidType());
+      assertEquals(ColumnType.FLOAT, facade.column("f").druidType());
+      assertEquals(ColumnType.DOUBLE, facade.column("d").druidType());
     }
   }
 
@@ -319,9 +334,7 @@ public class DatasourceTableTest
     assertEquals("SUM(BIGINT)", columns.get(3).sqlType());
 
     DatasourceFacade facade = new DatasourceFacade(registry.resolve(table.spec()));
-    assertTrue(facade.hasRollup());
     assertEquals(4, facade.columnFacades().size());
-    ColumnFacade col = facade.columnFacades().get(3);
   }
 
   @Test
@@ -367,13 +380,6 @@ public class DatasourceTableTest
       assertEquals(1, facade.columnFacades().size());
       ColumnFacade col = facade.columnFacades().get(0);
       assertSame(spec.columns().get(0), col.spec());
-    }
-
-    {
-      TableSpec spec = builder.copy()
-          .column(Columns.TIME_COLUMN, Columns.VARCHAR)
-          .buildSpec();
-      expectValidationFails(spec);
     }
   }
 

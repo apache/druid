@@ -267,7 +267,7 @@ public class ExternalTableDefn extends TableDefn
         propDefn.validate(table.property(propDefn.name()), table.jsonMapper());
       }
     }
-    validateColumns(table.spec().columns(), table.jsonMapper());
+    validateColumns(table.spec().columns());
     new ResolvedExternalTable(table).validate(registry);
   }
 

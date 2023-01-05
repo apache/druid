@@ -27,6 +27,7 @@ import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +63,11 @@ public class DatasourceFacade extends TableFacade
     public ColumnSpec spec()
     {
       return spec;
+    }
+
+    public ColumnType druidType()
+    {
+      return TableFacade.druidType(spec);
     }
 
     @Override

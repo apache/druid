@@ -86,6 +86,7 @@ public class TableMetadataTest
     }
 
     {
+      // Missing schema
       TableMetadata table = TableMetadata.newTable(
           TableId.of(null, "foo"),
           spec
@@ -94,6 +95,7 @@ public class TableMetadataTest
     }
 
     {
+      // Missing table name
       TableMetadata table = TableMetadata.newTable(
           TableId.of(TableId.DRUID_SCHEMA, null),
           spec
