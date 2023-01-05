@@ -155,7 +155,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
             .map((index1, r1, ctx1) -> new Pair<>(r1.getString(1), r1.getString(2)))
             .iterator();
   }
-  
+
   private static String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
   {
     if (Strings.isNullOrEmpty(filter)) {
