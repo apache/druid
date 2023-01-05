@@ -131,7 +131,7 @@ public class JdbcExtractionNamespaceTest
               0,
               handle.createStatement(
                   StringUtils.format(
-                      "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
+                      "CREATE TABLE \"%s\" (\"%s\" TIMESTAMP, \"%s\" VARCHAR(64), \"%s\" VARCHAR(64), \"%s\" VARCHAR(64))",
                       TABLE_NAME,
                       TS_COLUMN,
                       FILTER_COLUMN,
@@ -140,10 +140,10 @@ public class JdbcExtractionNamespaceTest
                   )
               ).setQueryTimeout(1).execute()
           );
-          handle.createStatement(StringUtils.format("TRUNCATE TABLE %s", TABLE_NAME)).setQueryTimeout(1).execute();
+          handle.createStatement(StringUtils.format("TRUNCATE TABLE \"%s\"", TABLE_NAME)).setQueryTimeout(1).execute();
           handle.commit();
           closer.register(() -> {
-            handle.createStatement("DROP TABLE " + TABLE_NAME).setQueryTimeout(1).execute();
+            handle.createStatement(StringUtils.format("DROP TABLE \"%s\"", TABLE_NAME)).setQueryTimeout(1).execute();
             final ListenableFuture future = setupTeardownService.submit(new Runnable()
             {
               @Override
@@ -292,17 +292,17 @@ public class JdbcExtractionNamespaceTest
     final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
-          StringUtils.format("DELETE FROM %s WHERE %s='%s'", TABLE_NAME, KEY_NAME, key)
+          StringUtils.format("DELETE FROM \"%s\" WHERE \"%s\"='%s'", TABLE_NAME, KEY_NAME, key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
+          "INSERT INTO \"%s\" (\"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', " + statementVal + ")",
           TABLE_NAME,
           FILTER_COLUMN, KEY_NAME, VAL_NAME,
           filter, key, val
       );
     } else {
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
+          "INSERT INTO \"%s\" (\"%s\", \"%s\", \"%s\", \"%s\") VALUES ('%s', '%s', '%s', " + statementVal + ")",
           TABLE_NAME,
           tsColumn, FILTER_COLUMN, KEY_NAME, VAL_NAME,
           updateTs, filter, key, val
