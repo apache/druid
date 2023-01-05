@@ -34,12 +34,14 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,7 +55,7 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 {
   private static final Logger log = new Logger(OpenTelemetryMetricsProtobufReader.class);
 
-  private final ByteEntity source;
+  private final SettableByteEntity<? extends ByteEntity> source;
   private final String metricDimension;
   private final String valueDimension;
   private final String metricAttributePrefix;
@@ -62,7 +64,7 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 
   public OpenTelemetryMetricsProtobufReader(
       DimensionsSpec dimensionsSpec,
-      ByteEntity source,
+      SettableByteEntity<? extends ByteEntity> source,
       String metricDimension,
       String valueDimension,
       String metricAttributePrefix,
@@ -98,7 +100,12 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
   List<InputRow> readAsList()
   {
     try {
-      return parseMetricsData(MetricsData.parseFrom(source.getBuffer()));
+      ByteBuffer buffer = source.getEntity().getBuffer();
+      List<InputRow> rows = parseMetricsData(MetricsData.parseFrom(buffer));
+      // Explicitly move the position assuming that all the remaining bytes have been consumed because the protobuf
+      // parser does not update the position itself
+      buffer.position(buffer.limit());
+      return rows;
     }
     catch (InvalidProtocolBufferException e) {
       throw new ParseException(null, e, "Protobuf message could not be parsed");
@@ -153,7 +160,7 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
       case HISTOGRAM:
       case SUMMARY:
       default:
-        log.trace("Metric type {} is not supported", metric.getDataCase());
+        log.trace("Metric type %s is not supported", metric.getDataCase());
         inputRows = Collections.emptyList();
 
     }
