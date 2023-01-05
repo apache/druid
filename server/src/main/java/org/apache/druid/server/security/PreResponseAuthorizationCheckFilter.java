@@ -172,12 +172,21 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
   private static boolean statusShouldBeHidden(int status)
   {
-    // We allow 404s to not be rewritten to forbidden because consistently returning 404s is a way to leak less
-    // information when something wasn't able to be done anyway.  I.e. if we pretend that the thing didn't exist
+    // We allow 404s (not found) to not be rewritten to forbidden because consistently returning 404s is a way to leak
+    // less information when something wasn't able to be done anyway.  I.e. if we pretend that the thing didn't exist
     // when the authorization fails, then there is no information about whether the thing existed.  If we return
     // a 403 when authorization fails and a 404 when authorization succeeds, but it doesn't exist, then we have
     // leaked that it could maybe exist, if the authentication credentials were good.
-    return !(status == HttpServletResponse.SC_FORBIDDEN || status == HttpServletResponse.SC_NOT_FOUND);
+    //
+    // We also allow 307s (temporary redirect) to not be hidden as they are used to redirect to the leader.
+    switch (status) {
+      case HttpServletResponse.SC_FORBIDDEN:
+      case HttpServletResponse.SC_NOT_FOUND:
+      case HttpServletResponse.SC_TEMPORARY_REDIRECT:
+        return false;
+      default:
+        return true;
+    }
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)
