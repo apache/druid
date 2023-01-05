@@ -126,7 +126,7 @@ public class Windowing
       if (i > 0) {
         LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
         for (String partitionColumn : group.getPartitionColumns()) {
-          sortColumns.add(new ColumnWithDirection(partitionColumn, ColumnWithDirection.Direction.ASC));
+          sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
         }
         sortColumns.addAll(group.getOrdering());
 

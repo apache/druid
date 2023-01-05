@@ -54,16 +54,16 @@ public class NaiveSortMakerTest extends SemanticTestBase
     }
 
     final NaiveSortMaker.NaiveSorter intSorter = maker.make(
-        new ColumnWithDirection("ints", ColumnWithDirection.Direction.ASC)
+        ColumnWithDirection.ascending("ints")
     );
     final NaiveSortMaker.NaiveSorter stringSorter = maker.make(
-        new ColumnWithDirection("strs", ColumnWithDirection.Direction.ASC)
+        ColumnWithDirection.ascending("strs")
     );
     final NaiveSortMaker.NaiveSorter intSorterDesc = maker.make(
-        new ColumnWithDirection("ints", ColumnWithDirection.Direction.DESC)
+        ColumnWithDirection.descending("ints")
     );
     final NaiveSortMaker.NaiveSorter stringSorterDesc = maker.make(
-        new ColumnWithDirection("strs", ColumnWithDirection.Direction.DESC)
+        ColumnWithDirection.descending("strs")
     );
 
     RowsAndColumns intermediate = make(MapOfColumnsRowsAndColumns.of(
@@ -142,16 +142,16 @@ public class NaiveSortMakerTest extends SemanticTestBase
     }
 
     final NaiveSortMaker.NaiveSorter sorter = maker.make(
-        new ColumnWithDirection("ints", ColumnWithDirection.Direction.ASC)
+        ColumnWithDirection.ascending("ints")
     );
     final NaiveSortMaker.NaiveSorter stringSorter = maker.make(
-        new ColumnWithDirection("strs", ColumnWithDirection.Direction.ASC)
+        ColumnWithDirection.ascending("strs")
     );
     final NaiveSortMaker.NaiveSorter sorterDesc = maker.make(
-        new ColumnWithDirection("ints", ColumnWithDirection.Direction.DESC)
+        ColumnWithDirection.descending("ints")
     );
     final NaiveSortMaker.NaiveSorter stringSorterDesc = maker.make(
-        new ColumnWithDirection("strs", ColumnWithDirection.Direction.DESC)
+        ColumnWithDirection.descending("strs")
     );
 
     final RowsAndColumnsHelper helper = new RowsAndColumnsHelper()
