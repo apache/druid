@@ -358,7 +358,7 @@ public class JdbcExtractionNamespaceTest
         KEY_NAME,
         VAL_NAME,
         tsColumn,
-        FILTER_COLUMN + "='1'",
+        "\"" + FILTER_COLUMN + "\"" + "='1'",
         new Period(0),
         null,
         new JdbcAccessSecurityConfig()
