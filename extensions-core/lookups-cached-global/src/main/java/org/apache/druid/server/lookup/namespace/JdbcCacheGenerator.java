@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.ISE;
@@ -154,32 +155,33 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
             .map((index1, r1, ctx1) -> new Pair<>(r1.getString(1), r1.getString(2)))
             .iterator();
   }
-
+  
   private static String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
   {
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
-          "SELECT \"%s\", \"%s\" FROM \"%s\" WHERE \"%s\" IS NOT NULL",
-          escapeQuotedIdentifier(keyColumn),
-          escapeQuotedIdentifier(valueColumn),
-          escapeQuotedIdentifier(table),
-          escapeQuotedIdentifier(valueColumn)
+          "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
+          toDoublyQuotedEscapedIdentifier(keyColumn),
+          toDoublyQuotedEscapedIdentifier(valueColumn),
+          toDoublyQuotedEscapedIdentifier(table),
+          toDoublyQuotedEscapedIdentifier(valueColumn)
       );
     }
 
     return StringUtils.format(
-        "SELECT \"%s\", \"%s\" FROM \"%s\" WHERE %s AND \"%s\" IS NOT NULL",
-        escapeQuotedIdentifier(keyColumn),
-        escapeQuotedIdentifier(valueColumn),
-        escapeQuotedIdentifier(table),
+        "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
+        toDoublyQuotedEscapedIdentifier(keyColumn),
+        toDoublyQuotedEscapedIdentifier(valueColumn),
+        toDoublyQuotedEscapedIdentifier(table),
         filter,
-        escapeQuotedIdentifier(valueColumn)
+        toDoublyQuotedEscapedIdentifier(valueColumn)
     );
   }
 
-  private static String escapeQuotedIdentifier(String identifier)
+  @VisibleForTesting
+  public static String toDoublyQuotedEscapedIdentifier(String identifier)
   {
-    return StringUtils.replace(identifier, "\"", "\"\"");
+    return "\"" + StringUtils.replace(identifier, "\"", "\"\"") + "\"";
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
@@ -212,8 +214,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final Timestamp update = dbi.withHandle(
         handle -> {
           final String query = StringUtils.format(
-              "SELECT MAX(\"%s\") FROM \"%s\"",
-              escapeQuotedIdentifier(tsColumn), escapeQuotedIdentifier(table)
+              "SELECT MAX(%s) FROM %s",
+              toDoublyQuotedEscapedIdentifier(tsColumn), toDoublyQuotedEscapedIdentifier(table)
           );
           return handle
               .createQuery(query)
