@@ -1196,17 +1196,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
 
       Assert.assertEquals(expectedRowSignature, specAndResults.rhs.lhs);
-
-      // We use subList to limit the size of the expected results aligning with the actual results.  This is because
-      // the base test added a check that validates the expected results and actual results sizes, this check broke
-      // some of the MSQ tests that run with this runner.  They are all "warning tests" and it's unclear if the tests
-      // are setup wrong (i.e. bug in tests) or if there is something wrong with the code.  This limit keeps the check
-      // in place but makes the MSQ tests continue to operate as they used to.  This limit should be removed, it should
-      // not exist, but the author does not have the context to know what the correct fix is, so instead the old, bad,
-      // behavior is maintained locally for the MSQ tests until someone with the context can come and fix it.
-      final List<Object[]> actualResults = specAndResults.rhs.rhs;
-      assertResultsEquals(sql, expectedResultRows.subList(0, actualResults.size()), actualResults);
-
+      assertResultsEquals(sql, expectedResultRows, specAndResults.rhs.rhs);
       assertMSQSpec(expectedMSQSpec, specAndResults.lhs);
     }
 
