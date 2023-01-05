@@ -61,22 +61,27 @@ public class SqlPlanningException extends BadQueryException
 
   public SqlPlanningException(SqlParseException e)
   {
-    this(PlanningError.SQL_PARSE_ERROR, e.getMessage());
+    this(e, PlanningError.SQL_PARSE_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(ValidationException e)
   {
-    this(PlanningError.VALIDATION_ERROR, e.getMessage());
+    this(e, PlanningError.VALIDATION_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(CalciteContextException e)
   {
-    this(PlanningError.VALIDATION_ERROR, e.getMessage());
+    this(e, PlanningError.VALIDATION_ERROR, e.getMessage());
   }
 
   public SqlPlanningException(PlanningError planningError, String errorMessage)
   {
-    this(planningError.errorCode, errorMessage, planningError.errorClass);
+    this(null, planningError, errorMessage);
+  }
+
+  public SqlPlanningException(Throwable cause, PlanningError planningError, String errorMessage)
+  {
+    this(cause, planningError.errorCode, errorMessage, planningError.errorClass);
   }
 
   @JsonCreator
@@ -86,6 +91,17 @@ public class SqlPlanningException extends BadQueryException
       @JsonProperty("errorClass") String errorClass
   )
   {
-    super(errorCode, errorMessage, errorClass);
+    this(null, errorCode, errorMessage, errorClass);
   }
+
+  private SqlPlanningException(
+      Throwable cause,
+      String errorCode,
+      String errorMessage,
+      String errorClass
+  )
+  {
+    super(cause, errorCode, errorMessage, errorClass, null);
+  }
+
 }

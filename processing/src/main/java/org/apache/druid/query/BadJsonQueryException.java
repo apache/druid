@@ -29,7 +29,7 @@ public class BadJsonQueryException extends BadQueryException
 
   public BadJsonQueryException(JsonParseException e)
   {
-    this(JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
+    this(e, JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
   @JsonCreator
@@ -39,6 +39,16 @@ public class BadJsonQueryException extends BadQueryException
       @JsonProperty("errorClass") String errorClass
   )
   {
-    super(errorCode, errorMessage, errorClass);
+    this(null, errorCode, errorMessage, errorClass);
+  }
+
+  private BadJsonQueryException(
+      Throwable cause,
+      String errorCode,
+      String errorMessage,
+      String errorClass
+  )
+  {
+    super(cause, errorCode, errorMessage, errorClass, null);
   }
 }
