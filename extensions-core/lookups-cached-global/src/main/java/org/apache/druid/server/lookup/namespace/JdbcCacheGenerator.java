@@ -179,7 +179,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
 
   private static String escapeQuotedIdentifier(String identifier)
   {
-    return identifier.replace("\"", "\"\"");
+    return StringUtils.replace(identifier, "\"", "\"\"");
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
