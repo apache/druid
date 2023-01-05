@@ -212,8 +212,8 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final Timestamp update = dbi.withHandle(
         handle -> {
           final String query = StringUtils.format(
-              "SELECT MAX(%s) FROM %s",
-              tsColumn, table
+              "SELECT MAX(\"%s\") FROM \"%s\"",
+              escapeQuotedIdentifier(tsColumn), escapeQuotedIdentifier(table)
           );
           return handle
               .createQuery(query)
