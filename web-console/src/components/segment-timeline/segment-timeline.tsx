@@ -28,9 +28,9 @@ import { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
+import { Capabilities } from '../../helpers';
 import { Api } from '../../singletons';
 import {
-  Capabilities,
   ceilToUtcDay,
   formatBytes,
   formatInteger,
@@ -278,7 +278,7 @@ ORDER BY "start" DESC`;
             intervals = await queryDruidSql({
               query: SegmentTimeline.getSqlQuery(startDate, endDate),
             });
-            datasources = uniq(intervals.map(r => r.datasource));
+            datasources = uniq(intervals.map(r => r.datasource).sort());
           } else if (capabilities.hasCoordinatorAccess()) {
             const startIso = startDate.toISOString();
 

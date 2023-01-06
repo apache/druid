@@ -116,9 +116,8 @@ export function changeTimezone(context: QueryContext, timezone: string | undefin
 
 // maxNumTasks
 
-export function getMaxNumTasks(context: QueryContext): number {
-  const { maxNumTasks } = context;
-  return Math.max(typeof maxNumTasks === 'number' ? maxNumTasks : 0, 2);
+export function getMaxNumTasks(context: QueryContext): number | undefined {
+  return context.maxNumTasks;
 }
 
 export function changeMaxNumTasks(

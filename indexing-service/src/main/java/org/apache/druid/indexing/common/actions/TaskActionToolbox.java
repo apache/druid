@@ -35,6 +35,7 @@ public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
   private final TaskStorage taskStorage;
+  private final SegmentAllocationQueue segmentAllocationQueue;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
@@ -46,6 +47,7 @@ public class TaskActionToolbox
       TaskLockbox taskLockbox,
       TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      SegmentAllocationQueue segmentAllocationQueue,
       ServiceEmitter emitter,
       SupervisorManager supervisorManager,
       @Json ObjectMapper jsonMapper
@@ -57,6 +59,27 @@ public class TaskActionToolbox
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
     this.jsonMapper = jsonMapper;
+    this.segmentAllocationQueue = segmentAllocationQueue;
+  }
+
+  public TaskActionToolbox(
+      TaskLockbox taskLockbox,
+      TaskStorage taskStorage,
+      IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      ServiceEmitter emitter,
+      SupervisorManager supervisorManager,
+      @Json ObjectMapper jsonMapper
+  )
+  {
+    this(
+        taskLockbox,
+        taskStorage,
+        indexerMetadataStorageCoordinator,
+        null,
+        emitter,
+        supervisorManager,
+        jsonMapper
+    );
   }
 
   public TaskLockbox getTaskLockbox()
@@ -103,4 +126,13 @@ public class TaskActionToolbox
     return Optional.absent();
   }
 
+  public SegmentAllocationQueue getSegmentAllocationQueue()
+  {
+    return segmentAllocationQueue;
+  }
+
+  public boolean canBatchSegmentAllocation()
+  {
+    return segmentAllocationQueue != null && segmentAllocationQueue.isEnabled();
+  }
 }

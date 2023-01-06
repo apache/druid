@@ -239,7 +239,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         bitmapIndexWriter.writeTo(channel, smoosher);
       }
     };
-    final String fieldFileName = NestedDataColumnSerializer.getFieldFileName(columnName, fieldName);
+    final String fieldFileName = NestedDataColumnSerializer.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {

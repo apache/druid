@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.RowKey;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -61,6 +62,9 @@ public class ClusterByStatisticsSnapshot
   public ClusterByStatisticsSnapshot getSnapshotForTimeChunk(long timeChunk)
   {
     Bucket bucket = buckets.get(timeChunk);
+    if (bucket == null) {
+      throw new ISE("ClusterByStatistics not present for requested timechunk %s", timeChunk);
+    }
     return new ClusterByStatisticsSnapshot(ImmutableMap.of(timeChunk, bucket), null);
   }
 

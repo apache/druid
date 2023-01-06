@@ -35,7 +35,11 @@ export async function getClusterCapacity(): Promise<CapacityInfo> {
     Number(workerInfo.worker.capacity),
   );
 
-  return { usedTaskSlots, totalTaskSlots };
+  return {
+    availableTaskSlots: totalTaskSlots - usedTaskSlots,
+    usedTaskSlots,
+    totalTaskSlots,
+  };
 }
 
 export async function maybeGetClusterCapacity(): Promise<CapacityInfo | undefined> {
