@@ -1,4 +1,4 @@
-{"timestamp":"2018-01-01T07:01:35Z","animal":"octopus", "number":115}
-{"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "number":737}
-{"timestamp":"2018-01-01T06:01:35Z","animal":"snake", "number":1234}
-{"timestamp":"2018-01-01T01:01:35Z","animal":"lion", "number":300}
+{"__time":"2018-01-01T07:01:35Z","animal":"octopus", "number":115}
+{"__time":"2018-01-01T05:01:35Z","animal":"mongoose", "number":737}
+{"__time":"2018-01-01T06:01:35Z","animal":"snake", "number":1234}
+{"__time":"2018-01-01T01:01:35Z","animal":"lion", "number":300}

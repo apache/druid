@@ -9,7 +9,7 @@
         ]
       },
       "timestampSpec": {
-        "column": "timestamp",
+        "column": "__time",
         "format": "iso"
       },
       "metricsSpec": [
