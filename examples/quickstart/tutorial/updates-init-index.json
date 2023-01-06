@@ -4,7 +4,7 @@
     "dataSchema" : {
       "dataSource" : "updates-tutorial",
       "timestampSpec": {
-        "column": "timestamp",
+        "column": "__time",
         "format": "iso"
       },
       "dimensionsSpec" : {
