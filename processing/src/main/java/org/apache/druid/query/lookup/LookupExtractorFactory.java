@@ -27,14 +27,14 @@ import javax.annotation.Nullable;
 /**
  * Users of Lookup Extraction need to implement a {@link LookupExtractorFactory} supplier of type {@link LookupExtractor}.
  * Such factory will manage the state and life cycle of an given lookup.
- * If a LookupExtractorFactory wishes to support idempotent updates, it needs to implement the  `replaces` method
+ * If a LookupExtractorFactory wishes to support idempotent updates, it needs to implement the `replaces` method
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface LookupExtractorFactory extends Supplier<LookupExtractor>
 {
   /**
    * <p>
-   *   This method will be called to start the LookupExtractor upon registered
+   *   Starts the LookupExtractor upon registered
    *   Calling start multiple times should return true if successfully started.
    * </p>
    *
@@ -44,7 +44,7 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
 
   /**
    * <p>
-   *   This method will be called to stop the LookupExtractor upon Druid process stop. This would be used, for
+   *   Stops the LookupExtractor upon Druid process stop. This would be used, for
    *   example, to stop any thread pools it might have.
    *   Calling this method multiple times should always return true if successfully closed.
    * </p>
@@ -54,7 +54,7 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
 
   /**
    * <p>
-   *   This method will be called to drop the LookupExtractor upon explicit user request to coordinator to drop
+   *   Drops the LookupExtractor upon explicit user request to coordinator to drop
    *   this lookup. In this method user can do additional cleanup (e.g. deleting disk persisted cache) not done simply
    *   when Druid process was being stopped to be restarted.
    *   Calling this method multiple times should always return true if successfully destroyed.

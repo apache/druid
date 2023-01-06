@@ -63,7 +63,6 @@ public class LookupExtractionFn extends FunctionalExtraction
     this.optimize = optimize == null ? true : optimize;
   }
 
-
   @JsonProperty
   public LookupExtractor getLookup()
   {
@@ -146,7 +145,6 @@ public class LookupExtractionFn extends FunctionalExtraction
     return getReplaceMissingValueWith() != null
            ? getReplaceMissingValueWith().equals(that.getReplaceMissingValueWith())
            : that.getReplaceMissingValueWith() == null;
-
   }
 
   @Override

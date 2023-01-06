@@ -54,7 +54,6 @@ public abstract class LookupExtractor
    * or empty map if {@code values} is `null`
    * User can override this method if there is a better way to perform bulk lookup
    */
-
   public Map<String, String> applyAll(Iterable<String> keys)
   {
     if (keys == null) {
@@ -74,11 +73,10 @@ public abstract class LookupExtractor
    *
    * @return the list of keys that maps to value or empty list.
    * Note that for the case of a none existing value in the lookup we have to cases either return an empty list OR list with null element.
-   * returning an empty list implies that user want to ignore such a lookup value.
-   * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
+   * returning an empty list implies that user wants to ignore such a lookup value.
+   * On the other hand returning a list with the null element implies user wants to map the none existing value to the key null.
    * Null value maps to empty list.
    */
-
   public abstract List<String> unapply(@Nullable String value);
 
   /**
@@ -88,7 +86,6 @@ public abstract class LookupExtractor
    * or empty map if {@code values} is `null`
    * User can override this method if there is a better way to perform bulk reverse lookup
    */
-
   public Map<String, List<String>> unapplyAll(Iterable<String> values)
   {
     if (values == null) {

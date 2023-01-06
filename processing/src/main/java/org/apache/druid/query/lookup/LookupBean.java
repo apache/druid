@@ -34,7 +34,6 @@ class LookupBean
   @Deprecated
   private final LookupExtractorFactory factory;
 
-
   @JsonCreator
   public LookupBean(
       @JsonProperty("name") String name,
