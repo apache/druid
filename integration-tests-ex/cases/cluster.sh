@@ -79,6 +79,9 @@ function category {
 	# Add an entry here if you create a new category that shares
 	# a definition.
 	case $CATEGORY in
+		"InputSource")
+			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
+			;;
 		"InputFormat")
 			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
 			;;

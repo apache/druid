@@ -103,7 +103,7 @@
         <log4j.version>2.18.0</log4j.version>
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
-        <netty4.version>4.1.85.Final</netty4.version>
+        <netty4.version>4.1.86.Final</netty4.version>
         <postgresql.version>42.4.1</postgresql.version>
         <protobuf.version>3.21.7</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -800,6 +800,11 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil-core</artifactId>
+                <version>${fastutil.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.unimi.dsi</groupId>
+                <artifactId>fastutil-extra</artifactId>
                 <version>${fastutil.version}</version>
             </dependency>
             <dependency>
@@ -1910,6 +1915,8 @@
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
+                                <exclude>.github/workflows/codeql.yml</exclude>
+                                <exclude>.github/workflows/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>

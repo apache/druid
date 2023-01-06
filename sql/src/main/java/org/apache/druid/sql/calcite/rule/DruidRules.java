@@ -28,12 +28,15 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.Window;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
@@ -50,51 +53,59 @@ public class DruidRules
 
   public static List<RelOptRule> rules(PlannerContext plannerContext)
   {
-    return ImmutableList.of(
-        new DruidQueryRule<>(
-            Filter.class,
-            PartialDruidQuery.Stage.WHERE_FILTER,
-            PartialDruidQuery::withWhereFilter
-        ),
-        new DruidQueryRule<>(
-            Project.class,
-            PartialDruidQuery.Stage.SELECT_PROJECT,
-            PartialDruidQuery::withSelectProject
-        ),
-        new DruidQueryRule<>(
-            Aggregate.class,
-            PartialDruidQuery.Stage.AGGREGATE,
-            PartialDruidQuery::withAggregate
-        ),
-        new DruidQueryRule<>(
-            Project.class,
-            PartialDruidQuery.Stage.AGGREGATE_PROJECT,
-            PartialDruidQuery::withAggregateProject
-        ),
-        new DruidQueryRule<>(
-            Filter.class,
-            PartialDruidQuery.Stage.HAVING_FILTER,
-            PartialDruidQuery::withHavingFilter
-        ),
-        new DruidQueryRule<>(
-            Sort.class,
-            PartialDruidQuery.Stage.SORT,
-            PartialDruidQuery::withSort
-        ),
-        new DruidQueryRule<>(
-            Project.class,
-            PartialDruidQuery.Stage.SORT_PROJECT,
-            PartialDruidQuery::withSortProject
-        ),
-        DruidOuterQueryRule.AGGREGATE,
-        DruidOuterQueryRule.WHERE_FILTER,
-        DruidOuterQueryRule.SELECT_PROJECT,
-        DruidOuterQueryRule.SORT,
-        new DruidUnionRule(plannerContext),
-        new DruidUnionDataSourceRule(plannerContext),
-        DruidSortUnionRule.instance(),
-        DruidJoinRule.instance(plannerContext)
+    final ArrayList<RelOptRule> retVal = new ArrayList<>(
+        ImmutableList.of(
+            new DruidQueryRule<>(
+                Filter.class,
+                PartialDruidQuery.Stage.WHERE_FILTER,
+                PartialDruidQuery::withWhereFilter
+            ),
+            new DruidQueryRule<>(
+                Project.class,
+                PartialDruidQuery.Stage.SELECT_PROJECT,
+                PartialDruidQuery::withSelectProject
+            ),
+            new DruidQueryRule<>(
+                Aggregate.class,
+                PartialDruidQuery.Stage.AGGREGATE,
+                PartialDruidQuery::withAggregate
+            ),
+            new DruidQueryRule<>(
+                Project.class,
+                PartialDruidQuery.Stage.AGGREGATE_PROJECT,
+                PartialDruidQuery::withAggregateProject
+            ),
+            new DruidQueryRule<>(
+                Filter.class,
+                PartialDruidQuery.Stage.HAVING_FILTER,
+                PartialDruidQuery::withHavingFilter
+            ),
+            new DruidQueryRule<>(
+                Sort.class,
+                PartialDruidQuery.Stage.SORT,
+                PartialDruidQuery::withSort
+            ),
+            new DruidQueryRule<>(
+                Project.class,
+                PartialDruidQuery.Stage.SORT_PROJECT,
+                PartialDruidQuery::withSortProject
+            ),
+            DruidOuterQueryRule.AGGREGATE,
+            DruidOuterQueryRule.WHERE_FILTER,
+            DruidOuterQueryRule.SELECT_PROJECT,
+            DruidOuterQueryRule.SORT,
+            new DruidUnionRule(plannerContext),
+            new DruidUnionDataSourceRule(plannerContext),
+            DruidSortUnionRule.instance(),
+            DruidJoinRule.instance(plannerContext)
+        )
     );
+
+    if (plannerContext.queryContext().getBoolean(DruidQuery.CTX_ENABLE_WINDOW_FNS, false)) {
+      retVal.add(new DruidQueryRule<>(Window.class, PartialDruidQuery.Stage.WINDOW, PartialDruidQuery::withWindow));
+      retVal.add(DruidOuterQueryRule.WINDOW);
+    }
+    return retVal;
   }
 
   public static class DruidQueryRule<RelType extends RelNode> extends RelOptRule
@@ -221,6 +232,28 @@ public class DruidRules
             druidRel,
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
                              .withSort(sort)
+        );
+        if (outerQueryRel.isValidDruidQuery()) {
+          call.transformTo(outerQueryRel);
+        }
+      }
+    };
+
+    public static final RelOptRule WINDOW = new DruidOuterQueryRule(
+        operand(Window.class, operandJ(DruidRel.class, null, CAN_BUILD_ON, any())),
+        "WINDOW"
+    )
+    {
+      @Override
+      public void onMatch(final RelOptRuleCall call)
+      {
+        final Window window = call.rel(0);
+        final DruidRel druidRel = call.rel(1);
+
+        final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
+            druidRel,
+            PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
+                             .withWindow(window)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);

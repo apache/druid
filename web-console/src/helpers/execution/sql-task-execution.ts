@@ -124,9 +124,14 @@ export async function reattachTaskExecution(
   option: ReattachTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
   const { id, cancelToken, preserveOnTermination } = option;
-  let execution = await getTaskExecution(id, undefined, cancelToken);
+  let execution: Execution;
 
-  execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  try {
+    execution = await getTaskExecution(id, undefined, cancelToken);
+    execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+  } catch (e) {
+    throw new Error(`Reattaching to query failed due to: ${e.message}`);
+  }
 
   if (execution.isFullyComplete()) return execution;
 

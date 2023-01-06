@@ -293,13 +293,22 @@
         </properties>
         </profile>
         <profile>
-          <id>IT-InputFormat</id>
+          <id>IT-InputSource</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
         <properties>
-          <it.category>InputFormat</it.category>
+          <it.category>InputSource</it.category>
         </properties>
+        </profile>
+        <profile>
+            <id>IT-InputFormat</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>InputFormat</it.category>
+            </properties>
         </profile>
         <profile>
             <id>IT-AzureDeepStorage</id>

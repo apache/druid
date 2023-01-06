@@ -64,9 +64,10 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Num rows",
             "Avg. row size",
             "Replicas",
-            "Is published",
-            "Is realtime",
             "Is available",
+            "Is active",
+            "Is realtime",
+            "Is published",
             "Is overshadowed",
             "Actions",
           ]
@@ -76,6 +77,8 @@ exports[`SegmentsView matches snapshot 1`] = `
         tableColumnsHidden={
           Array [
             "Time span",
+            "Is published",
+            "Is overshadowed",
           ]
         }
       />
@@ -277,10 +280,19 @@ exports[`SegmentsView matches snapshot 1`] = `
           },
           Object {
             "Filter": [Function],
-            "Header": "Is published",
+            "Header": "Is available",
             "accessor": [Function],
             "className": "padded",
-            "id": "is_published",
+            "id": "is_available",
+            "show": true,
+            "width": 100,
+          },
+          Object {
+            "Filter": [Function],
+            "Header": "Is active",
+            "accessor": [Function],
+            "className": "padded",
+            "id": "is_active",
             "show": true,
             "width": 100,
           },
@@ -295,11 +307,11 @@ exports[`SegmentsView matches snapshot 1`] = `
           },
           Object {
             "Filter": [Function],
-            "Header": "Is available",
+            "Header": "Is published",
             "accessor": [Function],
             "className": "padded",
-            "id": "is_available",
-            "show": true,
+            "id": "is_published",
+            "show": false,
             "width": 100,
           },
           Object {
@@ -308,7 +320,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "accessor": [Function],
             "className": "padded",
             "id": "is_overshadowed",
-            "show": true,
+            "show": false,
             "width": 100,
           },
           Object {

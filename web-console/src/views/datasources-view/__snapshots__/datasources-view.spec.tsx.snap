@@ -283,7 +283,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "filterable": false,
           "id": "compactionStatus",
           "show": true,
-          "width": 150,
+          "width": 180,
         },
         Object {
           "Cell": [Function],

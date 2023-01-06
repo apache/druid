@@ -216,6 +216,8 @@
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jettison/jettison@1.*$</packageUrl>
     <cve>CVE-2022-40149</cve>
     <cve>CVE-2022-40150</cve>
+    <cve>CVE-2022-45685</cve>
+    <cve>CVE-2022-45693</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
@@ -232,6 +234,7 @@
     file name: snakeyaml-1.27.jar
     ]]></notes>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2022-1471</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -359,6 +362,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
        <!--
@@ -401,6 +405,9 @@
     <cve>CVE-2021-35516</cve>
     <cve>CVE-2021-35515</cve>
     <cve>CVE-2021-36090</cve>
+    <cve>CVE-2022-2048</cve>
+    <cve>CVE-2022-3509</cve>
+    <cve>CVE-2022-40152</cve>
   </suppress>
   <suppress>
     <!-- The CVE is not applicable to kafka-clients. -->
@@ -508,6 +515,7 @@
     <cve>CVE-2020-10740</cve>
     <cve>CVE-2020-25644</cve>
     <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
   </suppress>
 
   <suppress>

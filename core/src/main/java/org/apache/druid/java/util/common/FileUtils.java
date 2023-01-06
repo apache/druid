@@ -53,6 +53,12 @@ import java.util.UUID;
 
 public class FileUtils
 {
+  public enum LinkOrCopyResult
+  {
+    LINK,
+    COPY
+  }
+
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
@@ -383,6 +389,29 @@ public class FileUtils
   }
 
   /**
+   * Computes the size of the file. If it is a directory, computes the size up
+   * to a depth of 1.
+   */
+  public static long getFileSize(File file)
+  {
+    if (file == null) {
+      return 0;
+    } else if (file.isDirectory()) {
+      File[] children = file.listFiles();
+      if (children == null) {
+        return 0;
+      }
+      long totalSize = 0;
+      for (File child : children) {
+        totalSize += child.length();
+      }
+      return totalSize;
+    } else {
+      return file.length();
+    }
+  }
+
+  /**
    * Creates a temporary directory inside the configured temporary space (java.io.tmpdir). Similar to the method
    * {@link com.google.common.io.Files#createTempDir()} from Guava, but has nicer error messages.
    *
@@ -459,6 +488,26 @@ public class FileUtils
   public static void deleteDirectory(final File directory) throws IOException
   {
     org.apache.commons.io.FileUtils.deleteDirectory(directory);
+  }
+
+  /**
+   * Hard-link "src" as "dest", if possible. If not possible -- perhaps they are on separate filesystems -- then
+   * copy "src" to "dest".
+   *
+   * @return whether a link or copy was made. Can be safely ignored if you don't care.
+   *
+   * @throws IOException if something went wrong
+   */
+  public static LinkOrCopyResult linkOrCopy(final File src, final File dest) throws IOException
+  {
+    try {
+      Files.createLink(dest.toPath(), src.toPath());
+      return LinkOrCopyResult.LINK;
+    }
+    catch (IOException e) {
+      Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      return LinkOrCopyResult.COPY;
+    }
   }
 
   public interface OutputStreamConsumer<T>
