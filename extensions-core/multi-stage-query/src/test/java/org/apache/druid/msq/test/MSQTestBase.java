@@ -197,17 +197,17 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
  * and populates data for the datasources. The runner does not go via the HTTP layer for communication between the
  * various MSQ processes.
- *
+ * <p>
  * Controller -> Coordinator (Coordinator is mocked)
- *
+ * <p>
  * In the Ut's we go from:
  * {@link MSQTaskQueryMaker} -> {@link MSQTestOverlordServiceClient} -> {@link Controller}
- *
- *
+ * <p>
+ * <p>
  * Controller -> Worker communication happens in {@link MSQTestControllerContext}
- *
+ * <p>
  * Worker -> Controller communication happens in {@link MSQTestControllerClient}
- *
+ * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
 public class MSQTestBase extends BaseCalciteQueryTest
@@ -258,7 +258,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     super.configureGuice(builder);
 
-    builder.addModule(new DruidModule() {
+    builder.addModule(new DruidModule()
+    {
 
       // Small subset of MsqSqlModule
       @Override

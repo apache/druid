@@ -20,7 +20,6 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -32,11 +31,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class SortedGroupPartitionerTest extends SemanticTestBase
+public class ClusteredGroupPartitionerTest extends SemanticTestBase
 {
-  public SortedGroupPartitionerTest(
+  public ClusteredGroupPartitionerTest(
       String name,
       Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn
   )
@@ -45,7 +45,7 @@ public class SortedGroupPartitionerTest extends SemanticTestBase
   }
 
   @Test
-  public void testDefaultSortedGroupPartitioner()
+  public void testDefaultClusteredGroupPartitioner()
   {
     RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
@@ -54,9 +54,9 @@ public class SortedGroupPartitionerTest extends SemanticTestBase
         )
     ));
 
-    SortedGroupPartitioner parter = rac.as(SortedGroupPartitioner.class);
+    ClusteredGroupPartitioner parter = rac.as(ClusteredGroupPartitioner.class);
     if (parter == null) {
-      parter = new DefaultSortedGroupPartitioner(rac);
+      parter = new DefaultClusteredGroupPartitioner(rac);
     }
 
     int[] expectedBounds = new int[]{0, 3, 5, 6, 9};
@@ -90,14 +90,31 @@ public class SortedGroupPartitionerTest extends SemanticTestBase
     }
     Assert.assertFalse(partedChunks.hasNext());
 
-    boolean exceptionThrown = false;
-    try {
-      parter.partitionOnBoundaries(Collections.singletonList("unsorted"));
+    BiFunction<Integer, Integer, RowsAndColumnsHelper> singleHelperMaker =
+        (sorted, unsorted) ->
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{sorted})
+                .expectColumn("unsorted", new int[]{unsorted})
+                .allColumnsRegistered();
+
+    List<RowsAndColumnsHelper> unsortedExcpectations = Arrays.asList(
+        singleHelperMaker.apply(0, 3),
+        singleHelperMaker.apply(0, 54),
+        singleHelperMaker.apply(0, 21),
+        singleHelperMaker.apply(1, 1),
+        singleHelperMaker.apply(1, 5),
+        singleHelperMaker.apply(2, 54),
+        singleHelperMaker.apply(4, 2),
+        singleHelperMaker.apply(4, 3),
+        singleHelperMaker.apply(4, 92)
+    );
+
+    final List<String> unsorted = Collections.singletonList("unsorted");
+    final Iterator<RowsAndColumns> unsortedChunks = parter.partitionOnBoundaries(unsorted).iterator();
+    for (RowsAndColumnsHelper expectation : unsortedExcpectations) {
+      Assert.assertTrue(unsortedChunks.hasNext());
+      expectation.validate(unsortedChunks.next());
     }
-    catch (ISE ex) {
-      Assert.assertEquals("Pre-sorted data required, rows[1] and [2] were not in order", ex.getMessage());
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    Assert.assertFalse(unsortedChunks.hasNext());
   }
 }
