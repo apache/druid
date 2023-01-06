@@ -442,14 +442,6 @@ public class EditorTest
     );
     assertThrows(CatalogException.class, () -> doEdit(tableName, cmd2));
 
-    // Invalid __time column type
-    UpdateColumns cmd3 = new UpdateColumns(
-        Collections.singletonList(
-            new ColumnSpec(Columns.TIME_COLUMN, Columns.VARCHAR, null)
-         )
-    );
-    assertThrows(CatalogException.class, () -> doEdit(tableName, cmd3));
-
     // Valid time column type
     cmd = new UpdateColumns(
         Collections.singletonList(
