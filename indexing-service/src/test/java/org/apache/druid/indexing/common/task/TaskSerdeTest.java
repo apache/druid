@@ -595,11 +595,15 @@ public class TaskSerdeTest
         null,
         new HadoopIngestionSpec(
             new DataSchema(
-                "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularities.DAY,
+                "foo",
                 null,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                ),
+                null,
                 null,
                 jsonMapper
             ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
