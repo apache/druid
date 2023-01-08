@@ -185,7 +185,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     final Supplier<Long> channelSizeSupplier = countingOutputStream::getCount;
 
     final File footerFile = new File(tmpDir, fileName + "_footer");
-    // build supplier for reader the footer of the underlying frame file
+    // build supplier for reading the footer of the underlying frame file
     final Supplier<FrameFileFooter> frameFileFooterSupplier = Suppliers.memoize(() -> {
       try {
         // read trailer and find the footer size

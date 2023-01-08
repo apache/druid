@@ -103,7 +103,10 @@ public class DurableStorageUtils
     );
   }
 
-
+  /**
+   * Fetches the file location where a particular worker writes the data corresponding to a particular stage
+   * and a custom path name
+   */
   public static String getOutputsFileNameForPath(
       final String controllerTaskId,
       final int stageNumber,

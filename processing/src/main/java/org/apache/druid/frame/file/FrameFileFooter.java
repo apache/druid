@@ -29,6 +29,7 @@ import java.nio.ByteOrder;
 /**
  * Encapsulation for ƒrame file footer related operations. The footer must be wrapped in a memory object (the memory
  * can be physical or mmaped). Some verifications are also done on the footer to see if it is not corrupted.
+ * The schema for footer is as described by {@link FrameFile}.
  */
 public class FrameFileFooter
 {

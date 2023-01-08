@@ -64,30 +64,7 @@ public class S3StorageConnector implements StorageConnector
   @Override
   public InputStream read(String path) throws IOException
   {
-    return new RetryingInputStream<>(
-        new GetObjectRequest(config.getBucket(), objectPath(path)),
-        new ObjectOpenFunction<GetObjectRequest>()
-        {
-          @Override
-          public InputStream open(GetObjectRequest object)
-          {
-            return s3Client.getObject(object).getObjectContent();
-          }
-
-          @Override
-          public InputStream open(GetObjectRequest object, long offset)
-          {
-            final GetObjectRequest offsetObjectRequest = new GetObjectRequest(
-                object.getBucketName(),
-                object.getKey()
-            );
-            offsetObjectRequest.setRange(offset);
-            return open(offsetObjectRequest);
-          }
-        },
-        S3Utils.S3RETRY,
-        config.getMaxRetry()
-    );
+    return buildInputStream(new GetObjectRequest(config.getBucket(), objectPath(path)));
   }
 
   @Override
@@ -101,8 +78,13 @@ public class S3StorageConnector implements StorageConnector
           size
       );
     }
+    return buildInputStream(new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(from, from + size - 1));
+  }
+
+  private RetryingInputStream buildInputStream(GetObjectRequest getObjectRequest) throws IOException
+  {
     return new RetryingInputStream<>(
-        new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(from, from + size - 1),
+        getObjectRequest,
         new ObjectOpenFunction<GetObjectRequest>()
         {
           @Override

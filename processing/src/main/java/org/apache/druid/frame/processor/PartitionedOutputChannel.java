@@ -30,6 +30,11 @@ import javax.annotation.Nullable;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * A channel which can contain multiple partitions of data. It is used by {@link SuperSorter} currently to write multiple
+ * partitions on the same channel. The readable channel provided to the caller is an instance of
+ * {@link PartitionedReadableFrameChannel} which allows the caller to open a readable channel for the desired partition.
+ */
 public class PartitionedOutputChannel
 {
   @Nullable
