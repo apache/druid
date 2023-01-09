@@ -85,7 +85,13 @@ public class MSQTasks
   {
     final Matcher matcher = WORKER_PATTERN.matcher(taskId);
     if (matcher.matches()) {
-      return Integer.parseInt(matcher.group(WORKER_NUMBER));
+      try {
+        String worker = matcher.group(WORKER_NUMBER);
+        return Integer.parseInt(worker);
+      }
+      catch (NumberFormatException e) {
+        throw new ISE(e, "Unable to parse worker out of task %s", taskId);
+      }
     } else {
       throw new ISE(
           "Desired pattern %s to extract worker from task id %s did not match ",

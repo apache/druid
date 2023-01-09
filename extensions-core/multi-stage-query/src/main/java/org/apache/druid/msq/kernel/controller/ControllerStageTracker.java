@@ -236,7 +236,7 @@ class ControllerStageTracker
       throw new ISE("Result partition information is not relevant to this stage because it does not shuffle");
     }
     IntAVLTreeSet workers = new IntAVLTreeSet();
-    for (Integer worker : workerToPhase.keySet()) {
+    for (int worker : workerToPhase.keySet()) {
       if (ControllerWorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES.equals(workerToPhase.get(worker))) {
         workers.add(worker);
       }
@@ -686,7 +686,7 @@ class ControllerStageTracker
     if (allResultsStatsFetched()) {
       if (completeKeyStatisticsInformation == null || !completeKeyStatisticsInformation.isComplete()) {
         throw new ISE(
-            "Cannot generate partition boundaries until all the key information is received for stage[%d]",
+            "Cannot generate partition boundaries until all the key information is received for worker[%d] stage[%d]",
             workerNumber,
             stageDef.getStageNumber()
         );

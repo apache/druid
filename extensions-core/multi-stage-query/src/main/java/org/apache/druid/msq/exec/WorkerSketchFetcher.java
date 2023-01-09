@@ -115,7 +115,7 @@ public class WorkerSketchFetcher implements AutoCloseable
           throw rejectedExecutionException;
         } else {
           // throw worker error exception
-          throw new ISE("Unable to fetch partitions ", isError.get());
+          throw new ISE("Unable to fetch partitions %s", isError.get());
         }
       }
     }

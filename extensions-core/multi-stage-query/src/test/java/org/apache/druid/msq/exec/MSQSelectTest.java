@@ -1300,7 +1300,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
-      File successFile = new File(
+      new File(
           localFileStorageDir,
           DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
       );
