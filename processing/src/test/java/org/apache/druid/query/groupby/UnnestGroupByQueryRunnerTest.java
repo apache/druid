@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -29,18 +29,16 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
-import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
-import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
-import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -66,36 +64,6 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 {
-  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.makeSmileMapper();
-  public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
-  {
-    @Override
-    public String getFormatString()
-    {
-      return null;
-    }
-
-    @Override
-    public int intermediateComputeSizeBytes()
-    {
-      return 10 * 1024 * 1024;
-    }
-
-    @Override
-    public int getNumMergeBuffers()
-    {
-      // Some tests need two buffers for testing nested groupBy (simulating two levels of merging).
-      // Some tests need more buffers for parallel combine (testMergedPostAggHavingSpec).
-      return 4;
-    }
-
-    @Override
-    public int getNumThreads()
-    {
-      return 2;
-    }
-  };
-
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
   private final QueryRunner<ResultRow> runner;
@@ -204,7 +172,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       @Override
       public int getNumParallelCombineThreads()
       {
-        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+        return GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG.getNumThreads();
       }
 
       @Override
@@ -228,7 +196,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       final TestGroupByBuffers bufferPools
   )
   {
-    return makeQueryRunnerFactory(DEFAULT_MAPPER, config, bufferPools, DEFAULT_PROCESSING_CONFIG);
+    return makeQueryRunnerFactory(GroupByQueryRunnerTest.DEFAULT_MAPPER, config, bufferPools, GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG);
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
@@ -237,7 +205,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       final TestGroupByBuffers bufferPools
   )
   {
-    return makeQueryRunnerFactory(mapper, config, bufferPools, DEFAULT_PROCESSING_CONFIG);
+    return makeQueryRunnerFactory(mapper, config, bufferPools, GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG);
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
@@ -593,7 +561,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedColumn()
   {
-    // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
     GroupByQuery query = makeQueryBuilder()
@@ -665,7 +632,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "hroupBy-on-unnested-column");
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-column");
   }
 
   /**

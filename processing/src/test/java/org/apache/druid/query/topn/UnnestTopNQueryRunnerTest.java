@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.topn;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,6 +27,14 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.Result;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestQueryRunners;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -34,14 +42,6 @@ import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.topn.DimensionTopNMetricSpec;
-import org.apache.druid.query.topn.PooledTopNAlgorithm;
-import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQueryRunnerFactory;
-import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;

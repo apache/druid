@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -27,15 +27,15 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQueryConfig;
-import org.apache.druid.query.scan.ScanQueryEngine;
-import org.apache.druid.query.scan.ScanQueryQueryToolChest;
-import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.scan.ScanQueryRunnerTest;
-import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -123,7 +123,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnnestRunner()
+  public void testScanOnUnnest()
   {
     ScanQuery query = newTestUnnestQuery()
         .intervals(I_0112_0114)
@@ -171,7 +171,72 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnnestRunnerVirtualColumns()
+  public void testUnnestRunnerVirtualColumnsUsingSingleColumn()
+  {
+    ScanQuery query =
+        Druids.newScanQueryBuilder()
+              .intervals(I_0112_0114)
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+                  "vc",
+                  QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                  null
+              ))
+              .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+              .eternityInterval()
+              .legacy(legacy)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "vc",
+                      "mv_to_array(placementish)",
+                      ColumnType.STRING_ARRAY,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .limit(3)
+              .build();
+
+    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    ScanQueryRunnerTest.verify(expectedResults, results);
+  }
+
+  @Test
+  public void testUnnestRunnerVirtualColumnsUsingMultipleColumn()
   {
     ScanQuery query =
         Druids.newScanQueryBuilder()
