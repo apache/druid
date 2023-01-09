@@ -37,9 +37,12 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -189,14 +192,16 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                   new ExpressionVirtualColumn(
                       "vc",
                       "mv_to_array(placementish)",
-                      ColumnType.STRING_ARRAY,
+                      ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
                   )
               )
               .limit(3)
               .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+    Iterable<ScanResultValue> results = vcrunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{
@@ -247,44 +252,50 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                   QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
                   null
               ))
-              .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+              .columns(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
               .eternityInterval()
               .legacy(legacy)
               .virtualColumns(
                   new ExpressionVirtualColumn(
                       "vc",
-                      "mv_to_array(placementish)",
+                      "array(\"market\",\"quality\")",
                       ColumnType.STRING_ARRAY,
                       TestExprMacroTable.INSTANCE
                   )
               )
-              .limit(3)
+              .limit(4)
               .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+    Iterable<ScanResultValue> results = vcrunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{
           getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.MARKET_DIMENSION,
           QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
       };
     } else {
       columnNames = new String[]{
+          QueryRunnerTestHelper.MARKET_DIMENSION,
           QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
       };
     }
     String[] values;
     if (legacy) {
       values = new String[]{
-          "2011-01-12T00:00:00.000Z\ta",
-          "2011-01-12T00:00:00.000Z\tpreferred",
-          "2011-01-12T00:00:00.000Z\tb"
+          "2011-01-12T00:00:00.000Z\tspot\tspot",
+          "2011-01-12T00:00:00.000Z\tspot\tautomotive",
+          "2011-01-12T00:00:00.000Z\tspot\tspot",
+          "2011-01-12T00:00:00.000Z\tspot\tbusiness",
       };
     } else {
       values = new String[]{
-          "a",
-          "preferred",
-          "b"
+          "spot\tspot",
+          "spot\tautomotive",
+          "spot\tspot",
+          "spot\tbusiness"
       };
     }
 
@@ -292,10 +303,10 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
-        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Lists.newArrayList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
         0,
-        3
+        4
     );
     ScanQueryRunnerTest.verify(expectedResults, results);
   }

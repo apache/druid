@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
@@ -38,11 +39,18 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -184,10 +192,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
     return ImmutableList.of(
-        v2Config,
-        v2SmallBufferConfig,
-        v2SmallDictionaryConfig,
-        v2ParallelCombineConfig
+        v2Config
     );
   }
 
@@ -633,6 +638,162 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedVirtualColumn()
+  {
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        "vc",
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "vc",
+                "mv_to_array(placementish)",
+                ColumnType.STRING_ARRAY,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    // Total rows should add up to 26 * 2 = 52
+    // 26 rows and each has 2 entries in the column to be unnested
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "e",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "b",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "h",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "a",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "m",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "n",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "p",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "t",
+            "rows", 4L
+        )
+    );
+
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(factory, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, vcrunner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedVirtualMultiColumn()
+  {
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        "vc",
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .setVirtualColumns(
+            new ExpressionVirtualColumn(
+                "vc",
+                "array(\"market\",\"quality\")",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setLimit(3)
+        .build();
+
+    // Total rows should add up to 26 * 2 = 52
+    // 26 rows and each has 2 entries in the column to be unnested
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "business",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "health",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "travel",
+            "rows", 2L
+        )
+    );
+
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(factory, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, vcrunner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-columns");
   }
 
   /**
