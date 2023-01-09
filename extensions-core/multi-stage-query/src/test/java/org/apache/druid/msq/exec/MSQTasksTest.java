@@ -155,6 +155,7 @@ public class MSQTasksTest
     Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker0-"));
     Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worr1_0"));
     Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-1-0"));
+    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xx"));
   }
 
   @Test

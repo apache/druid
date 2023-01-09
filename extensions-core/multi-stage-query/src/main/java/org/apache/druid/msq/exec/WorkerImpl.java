@@ -736,7 +736,7 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(snapshotsTree);
+      controllerClient.postCounters(id(), snapshotsTree);
     }
   }
 

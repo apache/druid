@@ -58,7 +58,9 @@ public class MSQTasks
 
   private static final String TASK_ID_PREFIX = "query-";
 
-  private static final Pattern WORKER_PATTERN = Pattern.compile(".*-worker([0-9]+)_[0-9]+");
+  private static final String WORKER_NUMBER = "workerNumber";
+  // taskids are in the form 12dsa1-worker9_0. see method workerTaskId() for more details.
+  private static final Pattern WORKER_PATTERN = Pattern.compile(".*-worker(?<" + WORKER_NUMBER + ">[0-9]+)_[0-9]+");
 
   /**
    * Returns a controller task ID given a SQL query id.
@@ -83,7 +85,7 @@ public class MSQTasks
   {
     final Matcher matcher = WORKER_PATTERN.matcher(taskId);
     if (matcher.matches()) {
-      return Integer.parseInt(matcher.group(1));
+      return Integer.parseInt(matcher.group(WORKER_NUMBER));
     } else {
       throw new ISE(
           "Desired pattern %s to extract worker from task id %s did not match ",

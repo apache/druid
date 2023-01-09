@@ -709,7 +709,6 @@ public class ControllerImpl implements Controller
   @Override
   public void workerError(MSQErrorReport errorReport)
   {
-    // move inside kernel
     if (workerTaskLauncher.isTaskCanceledByController(errorReport.getTaskId()) ||
         !workerTaskLauncher.isTaskLatest(errorReport.getTaskId())) {
       log.info("Ignoring task %s", errorReport.getTaskId());
@@ -749,7 +748,7 @@ public class ControllerImpl implements Controller
    * Periodic update of {@link CounterSnapshots} from subtasks.
    */
   @Override
-  public void updateCounters(CounterSnapshotsTree snapshotsTree)
+  public void updateCounters(String taskId, CounterSnapshotsTree snapshotsTree)
   {
     taskCountersForLiveReports.putAll(snapshotsTree);
     Optional<Pair<String, Long>> warningsExceeded =
@@ -761,7 +760,7 @@ public class ControllerImpl implements Controller
       Long limit = warningsExceeded.get().rhs;
 
       workerError(MSQErrorReport.fromFault(
-          id(),
+          taskId,
           selfDruidNode.getHost(),
           null,
           new TooManyWarningsFault(limit.intValue(), errorCode)

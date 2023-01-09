@@ -77,6 +77,11 @@ class ControllerStageTracker
   private final WorkerInputs workerInputs;
 
   // worker-> workerStagePhase
+  // Controller keeps track of the stage with this map.
+  // Currently, we rely on the serial nature of the state machine to keep things in sync between the controller and the worker.
+  // So the worker state in the controller can go out of sync with the actual worker state.
+
+
   private final Int2ObjectMap<ControllerWorkerStagePhase> workerToPhase = new Int2ObjectOpenHashMap<>();
 
   // workers which have reported partial key information.
