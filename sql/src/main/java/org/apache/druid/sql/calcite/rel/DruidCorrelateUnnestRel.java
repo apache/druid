@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -139,9 +140,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
     // handling for case when mv_to_array is used
-    // if used and has only 1 argument it can be consumed as a column
     // No need to use virtual column in such a case
-    if (expression.getArguments().size() == 1 && expression.getExpression().toLowerCase().contains("mv_to_array")) {
+    if (StringUtils.toLowerCase(expression.getExpression()).startsWith("mv_to_array")) {
       dimOrExpToUnnest = expression.getArguments().get(0).getSimpleExtraction().getColumn();
     } else {
       if (expression.isDirectColumnAccess()) {

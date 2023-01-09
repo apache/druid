@@ -230,7 +230,7 @@ public final class DimensionHandlerUtils
     String dimName = dimSpec.getDimension();
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimName);
     capabilities = getEffectiveCapabilities(dimSpec, capabilities);
-    if (capabilities.is(ValueType.STRING)) {
+    if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
       return columnSelectorFactory.makeDimensionSelector(dimSpec);
     }
     return columnSelectorFactory.makeColumnValueSelector(dimSpec.getDimension());

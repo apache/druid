@@ -117,8 +117,6 @@ public class DruidCorrelateUnnestRule extends RelOptRule
       }
     }
 
-
-    // todo: make new projects with druidQueryRel projects + unnestRel projects shifted
     LogicalCorrelate lc = logicalCorrelate.copy(
         logicalCorrelate.getTraitSet(),
         newLeft,
