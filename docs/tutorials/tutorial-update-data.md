@@ -71,7 +71,7 @@ The datasource contains three rows of data with an `animal` dimension and a `num
 
 ## Overwrite data
 
-To overwrite the data, you submit another task for the same interval but with different input data.
+To overwrite the data, submit another task for the same interval but with different input data.
 
 The `quickstart/tutorial/updates-overwrite-index.json` spec performs an overwrite on the `updates-tutorial` datasource.
 
@@ -144,8 +144,8 @@ Submit the task:
 bin/post-index-task --file quickstart/tutorial/updates-append-index2.json --url http://localhost:8081
 ```
 
-When the task completes, query the data again. Two additional rows are added after `octopus`.
-Druid does not roll up the new `bear` row with the existing `bear` row because it stored the new data in a separate segment.
+Druid adds two additional rows after `octopus`. When the task completes, query the data again to see them.
+Druid doesn't roll up the new `bear` row with the existing `bear` row because it stored the new data in a separate segment.
 
 ```bash
 dsql> SELECT * FROM "updates-tutorial";
