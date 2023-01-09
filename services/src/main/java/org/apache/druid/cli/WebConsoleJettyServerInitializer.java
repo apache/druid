@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.resource.Resource;
 
