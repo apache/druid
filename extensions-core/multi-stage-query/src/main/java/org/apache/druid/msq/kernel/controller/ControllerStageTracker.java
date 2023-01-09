@@ -100,7 +100,7 @@ class ControllerStageTracker
 
   // created when is called. Should be cleared once resultPartitionBoundariesforTimeChunk is set
   private final Map<Long, ClusterByStatisticsCollector> timeChunkToCollector = new HashMap<>();
-  private Map<Long, ClusterByPartitions> timeChunkToBoundaries = new TreeMap<>();
+  private final Map<Long, ClusterByPartitions> timeChunkToBoundaries = new TreeMap<>();
   private final Map<Long, Set<Integer>> timeChunkToWorkers = new HashMap<>();
   long totalPartitionCount;
 
