@@ -72,6 +72,7 @@ import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
+import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -216,24 +217,40 @@ public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
+                  .build();
+
+  public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true).build();
+
+
+  public static final Map<String, Object> FAULT_TOLERANCE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true).build();
+
+  public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                      ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                  )
                   .build();
 
   public static final Map<String, Object>
-      ROLLUP_CONTEXT = ImmutableMap.<String, Object>builder()
-                                   .putAll(DEFAULT_MSQ_CONTEXT)
-                                   .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
-                                   .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
-                                   .build();
+      ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
+                                          .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
+                                          .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
+                                          .build();
 
-  public static final Map<String, Object> MSQ_CONTEXT_WITHOUT_DURABLE_STORAGE =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
-                  .put(QueryContexts.FINALIZE_KEY, true)
-                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, false)
-                  .build();
+  public static final String FAULT_TOLERANCE = "fault_tolerance";
+  public static final String DURABLE_STORAGE = "durable_storage";
+  public static final String DEFAULT = "default";
+  public static final String SEQUENTIAL_MERGE = "sequential_merge";
 
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
@@ -489,11 +506,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
    * Returns query context expected for a scan query. Same as {@link #DEFAULT_MSQ_CONTEXT}, but
    * includes {@link DruidQuery#CTX_SCAN_SIGNATURE}.
    */
-  protected Map<String, Object> defaultScanQueryContext(final RowSignature signature)
+  protected Map<String, Object> defaultScanQueryContext(Map<String, Object> context, final RowSignature signature)
   {
     try {
       return ImmutableMap.<String, Object>builder()
-                         .putAll(DEFAULT_MSQ_CONTEXT)
+                         .putAll(context)
                          .put(
                              DruidQuery.CTX_SCAN_SIGNATURE,
                              queryFramework().queryJsonMapper().writeValueAsString(signature)

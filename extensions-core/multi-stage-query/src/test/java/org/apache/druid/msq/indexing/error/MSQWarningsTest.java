@@ -335,7 +335,9 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(DEFAULT_MSQ_CONTEXT)
+                                                                                .putAll(ROLLUP_CONTEXT_PARAMS)
+                                                                                .build())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)

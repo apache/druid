@@ -98,14 +98,16 @@ class ControllerStageTracker
   @Nullable
   private ClusterByPartitions resultPartitionBoundaries;
 
-  // created when is called. Should be cleared once resultPartitionBoundariesforTimeChunk is set
+
+  // created when mergingStatsForTimeChunk is called. Should be cleared once timeChunkToBoundaries is set for the timechunk
   private final Map<Long, ClusterByStatisticsCollector> timeChunkToCollector = new HashMap<>();
   private final Map<Long, ClusterByPartitions> timeChunkToBoundaries = new TreeMap<>();
-  private final Map<Long, Set<Integer>> timeChunkToWorkers = new HashMap<>();
   long totalPartitionCount;
 
 
+  // states used for tracking worker to timechunks and vice versa so that we know when to generate partition boundaries for (timeChunk,worker)
   private Map<Integer, Set<Long>> workerToRemainingTimeChunks = null;
+  private Map<Long, Set<Integer>> timeChunkToRemainingWorkers = null;
 
   @Nullable
   private Object resultObject;
@@ -430,8 +432,8 @@ class ControllerStageTracker
 
         if (allPartialKeyInformationFetched()) {
           completeKeyStatisticsInformation.complete();
-          if (workerToRemainingTimeChunks == null) {
-            initializeWorkerToRemainingTimeChunks();
+          if (workerToRemainingTimeChunks == null && timeChunkToRemainingWorkers == null) {
+            initializeTimeChunkWorkerTrackers();
           }
           // All workers have sent the partial key statistics information.
           // Transition to MERGING_STATISTICS state to queue fetch clustering statistics from workers.
@@ -464,9 +466,10 @@ class ControllerStageTracker
     return getPhase();
   }
 
-  private void initializeWorkerToRemainingTimeChunks()
+  private void initializeTimeChunkWorkerTrackers()
   {
     workerToRemainingTimeChunks = new HashMap<>();
+    timeChunkToRemainingWorkers = new HashMap<>();
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, workers) -> {
       for (int worker : workers) {
         this.workerToRemainingTimeChunks.compute(worker, (wk, timeChunks) -> {
@@ -477,6 +480,7 @@ class ControllerStageTracker
           return timeChunks;
         });
       }
+      timeChunkToRemainingWorkers.put(timeChunk, workers);
     });
   }
 
@@ -521,7 +525,7 @@ class ControllerStageTracker
       throw new ISE("Worker[%d] not found for stage[%s]", workerNumber, stageDef.getStageNumber());
     }
 
-    // only merge in case this worker has remaining timechunks
+    // only merge in case this worker has remaining time chunks
     workerToRemainingTimeChunks.computeIfPresent(workerNumber, (wk, timeChunks) -> {
       if (timeChunks.remove(timeChunk)) {
 
@@ -538,12 +542,17 @@ class ControllerStageTracker
         );
 
         // if work for one time chunk is finished, generate the ClusterByPartitions for that timeChunk and clear the collector so that we free up controller memory.
-        timeChunkToWorkers.compute(timeChunk, (tc, workers) -> {
+        timeChunkToRemainingWorkers.compute(timeChunk, (tc, workers) -> {
           if (workers == null || workers.isEmpty()) {
-            throw new ISE("Workers should not be empty until all the work is finished for time chunk[%d]", timeChunk);
+            throw new ISE(
+                "Remaining workers should not be empty until all the work is finished for time chunk[%d] for stage[%d]",
+                timeChunk,
+                stageDef.getStageNumber()
+            );
           }
           workers.remove(workerNumber);
           if (workers.isEmpty()) {
+            // generate partition boundaries since all work is finished for the time chunk
             ClusterByStatisticsCollector collector = timeChunkToCollector.get(tc);
             Either<Long, ClusterByPartitions> countOrPartitions = stageDef.generatePartitionsForShuffle(collector);
             totalPartitionCount += getPartitionCountFromEither(countOrPartitions);
@@ -552,6 +561,8 @@ class ControllerStageTracker
               return null;
             }
             timeChunkToBoundaries.put(tc, countOrPartitions.valueOrThrow());
+
+            // clear the collector to give back memory
             collector.clear();
             timeChunkToCollector.remove(tc);
             return null;

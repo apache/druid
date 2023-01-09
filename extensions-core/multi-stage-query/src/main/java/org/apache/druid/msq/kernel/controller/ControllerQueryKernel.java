@@ -719,7 +719,9 @@ public class ControllerQueryKernel
 
     for (StageId stageId : trackedSet) {
       ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
-      stageToWorkers.put(stageId, controllerStageTracker.getWorkersToFetchClusterStatisticsFrom());
+      if (controllerStageTracker.getStageDefinition().mustGatherResultKeyStatistics()) {
+        stageToWorkers.put(stageId, controllerStageTracker.getWorkersToFetchClusterStatisticsFrom());
+      }
     }
     return stageToWorkers;
   }

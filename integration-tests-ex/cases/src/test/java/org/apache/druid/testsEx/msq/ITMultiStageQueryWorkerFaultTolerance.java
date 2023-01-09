@@ -34,7 +34,7 @@ import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testsEx.categories.MultiStageQuery;
+import org.apache.druid.testsEx.categories.MultiStageQueryWithMM;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.utils.DruidClusterAdminClient;
 import org.junit.Assert;
@@ -42,11 +42,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+/**
+ * As we need to kill the PID of the launched task, these tests should be run with middle manager only.
+ */
 @RunWith(DruidTestRunner.class)
-@Category(MultiStageQuery.class)
-public class ITMultiStageQueryHA
+@Category(MultiStageQueryWithMM.class)
+public class ITMultiStageQueryWorkerFaultTolerance
 {
-  private static final Logger LOG = new Logger(ITMultiStageQueryHA.class);
+  private static final Logger LOG = new Logger(ITMultiStageQueryWorkerFaultTolerance.class);
   @Inject
   private MsqTestQueryHelper msqHelper;
 
