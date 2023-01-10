@@ -21,11 +21,11 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.joda.time.DateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.joda.time.DateTime;
 
 public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
 {
