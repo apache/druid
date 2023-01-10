@@ -382,9 +382,6 @@ class ControllerStageTracker
       final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
-    if (phase != ControllerStagePhase.READING_INPUT) {
-      throw new ISE("Cannot add result key statistics from stage [%s]", phase);
-    }
     if (!stageDef.mustGatherResultKeyStatistics()
         || !stageDef.doesShuffle()
         || completeKeyStatisticsInformation == null) {

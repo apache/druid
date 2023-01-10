@@ -125,7 +125,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(
         queryLocal,
         ImmutableMap.of(
-            MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+            MultiStageQueryContext.CTX_FAULT_TOLERANCE,
             "true",
             MultiStageQueryContext.CTX_MAX_NUM_TASKS,
             3
@@ -143,7 +143,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
     String taskIdToKill = sqlTaskStatus.getTaskId() + "-worker1_0";
     killTaskAbruptly(taskIdToKill);
 
-    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
+    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);

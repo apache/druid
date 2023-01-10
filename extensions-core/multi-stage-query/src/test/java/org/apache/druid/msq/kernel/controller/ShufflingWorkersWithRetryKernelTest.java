@@ -96,13 +96,12 @@ public class ShufflingWorkersWithRetryKernelTest extends BaseControllerQueryKern
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
     controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
     controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
