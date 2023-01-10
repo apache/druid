@@ -32,6 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * A composed readable channel to read frames. The channel can encapsulate multiple readable channels in it and
+ * automatically switches to next channels once the currently read channel is finished.
+ */
 public class ComposingReadableFrameChannel implements ReadableFrameChannel
 {
   private final List<Supplier<ReadableFrameChannel>> channels;

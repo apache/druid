@@ -23,10 +23,12 @@ import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.query.ResourceLimitExceededException;
 
-
+/**
+ * Tracks the byte usage with an upper bound bytes limit. Reservaction of bytes beyond limit throws
+ * {@link ResourceLimitExceededException}.
+ */
 public class ByteTracker
 {
-  @GuardedBy("this")
   private final long maxBytes;
 
   @GuardedBy("this")

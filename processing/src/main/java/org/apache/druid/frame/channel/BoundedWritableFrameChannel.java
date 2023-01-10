@@ -24,6 +24,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
+/**
+ * A writable channel which only allows writing frames till some defined limit. If that limit is breached, every write
+ * to this channel will throw a {@link org.apache.druid.query.ResourceLimitExceededException}.
+ */
 public class BoundedWritableFrameChannel implements WritableFrameChannel
 {
   private final WritableFrameChannel delegate;

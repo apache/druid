@@ -40,7 +40,9 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- *
+ * A channel factory which provides ordered composed channels. The factory encapsulates multiple output channel factories
+ * and automatically switches between then when the current factory is 'full' for writes. The reads can also encapsulate
+ * multiple readable channels with automatic switching.
  */
 public class ComposingOutputChannelFactory implements OutputChannelFactory
 {

@@ -32,6 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * A composed writable channel to write frames. The channel can encapsulate multiple writable channels in it and
+ * automatically switches to next channels once the current write channel cannot allow more writes.
+ */
 public class ComposingWritableFrameChannel implements WritableFrameChannel
 {
   private final List<Supplier<WritableFrameChannel>> channels;
