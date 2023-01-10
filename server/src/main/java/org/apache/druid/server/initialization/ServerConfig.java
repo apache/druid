@@ -67,7 +67,8 @@ public class ServerConfig
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
-      @Nullable String contentSecurityPolicy
+      @Nullable String contentSecurityPolicy,
+      boolean enableHSTS
   )
   {
     this.numThreads = numThreads;
@@ -88,6 +89,7 @@ public class ServerConfig
     this.showDetailedJettyErrors = showDetailedJettyErrors;
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
+    this.enableHSTS = enableHSTS;
   }
 
   public ServerConfig()
@@ -160,6 +162,9 @@ public class ServerConfig
 
   @JsonProperty("contentSecurityPolicy")
   private String contentSecurityPolicy;
+
+  @JsonProperty
+  private boolean enableHSTS = false;
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
@@ -255,6 +260,11 @@ public class ServerConfig
     return contentSecurityPolicy;
   }
 
+  public boolean isEnableHSTS()
+  {
+    return enableHSTS;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -282,7 +292,8 @@ public class ServerConfig
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
-           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy());
+           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
+           enableHSTS == that.enableHSTS;
   }
 
   @Override
@@ -306,7 +317,8 @@ public class ServerConfig
         allowedHttpMethods,
         errorResponseTransformStrategy,
         showDetailedJettyErrors,
-        contentSecurityPolicy
+        contentSecurityPolicy,
+        enableHSTS
     );
   }
 
@@ -332,6 +344,7 @@ public class ServerConfig
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
+           ", enableHSTS=" + enableHSTS +
            '}';
   }
 
