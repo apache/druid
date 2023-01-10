@@ -21,14 +21,17 @@ package org.apache.druid.rpc;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 
 import java.util.ArrayDeque;
@@ -57,8 +60,14 @@ public class MockServiceClient implements ServiceClient
     );
 
     if (expectation.response.isValue()) {
-      final ClientResponse<FinalType> response =
-          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0));
+      Pair<HttpResponse, HttpContent> responseHttpContentPair = expectation.response.valueOrThrow();
+      ClientResponse<IntermediateType> intermediate
+          = handler.handleResponse(responseHttpContentPair.lhs, chunkNum -> 0);
+
+      if (responseHttpContentPair.rhs != null) {
+        intermediate = handler.handleChunk(intermediate, responseHttpContentPair.rhs, 1);
+      }
+      final ClientResponse<FinalType> response = handler.done(intermediate);
       return Futures.immediateFuture(response.getObj());
     } else {
       return Futures.immediateFailedFuture(expectation.response.error());
@@ -71,9 +80,10 @@ public class MockServiceClient implements ServiceClient
     return this;
   }
 
-  public MockServiceClient expect(final RequestBuilder request, final HttpResponse response)
+  public MockServiceClient expect(final RequestBuilder request, final HttpResponse response, final
+                                  HttpContent content)
   {
-    expectations.add(new Expectation(request, Either.value(response)));
+    expectations.add(new Expectation(request, Either.value(Pair.of(response, content))));
     return this;
   }
 
@@ -88,10 +98,7 @@ public class MockServiceClient implements ServiceClient
     for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
       response.headers().set(headerEntry.getKey(), headerEntry.getValue());
     }
-    if (content != null) {
-      response.setContent(ChannelBuffers.wrappedBuffer(content));
-    }
-    return expect(request, response);
+    return expect(request, response, content != null ? new DefaultHttpContent(Unpooled.wrappedBuffer(content)) : null);
   }
 
   public MockServiceClient expect(final RequestBuilder request, final Throwable e)
@@ -108,9 +115,9 @@ public class MockServiceClient implements ServiceClient
   private static class Expectation
   {
     private final RequestBuilder request;
-    private final Either<Throwable, HttpResponse> response;
+    private final Either<Throwable, Pair<HttpResponse, HttpContent>> response;
 
-    public Expectation(RequestBuilder request, Either<Throwable, HttpResponse> response)
+    public Expectation(RequestBuilder request, Either<Throwable, Pair<HttpResponse, HttpContent>> response)
     {
       this.request = request;
       this.response = response;
