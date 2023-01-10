@@ -19,20 +19,15 @@
 
 package org.apache.druid.catalog.model.facade;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
-import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Convenience wrapper on top of a resolved table (a table spec and its corresponding
@@ -43,57 +38,10 @@ public class DatasourceFacade extends TableFacade
 {
   private static final Logger LOG = new Logger(DatasourceFacade.class);
 
-  public static class ColumnFacade
-  {
-    public enum Kind
-    {
-      ANY,
-      TIME,
-      DIMENSION,
-      MEASURE
-    }
-
-    private final ColumnSpec spec;
-
-    public ColumnFacade(ColumnSpec spec)
-    {
-      this.spec = spec;
-    }
-
-    public ColumnSpec spec()
-    {
-      return spec;
-    }
-
-    public ColumnType druidType()
-    {
-      return TableFacade.druidType(spec);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "{spec=" + spec + "}";
-    }
-  }
-
-  private final List<ColumnFacade> columns;
-  private final Map<String, ColumnFacade> columnIndex;
-  private final boolean hasRollup;
 
   public DatasourceFacade(ResolvedTable resolved)
   {
     super(resolved);
-    this.columns = resolved.spec().columns()
-        .stream()
-        .map(col -> new ColumnFacade(col))
-        .collect(Collectors.toList());
-    this.hasRollup = false;
-    ImmutableMap.Builder<String, ColumnFacade> builder = ImmutableMap.builder();
-    for (ColumnFacade col : columns) {
-      builder.put(col.spec.name(), col);
-    }
-    columnIndex = builder.build();
   }
 
   public String segmentGranularityString()
@@ -140,20 +88,5 @@ public class DatasourceFacade extends TableFacade
   public boolean isSealed()
   {
     return booleanProperty(DatasourceDefn.SEALED_PROPERTY);
-  }
-
-  public List<ColumnFacade> columnFacades()
-  {
-    return columns;
-  }
-
-  public ColumnFacade column(String name)
-  {
-    return columnIndex.get(name);
-  }
-
-  public boolean hasRollup()
-  {
-    return hasRollup;
   }
 }

@@ -185,6 +185,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public int hashCode()
   {
+
     return Objects.hash(lookup, retainMissingValue, replaceMissingValueWith, injective, optimize);
   }
 
