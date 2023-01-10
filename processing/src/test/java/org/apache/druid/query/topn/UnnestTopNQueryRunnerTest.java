@@ -42,8 +42,11 @@ import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -175,31 +178,15 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     return nullRow;
   }
 
-  private List<AggregatorFactory> duplicateAggregators(AggregatorFactory aggregatorFactory, AggregatorFactory duplicate)
-  {
-    if (duplicateSingleAggregatorQueries) {
-      return ImmutableList.of(aggregatorFactory, duplicate);
-    } else {
-      return Collections.singletonList(aggregatorFactory);
-    }
-  }
-
-  private List<Map<String, Object>> withDuplicateResults(
-      List<? extends Map<String, Object>> results,
-      String key,
-      String duplicateKey
+  private Sequence<Result<TopNResultValue>> assertExpectedResultsWithCustomRunner(
+      Iterable<Result<TopNResultValue>> expectedResults,
+      TopNQuery query,
+      QueryRunner runner
   )
   {
-    if (!duplicateSingleAggregatorQueries) {
-      return (List<Map<String, Object>>) results;
-    }
-    List<Map<String, Object>> resultsWithDuplicates = new ArrayList<>();
-    for (Map<String, Object> result : results) {
-      resultsWithDuplicates.add(
-          ImmutableMap.<String, Object>builder().putAll(result).put(duplicateKey, result.get(key)).build()
-      );
-    }
-    return resultsWithDuplicates;
+    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query, runner);
+    TestHelper.assertExpectedResults(expectedResults, retval);
+    return retval;
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResults(
@@ -217,11 +204,26 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     return runWithMerge(query, ResponseContext.createEmpty());
   }
 
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, QueryRunner runner)
+  {
+    return runWithMerge(query, ResponseContext.createEmpty(), runner);
+  }
+
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
         chest.mergeResults(runner),
+        chest
+    );
+    return mergeRunner.run(QueryPlus.wrap(query), context);
+  }
+
+  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context, QueryRunner runner1)
+  {
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
+        chest.mergeResults(runner1),
         chest
     );
     return mergeRunner.run(QueryPlus.wrap(query), context);
@@ -380,6 +382,89 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNStringVirtualMultiColumnUnnest()
+  {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
+        "TopNQueryRunnerFactory-bufferPool",
+        () -> ByteBuffer.allocate(20000)
+    );
+
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(
+        new TopNQueryRunnerFactory(
+            defaultPool,
+            new TopNQueryQueryToolChest(new TopNQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ),
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        "vc",
+        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        null,
+        "rtIndexvc"
+    );
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(UnnestDataSource.create(
+            new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+            "vc",
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            null
+        ))
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .virtualColumns(
+            new ExpressionVirtualColumn(
+                "vc",
+                "array(\"market\",\"quality\")",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .dimension(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .metric("rows")
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(commonAggregators)
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "spot",
+                        "rows", 18L,
+                        "index", 2231.876812D,
+                        "addRowsIndexConstant", 2250.876812D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "premium",
+                        "rows", 6L,
+                        "index", 5407.213795D,
+                        "addRowsIndexConstant", 5414.213795D,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_1
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResultsWithCustomRunner(expectedResults, query, vcrunner);
+    RESOURCE_CLOSER.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
+      Assert.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      defaultPool.close();
+      customPool.close();
+    });
   }
 }
 
