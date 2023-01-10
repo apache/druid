@@ -105,7 +105,7 @@ public class IntArrayColumn implements Column
   {
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
-        if ((intoStart + (long) vals.length) > Integer.MAX_VALUE) {
+        if (Integer.MAX_VALUE - vals.length < intoStart) {
           throw new ISE(
               "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
               intoStart,
