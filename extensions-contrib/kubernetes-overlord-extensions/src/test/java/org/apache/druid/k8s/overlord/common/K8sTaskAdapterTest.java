@@ -24,8 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
+import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -38,14 +41,17 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -160,4 +166,55 @@ class K8sTaskAdapterTest
     expected = (long) ((HumanReadableBytes.parse("512m") + HumanReadableBytes.parse("1g")) * 1.2);
     assertEquals(expected, K8sTaskAdapter.getContainerMemory(context));
   }
+
+  @Test
+  void testMassagingSpec()
+  {
+    PodSpec spec = new PodSpec();
+    List<Container> containers = new ArrayList<>();
+    containers.add(new ContainerBuilder()
+                       .withName("excludeSidecar").build());
+    containers.add(new ContainerBuilder()
+                       .withName("sidecar").build());
+    containers.add(new ContainerBuilder()
+                       .withName("primary").build());
+    spec.setContainers(containers);
+    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
+    config.primaryContainerName = "primary";
+    Set<String> containersToExclude = new HashSet<>();
+    containersToExclude.add("excludeSidecar");
+    config.containersToExclude = containersToExclude;
+    K8sTaskAdapter.massageSpec(config, spec);
+
+    List<Container> actual = spec.getContainers();
+    Assertions.assertEquals(2, containers.size());
+    Assertions.assertEquals("primary", actual.get(0).getName());
+    Assertions.assertEquals("sidecar", actual.get(1).getName());
+  }
+
+  @Test
+  void testNoPrimaryFound() throws Exception
+  {
+    PodSpec spec = new PodSpec();
+    List<Container> containers = new ArrayList<>();
+    containers.add(new ContainerBuilder()
+                       .withName("istio-proxy").build());
+    containers.add(new ContainerBuilder()
+                       .withName("main").build());
+    containers.add(new ContainerBuilder()
+                       .withName("sidecar").build());
+    spec.setContainers(containers);
+    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
+    config.primaryContainerName = "primary";
+    Set<String> containersToExclude = new HashSet<>();
+    containersToExclude.add("istio-proxy");
+    config.containersToExclude = containersToExclude;
+    K8sTaskAdapter.massageSpec(config, spec);
+
+    List<Container> actual = spec.getContainers();
+    Assertions.assertEquals(2, actual.size());
+    Assertions.assertEquals("main", actual.get(0).getName());
+    Assertions.assertEquals("sidecar", actual.get(1).getName());
+  }
+
 }
