@@ -65,7 +65,7 @@ public class MSQWarningsTest extends MSQTestBase
   @Before
   public void setUp3() throws IOException
   {
-    toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
+    toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/unparseable.gz");
     toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     rowSignature = RowSignature.builder()

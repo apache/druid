@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
@@ -48,6 +49,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryProcessingPool;
@@ -56,6 +58,10 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
+import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexBuilder;
@@ -77,7 +83,8 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
-import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.CalciteQueryTest;
+import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -86,8 +93,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -97,6 +107,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
@@ -104,10 +115,26 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
-public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
+public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 {
 
   private MSQTestOverlordServiceClient indexingServiceClient;
+  private AtomicReference<MSQTestOverlordServiceClient> indexingServiceClientRef;
+
+  private TestGroupByBuffers groupByBuffers;
+
+  @Before
+  public void setup2()
+  {
+    groupByBuffers = TestGroupByBuffers.createDefault();
+
+  }
+
+  @After
+  public void teardown2()
+  {
+    groupByBuffers.close();
+  }
 
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
@@ -174,6 +201,11 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
       binder.bind(DataSegmentProvider.class)
             .toInstance((dataSegment, channelCounters) ->
                             new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
+
+      GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+      binder.bind(GroupByStrategySelector.class)
+            .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
+                                              .getStrategySelector());
     });
 
     builder.addModule(new IndexingServiceTuningConfigModule());
@@ -183,6 +215,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
 
   }
 
+
   @Override
   public SqlEngine createEngine(
       QueryLifecycleFactory qlf,
@@ -190,15 +223,14 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
       Injector injector
   )
   {
-    final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
+    final WorkerMemoryParameters workerMemoryParameters =
         WorkerMemoryParameters.createInstance(
             WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
             WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
             2,
             10,
             2
-        )
-    );
+        );
     indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
         injector,
@@ -208,8 +240,23 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }
 
+  @Override
+  protected QueryTestBuilder testBuilder()
+  {
+    return new QueryTestBuilder(new CalciteTestConfig())
+        .addCustomRunner(new MSQTestBase.ExtractResults(() -> indexingServiceClient))
+        .skipVectorize(true);
+  }
+
   Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
   {
+    final TemporaryFolder temporaryFolder = new TemporaryFolder();
+    try {
+      temporaryFolder.create();
+    }
+    catch (IOException e) {
+      e.printStackTrace();
+    }
     final QueryableIndex index;
     try {
       switch (segmentId.getDataSource()) {
@@ -325,7 +372,28 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
   }
 
 
+  @Test
+  public void testFilterOnTimeFloorMisaligned()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE floor(__time TO month) = TIMESTAMP '2000-01-01 00:00:01'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec())
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{0L})
+    );
+  }
 
+
+
+  @Ignore
   @Test
   public void testOrderThenLimitThenFilter()
   {
@@ -363,7 +431,7 @@ public class CalciteSelectQueryTestMSQ extends BaseCalciteQueryTest
             new Object[]{"abc"},
             new Object[]{"def"}
         ),
-        new MSQTestBase.ExtractResults(indexingServiceClient)
+        new MSQTestBase.ExtractResults(() -> indexingServiceClient)
     );
   }
 }

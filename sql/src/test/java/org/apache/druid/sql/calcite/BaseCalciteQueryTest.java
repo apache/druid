@@ -108,7 +108,6 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -260,8 +259,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;

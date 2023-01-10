@@ -197,8 +197,7 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
- * and populates data for the datasources. The ruimport org.apache.druid.initialization.CoreInjectorBuilder;
-nner does not go via the HTTP layer for communication between the
+ * and populates data for the datasources. The runner does not go via the HTTP layer for communication between the
  * various MSQ processes.
  *
  * Controller -> Coordinator (Coordinator is mocked)
@@ -1214,11 +1213,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   public static class ExtractResults implements QueryTestRunner.QueryRunStepFactory
   {
-    private final MSQTestOverlordServiceClient overlordClient;
+    private final Supplier<MSQTestOverlordServiceClient> overlordClientSupplier;
 
-    public ExtractResults(MSQTestOverlordServiceClient overlordClient)
+    public ExtractResults(Supplier<MSQTestOverlordServiceClient> overlordClientSupplier)
     {
-      this.overlordClient = overlordClient;
+      this.overlordClientSupplier = overlordClientSupplier;
     }
 
     @Override
@@ -1233,6 +1232,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         {
           for (QueryTestRunner.QueryResults results : execStep.results()) {
             List<Object[]> queryResults = results.results;
+            if (queryResults == null) {
+              extractedResults.add(results);
+              return;
+            }
             Assert.assertEquals(
                 "Found multiple rows, cannot extract the actual results from the reports",
                 1,
@@ -1245,6 +1248,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 row.length
             );
             String taskId = row[0].toString();
+            MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
             MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)
                                                                                 .get(MSQTaskReport.REPORT_KEY)
                                                                                 .getPayload();

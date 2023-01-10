@@ -169,8 +169,7 @@ public class QueryTestBuilder
       List<QueryTestRunner.QueryRunStepFactory> factories
   )
   {
-    this.customRunners = new ArrayList<>();
-    this.customRunners.addAll(factories);
+    this.customRunners = new ArrayList<>(factories);
     return this;
   }
 
