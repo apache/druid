@@ -30,7 +30,7 @@ import java.util.stream.IntStream;
 
 public class NestedPathFinder
 {
-  public static String JSON_PATH_ROOT = "$";
+  public static final String JSON_PATH_ROOT = "$";
   public static final String JQ_PATH_ROOT = ".";
 
   public static String toNormalizedJsonPath(List<NestedPathPart> paths)
