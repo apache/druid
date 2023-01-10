@@ -43,6 +43,13 @@ public class ObjectArrayColumn implements Column
     this.comparator = comparator;
   }
 
+  /**
+   * Gets the underlying object array.  This method is exposed on the concrete class explicitly to allow for
+   * mutation.  This class does absolutely nothing to ensure that said mutation of the array is valid.  It is up
+   * to the caller that is choosing to do this mutation to make sure that it is safe.
+   *
+   * @return the object array backing this column
+   */
   public Object[] getObjects()
   {
     return objects;

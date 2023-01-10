@@ -88,6 +88,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
         Assert.assertNull(sorter.moreData(aggedRAC));
       }
     }
+    Assert.assertNotNull(sorter);
 
     final RowsAndColumns completed = sorter.complete();
     Assert.assertNotNull(completed);

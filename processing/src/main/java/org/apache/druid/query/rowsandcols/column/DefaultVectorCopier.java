@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
+
 public class DefaultVectorCopier implements VectorCopier
 {
   ColumnAccessor accessor;
@@ -32,6 +34,10 @@ public class DefaultVectorCopier implements VectorCopier
   public void copyInto(Object[] into, int intoStart)
   {
     final int numRows = accessor.numRows();
+    if ((intoStart + (long) numRows) > Integer.MAX_VALUE) {
+      throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
+    }
+
     for (int i = 0; i < numRows; ++i) {
       into[intoStart + i] = accessor.getObject(i);
     }

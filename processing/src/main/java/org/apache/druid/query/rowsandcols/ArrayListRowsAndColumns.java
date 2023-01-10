@@ -427,7 +427,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
     copier.copyInto(existingColumn.getObjects(), startOffset);
   }
 
-  public ArrayListRowsAndColumns<RowType> limited(int startOffset, int endOffset)
+  private ArrayListRowsAndColumns<RowType> limited(int startOffset, int endOffset)
   {
     return new ArrayListRowsAndColumns<>(
         rows,

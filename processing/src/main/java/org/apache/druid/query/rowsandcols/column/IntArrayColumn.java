@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
@@ -104,6 +105,13 @@ public class IntArrayColumn implements Column
   {
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
+        if ((intoStart + (long) vals.length) > Integer.MAX_VALUE) {
+          throw new ISE(
+              "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
+              intoStart,
+              vals.length
+          );
+        }
         for (int i = 0; i < vals.length; ++i) {
           into[intoStart + i] = vals[i];
         }

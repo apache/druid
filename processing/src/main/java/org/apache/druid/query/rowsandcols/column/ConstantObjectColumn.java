@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
@@ -106,7 +107,12 @@ public class ConstantObjectColumn implements Column
   public <T> T as(Class<? extends T> clazz)
   {
     if (VectorCopier.class.equals(clazz)) {
-      return (T) (VectorCopier) (into, intoStart) -> Arrays.fill(into, intoStart, intoStart + numRows, obj);
+      return (T) (VectorCopier) (into, intoStart) -> {
+        if ((intoStart + (long) numRows) > Integer.MAX_VALUE) {
+          throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
+        }
+        Arrays.fill(into, intoStart, intoStart + numRows, obj);
+      };
     }
     if (ColumnValueSwapper.class.equals(clazz)) {
       return (T) (ColumnValueSwapper) (lhs, rhs) -> {
