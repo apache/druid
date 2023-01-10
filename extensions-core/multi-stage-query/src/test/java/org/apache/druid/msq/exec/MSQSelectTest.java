@@ -62,6 +62,7 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -1159,6 +1160,19 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."))
+        ))
+        .verifyExecutionError();
+  }
+
+  @Test
+  public void testGroupByWithComplexColumnThrowsUnsupportedException()
+  {
+    testSelectQuery()
+        .setSql("select unique_dim1 from foo2 group by unique_dim1")
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
         ))
         .verifyExecutionError();
   }
