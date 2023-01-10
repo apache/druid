@@ -19,16 +19,18 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class NullColumnAccessorTest
+public class NullColumnTest
 {
 
   @Test
   public void testSanity()
   {
-    NullColumnAccessor accessor = new NullColumnAccessor(10);
+    NullColumn col = new NullColumn(ColumnType.UNKNOWN_COMPLEX, 10);
+    ColumnAccessor accessor = col.toAccessor();
     Assert.assertEquals(10, accessor.numRows());
 
     for (int i = 0; i < 10; ++i) {

@@ -30,6 +30,19 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * This class exists to "decorate" a rows and columns such that it pretends to exist in a new ordering.
+ * <p>
+ * The constructor generally takes an int[] of pointers, these pointers are used to re-map the rows from the
+ * RowsAndColumns object.  That is, if the RowsAndColumns has 4 rows and the array {@code new int[]{3, 1, 2, 0}}
+ * is passed in, then the order of traverals of the rows will be {@code 3 -> 1 -> 2 -> 0}.
+ * <p>
+ * This can be useful for sorting potentially immutable data, as the list of pointers can identify the order
+ * that the rows should be traversed in.  It can also be used for clustering like-data together.
+ * <p>
+ * While this avoids a copy, in cases where the data will be iterated regularly, it also generates a random-access
+ * pattern that is not always optimal.
+ */
 public class RearrangedRowsAndColumns implements RowsAndColumns
 {
   private final Map<String, Column> columnCache = new LinkedHashMap<>();

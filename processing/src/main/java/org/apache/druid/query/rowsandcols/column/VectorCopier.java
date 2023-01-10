@@ -17,29 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.column;
 
-import java.util.ArrayList;
-import java.util.function.Function;
-
-public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
+/**
+ * A semantic interface for use with {@link Column} objects.  Has methods to request that the {@link Column} copy
+ * values into provided array structures.  Note that this interface is primarily useful to <em>read</em> from
+ * {@link Column} objects and not to write to them.
+ */
+public interface VectorCopier
 {
-  public ConcatRowsAndColumnsTest()
-  {
-    super(ConcatRowsAndColumns.class);
-  }
-
-  public static Function<MapOfColumnsRowsAndColumns, ConcatRowsAndColumns> MAKER = input -> {
-    int rowsPerChunk = Math.max(1, input.numRows() / 4);
-
-    ArrayList<RowsAndColumns> theRac = new ArrayList<>();
-
-    int startId = 0;
-    while (startId < input.numRows()) {
-      theRac.add(new LimitedRowsAndColumns(input, startId, Math.min(input.numRows(), startId + rowsPerChunk)));
-      startId += rowsPerChunk;
-    }
-
-    return new ConcatRowsAndColumns(theRac);
-  };
+  /**
+   * Copies all values from the underlying column <em>into</em> the {@code Object[]} passed into this method.
+   *
+   * @param into the object array to store the values
+   * @param intoStart the index of the into array to start writing into.
+   */
+  void copyInto(Object[] into, int intoStart);
 }

@@ -21,6 +21,9 @@ package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public class DoubleArrayColumn implements Column
 {
   private final double[] vals;
@@ -32,6 +35,7 @@ public class DoubleArrayColumn implements Column
     this.vals = vals;
   }
 
+  @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
@@ -93,9 +97,25 @@ public class DoubleArrayColumn implements Column
     };
   }
 
+  @Nullable
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
+    if (VectorCopier.class.equals(clazz)) {
+      return (T) (VectorCopier) (into, intoStart) -> {
+        for (int i = 0; i < vals.length; ++i) {
+          into[intoStart + i] = vals[i];
+        }
+      };
+    }
+    if (ColumnValueSwapper.class.equals(clazz)) {
+      return (T) (ColumnValueSwapper) (lhs, rhs) -> {
+        double tmp = vals[lhs];
+        vals[lhs] = vals[rhs];
+        vals[rhs] = tmp;
+      };
+    }
     return null;
   }
 }

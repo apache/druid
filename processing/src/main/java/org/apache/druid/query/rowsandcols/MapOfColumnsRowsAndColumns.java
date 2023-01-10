@@ -40,14 +40,15 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
     return fromMap(ImmutableMap.of(name, col, name2, col2));
   }
 
-  public static MapOfColumnsRowsAndColumns fromMap(Map<String, Column> map)
+  @SuppressWarnings("unchecked")
+  public static MapOfColumnsRowsAndColumns fromMap(Map<String, ? extends Column> map)
   {
     if (map == null || map.isEmpty()) {
       throw new ISE("map[%s] cannot be null or empty.", map);
     }
 
-    final Iterator<Map.Entry<String, Column>> iter = map.entrySet().iterator();
-    Map.Entry<String, Column> entry = iter.next();
+    final Iterator<? extends Map.Entry<String, ? extends Column>> iter = map.entrySet().iterator();
+    Map.Entry<String, ? extends Column> entry = iter.next();
     int numCells = entry.getValue().toAccessor().numRows();
     if (iter.hasNext()) {
       entry = iter.next();
@@ -62,7 +63,10 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
       }
     }
 
-    return new MapOfColumnsRowsAndColumns(map, map.values().iterator().next().toAccessor().numRows());
+    return new MapOfColumnsRowsAndColumns(
+        (Map<String, Column>) map,
+        map.values().iterator().next().toAccessor().numRows()
+    );
   }
 
   private final Map<String, Column> mapOfColumns;

@@ -21,7 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.query.operator.LimitedRowsAndColumns;
+import org.apache.druid.query.rowsandcols.LimitedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -43,6 +43,10 @@ public class DefaultClusteredGroupPartitioner implements ClusteredGroupPartition
   @Override
   public int[] computeBoundaries(List<String> columns)
   {
+    if (rac.numRows() == 0) {
+      return new int[]{};
+    }
+
     // Initialize to a grouping of everything
     IntList boundaries = new IntArrayList(new int[]{0, rac.numRows()});
 
@@ -78,6 +82,10 @@ public class DefaultClusteredGroupPartitioner implements ClusteredGroupPartition
   public ArrayList<RowsAndColumns> partitionOnBoundaries(List<String> partitionColumns)
   {
     final int[] boundaries = computeBoundaries(partitionColumns);
+    if (boundaries.length < 2) {
+      return new ArrayList<>();
+    }
+
     ArrayList<RowsAndColumns> retVal = new ArrayList<>(boundaries.length - 1);
 
     for (int i = 1; i < boundaries.length; ++i) {

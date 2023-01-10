@@ -17,13 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator;
+package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.operator.window.value.ShiftedColumnAccessorBase;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.LimitedColumn;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -66,44 +64,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
       return null;
     }
 
-    return new Column()
-    {
-      @Override
-      public ColumnAccessor toAccessor()
-      {
-        final ColumnAccessor columnAccessor = column.toAccessor();
-        return new ShiftedColumnAccessorBase(columnAccessor)
-        {
-          @Override
-          public int numRows()
-          {
-            return end - start;
-          }
-
-          @Override
-          protected int getActualValue(int rowNum)
-          {
-            int retVal = start + rowNum;
-            if (retVal >= end) {
-              throw new ISE("Index out of bounds[%d] >= [%d], start[%s]", retVal, end, start);
-            }
-            return retVal;
-          }
-
-          @Override
-          protected boolean outsideBounds(int rowNum)
-          {
-            return false;
-          }
-        };
-      }
-
-      @Override
-      public <T> T as(Class<? extends T> clazz)
-      {
-        return null;
-      }
-    };
+    return new LimitedColumn(column, start, end);
   }
 
   @Nullable
@@ -112,4 +73,5 @@ public class LimitedRowsAndColumns implements RowsAndColumns
   {
     return null;
   }
+
 }
