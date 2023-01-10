@@ -158,7 +158,7 @@ public abstract class StructuredDataProcessor
 
   public static class ProcessedLiteral<T>
   {
-    public static ProcessedLiteral<?> NULL_LITERAL = new ProcessedLiteral<>(null, 0);
+    public static final ProcessedLiteral<?> NULL_LITERAL = new ProcessedLiteral<>(null, 0);
     @Nullable
     private final T value;
     private final int size;
