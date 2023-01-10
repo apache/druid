@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.resource.Resource;
 
@@ -57,7 +56,7 @@ class WebConsoleJettyServerInitializer
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNAUTHORIZED_PATHS_FOR_UI);
   }
 
-  static Handler createWebConsoleRewriteHandler()
+  static RewriteHandler createWebConsoleRewriteHandler()
   {
     // redirect all legacy web consoles to current unified web console
     RewriteHandler rewrite = new RewriteHandler();

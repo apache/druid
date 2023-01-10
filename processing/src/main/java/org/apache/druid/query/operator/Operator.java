@@ -53,7 +53,7 @@ public interface Operator
   {
     /**
      * Used to push data.  Return value indicates if more data will be accepted.  If false, push should not
-     * be called anymore.
+     * be called anymore.  If push is called after it returned false, undefined things will happen.
      *
      * @param rac {@link RowsAndColumns} of data
      * @return a boolean value indicating if more data will be accepted.  If false, push should never be called
@@ -62,7 +62,12 @@ public interface Operator
     boolean push(RowsAndColumns rac);
 
     /**
-     * Used to indicate that no more data will ever come
+     * Used to indicate that no more data will ever come.  This is only used during the happy path and is not
+     * equivalent to a {@link java.io.Closeable#close()} method.  Namely, there is no guarantee that this method
+     * will be called if execution halts due to an exception from push.
+     *
+     * It is acceptable for an implementation to eagerly close resources from this method, but it is not acceptable
+     * for this method to be the sole method of managing the lifecycle of resources held by the Operator
      */
     void completed();
   }

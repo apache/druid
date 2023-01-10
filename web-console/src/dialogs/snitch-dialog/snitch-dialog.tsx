@@ -112,12 +112,11 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
   }
 
   renderHistoryDialog(): JSX.Element | null {
-    const { className, title, historyRecords } = this.props;
+    const { title, historyRecords } = this.props;
     if (!historyRecords) return null;
 
     return (
       <HistoryDialog
-        className={className}
         title={title + ' history'}
         historyRecords={historyRecords}
         onBack={this.back}

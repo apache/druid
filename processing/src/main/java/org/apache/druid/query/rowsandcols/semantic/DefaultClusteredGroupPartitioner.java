@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.LimitedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -30,11 +29,11 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
+public class DefaultClusteredGroupPartitioner implements ClusteredGroupPartitioner
 {
   private final RowsAndColumns rac;
 
-  public DefaultSortedGroupPartitioner(
+  public DefaultClusteredGroupPartitioner(
       RowsAndColumns rac
   )
   {
@@ -63,10 +62,8 @@ public class DefaultSortedGroupPartitioner implements SortedGroupPartitioner
         int end = boundaries.getInt(i);
         for (int j = start + 1; j < end; ++j) {
           int comparison = accessor.compareRows(j - 1, j);
-          if (comparison < 0) {
+          if (comparison != 0) {
             newBoundaries.add(j);
-          } else if (comparison > 0) {
-            throw new ISE("Pre-sorted data required, rows[%s] and [%s] were not in order", j - 1, j);
           }
         }
         newBoundaries.add(end);

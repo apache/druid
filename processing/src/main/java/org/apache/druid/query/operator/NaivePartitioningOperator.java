@@ -20,8 +20,8 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.DefaultSortedGroupPartitioner;
-import org.apache.druid.query.rowsandcols.semantic.SortedGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.util.Iterator;
 import java.util.List;
@@ -60,9 +60,9 @@ public class NaivePartitioningOperator implements Operator
           @Override
           public boolean push(RowsAndColumns rac)
           {
-            SortedGroupPartitioner groupPartitioner = rac.as(SortedGroupPartitioner.class);
+            ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
             if (groupPartitioner == null) {
-              groupPartitioner = new DefaultSortedGroupPartitioner(rac);
+              groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
             }
 
             partitionsIter = groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
