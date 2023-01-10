@@ -17,38 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParseException;
 
-public class BadJsonQueryException extends BadQueryException
+import java.util.ArrayList;
+
+public class NaiveSortOperatorFactory implements OperatorFactory
 {
-  public static final String ERROR_CLASS = JsonParseException.class.getName();
-
-  public BadJsonQueryException(JsonParseException e)
-  {
-    this(e, JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
-  }
+  private final ArrayList<ColumnWithDirection> sortColumns;
 
   @JsonCreator
-  private BadJsonQueryException(
-      @JsonProperty("error") String errorCode,
-      @JsonProperty("errorMessage") String errorMessage,
-      @JsonProperty("errorClass") String errorClass
+  public NaiveSortOperatorFactory(
+      @JsonProperty("columns") ArrayList<ColumnWithDirection> sortColumns
   )
   {
-    this(null, errorCode, errorMessage, errorClass);
+    this.sortColumns = sortColumns;
   }
 
-  private BadJsonQueryException(
-      Throwable cause,
-      String errorCode,
-      String errorMessage,
-      String errorClass
-  )
+  @JsonProperty("columns")
+  public ArrayList<ColumnWithDirection> getSortColumns()
   {
-    super(cause, errorCode, errorMessage, errorClass, null);
+    return sortColumns;
+  }
+
+  @Override
+  public Operator wrap(Operator op)
+  {
+    return new NaiveSortOperator(op, sortColumns);
+  }
+
+  @Override
+  public boolean validateEquivalent(OperatorFactory other)
+  {
+    if (other instanceof NaiveSortOperatorFactory) {
+      return sortColumns.equals(((NaiveSortOperatorFactory) other).getSortColumns());
+    }
+    return false;
   }
 }

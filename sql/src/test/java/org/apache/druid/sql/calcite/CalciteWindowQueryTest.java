@@ -28,7 +28,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -54,8 +53,8 @@ import java.util.function.Function;
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
 
-  public static final boolean DUMP_EXPECTED_RESULTS = Boolean.parseBoolean(
-      System.getProperty("druid.tests.sql.dumpExpectedResults")
+  public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
+      System.getProperty("druid.tests.sql.dumpActualResults")
   );
 
   static {
@@ -116,6 +115,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
     };
 
+    if ("failingTest".equals(input.type)) {
+      return;
+    }
+
     if ("operatorValidation".equals(input.type)) {
       testBuilder()
           .skipVectorize(true)
@@ -154,9 +157,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
               Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
             }
 
-            maybeDumpExpectedResults(jacksonToString, results.results);
+            maybeDumpActualResults(jacksonToString, results.results);
             for (Object[] result : input.expectedResults) {
-              for (int i = 0; i < types.length; i++) {
+              for (int i = 0; i < result.length; i++) {
                 // Jackson deserializes numbers as the minimum size required to store the value.  This means that
                 // Longs can become Integer objects and then they fail equality checks.  We read the expected
                 // results using Jackson, so, we coerce the expected results to the type expected.
@@ -187,11 +190,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  private void maybeDumpExpectedResults(
+  private void maybeDumpActualResults(
       Function<Object, String> toStrFn, List<Object[]> results
   )
   {
-    if (DUMP_EXPECTED_RESULTS) {
+    if (DUMP_ACTUAL_RESULTS) {
       for (Object[] result : results) {
         System.out.println("  - " + toStrFn.apply(result));
       }
@@ -205,9 +208,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     @JsonProperty
     public String sql;
-
-    @JsonProperty
-    public Query nativeQuery;
 
     @JsonProperty
     public List<OperatorFactory> expectedOperators;

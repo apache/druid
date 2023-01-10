@@ -167,7 +167,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     );
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    this.spec = spec;
+    this.spec = context == null ? spec : spec.withContext(context);
 
     // Some HadoopIngestionSpec stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(

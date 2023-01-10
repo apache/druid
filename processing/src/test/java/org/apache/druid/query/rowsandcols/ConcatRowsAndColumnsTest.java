@@ -17,29 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.rowsandcols;
 
-/**
- * An abstract class for all query exceptions that should return a bad request status code (400).
- *
- * See {@code BadRequestException} for non-query requests.
- */
-public abstract class BadQueryException extends QueryException
+import org.apache.druid.query.operator.LimitedRowsAndColumns;
+
+import java.util.ArrayList;
+import java.util.function.Function;
+
+public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  public static final int STATUS_CODE = 400;
-
-  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
+  public ConcatRowsAndColumnsTest()
   {
-    this(errorCode, errorMessage, errorClass, null);
+    super(ConcatRowsAndColumns.class);
   }
 
-  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
-  {
-    this(null, errorCode, errorMessage, errorClass, host);
-  }
+  public static Function<MapOfColumnsRowsAndColumns, ConcatRowsAndColumns> MAKER = input -> {
+    int rowsPerChunk = Math.max(1, input.numRows() / 4);
 
-  protected BadQueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
-  {
-    super(cause, errorCode, errorMessage, errorClass, host);
-  }
+    ArrayList<RowsAndColumns> theRac = new ArrayList<>();
+
+    int startId = 0;
+    while (startId < input.numRows()) {
+      theRac.add(new LimitedRowsAndColumns(input, startId, Math.min(input.numRows(), startId + rowsPerChunk)));
+      startId += rowsPerChunk;
+    }
+
+    return new ConcatRowsAndColumns(theRac);
+  };
 }

@@ -17,29 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.rowsandcols;
 
-/**
- * An abstract class for all query exceptions that should return a bad request status code (400).
- *
- * See {@code BadRequestException} for non-query requests.
- */
-public abstract class BadQueryException extends QueryException
+import org.apache.druid.query.rowsandcols.column.Column;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collection;
+
+public class EmptyRowsAndColumns implements RowsAndColumns
 {
-  public static final int STATUS_CODE = 400;
-
-  protected BadQueryException(String errorCode, String errorMessage, String errorClass)
+  @Override
+  public Collection<String> getColumnNames()
   {
-    this(errorCode, errorMessage, errorClass, null);
+    return new ArrayList<>();
   }
 
-  protected BadQueryException(String errorCode, String errorMessage, String errorClass, String host)
+  @Override
+  public int numRows()
   {
-    this(null, errorCode, errorMessage, errorClass, host);
+    return 0;
   }
 
-  protected BadQueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
+  @Override
+  public Column findColumn(String name)
   {
-    super(cause, errorCode, errorMessage, errorClass, host);
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    return null;
   }
 }
