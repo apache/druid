@@ -231,19 +231,24 @@ public class WorkerSketchFetcherTest
 
     workersWithFailedFetchParallel(ImmutableSet.of(TASK_1, TASK_0));
 
-    target.inMemoryFullSketchMerging(
-        (kernelConsumer) -> kernelConsumer.accept(kernel),
-        stageDefinition.getId(),
-        ImmutableSet.copyOf(TASK_IDS),
-        ((queryKernel, integer, msqFault) -> {
-          throw new ISE("Should not be here");
-        })
-    );
+    try {
+      target.inMemoryFullSketchMerging(
+          (kernelConsumer) -> kernelConsumer.accept(kernel),
+          stageDefinition.getId(),
+          ImmutableSet.copyOf(TASK_IDS),
+          ((queryKernel, integer, msqFault) -> {
+            throw new ISE("Should not be here");
+          })
+      );
+    }
+    catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+    }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertNotNull(target.getError().getMessage().contains("Task fetch failed:"));
+    Assert.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
 
   }
 
@@ -255,19 +260,24 @@ public class WorkerSketchFetcherTest
 
     workersWithFailedFetchParallel(ImmutableSet.of(TASK_1));
 
-    target.inMemoryFullSketchMerging(
-        (kernelConsumer) -> kernelConsumer.accept(kernel),
-        stageDefinition.getId(),
-        ImmutableSet.copyOf(TASK_IDS),
-        ((queryKernel, integer, msqFault) -> {
-          throw new ISE("Should not be here");
-        })
-    );
+    try {
+      target.inMemoryFullSketchMerging(
+          (kernelConsumer) -> kernelConsumer.accept(kernel),
+          stageDefinition.getId(),
+          ImmutableSet.copyOf(TASK_IDS),
+          ((queryKernel, integer, msqFault) -> {
+            throw new ISE("Should not be here");
+          })
+      );
+    }
+    catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+    }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertNotNull(target.getError().getMessage().contains(TASK_1));
+    Assert.assertTrue((target.getError().getMessage().contains("Task fetch failed")));
 
   }
 
@@ -281,22 +291,27 @@ public class WorkerSketchFetcherTest
 
     workersWithFailedFetchSequential(ImmutableSet.of(TASK_1, TASK_0));
 
-    target.sequentialTimeChunkMerging(
-        (kernelConsumer) -> {
-          kernelConsumer.accept(kernel);
-        },
-        completeKeyStatisticsInformation,
-        stageDefinition.getId(),
-        ImmutableSet.copyOf(TASK_IDS),
-        ((queryKernel, integer, msqFault) -> {
-          throw new ISE("Should not be here");
-        })
-    );
+    try {
+      target.sequentialTimeChunkMerging(
+          (kernelConsumer) -> {
+            kernelConsumer.accept(kernel);
+          },
+          completeKeyStatisticsInformation,
+          stageDefinition.getId(),
+          ImmutableSet.copyOf(TASK_IDS),
+          ((queryKernel, integer, msqFault) -> {
+            throw new ISE("Should not be here");
+          })
+      );
+    }
+    catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+    }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertNotNull(target.getError().getMessage().contains("Task fetch failed:"));
+    Assert.assertTrue(target.getError().getMessage().contains("Task fetch failed"));
 
   }
 
@@ -308,22 +323,27 @@ public class WorkerSketchFetcherTest
 
     workersWithFailedFetchSequential(ImmutableSet.of(TASK_1));
 
-    target.sequentialTimeChunkMerging(
-        (kernelConsumer) -> {
-          kernelConsumer.accept(kernel);
-        },
-        completeKeyStatisticsInformation,
-        stageDefinition.getId(),
-        ImmutableSet.copyOf(TASK_IDS),
-        ((queryKernel, integer, msqFault) -> {
-          throw new ISE("Should not be here");
-        })
-    );
+    try {
+      target.sequentialTimeChunkMerging(
+          (kernelConsumer) -> {
+            kernelConsumer.accept(kernel);
+          },
+          completeKeyStatisticsInformation,
+          stageDefinition.getId(),
+          ImmutableSet.copyOf(TASK_IDS),
+          ((queryKernel, integer, msqFault) -> {
+            throw new ISE("Should not be here");
+          })
+      );
+    }
+    catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Task fetch failed"));
+    }
 
     while (!target.executorService.isShutdown()) {
       Thread.sleep(100);
     }
-    Assert.assertNotNull(target.getError().getMessage().contains(TASK_1));
+    Assert.assertTrue(target.getError().getMessage().contains(TASK_1));
 
   }
 
