@@ -74,6 +74,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -241,6 +242,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
   private final AtomicLong bytesInMemory = new AtomicLong();
   private final boolean useMaxMemoryEstimates;
 
+  private final boolean useNestedColumnIndexerForSchemaDiscovery;
+
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
@@ -273,7 +276,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       final boolean deserializeComplexMetrics,
       final boolean concurrentEventAdd,
       final boolean preserveExistingMetrics,
-      final boolean useMaxMemoryEstimates
+      final boolean useMaxMemoryEstimates,
+      final boolean useNestedColumnIndexerForSchemaDiscovery
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -285,6 +289,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.preserveExistingMetrics = preserveExistingMetrics;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+    this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
@@ -454,13 +459,13 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return row;
   }
 
-  public Map<String, ColumnCapabilities> getColumnCapabilities()
+  public Map<String, ColumnCapabilities> getColumnHandlerCapabilities()
   {
     ImmutableMap.Builder<String, ColumnCapabilities> builder =
         ImmutableMap.<String, ColumnCapabilities>builder().putAll(timeAndMetricsColumnCapabilities);
 
     synchronized (dimensionDescs) {
-      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+      dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getIndexer().getHandlerCapabilities()));
     }
     return builder.build();
   }
@@ -475,6 +480,20 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     synchronized (dimensionDescs) {
       if (dimensionDescs.containsKey(columnName)) {
         return dimensionDescs.get(columnName).getCapabilities();
+      }
+    }
+    return null;
+  }
+
+  @Nullable
+  public ColumnCapabilities getColumnHandlerCapabilities(String columnName)
+  {
+    if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
+      return timeAndMetricsColumnCapabilities.get(columnName);
+    }
+    synchronized (dimensionDescs) {
+      if (dimensionDescs.containsKey(columnName)) {
+        return dimensionDescs.get(columnName).getIndexer().getHandlerCapabilities();
       }
     }
     return null;
@@ -563,16 +582,22 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           absentDimensions.remove(dimension);
         } else {
           wasNewDim = true;
-          desc = addNewDimension(
-              dimension,
-              DimensionHandlerUtils.getHandlerFromCapabilities(
-                  dimension,
-                  // for schemaless type discovery, everything is a String. this should probably try to autodetect
-                  // based on the value to use a better handler
-                  makeDefaultCapabilitiesFromValueType(ColumnType.STRING),
-                  null
-              )
-          );
+          final DimensionHandler<?, ?, ?> handler;
+          if (useNestedColumnIndexerForSchemaDiscovery) {
+            handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+                dimension,
+                makeDefaultCapabilitiesFromValueType(NestedDataComplexTypeSerde.TYPE),
+                null
+            );
+          } else {
+            // legacy behavior: for schemaless type discovery, everything is a String
+            handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+                dimension,
+                makeDefaultCapabilitiesFromValueType(ColumnType.STRING),
+                null
+            );
+          }
+          desc = addNewDimension(dimension, handler);
         }
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
@@ -782,13 +807,6 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     synchronized (dimensionDescs) {
       return dimensionDescs.get(dimension);
     }
-  }
-
-  @Nullable
-  public String getMetricType(String metric)
-  {
-    final MetricDesc metricDesc = metricDescs.get(metric);
-    return metricDesc != null ? metricDesc.getType() : null;
   }
 
   public ColumnValueSelector<?> makeMetricColumnValueSelector(String metric, IncrementalIndexRowHolder currEntry)

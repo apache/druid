@@ -88,8 +88,23 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     capabilitiesBuilder.setDictionaryEncoded(true);
     capabilitiesBuilder.setDictionaryValuesSorted(true);
     capabilitiesBuilder.setDictionaryValuesUnique(true);
-    builder.setComplexTypeName(TYPE_NAME);
+    ColumnType simpleType = supplier.getSimpleType();
+    if (simpleType != null) {
+      builder.setType(simpleType);
+    } else {
+      builder.setComplexTypeName(TYPE_NAME);
+
+    }
     builder.setComplexColumnSupplier(supplier);
+
+    // always use the nested column dimension hanler, regardless what we claim our query time type is
+    builder.setHandlerCapabilities(
+        new ColumnCapabilitiesImpl().setType(TYPE)
+                                    .setDictionaryEncoded(true)
+                                    .setDictionaryValuesUnique(true)
+                                    .setDictionaryValuesSorted(true)
+                                    .setHasNulls(capabilitiesBuilder.hasNulls())
+    );
   }
 
   @Override

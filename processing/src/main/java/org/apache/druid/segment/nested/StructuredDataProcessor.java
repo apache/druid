@@ -25,12 +25,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
 public abstract class StructuredDataProcessor
 {
-  public abstract int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
+  public abstract ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
 
   /**
    * Process fields, returning a list of all paths to literal fields, represented as an ordered sequence of
@@ -46,7 +47,7 @@ public abstract class StructuredDataProcessor
     } else if (raw instanceof List) {
       toProcess.add(new ListField(newPath, (List<?>) raw));
     } else {
-      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw));
+      return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw).getSize());
     }
 
     ProcessResults accumulator = new ProcessResults();
@@ -80,7 +81,7 @@ public abstract class StructuredDataProcessor
         toProcess.add(new MapField(newPath, (Map<String, ?>) value));
       } else {
         // literals get processed
-        processResults.addLiteralField(newPath, processLiteralField(newPath, value));
+        processResults.addLiteralField(newPath, processLiteralField(newPath, value).getSize());
       }
     }
     return processResults;
@@ -102,7 +103,7 @@ public abstract class StructuredDataProcessor
         toProcess.add(new ListField(newPath, (List<?>) element));
       } else {
         // literals get processed
-        results.addLiteralField(newPath, processLiteralField(newPath, element));
+        results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
       }
     }
     return results;
@@ -155,6 +156,50 @@ public abstract class StructuredDataProcessor
     }
   }
 
+  public static class ProcessedLiteral<T>
+  {
+    public static ProcessedLiteral<?> NULL_LITERAL = new ProcessedLiteral<>(null, 0);
+    @Nullable
+    private final T value;
+    private final int size;
+
+    public ProcessedLiteral(@Nullable T value, int size)
+    {
+      this.value = value;
+      this.size = size;
+    }
+
+    @Nullable
+    public T getValue()
+    {
+      return value;
+    }
+
+    public int getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ProcessedLiteral<?> that = (ProcessedLiteral<?>) o;
+      return size == that.size && Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(value, size);
+    }
+  }
+
   /**
    * Accumulates the list of literal field paths and a rough size estimation for {@link StructuredDataProcessor}
    */
@@ -162,6 +207,9 @@ public abstract class StructuredDataProcessor
   {
     private Set<ArrayList<NestedPathPart>> literalFields;
     private int estimatedSize;
+
+    @Nullable
+    private Object rootLiteral;
 
     public ProcessResults()
     {
@@ -198,11 +246,24 @@ public abstract class StructuredDataProcessor
       return this;
     }
 
+    public ProcessResults ofRootLiteral(ProcessedLiteral<?> literal)
+    {
+      this.estimatedSize = literal.getSize();
+      this.rootLiteral = literal.getValue();
+      return this;
+    }
+
     public ProcessResults merge(ProcessResults other)
     {
       this.literalFields.addAll(other.literalFields);
       this.estimatedSize += other.estimatedSize;
       return this;
+    }
+
+    @Nullable
+    public Object getRootLiteral()
+    {
+      return rootLiteral;
     }
   }
 

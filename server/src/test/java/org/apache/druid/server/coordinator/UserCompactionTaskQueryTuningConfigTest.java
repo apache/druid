@@ -78,7 +78,7 @@ public class UserCompactionTaskQueryTuningConfigTest
   {
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         40000,
-        new OnheapIncrementalIndex.Spec(true),
+        new OnheapIncrementalIndex.Spec(true, false),
         2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null),

@@ -236,6 +236,12 @@ public interface DimensionIndexer<
   );
 
   ColumnCapabilities getColumnCapabilities();
+
+  default ColumnCapabilities getHandlerCapabilities()
+  {
+    return getColumnCapabilities();
+  }
+
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *

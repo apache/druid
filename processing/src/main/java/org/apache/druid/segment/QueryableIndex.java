@@ -38,7 +38,7 @@ import java.util.Map;
  * @see QueryableIndexStorageAdapter for query path adapter
  * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
-public interface QueryableIndex extends Closeable
+public interface QueryableIndex extends Closeable, ColumnInspector
 {
   Interval getDataInterval();
   int getNumRows();
@@ -52,6 +52,7 @@ public interface QueryableIndex extends Closeable
   @Nullable
   ColumnHolder getColumnHolder(String columnName);
 
+  @Override
   @Nullable
   default ColumnCapabilities getColumnCapabilities(String column)
   {

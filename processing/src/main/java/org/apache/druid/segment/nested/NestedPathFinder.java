@@ -30,17 +30,20 @@ import java.util.stream.IntStream;
 
 public class NestedPathFinder
 {
+  public static String JSON_PATH_ROOT = "$";
+  public static final String JQ_PATH_ROOT = ".";
+
   public static String toNormalizedJsonPath(List<NestedPathPart> paths)
   {
     if (paths.isEmpty()) {
-      return "$";
+      return JSON_PATH_ROOT;
     }
     StringBuilder bob = new StringBuilder();
     boolean first = true;
     for (NestedPathPart partFinder : paths) {
       if (partFinder instanceof NestedPathField) {
         if (first) {
-          bob.append("$");
+          bob.append(JSON_PATH_ROOT);
         }
         final String id = partFinder.getPartIdentifier();
         if (id.contains(".") || id.contains("'") || id.contains("\"") || id.contains("[") || id.contains("]")) {
@@ -51,7 +54,7 @@ public class NestedPathFinder
         }
       } else if (partFinder instanceof NestedPathArrayElement) {
         if (first) {
-          bob.append("$");
+          bob.append(JSON_PATH_ROOT);
         }
         bob.append("[").append(partFinder.getPartIdentifier()).append("]");
       }
@@ -70,7 +73,7 @@ public class NestedPathFinder
     }
     List<NestedPathPart> parts = new ArrayList<>();
 
-    if (!path.startsWith("$")) {
+    if (!path.startsWith(JSON_PATH_ROOT)) {
       badFormatJsonPath(path, "must start with '$'");
     }
 
@@ -162,7 +165,7 @@ public class NestedPathFinder
   public static String toNormalizedJqPath(List<NestedPathPart> paths)
   {
     if (paths.isEmpty()) {
-      return ".";
+      return JQ_PATH_ROOT;
     }
     StringBuilder bob = new StringBuilder();
     boolean first = true;
@@ -172,7 +175,7 @@ public class NestedPathFinder
         bob.append("\"").append(partFinder.getPartIdentifier()).append("\"");
       } else {
         if (first) {
-          bob.append(".");
+          bob.append(JQ_PATH_ROOT);
         }
         bob.append("[").append(partFinder.getPartIdentifier()).append("]");
       }

@@ -1109,7 +1109,7 @@ public class CompactionTask extends AbstractBatchIndexTask
               dimension,
               createDimensionSchema(
                   dimension,
-                  columnHolder.getCapabilities(),
+                  columnHolder.getHandlerCapabilities(),
                   dimensionHandler.getMultivalueHandling()
               )
           );
