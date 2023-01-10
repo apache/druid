@@ -23,17 +23,17 @@ sidebar_label: Nested columns
   ~ under the License.
   -->
 
-> Nested columns is an experimental feature available starting in Apache Druid 24.0. Like most experimental features, functionality documented on this page is subject to change in future releases. However, the COMPLEX column type includes versioning to provide backward compatible support in future releases. We strongly encourage you to experiment with nested columns in your development environment to evaluate that they meet your use case. If so, you can use them in production scenarios. Review the release notes and this page to stay up to date with changes.
-
 Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
 Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](../misc/math-expr.md#json-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
 You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to "flatten" nested data for ingestion.
 
+Druid supports directly ingesting nested data with the following formats: JSON, Parquet, Avro, ORC, Protobuf.
+
 ## Example nested data
 
-The examples in this topic use the data in [`nested_example_data.json`](https://static.imply.io/data/nested_example_data.json). The file contains a simple facsimile of an order tracking and shipping table. 
+The examples in this topic use the JSON data in [`nested_example_data.json`](https://static.imply.io/data/nested_example_data.json). The file contains a simple facsimile of an order tracking and shipping table. 
 
 When pretty-printed, a sample row in `nested_example_data` looks like this:
 
@@ -63,7 +63,7 @@ When pretty-printed, a sample row in `nested_example_data` looks like this:
 
 ## Native batch ingestion
 
-For native batch ingestion, you can use the [JSON nested columns functions](./sql-json-functions.md) to extract nested data as an alternative to using the [`flattenSpec`](../ingestion/data-formats.md#flattenspec) input format.
+For native batch ingestion, you can use the [SQL JSON functions](./sql-json-functions.md) to extract nested data as an alternative to using the [`flattenSpec`](../ingestion/data-formats.md#flattenspec) input format.
 
 To configure a dimension as a nested data type, specify the `json` type for the dimension in the `dimensions` list in the `dimensionsSpec` property of your ingestion spec.
 
@@ -124,7 +124,7 @@ For example, the following ingestion spec instructs Druid to ingest `shipTo` and
 
 ### Transform data during batch ingestion
 
-You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data and reference the transformed data in your ingestion spec. 
+You can use the [SQL JSON functions](./sql-json-functions.md) to transform nested data and reference the transformed data in your ingestion spec. 
 
 To do this, define the output name and expression in the `transforms` list in the `transformSpec` object of your ingestion spec.
 
@@ -192,7 +192,7 @@ For example, the following ingestion spec extracts `firstName`, `lastName` and `
 
 ## SQL-based ingestion
 
-To ingest nested data using multi-stage query architecture, specify `COMPLEX<json>` as the value for `type` when you define the row signature&mdash;`shipTo` and `details` in the following example ingestion spec:
+To ingest nested data using SQL-based ingestion, specify `COMPLEX<json>` as the value for `type` when you define the row signature&mdash;`shipTo` and `details` in the following example ingestion spec:
 
 ![SQL-based ingestion](../assets/nested-msq-ingestion.png)
 
@@ -297,7 +297,7 @@ The [Kafka tutorial](../tutorials/tutorial-kafka.md) guides you through the step
 
 ### Transform data during SQL-based ingestion
 
-You can use the [JSON nested columns functions](./sql-json-functions.md) to transform JSON data in your ingestion query.
+You can use the [SQL JSON functions](./sql-json-functions.md) to transform nested data in your ingestion query.
 
 For example, the following ingestion query is the SQL-based version of the [previous batch example](#transform-data-during-batch-ingestion)&mdash;it extracts `firstName`, `lastName`, and `address` from `shipTo` and creates a composite JSON object containing `product`, `details`, and `department`.
 
@@ -326,7 +326,7 @@ PARTITIONED BY ALL
 
 ## Ingest a JSON string as COMPLEX<json\>
 
-If your source data uses a string representation of your JSON column, you can still ingest the data as `COMPLEX<JSON>` as follows:
+If your source data contains serialized JSON strings, you can ingest the data as `COMPLEX<JSON>` as follows:
 - During native batch ingestion, call the `parse_json` function in a `transform` object in the `transformSpec`.
 - During SQL-based ingestion, use the PARSE_JSON keyword within your SELECT statement to transform the string values to JSON.
 - If you are concerned that your data may not contain valid JSON, you can use `try_parse_json` for native batch or `TRY_PARSE_JSON` for SQL-based ingestion. For cases where the column does not contain valid JSON, Druid inserts a null value.
@@ -563,7 +563,7 @@ In addition to `JSON_VALUE`, Druid offers a number of operators that focus on tr
 - `PARSE_JSON`
 - `TO_JSON_STRING`
 
-These functions are primarily intended for use with the multi-stage query architecture to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
+These functions are primarily intended for use with SQL-based ingestion to transform data during insert operations, but they also work in traditional Druid SQL queries. Because most of these functions output JSON objects, they have the same limitations when used in traditional Druid queries as interacting with the JSON objects directly.
 
 #### Example query: Return results in a JSON object
 
@@ -663,7 +663,7 @@ Before you start using the nested columns feature, consider the following known 
 - Directly using `COMPLEX<json>` columns and expressions is not well integrated into the Druid query engine. It can result in errors or undefined behavior when grouping and filtering, and when you use `COMPLEX<json>` objects as inputs to aggregators. As a workaround, consider using `TO_JSON_STRING` to coerce the values to strings before you perform these operations.
 - Directly using array-typed outputs from `JSON_KEYS` and `JSON_PATHS` is moderately supported by the Druid query engine. You can group on these outputs, and there are a number of array expressions that can operate on these values, such as `ARRAY_CONCAT_AGG`. However, some operations are not well defined for use outside array-specific functions, such as filtering using `=` or `IS NULL`.
 - Input validation for JSON SQL operators is currently incomplete, which sometimes results in undefined behavior or unhelpful error messages.
-- Ingesting JSON columns with a very complex nested structure is potentially an expensive operation and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside a JSON object as a flattened top-level Druid column.
+- Ingesting data with a very complex nested structure is potentially an expensive operation and may require you to tune ingestion tasks and/or cluster parameters to account for increased memory usage or overall task run time. When you tune your ingestion configuration, treat each nested literal field inside an object as a flattened top-level Druid column.
 
 ## Further reading
 

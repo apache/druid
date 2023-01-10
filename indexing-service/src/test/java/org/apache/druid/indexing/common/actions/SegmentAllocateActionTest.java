@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -51,6 +50,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -64,6 +64,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -79,20 +81,26 @@ public class SegmentAllocateActionTest
   private static final DateTime PARTY_TIME = DateTimes.of("1999");
   private static final DateTime THE_DISTANT_FUTURE = DateTimes.of("3000");
 
+  private final boolean useBatch;
   private final LockGranularity lockGranularity;
 
-  @Parameterized.Parameters(name = "{0}")
+  private SegmentAllocationQueue allocationQueue;
+
+  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT},
-        new Object[]{LockGranularity.TIME_CHUNK}
+        new Object[]{LockGranularity.SEGMENT, true},
+        new Object[]{LockGranularity.SEGMENT, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false}
     );
   }
 
-  public SegmentAllocateActionTest(LockGranularity lockGranularity)
+  public SegmentAllocateActionTest(LockGranularity lockGranularity, boolean useBatch)
   {
     this.lockGranularity = lockGranularity;
+    this.useBatch = useBatch;
   }
 
   @Before
@@ -101,6 +109,19 @@ public class SegmentAllocateActionTest
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
+    allocationQueue = taskActionTestKit.getTaskActionToolbox().getSegmentAllocationQueue();
+    if (allocationQueue != null) {
+      allocationQueue.start();
+      allocationQueue.becomeLeader();
+    }
+  }
+
+  @After
+  public void tearDown()
+  {
+    if (allocationQueue != null) {
+      allocationQueue.stop();
+    }
   }
 
   @Test
@@ -288,29 +309,11 @@ public class SegmentAllocateActionTest
     if (lockGranularity == LockGranularity.TIME_CHUNK) {
       final TaskLock partyLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(PARTY_TIME);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(PARTY_TIME))
       );
       final TaskLock futureLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(THE_DISTANT_FUTURE);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(THE_DISTANT_FUTURE))
       );
 
       assertSameIdentifier(
@@ -446,29 +449,11 @@ public class SegmentAllocateActionTest
     if (lockGranularity == LockGranularity.TIME_CHUNK) {
       final TaskLock partyLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(PARTY_TIME);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(PARTY_TIME))
       );
       final TaskLock futureLock = Iterables.getOnlyElement(
           FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
-                        .filter(
-                            new Predicate<TaskLock>()
-                            {
-                              @Override
-                              public boolean apply(TaskLock input)
-                              {
-                                return input.getInterval().contains(THE_DISTANT_FUTURE);
-                              }
-                            }
-                        )
+                        .filter(input -> input.getInterval().contains(THE_DISTANT_FUTURE))
       );
 
       assertSameIdentifier(
@@ -990,21 +975,26 @@ public class SegmentAllocateActionTest
         lockGranularity,
         null
     );
-    return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+
+    try {
+      if (useBatch) {
+        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox())
+                     .get(5, TimeUnit.SECONDS);
+      } else {
+        return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+      }
+    }
+    catch (ExecutionException e) {
+      return null;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void assertSameIdentifier(final SegmentIdWithShardSpec expected, final SegmentIdWithShardSpec actual)
   {
     Assert.assertEquals(expected, actual);
-    Assert.assertEquals(expected.getShardSpec().getPartitionNum(), actual.getShardSpec().getPartitionNum());
-    Assert.assertEquals(expected.getShardSpec().getClass(), actual.getShardSpec().getClass());
-
-    if (expected.getShardSpec().getClass() == NumberedShardSpec.class
-        && actual.getShardSpec().getClass() == NumberedShardSpec.class) {
-      Assert.assertEquals(expected.getShardSpec().getNumCorePartitions(), actual.getShardSpec().getNumCorePartitions());
-    } else if (expected.getShardSpec().getClass() == LinearShardSpec.class
-               && actual.getShardSpec().getClass() == LinearShardSpec.class) {
-      // do nothing
-    }
+    Assert.assertEquals(expected.getShardSpec(), actual.getShardSpec());
   }
 }

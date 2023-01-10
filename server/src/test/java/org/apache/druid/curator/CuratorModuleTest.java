@@ -120,7 +120,7 @@ public final class CuratorModuleTest
     return new StartupInjectorBuilder()
         .add(
             new LifecycleModule(),
-            new CuratorModule(),
+            new CuratorModule(false),
             binder -> binder.bind(Properties.class).toInstance(props)
          )
         .build();

@@ -320,6 +320,30 @@ apache-druid-0.17.0-src.tar.gz.asc
 apache-druid-0.17.0-src.tar.gz.sha512
 ```
 
+#### Build artifacts for Hadoop-3
+
+```bash
+$ mvn clean install -Phadoop3,apache-release,dist,rat -DskipTests -Dgpg.keyname=<your GPG key fingerprint>
+```
+
+This should produce the following artifacts:
+
+```plaintext
+apache-druid-0.17.0-bin.tar.gz
+apache-druid-0.17.0-bin.tar.gz.asc
+apache-druid-0.17.0-bin.tar.gz.sha512
+apache-druid-0.17.0-src.tar.gz
+apache-druid-0.17.0-src.tar.gz.asc
+apache-druid-0.17.0-src.tar.gz.sha512
+```
+
+You can ignore the src artifacts as they are the same as the main profile. The binary artifacts should be renamed to include the suffix `hadoop3`. So the final artifacts would be as follows:  
+```plaintext
+apache-druid-0.17.0-hadoop3-bin.tar.gz
+apache-druid-0.17.0-hadoop3-bin.tar.gz.asc
+apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512
+```
+
 Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/druid/KEYS.                                                                                               
  
 ### Verify checksums
@@ -328,6 +352,9 @@ Ensure that the GPG key fingerprint used in the `mvn install` command matches yo
 $ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-bin.tar.gz.sha512 ; echo)
 ...
 $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
+...
+$ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512 ; echo)
+...
 ```
 
 ### Verify GPG signatures
@@ -336,6 +363,9 @@ $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apa
 $ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
+...
+$ gpg --verify apache-druid-0.17.0-hadoop3-bin.tar.gz.asc apache-druid-0.17.0-hadoop3-bin.tar.gz
+...
 ```
 
 ### Commit artifacts to SVN repo
@@ -353,6 +383,14 @@ $ svn add 0.17.0-rc3
 ...
 $ svn commit -m 'add 0.17.0-rc3 artifacts'
 ```
+
+> The commit might fail with the following message if the tarball exceeds 450MB in size (the current limit on the size of a single commit). If this happens, ensure that the tar does not include any superfluous dependencies. If the size is still not within 450MB, raise a ticket with asfinfra to increase the limit.
+> ```
+> $ svn commit -m 'add 0.17.0-rc3 artifacts'
+> Adding  (bin)  apache-druid-25.0.0-bin.tar.gz
+> Transmitting file data .svn: E175002: Commit failed (details follow):
+> svn: E175002: PUT request on '/repos/dist/!svn/txr/58803-1dhj/dev/druid/25.0.0-rc1/apache-druid-25.0.0-bin.tar.gz' failed
+> ```
 
 ### Update druid.staged.apache.org
 
@@ -629,17 +667,17 @@ Copy the release notes and create the release from the tag.
 
 ### Announce the release
 
-Announce the release to all the lists, announce@apache.org, dev@druid.apache.org, druid-user@googlegroups.com (general announcement list, druid dev list, druid user group).
+Announce the release to all the lists, dev@druid.apache.org, druid-user@googlegroups.com (Druid dev list, Druid user group).
 
 Additionally, announce it to the Druid official ASF Slack channel, https://druid.apache.org/community/join-slack.
 
-##### subject
+##### Subject
 
 ```plaintext
 [ANNOUNCE] Apache Druid 0.17.0 release
 ```
 
-##### body
+##### Body
 
 ```plaintext
 The Apache Druid team is proud to announce the release of Apache Druid 0.17.0. 

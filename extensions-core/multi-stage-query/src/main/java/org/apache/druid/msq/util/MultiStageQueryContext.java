@@ -64,7 +64,7 @@ public class MultiStageQueryContext
   public static final String CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES =
       "intermediateSuperSorterStorageMaxLocalBytes";
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
-  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.AUTO.toString();
+  public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.PARALLEL.toString();
   private static final boolean DEFAULT_ENABLE_DURABLE_SHUFFLE_STORAGE = false;
   private static final boolean DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE = false;
   private static final long DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES = Long.MAX_VALUE;

@@ -67,12 +67,14 @@ An example output is shown below:
       "rowStats": {
         "determinePartitions": {
           "processed": 0,
+          "processedBytes": 0,
           "processedWithError": 0,
           "thrownAway": 0,
           "unparseable": 0
         },
         "buildSegments": {
           "processed": 5390324,
+          "processedBytes": 5109573212,
           "processedWithError": 0,
           "thrownAway": 0,
           "unparseable": 0
@@ -118,18 +120,21 @@ An example output is shown below:
           "buildSegments": {
             "5m": {
               "processed": 3.392158326408501,
+              "processedBytes": 627.5492903856,
               "unparseable": 0,
               "thrownAway": 0,
               "processedWithError": 0
             },
             "15m": {
               "processed": 1.736165476881023,
+              "processedBytes": 321.1906130223,
               "unparseable": 0,
               "thrownAway": 0,
               "processedWithError": 0
             },
             "1m": {
               "processed": 4.206417693750045,
+              "processedBytes": 778.1872733438,
               "unparseable": 0,
               "thrownAway": 0,
               "processedWithError": 0
@@ -139,6 +144,7 @@ An example output is shown below:
         "totals": {
           "buildSegments": {
             "processed": 1994,
+            "processedBytes": 3425110,
             "processedWithError": 0,
             "thrownAway": 0,
             "unparseable": 0
@@ -168,6 +174,7 @@ Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as tho
 
 the `rowStats` map contains information about row counts. There is one entry for each ingestion phase. The definitions of the different row counts are shown below:
 - `processed`: Number of rows successfully ingested without parsing errors
+- `processedBytes`: Total number of uncompressed bytes processed by the task. This reports the total byte size of all rows i.e. even those that are included in `processedWithError`, `unparseable` or `thrownAway`.
 - `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
 - `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
 - `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
@@ -188,24 +195,27 @@ http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/rowStat
 
 An example report is shown below. The `movingAverages` section contains 1 minute, 5 minute, and 15 minute moving averages of increases to the four row counters, which have the same definitions as those in the completion report. The `totals` section shows the current totals.
 
-```
+```json
 {
   "movingAverages": {
     "buildSegments": {
       "5m": {
         "processed": 3.392158326408501,
+        "processedBytes": 627.5492903856,
         "unparseable": 0,
         "thrownAway": 0,
         "processedWithError": 0
       },
       "15m": {
         "processed": 1.736165476881023,
+        "processedBytes": 321.1906130223,
         "unparseable": 0,
         "thrownAway": 0,
         "processedWithError": 0
       },
       "1m": {
         "processed": 4.206417693750045,
+        "processedBytes": 778.1872733438,
         "unparseable": 0,
         "thrownAway": 0,
         "processedWithError": 0
@@ -215,6 +225,7 @@ An example report is shown below. The `movingAverages` section contains 1 minute
   "totals": {
     "buildSegments": {
       "processed": 1994,
+      "processedBytes": 3425110,
       "processedWithError": 0,
       "thrownAway": 0,
       "unparseable": 0
@@ -343,6 +354,26 @@ You can override the task priority by setting your priority in the task context 
   "priority" : 100
 }
 ```
+<a name="actions"></a>
+
+## Task actions
+
+Task actions are overlord actions performed by tasks during their lifecycle. Some typical task actions are:
+- `lockAcquire`: acquires a time-chunk lock on an interval for the task
+- `lockRelease`: releases a lock acquired by the task on an interval
+- `segmentTransactionalInsert`: publishes new segments created by a task and optionally overwrites and/or drops existing segments in a single transaction
+- `segmentAllocate`: allocates pending segments to a task to write rows
+
+### Batching `segmentAllocate` actions
+
+In a cluster with several concurrent tasks, `segmentAllocate` actions on the overlord can take a long time to finish, causing spikes in the `task/action/run/time`. This can result in ingestion lag building up while a task waits for a segment to be allocated.
+The root cause of such spikes is likely to be one or more of the following:
+- several concurrent tasks trying to allocate segments for the same datasource and interval
+- large number of metadata calls made to the segments and pending segments tables 
+- concurrency limitations while acquiring a task lock required for allocating a segment
+
+Since the contention typically arises from tasks allocating segments for the same datasource and interval, you can improve the run times by batching the actions together.
+To enable batched segment allocation on the overlord, set  `druid.indexer.tasklock.batchSegmentAllocation` to `true`. See [overlord configuration](../configuration/index.md#overlord-operations) for more details.
 
 <a name="context"></a>
 

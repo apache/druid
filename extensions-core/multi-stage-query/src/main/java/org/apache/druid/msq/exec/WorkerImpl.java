@@ -578,15 +578,36 @@ public class WorkerImpl implements Worker
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId)
   {
-    return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId %s.", stageId);
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
+    } else {
+      return stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
+    }
   }
 
   @Override
   public ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk)
   {
-    ClusterByStatisticsSnapshot snapshot = stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot();
-    return snapshot.getSnapshotForTimeChunk(timeChunk);
+    if (stageKernelMap.get(stageId) == null) {
+      throw new ISE("Requested statistics snapshot for non-existent stageId[%s].", stageId);
+    } else if (stageKernelMap.get(stageId).getResultKeyStatisticsSnapshot() == null) {
+      throw new ISE(
+          "Requested statistics snapshot is not generated yet for stageId[%s]",
+          stageId
+      );
+    } else {
+      return stageKernelMap.get(stageId)
+                           .getResultKeyStatisticsSnapshot()
+                           .getSnapshotForTimeChunk(timeChunk);
+    }
+
   }
+
 
   @Override
   public CounterSnapshotsTree getCounters()
@@ -698,7 +719,7 @@ public class WorkerImpl implements Worker
   /**
    * Decorates the server-wide {@link QueryProcessingPool} such that any Callables and Runnables, not just
    * {@link PrioritizedCallable} and {@link PrioritizedRunnable}, may be added to it.
-   *
+   * <p>
    * In production, the underlying {@link QueryProcessingPool} pool is set up by
    * {@link org.apache.druid.guice.DruidProcessingModule}.
    */

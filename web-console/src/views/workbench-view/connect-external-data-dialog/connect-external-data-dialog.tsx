@@ -20,7 +20,7 @@ import { Classes, Dialog } from '@blueprintjs/core';
 import { SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import { ExternalConfig } from '../../../druid-models';
+import { ExternalConfig, InputFormat, InputSource } from '../../../druid-models';
 import { InputFormatStep } from '../input-format-step/input-format-step';
 import { InputSourceStep } from '../input-source-step/input-source-step';
 
@@ -32,8 +32,15 @@ export interface ConnectExternalDataDialogProps {
     config: ExternalConfig,
     isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
+    partitionedByHint: string | undefined,
   ): void;
   onClose(): void;
+}
+
+interface ExternalConfigStep {
+  inputSource?: InputSource;
+  inputFormat?: InputFormat;
+  partitionedByHint?: string;
 }
 
 export const ConnectExternalDataDialog = React.memo(function ConnectExternalDataDialog(
@@ -41,11 +48,11 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
 ) {
   const { initExternalConfig, onClose, onSetExternalConfig } = props;
 
-  const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>(
+  const [externalConfigStep, setExternalConfigStep] = useState<ExternalConfigStep>(
     initExternalConfig || {},
   );
 
-  const { inputSource, inputFormat } = externalConfigStep;
+  const { inputSource, inputFormat, partitionedByHint } = externalConfigStep;
 
   return (
     <Dialog
@@ -65,6 +72,7 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
                 { inputSource, inputFormat, signature },
                 isArrays,
                 timeExpression,
+                partitionedByHint,
               );
               onClose();
             }}
@@ -76,8 +84,8 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
           <InputSourceStep
             initInputSource={inputSource}
             mode="sampler"
-            onSet={(inputSource, inputFormat) => {
-              setExternalConfigStep({ inputSource, inputFormat });
+            onSet={(inputSource, inputFormat, partitionedByHint) => {
+              setExternalConfigStep({ inputSource, inputFormat, partitionedByHint });
             }}
           />
         )}

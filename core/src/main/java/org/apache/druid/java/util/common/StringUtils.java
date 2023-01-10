@@ -20,9 +20,15 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
+import it.unimi.dsi.fastutil.bytes.ByteArrayList;
+import it.unimi.dsi.fastutil.bytes.ByteList;
+import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -221,8 +227,13 @@ public class StringUtils
 
   public static String fromUtf8(final byte[] bytes)
   {
+    return fromUtf8(bytes, 0, bytes.length);
+  }
+
+  public static String fromUtf8(final byte[] bytes, int offset, int length)
+  {
     try {
-      return new String(bytes, UTF8_STRING);
+      return new String(bytes, offset, length, UTF8_STRING);
     }
     catch (UnsupportedEncodingException e) {
       // Should never happen
@@ -250,6 +261,16 @@ public class StringUtils
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());
+  }
+
+  public static String fromUtf8(final ByteArrayList buffer)
+  {
+    return StringUtils.fromUtf8(buffer.elements(), 0, buffer.size());
+  }
+
+  public static String fromUtf8(final ByteList buffer)
+  {
+    return StringUtils.fromUtf8(buffer.toByteArray());
   }
 
   /**
@@ -795,6 +816,20 @@ public class StringUtils
       return s;
     } else {
       return s.substring(0, maxBytes);
+    }
+  }
+
+  public static String getResource(Object ref, String resource)
+  {
+    try {
+      InputStream is = ref.getClass().getResourceAsStream(resource);
+      if (is == null) {
+        throw new ISE("Resource not found: [%s]", resource);
+      }
+      return IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
   }
 }

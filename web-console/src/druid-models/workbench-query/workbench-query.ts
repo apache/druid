@@ -82,13 +82,19 @@ export class WorkbenchQuery {
     externalConfig: ExternalConfig,
     isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
+    partitionedByHint: string | undefined,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryContext: {},
       queryParts: [
         WorkbenchQueryPart.fromQueryString(
           ingestQueryPatternToQuery(
-            externalConfigToIngestQueryPattern(externalConfig, isArrays, timeExpression),
+            externalConfigToIngestQueryPattern(
+              externalConfig,
+              isArrays,
+              timeExpression,
+              partitionedByHint,
+            ),
           ).toString(),
         ),
       ],
@@ -458,10 +464,10 @@ export class WorkbenchQuery {
       }
     }
 
-    // Adjust the context, remove maxNumTasks and add in ingest mode flags
-    const cleanContext = deleteKeys(this.queryContext, ['maxNumTasks']);
-    ret = ret.changeQueryContext({
-      ...cleanContext,
+    // Explicitly select MSQ, adjust the context, set maxNumTasks to the lowest possible and add in ingest mode flags
+    ret = ret.changeEngine('sql-msq-task').changeQueryContext({
+      ...this.queryContext,
+      maxNumTasks: 2,
       finalizeAggregations: false,
       groupByEnableMultiValueUnnesting: false,
     });
@@ -473,16 +479,17 @@ export class WorkbenchQuery {
           .changeReplaceClause(undefined)
           .changePartitionedByClause(undefined)
           .changeClusteredByClause(undefined)
-          .changeOrderByClause(
-            WorkbenchQuery.makeOrderByClause(
-              parsedQuery.partitionedByClause,
-              parsedQuery.clusteredByClause,
-            ),
-          )
           .toString()
       : WorkbenchQuery.commentOutIngestParts(this.getQueryString());
 
     return ret.changeQueryString(newQueryString);
+  }
+
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    const { queryContext } = this;
+    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+
+    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

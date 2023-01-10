@@ -55,7 +55,6 @@ import java.util.Map;
  */
 public class MSQWarningsTest extends MSQTestBase
 {
-
   private File toRead;
   private RowSignature rowSignature;
   private String toReadFileNameAsJson;
@@ -66,7 +65,11 @@ public class MSQWarningsTest extends MSQTestBase
   @Before
   public void setUp3() throws IOException
   {
-    toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
+    File tempFile = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
+
+    // Rename the file and the file's extension from .tmp to .gz to prevent issues with 'parsing' the file
+    toRead = new File(tempFile.getParentFile(), "unparseable.gz");
+    tempFile.renameTo(toRead);
     toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     rowSignature = RowSignature.builder()

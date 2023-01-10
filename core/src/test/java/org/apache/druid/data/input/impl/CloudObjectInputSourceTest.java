@@ -72,7 +72,7 @@ public class CloudObjectInputSourceTest
   public void testGetUris()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null, null)
+        .useConstructor(SCHEME, URIS, null, null, null)
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -86,7 +86,7 @@ public class CloudObjectInputSourceTest
   public void testGetPrefixes()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, PREFIXES, null, null, null)
+        .useConstructor(SCHEME, null, PREFIXES, null, null)
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -100,7 +100,7 @@ public class CloudObjectInputSourceTest
   public void testGetObjectGlob()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null, "**.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -111,12 +111,12 @@ public class CloudObjectInputSourceTest
   public void testInequality()
   {
     CloudObjectInputSource inputSource1 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null, "**.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
     CloudObjectInputSource inputSource2 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null, "**.csv")
+        .useConstructor(SCHEME, URIS, null, null, "**.csv")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -128,32 +128,9 @@ public class CloudObjectInputSourceTest
   @Test
   public void testWithUrisFilter()
   {
-    CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class,
-                                                      Mockito.withSettings()
-                                                             .useConstructor(SCHEME, URIS2, null, null, "*.csv", null)
-                                                             .defaultAnswer(Mockito.CALLS_REAL_METHODS)
-    );
-
-    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        new MaxSizeSplitHintSpec(null, 1)
-    );
-
-    List<CloudObjectLocation> returnedLocations = splits.map(InputSplit::get).collect(Collectors.toList()).get(0);
-
-    List<URI> returnedLocationUris = returnedLocations.stream().map(object -> object.toUri(SCHEME)).collect(Collectors.toList());
-
-    Assert.assertEquals("*.csv", inputSource.getFilter());
-    Assert.assertEquals(URIS, returnedLocationUris);
-  }
-
-  @Test
-  public void testWithUrisObjectGlob()
-  {
-    CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class,
-                                                      Mockito.withSettings()
-                                                             .useConstructor(SCHEME, URIS2, null, null, null, "**.csv")
-                                                             .defaultAnswer(Mockito.CALLS_REAL_METHODS)
+    CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
+        .useConstructor(SCHEME, URIS2, null, null, "**.csv")
+        .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -173,7 +150,7 @@ public class CloudObjectInputSourceTest
   public void testWithUris()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null, null)
+        .useConstructor(SCHEME, URIS, null, null, null)
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -194,7 +171,7 @@ public class CloudObjectInputSourceTest
   public void testWithObjectsFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, null, "**.csv")
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, "**.csv")
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -215,7 +192,7 @@ public class CloudObjectInputSourceTest
   public void testWithObjects()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, OBJECTS, null, null)
+        .useConstructor(SCHEME, null, null, OBJECTS, null)
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
