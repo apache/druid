@@ -2425,8 +2425,8 @@ public class ControllerImpl implements Controller
             && queryKernel.doesStageHaveResultPartitions(stageId)) {
           IntSet workersToSendPartitionBoundaries = queryKernel.getWorkersToSendPartitionBoundaries(stageId);
           if (workersToSendPartitionBoundaries.isEmpty()) {
-            log.debug("No workers for stage[%s] ready to recieve partition boundaries", stageId);
-            return;
+            log.debug("No workers for stage[%s] ready to receive partition boundaries", stageId);
+            continue;
           }
           final ClusterByPartitions partitions = queryKernel.getResultPartitionBoundariesForStage(stageId);
 
