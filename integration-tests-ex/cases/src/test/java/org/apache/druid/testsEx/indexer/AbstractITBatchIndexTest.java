@@ -209,7 +209,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                                           Map<String, Object> msqContext
   ) throws Exception
   {
-    LOG.info("Starting MSQ test for sql path:%s, query path: %s]", sqlFilePath, queryFilePath);
+    LOG.info("Starting MSQ test for sql path: %s, query path: %s]", sqlFilePath, queryFilePath);
 
     submitMSQTaskFromFile(sqlFilePath, datasource, msqContext);
     doTestQuery(datasource, queryFilePath);
@@ -226,7 +226,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                                                  Map<String, Object> msqContext
   ) throws Exception
   {
-    LOG.info("Starting Reindex MSQ test for sql path:%s, query path: %s", sqlFilePath, queryFilePath);
+    LOG.info("Starting Reindex MSQ test for sql path: %s, query path: %s", sqlFilePath, queryFilePath);
 
     String sqlTask = getStringFromFileAndReplaceDatasource(sqlFilePath, datasource);
     sqlTask = StringUtils.replace(

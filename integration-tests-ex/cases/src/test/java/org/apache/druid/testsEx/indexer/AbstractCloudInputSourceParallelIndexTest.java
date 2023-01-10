@@ -46,6 +46,11 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
   private static final String WIKIPEDIA_DATA_1 = "wikipedia_index_data1.json";
   private static final String WIKIPEDIA_DATA_2 = "wikipedia_index_data2.json";
   private static final String WIKIPEDIA_DATA_3 = "wikipedia_index_data3.json";
+  private static final String GOOGLE = "google";
+  private static final String AZURE = "azure";
+  private static final String GOOGLE_PREFIX = "googlePrefix";
+  private static final String GOOGLE_BUCKET = "googleBucket";
+  private static final String AZURE_CONTAINER = "azureContainer";
   private static final Logger LOG = new Logger(AbstractCloudInputSourceParallelIndexTest.class);
 
   String indexDatasource = "wikipedia_cloud_index_test_";
@@ -82,7 +87,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
 
   public String setInputSourceInPath(String inputSourceType, String inputSourcePath)
   {
-    if ("google".equals(inputSourceType)) {
+    if (GOOGLE.equals(inputSourceType)) {
       return StringUtils.replace(
           inputSourcePath,
           "%%INPUT_SOURCE_TYPE%%",
@@ -99,8 +104,8 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
 
   public String getCloudPath(String inputSourceType)
   {
-    if ("google".equals(inputSourceType)) {
-      return config.getProperty("googlePrefix");
+    if (GOOGLE.equals(inputSourceType)) {
+      return config.getProperty(GOOGLE_PREFIX);
     } else {
       return config.getCloudPath();
     }
@@ -108,10 +113,10 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
 
   public String getCloudBucket(String inputSourceType)
   {
-    if ("google".equals(inputSourceType)) {
-      return config.getProperty("googleBucket");
-    } else if ("azure".equals(inputSourceType)) {
-      return config.getProperty("azureContainer");
+    if (GOOGLE.equals(inputSourceType)) {
+      return config.getProperty(GOOGLE_BUCKET);
+    } else if (AZURE.equals(inputSourceType)) {
+      return config.getProperty(AZURE_CONTAINER);
     } else {
       return config.getCloudBucket();
     }
