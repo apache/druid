@@ -20,7 +20,9 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -1032,28 +1034,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
+   * @return
    */
-  public static <T> Query<T> recursivelyClearContext(final Query<T> query)
+  public static <T> Query recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
-    Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource()));
-    newQuery.context().clear();
-    return newQuery;
+    try {
+      Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
+      ((ObjectNode) newQueryNode).remove("context");
+      return queryJsonMapper.treeToValue(newQueryNode, Query.class);
+    }
+    catch (Exception e) {
+      Assert.fail(e.getMessage());
+      return null;
+    }
   }
 
   /**
    * Override the contexts of all subqueries of a particular datasource.
    */
-  private static DataSource recursivelyClearContext(final DataSource dataSource)
+  private static DataSource recursivelyClearContext(final DataSource dataSource, ObjectMapper queryJsonMapper)
   {
     if (dataSource instanceof QueryDataSource) {
       final Query<?> subquery = ((QueryDataSource) dataSource).getQuery();
-      subquery.context().clear();
-      return new QueryDataSource(subquery);
+      Query<?> newSubQuery = recursivelyClearContext(subquery, queryJsonMapper);
+      return new QueryDataSource(newSubQuery);
     } else {
       return dataSource.withChildren(
           dataSource.getChildren()
                     .stream()
-                    .map(ds -> recursivelyClearContext(ds))
+                    .map(ds -> recursivelyClearContext(ds, queryJsonMapper))
                     .collect(Collectors.toList())
       );
     }

@@ -378,6 +378,7 @@ public class QueryTestRunner
       }
       QueryTestBuilder builder = execStep.builder();
       final List<Query<?>> expectedQueries = new ArrayList<>();
+      ObjectMapper queryJsonMapper = builder.config.jsonMapper();
       for (Query<?> query : builder.expectedQueries) {
         // The tests set a lot of various values in the context that are not relevant to how the query actually planned,
         // so we effectively ignore these keys in the context during query validation by overwriting whatever
@@ -390,12 +391,12 @@ public class QueryTestRunner
         // we could have validations of query objects that are a bit more intelligent.  That is, instead of relying on
         // equals, perhaps we could have a context validator that only validates that keys set on the expected query
         // are set, allowing any other context keys to also be set?
-        expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query));
+        expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query, queryJsonMapper));
       }
 
-      final List<Query<?>> recordedQueries = queryResults.recordedQueries
+      final List<Query> recordedQueries = queryResults.recordedQueries
           .stream()
-          .map(BaseCalciteQueryTest::recursivelyClearContext)
+          .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
 
       Assert.assertEquals(
@@ -403,7 +404,6 @@ public class QueryTestRunner
           expectedQueries.size(),
           recordedQueries.size()
       );
-      ObjectMapper queryJsonMapper = builder.config.jsonMapper();
       for (int i = 0; i < expectedQueries.size(); i++) {
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
