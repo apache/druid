@@ -208,9 +208,6 @@ public abstract class StructuredDataProcessor
     private Set<ArrayList<NestedPathPart>> literalFields;
     private int estimatedSize;
 
-    @Nullable
-    private Object rootLiteral;
-
     public ProcessResults()
     {
       literalFields = new HashSet<>();
@@ -246,24 +243,11 @@ public abstract class StructuredDataProcessor
       return this;
     }
 
-    public ProcessResults ofRootLiteral(ProcessedLiteral<?> literal)
-    {
-      this.estimatedSize = literal.getSize();
-      this.rootLiteral = literal.getValue();
-      return this;
-    }
-
     public ProcessResults merge(ProcessResults other)
     {
       this.literalFields.addAll(other.literalFields);
       this.estimatedSize += other.estimatedSize;
       return this;
-    }
-
-    @Nullable
-    public Object getRootLiteral()
-    {
-      return rootLiteral;
     }
   }
 

@@ -96,9 +96,6 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     // 'raw' data
     effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
     effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
-    if (info.getRootLiteral() != null) {
-      return new EncodedKeyComponent<>(data == null ? data : new StructuredData(info.getRootLiteral()), effectiveSizeBytes);
-    }
     return new EncodedKeyComponent<>(data, effectiveSizeBytes);
   }
 
@@ -180,14 +177,6 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       IncrementalIndex.DimensionDesc desc
   )
   {
-    final int dimIndex = desc.getIndex();
-    final Object[] dims = currEntry.get().getDims();
-    final StructuredData data;
-    if (0 <= dimIndex && dimIndex < dims.length) {
-      data = (StructuredData) dims[dimIndex];
-    } else {
-      data = null;
-    }
 
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       final LiteralFieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
@@ -241,9 +230,15 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
           @Override
           public Object getObject()
           {
-            if (data != null) {
-              return data.getValue();
+            final int dimIndex = desc.getIndex();
+            final Object[] dims = currEntry.get().getDims();
+            if (0 <= dimIndex && dimIndex < dims.length) {
+              final StructuredData data = (StructuredData) dims[dimIndex];
+              if (data != null) {
+                return data.getValue();
+              }
             }
+
             return null;
           }
 
@@ -267,7 +262,13 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       @Override
       public StructuredData getObject()
       {
-        return data;
+        final int dimIndex = desc.getIndex();
+        final Object[] dims = currEntry.get().getDims();
+        if (0 <= dimIndex && dimIndex < dims.length) {
+          return (StructuredData) dims[dimIndex];
+        } else {
+          return null;
+        }
       }
 
       @Override
