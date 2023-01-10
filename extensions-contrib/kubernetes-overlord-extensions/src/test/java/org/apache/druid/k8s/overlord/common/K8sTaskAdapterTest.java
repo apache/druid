@@ -193,7 +193,7 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  void testNoPrimaryFound() throws Exception
+  void testNoPrimaryFound()
   {
     PodSpec spec = new PodSpec();
     List<Container> containers = new ArrayList<>();
