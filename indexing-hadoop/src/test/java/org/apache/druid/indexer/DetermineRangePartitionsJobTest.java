@@ -329,6 +329,15 @@ public class DetermineRangePartitionsJobTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
+                null,
+                null,
+                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.NONE,
+                    ImmutableList.of(Intervals.of(interval))
+                ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
@@ -345,13 +354,6 @@ public class DetermineRangePartitionsJobTest
                     ),
                     Map.class
                 ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.NONE,
-                    ImmutableList.of(Intervals.of(interval))
-                ),
-                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
