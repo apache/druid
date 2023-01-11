@@ -29,7 +29,7 @@ sidebar_label: Known issues
 
 ## Multi-stage query task runtime
 
-- Fault tolerance is not implemented. If any task fails, the entire query fails.
+- Fault tolerance is partially implemented. Workers get relaunched when they are killed unexpectedly. The controller does not get relaunched if it is killed unexpectedly.
 
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with

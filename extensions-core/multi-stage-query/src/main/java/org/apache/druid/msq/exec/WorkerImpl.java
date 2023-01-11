@@ -71,6 +71,7 @@ import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
@@ -233,7 +234,7 @@ public class WorkerImpl implements Worker
           }
         });
 
-        return TaskStatus.failure(id(), errorReport.getFault().getCodeWithMessage());
+        return TaskStatus.failure(id(), MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
       } else {
         return TaskStatus.success(id());
       }
@@ -261,7 +262,7 @@ public class WorkerImpl implements Worker
     // Delete all the stage outputs
     closer.register(() -> {
       for (final StageId stageId : stageOutputs.keySet()) {
-        cleanStageOutput(stageId);
+        cleanStageOutput(stageId, false);
       }
     });
 
@@ -516,11 +517,12 @@ public class WorkerImpl implements Worker
       throw new ISE("Worker number mismatch: expected [%d]", task.getWorkerNumber());
     }
 
+    // Do not add to queue if workerOrder already present.
     kernelManipulationQueue.add(
         kernelHolder ->
-            kernelHolder.getStageKernelMap().computeIfAbsent(
+            kernelHolder.getStageKernelMap().putIfAbsent(
                 workOrder.getStageDefinition().getId(),
-                ignored -> WorkerStageKernel.create(workOrder)
+                WorkerStageKernel.create(workOrder)
             )
     );
   }
@@ -538,10 +540,18 @@ public class WorkerImpl implements Worker
         kernelHolder -> {
           final WorkerStageKernel stageKernel = kernelHolder.getStageKernelMap().get(stageId);
 
-          // Ignore the update if we don't have a kernel for this stage.
           if (stageKernel != null) {
-            stageKernel.setResultPartitionBoundaries(stagePartitionBoundaries);
+            if (!stageKernel.hasResultPartitionBoundaries()) {
+              stageKernel.setResultPartitionBoundaries(stagePartitionBoundaries);
+            } else {
+              // Ignore if partition boundaries are already set.
+              log.warn(
+                  "Stage[%s] already has result partition boundaries set. Ignoring the latest partition boundaries recieved.",
+                  stageId
+              );
+            }
           } else {
+            // Ignore the update if we don't have a kernel for this stage.
             log.warn("Ignored result partition boundaries call for unknown stage [%s]", stageId);
           }
         }
@@ -555,7 +565,7 @@ public class WorkerImpl implements Worker
     log.info("Cleanup order for stage: [%s] received", stageId);
     kernelManipulationQueue.add(
         holder -> {
-          cleanStageOutput(stageId);
+          cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
           holder.getStageKernelMap().get(stageId).setStageFinished();
         }
@@ -726,7 +736,7 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(snapshotsTree);
+      controllerClient.postCounters(id(), snapshotsTree);
     }
   }
 
@@ -735,7 +745,7 @@ public class WorkerImpl implements Worker
    * the readable channels corresponding to all the partitions for that stage, and removes it from the {@code stageOutputs}
    * map
    */
-  private void cleanStageOutput(final StageId stageId)
+  private void cleanStageOutput(final StageId stageId, boolean removeDurableStorageFiles)
   {
     // This code is thread-safe because remove() on ConcurrentHashMap will remove and return the removed channel only for
     // one thread. For the other threads it will return null, therefore we will call doneReading for a channel only once
@@ -755,7 +765,7 @@ public class WorkerImpl implements Worker
       // temp directories where intermediate results were stored, it won't be the case for the external storage.
       // Therefore, the logic for cleaning the stage output in case of a worker/machine crash has to be external.
       // We currently take care of this in the controller.
-      if (durableStageStorageEnabled) {
+      if (durableStageStorageEnabled && removeDurableStorageFiles) {
         final String folderName = DurableStorageUtils.getTaskIdOutputsFolderName(
             task.getControllerTaskId(),
             stageId.getStageNumber(),

@@ -22,12 +22,12 @@ package org.apache.druid.server.mocks;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -63,6 +63,21 @@ public class MockHttpServletResponse implements HttpServletResponse
 
   private int statusCode;
   private String contentType;
+  private String characterEncoding;
+
+  @Override
+  public void reset()
+  {
+    if (isCommitted()) {
+      throw new IllegalStateException("Cannot reset a committed ServletResponse");
+    }
+
+    headers.clear();
+    statusCode = 0;
+    contentType = null;
+    characterEncoding = null;
+  }
+
 
   @Override
   public void addCookie(Cookie cookie)
@@ -198,7 +213,7 @@ public class MockHttpServletResponse implements HttpServletResponse
   @Override
   public String getCharacterEncoding()
   {
-    throw new UnsupportedOperationException();
+    return characterEncoding;
   }
 
   @Override
@@ -231,13 +246,13 @@ public class MockHttpServletResponse implements HttpServletResponse
       }
 
       @Override
-      public void write(@Nonnull byte[] b)
+      public void write(@NotNull byte[] b)
       {
         baos.write(b, 0, b.length);
       }
 
       @Override
-      public void write(@Nonnull byte[] b, int off, int len)
+      public void write(@NotNull byte[] b, int off, int len)
       {
         baos.write(b, off, len);
       }
@@ -253,7 +268,7 @@ public class MockHttpServletResponse implements HttpServletResponse
   @Override
   public void setCharacterEncoding(String charset)
   {
-    throw new UnsupportedOperationException();
+    characterEncoding = charset;
   }
 
   @Override
@@ -298,16 +313,17 @@ public class MockHttpServletResponse implements HttpServletResponse
     throw new UnsupportedOperationException();
   }
 
+  public void forceCommitted()
+  {
+    if (!isCommitted()) {
+      baos.write(1234);
+    }
+  }
+
   @Override
   public boolean isCommitted()
   {
     return baos.size() > 0;
-  }
-
-  @Override
-  public void reset()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override

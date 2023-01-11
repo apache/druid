@@ -20,13 +20,15 @@
 package org.apache.druid.msq.kernel.controller;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Set;
 
-public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
+public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 {
 
   @Test
@@ -147,14 +149,16 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(0), newStageNumbers);
     Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(0);
-    ClusterByStatisticsCollector clusterByStatisticsCollector =
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            0,
-            0
-        );
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
+
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
-    controllerQueryKernelTester.setPartitionBoundaries(0, clusterByStatisticsCollector);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
@@ -162,24 +166,25 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(1), newStageNumbers);
     Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(1);
-    clusterByStatisticsCollector =
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            1,
-            0
-        );
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(1, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(1, 0);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(1, 0);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.READING_INPUT);
-    clusterByStatisticsCollector.addAll(
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            1,
-            1
-        )
-    );
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(1, 0);
+    controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.READING_INPUT);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(1, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(1, 1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.MERGING_STATISTICS);
-    controllerQueryKernelTester.setPartitionBoundaries(1, clusterByStatisticsCollector);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(1, 1);
+    controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(1, 1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(1, 0);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(1, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(1, 0);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(1, 1);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(1, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(1, 1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.RESULTS_READY);
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
@@ -188,7 +193,8 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(2);
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.READING_INPUT);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(2, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(2, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(2, 0);
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.finishStage(0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.FINISHED);
@@ -199,23 +205,22 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
     Assert.assertEquals(ImmutableSet.of(1), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(3);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.READING_INPUT);
-    ClusterByStatisticsCollector clusterByStatisticsCollector3 =
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            3,
-            0
-        );
+    controllerQueryKernelTester.startWorkOrder(3);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(3, 1);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.READING_INPUT);
-    ClusterByStatisticsCollector clusterByStatisticsCollector4 =
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-        3,
-        1
-        );
+    controllerQueryKernelTester.addPartialKeyStatsInformation(3, 0);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.MERGING_STATISTICS);
-    controllerQueryKernelTester.setPartitionBoundaries(3, clusterByStatisticsCollector3.addAll(clusterByStatisticsCollector4));
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(3, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(3, 0, 1);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(3, 0);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(3, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(3, 0);
+
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.POST_READING);
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(3, 1);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(3, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(3, 1);
+
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.finishStage(1);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.FINISHED);
@@ -243,27 +248,24 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
 
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
-
-    ClusterByStatisticsCollector clusterByStatisticsCollector =
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            0,
-            0
-        );
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    clusterByStatisticsCollector.addAll(
-        controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(
-            0,
-            1
-        )
-    );
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 1);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
-    controllerQueryKernelTester.setPartitionBoundaries(0, clusterByStatisticsCollector);
-
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
+    controllerQueryKernelTester.statsBeingFetchedForWorkers(0, 0, 1);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.MERGING_STATISTICS);
+    controllerQueryKernelTester.mergeClusterByStatsForAllTimeChunksForWorkers(0, 0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 1);
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
+    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.POST_READING);
+
+    controllerQueryKernelTester.sendPartitionBoundariesForStageAndWorkers(0, 1);
+    controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
     controllerQueryKernelTester.finishStage(0, false);
@@ -287,13 +289,23 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
 
     controllerQueryKernelTester.createAndGetNewStageNumbers();
     controllerQueryKernelTester.startStage(0);
-
-    controllerQueryKernelTester.addResultKeyStatisticsForStageAndWorker(0, 0);
+    controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
+    controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
-    controllerQueryKernelTester.setResultsCompleteForStageAndWorker(0, 0);
-    controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
+    Assert.assertThrows(
+        StringUtils.format(
+            "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
+            1,
+            0,
+            WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES,
+            WorkerStagePhase.NEW
+        ),
+        ISE.class,
+        () -> controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0)
+    );
+
   }
 
   @Test
@@ -414,7 +426,8 @@ public class ControllerQueryKernelTests extends BaseControllerQueryKernelTest
   private static void transitionNewToResultsComplete(ControllerQueryKernelTester queryKernelTester, int stageNumber)
   {
     queryKernelTester.startStage(stageNumber);
-    queryKernelTester.setResultsCompleteForStageAndWorker(stageNumber, 0);
+    queryKernelTester.startWorkOrder(stageNumber);
+    queryKernelTester.setResultsCompleteForStageAndWorkers(stageNumber, 0);
   }
 
 }

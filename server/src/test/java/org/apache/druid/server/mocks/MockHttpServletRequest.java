@@ -54,9 +54,11 @@ import java.util.function.Supplier;
  */
 public class MockHttpServletRequest implements HttpServletRequest
 {
+  public String requestUri = null;
   public String method = null;
   public String contentType = null;
   public String remoteAddr = null;
+  public String remoteHost = null;
 
   public LinkedHashMap<String, String> headers = new LinkedHashMap<>();
   public LinkedHashMap<String, Object> attributes = new LinkedHashMap<>();
@@ -110,7 +112,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public String getMethod()
   {
-    return method;
+    return unsupportedIfNull(method);
   }
 
   @Override
@@ -164,7 +166,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public String getRequestURI()
   {
-    throw new UnsupportedOperationException();
+    return unsupportedIfNull(requestUri);
   }
 
   @Override
@@ -296,7 +298,7 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public String getContentType()
   {
-    return contentType;
+    return unsupportedIfNull(contentType);
   }
 
   @Override
@@ -362,13 +364,13 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public String getRemoteAddr()
   {
-    return remoteAddr;
+    return unsupportedIfNull(remoteAddr);
   }
 
   @Override
   public String getRemoteHost()
   {
-    throw new UnsupportedOperationException();
+    return unsupportedIfNull(remoteHost);
   }
 
   @Override
@@ -486,6 +488,9 @@ public class MockHttpServletRequest implements HttpServletRequest
   @Override
   public AsyncContext getAsyncContext()
   {
+    if (currAsyncContext == null) {
+      throw new IllegalStateException("Must be put into Async mode before async context can be gottendid");
+    }
     return currAsyncContext;
   }
 
@@ -513,5 +518,14 @@ public class MockHttpServletRequest implements HttpServletRequest
     retVal.remoteAddr = remoteAddr;
 
     return retVal;
+  }
+
+  private <T> T unsupportedIfNull(T obj)
+  {
+    if (obj == null) {
+      throw new UnsupportedOperationException();
+    } else {
+      return obj;
+    }
   }
 }

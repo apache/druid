@@ -55,10 +55,10 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postCounters(CounterSnapshotsTree snapshotsTree)
+  public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree)
   {
     if (snapshotsTree != null) {
-      controller.updateCounters(snapshotsTree);
+      controller.updateCounters(workerId, snapshotsTree);
     }
   }
 

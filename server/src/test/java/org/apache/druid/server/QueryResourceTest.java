@@ -26,7 +26,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
@@ -88,7 +87,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -396,7 +397,7 @@ public class QueryResourceTest
     final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is null, the response content type should be same as the value of 'Content-Type' header
-    Assert.assertEquals(MediaType.APPLICATION_JSON, Iterables.getOnlyElement(response.headers.get("Content-Type")));
+    Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
   }
 
   @Test
@@ -409,7 +410,7 @@ public class QueryResourceTest
 
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is empty, the response content type should be same as the value of 'Content-Type' header
-    Assert.assertEquals(MediaType.APPLICATION_JSON, Iterables.getOnlyElement(response.headers.get("Content-Type")));
+    Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
   }
 
   @Test
@@ -424,10 +425,7 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
     // Content-Type in response should be Smile
-    Assert.assertEquals(
-        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
-        Iterables.getOnlyElement(response.headers.get("Content-Type"))
-    );
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
@@ -447,10 +445,7 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
     // Content-Type in response should be Smile
-    Assert.assertEquals(
-        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
-        Iterables.getOnlyElement(response.headers.get("Content-Type"))
-    );
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
@@ -469,10 +464,7 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
     // Content-Type in response should default to Content-Type from request
-    Assert.assertEquals(
-        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
-        Iterables.getOnlyElement(response.headers.get("Content-Type"))
-    );
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
@@ -643,13 +635,16 @@ public class QueryResourceTest
     );
     expectPermissiveHappyPathAuth();
 
-    final MockHttpServletResponse response = expectAsyncRequestFlow(
+    final Response response = expectSynchronousRequestFlow(
         testServletRequest,
         SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
         timeoutQueryResource
     );
     Assert.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
-    QueryTimeoutException ex = jsonMapper.readValue(response.baos.toByteArray(), QueryTimeoutException.class);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    QueryTimeoutException ex = jsonMapper.readValue(baos.toByteArray(), QueryTimeoutException.class);
     Assert.assertEquals("Query Timed Out!", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
@@ -892,25 +887,28 @@ public class QueryResourceTest
     );
 
     createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitTwoScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
+
           try {
-            ex = jsonMapper.readValue(response.baos.toByteArray(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -938,20 +936,22 @@ public class QueryResourceTest
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitOneScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
           try {
-            ex = jsonMapper.readValue(response.baos.toByteArray(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -965,7 +965,7 @@ public class QueryResourceTest
         }
     );
     waitTwoStarted.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
@@ -990,20 +990,22 @@ public class QueryResourceTest
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitOneScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
           try {
-            ex = jsonMapper.readValue(response.baos.toByteArray(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -1016,7 +1018,7 @@ public class QueryResourceTest
         }
     );
     waitTwoStarted.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
@@ -1085,7 +1087,7 @@ public class QueryResourceTest
     );
   }
 
-  private void assertResponseAndCountdownOrBlockForever(
+  private void assertAsyncResponseAndCountdownOrBlockForever(
       String query,
       CountDownLatch done,
       Consumer<MockHttpServletResponse> asserts
@@ -1145,5 +1147,37 @@ public class QueryResourceTest
         req
     ));
     return response;
+  }
+
+  private void assertSynchronousResponseAndCountdownOrBlockForever(
+      String query,
+      CountDownLatch done,
+      Consumer<Response> asserts
+  )
+  {
+    Executors.newSingleThreadExecutor().submit(() -> {
+      try {
+        asserts.accept(
+            expectSynchronousRequestFlow(
+                testServletRequest.mimic(),
+                query.getBytes(StandardCharsets.UTF_8),
+                queryResource
+            )
+        );
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      done.countDown();
+    });
+  }
+
+  private Response expectSynchronousRequestFlow(
+      MockHttpServletRequest req,
+      byte[] bytes,
+      QueryResource queryResource
+  ) throws IOException
+  {
+    return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
   }
 }

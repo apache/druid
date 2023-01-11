@@ -30,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "naivePartition", value = NaivePartitioningOperatorFactory.class),
+    @JsonSubTypes.Type(name = "naiveSort", value = NaiveSortOperatorFactory.class),
     @JsonSubTypes.Type(name = "window", value = WindowOperatorFactory.class),
 })
 public interface OperatorFactory
