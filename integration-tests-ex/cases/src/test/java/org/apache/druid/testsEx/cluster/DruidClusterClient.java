@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
@@ -336,7 +335,8 @@ public class DruidClusterClient
    */
   public void validate()
   {
-    log.info("Starting cluster validation");
+    RE exception = new RE("Just building for the stack trace");
+    log.info(exception, "Starting cluster validation");
     for (ResolvedDruidService service : config.requireDruid().values()) {
       for (ResolvedInstance instance : service.requireInstances()) {
         validateInstance(service, instance);
@@ -348,27 +348,45 @@ public class DruidClusterClient
   /**
    * Validate an instance by waiting for it to report that it is healthy.
    */
+  @SuppressWarnings("BusyWait")
   private void validateInstance(ResolvedDruidService service, ResolvedInstance instance)
   {
     int timeoutMs = config.readyTimeoutSec() * 1000;
     int pollMs = config.readyPollMs();
     long startTime = System.currentTimeMillis();
     long updateTime = startTime + 5000;
-    while (System.currentTimeMillis() - startTime < timeoutMs) {
+    while (true) {
       if (isHealthy(service, instance)) {
         log.info(
-            "Service %s, host %s is ready",
+            "Service[%s], host[%s], tag[%s] is ready",
             service.service(),
-            instance.clientHost());
+            instance.clientHost(),
+            instance.tag() == null ? "<default>" : instance.tag()
+        );
         return;
       }
       long currentTime = System.currentTimeMillis();
       if (currentTime > updateTime) {
         log.info(
-            "Service %s, host %s not ready, retrying",
+            "Service[%s], host[%s], tag[%s] not ready, retrying",
             service.service(),
-            instance.clientHost());
+            instance.clientHost(),
+            instance.tag() == null ? "<default>" : instance.tag()
+        );
         updateTime = currentTime + 5000;
+      }
+      final long elapsedTime = System.currentTimeMillis() - startTime;
+      if (elapsedTime > timeoutMs) {
+        final RE exception = new RE(
+            "Service[%s], host[%s], tag[%s] not ready after %,d ms.",
+            service.service(),
+            instance.clientHost(),
+            instance.tag() == null ? "<default>" : instance.tag(),
+            elapsedTime
+        );
+        // We log the exception here so that the logs include which thread is having the problem
+        log.error(exception.getMessage());
+        throw exception;
       }
       try {
         Thread.sleep(pollMs);
@@ -377,34 +395,30 @@ public class DruidClusterClient
         throw new RuntimeException("Interrupted during cluster validation");
       }
     }
-    throw new RE(
-        StringUtils.format("Service %s, instance %s not ready after %d ms.",
-            service.service(),
-            instance.tag() == null ? "<default>" : instance.tag(),
-            timeoutMs));
   }
 
   /**
    * Wait for an instance to become ready given the URL and a description of
    * the service.
    */
+  @SuppressWarnings("BusyWait")
   public void waitForNodeReady(String label, String url)
   {
     int timeoutMs = config.readyTimeoutSec() * 1000;
     int pollMs = config.readyPollMs();
     long startTime = System.currentTimeMillis();
-    while (System.currentTimeMillis() - startTime < timeoutMs) {
+    while (true) {
       if (isHealthy(url)) {
-        log.info(
-            "Service %s, url %s is ready",
-            label,
-            url);
+        log.info("Service[%s], url[%s] is ready", label, url);
         return;
       }
-      log.info(
-          "Service %s, url %s not ready, retrying",
-          label,
-          url);
+      final long elapsedTime = System.currentTimeMillis() - startTime;
+      if (elapsedTime > timeoutMs) {
+        final RE re = new RE("Service[%s], url[%s] not ready after %,d ms.", label, url, elapsedTime);
+        log.error(re.getMessage());
+        throw re;
+      }
+      log.info("Service[%s], url[%s] not ready, retrying", label, url);
       try {
         Thread.sleep(pollMs);
       }
@@ -412,11 +426,6 @@ public class DruidClusterClient
         throw new RuntimeException("Interrupted while waiting for note to be ready");
       }
     }
-    throw new RE(
-        StringUtils.format("Service %s, url %s not ready after %d ms.",
-            label,
-            url,
-            timeoutMs));
   }
 
   public String nodeUrl(DruidNode node)

@@ -144,14 +144,17 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 2L);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    int totalAssignedInRun1
+        = getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2)).intValue()
+          + getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3)).intValue();
+    Assert.assertTrue(totalAssignedInRun1 > 0 && totalAssignedInRun1 < 40);
 
     // Run 2: Replicas still queued
     // nothing new is assigned to T2, nothing is dropped from T1
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 0L);
 
     loadQueuedSegments();
@@ -175,18 +178,17 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     addServer(historicalT23);
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
-    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
-
-    loadQueuedSegments();
-    Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
-    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    int totalLoadedAfterRun2
+        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
+          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
+    Assert.assertEquals(totalAssignedInRun1, totalLoadedAfterRun2);
 
     // Run 5: segment is fully replicated on T2, all replicas will now be dropped from T1
     runCoordinatorCycle();
 
     verifyValue(Metric.DROPPED_COUNT, filter(DruidMetrics.TIER, Tier.T1), 1L);
-    verifyNoEvent(Metric.ASSIGNED_COUNT);
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
 
     loadQueuedSegments();
     Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));

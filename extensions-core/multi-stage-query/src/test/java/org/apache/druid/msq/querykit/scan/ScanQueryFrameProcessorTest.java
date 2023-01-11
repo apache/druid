@@ -37,6 +37,7 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -152,7 +153,8 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
         },
         new LazyResourceHolder<>(() -> Pair.of(frameWriterFactory, () -> {})),
         null,
-        0L
+        0L,
+        new DefaultObjectMapper()
     );
 
     ListenableFuture<Long> retVal = exec.runFully(processor, null);

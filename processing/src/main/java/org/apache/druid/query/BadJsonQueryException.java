@@ -25,12 +25,11 @@ import com.fasterxml.jackson.core.JsonParseException;
 
 public class BadJsonQueryException extends BadQueryException
 {
-  public static final String ERROR_CODE = "Json parse failed";
   public static final String ERROR_CLASS = JsonParseException.class.getName();
 
   public BadJsonQueryException(JsonParseException e)
   {
-    this(ERROR_CODE, e.getMessage(), ERROR_CLASS);
+    this(e, JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
   }
 
   @JsonCreator
@@ -40,6 +39,16 @@ public class BadJsonQueryException extends BadQueryException
       @JsonProperty("errorClass") String errorClass
   )
   {
-    super(errorCode, errorMessage, errorClass);
+    this(null, errorCode, errorMessage, errorClass);
+  }
+
+  private BadJsonQueryException(
+      Throwable cause,
+      String errorCode,
+      String errorMessage,
+      String errorClass
+  )
+  {
+    super(cause, errorCode, errorMessage, errorClass, null);
   }
 }

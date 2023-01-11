@@ -116,14 +116,13 @@ naturally emitted. It is also useful if you want to combine timeseries and non-t
 Similar to log aggregation systems, Druid offers inverted indexes for fast searching and filtering. Druid's search
 capabilities are generally less developed than these systems, and its analytical capabilities are generally more
 developed. The main data modeling differences between Druid and these systems are that when ingesting data into Druid,
-you must be more explicit. Druid columns have types specific upfront and Druid does not, at this time, natively support
-nested data.
+you must be more explicit. Druid columns have types specific upfront.
 
 Tips for modeling log data in Druid:
 
 * If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
 [automatic detection of dimension columns](#schema-less-dimensions).
-* If you have nested data, flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
+* If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
 * Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
 query performance boosts.
@@ -198,9 +197,9 @@ like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Dru
 
 ### Nested dimensions
 
-You can ingest and store nested JSON in a Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
+You can ingest and store nested data in a Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
 
-If you want to ingest nested data in a format other than JSON&mdash;for example Avro, ORC, and Parquet&mdash;you  must use the `flattenSpec` object to flatten it. For example, if you have data of the following form:
+If you want to ingest nested data in a format unsupported by the nested columns feature, you  must use the `flattenSpec` object to flatten it. For example, if you have data of the following form:
 
 ```json
 { "foo": { "bar": 3 } }

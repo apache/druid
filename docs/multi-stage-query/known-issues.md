@@ -29,20 +29,22 @@ sidebar_label: Known issues
 
 ## Multi-stage query task runtime
 
-- Fault tolerance is not implemented. If any task fails, the entire query fails.
+- Fault tolerance is partially implemented. Workers get relaunched when they are killed unexpectedly. The controller does not get relaunched if it is killed unexpectedly.
 
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with
-an [UnknownError](./reference.md#error-codes) with a message including "No space left on device".
+an [UnknownError](./reference.md#error_UnknownError) with a message including "No space left on device".
 
 ## SELECT
 
 - SELECT from a Druid datasource does not include unpublished real-time data.
 
 - GROUPING SETS and UNION ALL are not implemented. Queries using these features return a
-  [QueryNotSupported](reference.md#error-codes) error. 
+  [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
-- For some COUNT DISTINCT queries, you'll encounter a [QueryNotSupported](reference.md#error-codes) error that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use GROUPING SETs, which are not implemented.
+- For some COUNT DISTINCT queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
+  that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use
+  GROUPING SETs, which are not implemented.
 
 - The numeric varieties of the EARLIEST and LATEST aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like

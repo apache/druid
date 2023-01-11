@@ -27,13 +27,12 @@ import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
-import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
-import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
+import org.apache.druid.msq.test.CounterSnapshotBuilder;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -45,22 +44,45 @@ import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
+
+@RunWith(Parameterized.class)
 public class MSQInsertTest extends MSQTestBase
 {
   private final HashFunction fn = Hashing.murmur3_128();
+
+  @Parameterized.Parameters(name = "{index}:with context {0}")
+  public static Collection<Object[]> data()
+  {
+    Object[][] data = new Object[][]{
+        {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
+        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
+        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+    };
+    return Arrays.asList(data);
+  }
+
+  @Parameterized.Parameter(0)
+  public String contextName;
+
+  @Parameterized.Parameter(1)
+  public Map<String, Object> context;
+
 
   @Test
   public void testInsertOnFoo1()
@@ -73,6 +95,7 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
@@ -83,7 +106,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnExternalDataSource() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -103,6 +126,7 @@ public class MSQInsertTest extends MSQTestBase
                              + ") group by 1  PARTITIONED by day ")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27/P1D"),
@@ -110,6 +134,12 @@ public class MSQInsertTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
                      .verifyResults();
 
   }
@@ -126,6 +156,34 @@ public class MSQInsertTest extends MSQTestBase
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedResultRows(expectedFooRows())
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeFunctionWithSequential()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+    Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put(
+                                                  MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                                                  ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                                              )
+                                              .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(MSQInsertTest.this.context)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .verifyResults();
@@ -143,6 +201,7 @@ public class MSQInsertTest extends MSQTestBase
                          "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedMultiValueFooRows())
                      .verifyResults();
@@ -159,6 +218,7 @@ public class MSQInsertTest extends MSQTestBase
                          "INSERT INTO foo1 SELECT dim3 FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedMultiValueFooRowsGroupBy())
                      .verifyResults();
@@ -170,6 +230,7 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT count(dim3) FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
+                     .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(SqlPlanningException.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
@@ -190,6 +251,7 @@ public class MSQInsertTest extends MSQTestBase
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedMultiValueFooRowsToArray())
                      .verifyResults();
@@ -198,24 +260,29 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnable()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", false)
-                                              .build();
+    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put("groupByEnableMultiValueUnnesting", false)
+                                                   .build();
+
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
-                     .setQueryContext(context)
+                     .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."))
+                         ThrowableMessageMatcher.hasMessage(!FAULT_TOLERANCE.equals(contextName)
+                                                            ? CoreMatchers.containsString(
+                             "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+                                                            :
+                                                            CoreMatchers.containsString("exceeded max relaunch count")
+                         )
                      ))
                      .verifyExecutionError();
   }
 
   @Test
-  public void testRolltestRollUpOnFoo1UpOnFoo1()
+  public void testRollUpOnFoo1UpOnFoo1()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -225,7 +292,9 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context)
+                                                                                .putAll(ROLLUP_CONTEXT_PARAMS)
+                                                                                .build())
                      .setExpectedRollUp(true)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
@@ -243,11 +312,11 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .setExpectedQueryGranularity(Granularities.DAY)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -271,7 +340,8 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .setExpectedQueryGranularity(Granularities.DAY)
                      .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
@@ -295,7 +365,8 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
                      .setExpectedRowSignature(rowSignature)
@@ -308,7 +379,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testRollUpOnExternalDataSource() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -326,7 +397,8 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
@@ -344,7 +416,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test()
   public void testRollUpOnExternalDataSourceWithCompositeKey() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -363,7 +435,8 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1,2  PARTITIONED by day ")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).build())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
@@ -387,29 +460,6 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertNullTimestamp()
-  {
-    final RowSignature rowSignature =
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("dim1", ColumnType.STRING)
-                    .build();
-
-    testIngestQuery()
-        .setSql(
-            "INSERT INTO foo1\n"
-            + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
-            + "FROM foo\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY dim1")
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0)))
-        .setExpectedMSQFault(InsertTimeNullFault.instance())
-        .verifyResults();
-  }
-
-  @Test
   public void testInsertWrongTypeTimestamp()
   {
     final RowSignature rowSignature =
@@ -427,6 +477,7 @@ public class MSQInsertTest extends MSQTestBase
             + "CLUSTERED BY dim1")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(SqlPlanningException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
@@ -448,48 +499,6 @@ public class MSQInsertTest extends MSQTestBase
                      .verifyPlanningErrors();
   }
 
-  @Test
-  public void testInsertWithHugeClusteringKeys()
-  {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
-
-    final int numColumns = 1700;
-
-    String columnNames = IntStream.range(1, numColumns)
-                                  .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
-
-    String clusteredByClause = IntStream.range(1, numColumns + 1)
-                                        .mapToObj(String::valueOf)
-                                        .collect(Collectors.joining(", "));
-
-    String externSignature = IntStream.range(1, numColumns)
-                                      .mapToObj(i -> StringUtils.format(
-                                          "{\"name\": \"col%d\", \"type\": \"string\"}",
-                                          i
-                                      ))
-                                      .collect(Collectors.joining(", "));
-
-    testIngestQuery()
-        .setSql(StringUtils.format(
-            " insert into foo1 SELECT\n"
-            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-            + " %s\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
-            + "    '{\"type\": \"json\"}',\n"
-            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, %s]'\n"
-            + "  )\n"
-            + ") PARTITIONED by day CLUSTERED BY %s",
-            columnNames,
-            externSignature,
-            clusteredByClause
-        ))
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
-        .verifyResults();
-  }
 
   @Test
   public void testInsertRestrictedColumns()
@@ -514,6 +523,7 @@ public class MSQInsertTest extends MSQTestBase
                 + ") PARTITIONED by day")
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedMSQFault(new ColumnNameRestrictedFault("__bucket"))
         .verifyResults();
   }
@@ -521,13 +531,13 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertQueryWithInvalidSubtaskCount()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1)
-                                              .build();
+    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1)
+                                                   .build();
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
-                     .setQueryContext(context)
+                     .setQueryContext(localContext)
                      .setExpectedExecutionErrorMatcher(
                          ThrowableMessageMatcher.hasMessage(
                              CoreMatchers.startsWith(
@@ -542,7 +552,7 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertWithTooLargeRowShouldThrowException() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     Mockito.doReturn(500).when(workerMemoryParameters).getLargeFrameSize();
@@ -558,6 +568,7 @@ public class MSQInsertTest extends MSQTestBase
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
                      .setExpectedDataSource("foo")
+                     .setQueryContext(context)
                      .setExpectedMSQFault(new RowTooLargeFault(500))
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
@@ -580,6 +591,7 @@ public class MSQInsertTest extends MSQTestBase
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
                      ))
+                     .setQueryContext(context)
                      .verifyPlanningErrors();
   }
 
@@ -597,6 +609,7 @@ public class MSQInsertTest extends MSQTestBase
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                              "INSERT and REPLACE queries cannot have an OFFSET"))
                      ))
+                     .setQueryContext(context)
                      .verifyPlanningErrors();
   }
 

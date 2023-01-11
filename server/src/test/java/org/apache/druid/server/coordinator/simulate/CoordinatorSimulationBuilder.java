@@ -32,8 +32,8 @@ import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -394,9 +394,9 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
-    public List<ServiceMetricEvent> getMetricEvents()
+    public MetricsVerifier getMetricsVerifier()
     {
-      return new ArrayList<>(env.serviceEmitter.getMetricEvents());
+      return env.serviceEmitter;
     }
   }
 

@@ -118,6 +118,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -151,7 +152,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -1975,14 +1975,8 @@ public class CompactionTaskTest
       Map<DataSegment, File> segments
   )
   {
-    final SegmentCacheManager segmentCacheManager = new SegmentCacheManager()
+    final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
-      @Override
-      public boolean isSegmentCached(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
       @Override
       public File getSegmentFiles(DataSegment segment)
       {
@@ -1990,27 +1984,9 @@ public class CompactionTaskTest
       }
 
       @Override
-      public boolean reserve(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public boolean release(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public void cleanup(DataSegment segment)
       {
         // Do nothing.
-      }
-
-      @Override
-      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-      {
-        throw new UnsupportedOperationException();
       }
     };
 

@@ -91,7 +91,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
+  public static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
   protected IntegrationTestingConfig config;

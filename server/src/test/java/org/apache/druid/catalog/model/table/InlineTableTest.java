@@ -75,14 +75,14 @@ public class InlineTableTest
     // Convert to an external spec
     ExternalTableSpec externSpec = tableDefn.convertToExtern(table);
 
-    InlineInputSource inlineSpec = (InlineInputSource) externSpec.inputSource();
+    InlineInputSource inlineSpec = (InlineInputSource) externSpec.inputSource;
     assertEquals("a,b\nc,d\n", inlineSpec.getData());
 
     // Just a sanity check: details of CSV conversion are tested elsewhere.
-    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat();
+    CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat;
     assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
 
-    RowSignature sig = externSpec.signature();
+    RowSignature sig = externSpec.signature;
     assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
     assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
     assertEquals(ColumnType.LONG, sig.getColumnType(1).get());

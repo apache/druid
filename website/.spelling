@@ -129,6 +129,7 @@ JDK
 JDK7
 JDK8
 JKS
+jks
 JMX
 JRE
 JS
@@ -141,12 +142,14 @@ JVMs
 Joda
 JsonProperty
 Jupyter
+JupyterLab
 KMS
 Kerberized
 Kerberos
 KeyStores
 Kinesis
 Kubernetes
+LDAPS
 LRU
 LZ4
 LZO
@@ -203,6 +206,7 @@ SYSTEM_TABLE
 TCP
 TGT
 TLS
+tls
 TopN
 TopNs
 UI
@@ -376,6 +380,7 @@ non-nullable
 noop
 numerics
 numShards
+parameterize
 objectGlob
 parameterized
 parse_json
@@ -421,6 +426,10 @@ programmatically
 proto
 proxied
 proxyConfig
+python2
+python3
+Python2
+Python3
 QPS
 quantile
 quantiles
@@ -731,6 +740,8 @@ appenders
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
+Minio
+multi-server
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
@@ -2294,3 +2305,8 @@ Czechia
 Zeelund
  - ../docs/tutorials/docker.md
  nano
+ - ../docs/operations/python.md
+MacOS
+RHEL
+psutil
+pathlib

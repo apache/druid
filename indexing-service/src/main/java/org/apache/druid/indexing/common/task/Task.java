@@ -178,7 +178,7 @@ public interface Task
   boolean isReady(TaskActionClient taskActionClient) throws Exception;
 
   /**
-   * Returns whether or not this task can restore its progress from its on-disk working directory. Restorable tasks
+   * Returns whether this task can restore its progress from its on-disk working directory. Restorable tasks
    * may be started with a non-empty working directory. Tasks that exit uncleanly may still have a chance to attempt
    * restores, meaning that restorable tasks should be able to deal with potentially partially written on-disk state.
    */

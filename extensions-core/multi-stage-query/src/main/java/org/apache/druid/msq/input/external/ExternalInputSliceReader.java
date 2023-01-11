@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -52,6 +53,7 @@ import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
@@ -140,6 +142,7 @@ public class ExternalInputSliceReader implements InputSliceReader
           final InputSourceReader reader;
           final boolean incrementCounters = isFileBasedInputSource(inputSource);
 
+          final InputStats inputStats = new SimpleRowIngestionMeters();
           if (incrementCounters) {
             reader = new CountableInputSourceReader(
                 inputSource.reader(schema, inputFormat, temporaryDirectory),
@@ -159,7 +162,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                     public CloseableIterator<InputRow> make()
                     {
                       try {
-                        CloseableIterator<InputRow> baseIterator = reader.read();
+                        CloseableIterator<InputRow> baseIterator = reader.read(inputStats);
                         return new CloseableIterator<InputRow>()
                         {
                           private InputRow next = null;
@@ -216,6 +219,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                         // has one file.
                         if (incrementCounters) {
                           channelCounters.incrementFileCount();
+                          channelCounters.incrementBytes(inputStats.getProcessedBytes());
                         }
                       }
                       catch (IOException e) {

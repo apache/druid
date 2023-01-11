@@ -19,7 +19,7 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import { Capabilities } from '../../helpers';
 
 import { HomeView } from './home-view';
 
