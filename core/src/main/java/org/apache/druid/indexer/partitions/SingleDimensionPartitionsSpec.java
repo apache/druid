@@ -26,15 +26,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -152,26 +149,6 @@ public class SingleDimensionPartitionsSpec extends DimensionRangePartitionsSpec
     }
 
     return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
-  }
-
-  @Override
-  public List<List<String>> getDimensionGroupingSet(DimensionsSpec dimensionsSpec)
-  {
-    List<List<String>> result = new ArrayList<>();
-    if (partitionDimension != null) {
-      result.add(Collections.singletonList(partitionDimension));
-      return result;
-    }
-    for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
-      result.add(Collections.singletonList(dimensionSchema.getName()));
-    }
-    return result;
-  }
-
-  @Override
-  public boolean supportNullValue()
-  {
-    return false;
   }
 
   @Override

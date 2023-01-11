@@ -22,15 +22,12 @@ package org.apache.druid.indexer.partitions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -288,35 +285,6 @@ public class SingleDimensionPartitionsSpecTest
     Assert.assertEquals(
         new SingleDimensionShardSpec(dimemsion, null, "v1", 1, 1),
         partitionsSpec.createShardSpec(Collections.singletonList(dimemsion), null, StringTuple.create("v1"), 1, 1)
-    );
-  }
-
-  @Test
-  public void testGetDimensionGroupingSet()
-  {
-    DimensionsSpec dimensionsSpec = DimensionsSpec
-        .builder()
-        .setDimensions(
-            Arrays.asList(
-                new StringDimensionSchema("d1"),
-                new StringDimensionSchema("d2")
-            )
-        ).build();
-    SingleDimensionPartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(5000000, null, "d1", false);
-    Assert.assertEquals(
-        Collections.singletonList(Collections.singletonList("d1")),
-        partitionsSpec.getDimensionGroupingSet(dimensionsSpec)
-    );
-
-    SingleDimensionPartitionsSpec partitionsSpecWithoutDimension = new SingleDimensionPartitionsSpec(
-        5000000,
-        null,
-        null,
-        false
-    );
-    Assert.assertEquals(
-        Arrays.asList(Collections.singletonList("d1"), Collections.singletonList("d2")),
-        partitionsSpecWithoutDimension.getDimensionGroupingSet(dimensionsSpec)
     );
   }
 

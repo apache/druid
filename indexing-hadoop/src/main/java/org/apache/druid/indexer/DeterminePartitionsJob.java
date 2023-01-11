@@ -38,6 +38,7 @@ import org.apache.druid.collections.CombiningIterable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -468,8 +469,19 @@ public class DeterminePartitionsJob implements Jobby
 
       DimensionRangePartitionsSpec spec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
       final DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getDimensionsSpec();
-      this.dimensionGroupingSet = new ArrayList<>(spec.getDimensionGroupingSet(dimensionsSpec));
-      this.supportNullValue = spec.supportNullValue();
+      this.dimensionGroupingSet = new ArrayList<>();
+      final List<String> partitionDimensions = spec.getPartitionDimensions();
+      //if the partitionDimensions is not set, we just try every dimension to find the best one.
+      if (partitionDimensions.isEmpty()) {
+        for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
+          dimensionGroupingSet.add(Collections.singletonList(dimensionSchema.getName()));
+        }
+      } else {
+        dimensionGroupingSet.add(partitionDimensions);
+      }
+      //here we just keep the single_dim not support null value as before
+      //but actually single_dim can support null values
+      this.supportNullValue = partitionDimensions.size() > 1;
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
@@ -677,7 +689,7 @@ public class DeterminePartitionsJob implements Jobby
       final DimValueCount firstDvc = iterator.next();
       final long totalRows = firstDvc.numRows;
 
-      if (!Collections.emptyList().equals(firstDvc.dims) || firstDvc.values.size() != 0) {
+      if (!firstDvc.dims.isEmpty() || firstDvc.values.size() != 0) {
         throw new IllegalStateException("Expected total row indicator on first k/v pair");
       }
 

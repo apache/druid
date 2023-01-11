@@ -25,13 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -146,16 +144,6 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
-  }
-
-  public List<List<String>> getDimensionGroupingSet(DimensionsSpec dimensionsSpec)
-  {
-    return Collections.singletonList(partitionDimensions);
-  }
-
-  public boolean supportNullValue()
-  {
-    return true;
   }
 
   public DimensionRangeShardSpec createShardSpec(
