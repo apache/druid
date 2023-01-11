@@ -191,6 +191,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
+          queryTransform,
           false,
           true,
           true,
@@ -248,7 +249,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
         try {
           query = StringUtils.replace(
               query,
-              "%%EXPECTED_NUMBER_SUM_RESULT_0831%%",
+              "%%EXPECTED_NUMBER_SUM_RESULT%%",
               jsonMapper.writeValueAsString(
                   ImmutableMap.of("sum_added", 1602, "sum_deleted", 497, "sum_delta", 2378)
               )
