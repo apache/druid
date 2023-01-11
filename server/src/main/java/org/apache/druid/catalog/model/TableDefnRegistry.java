@@ -151,14 +151,22 @@ public class TableDefnRegistry
     return new ResolvedTable(defn, spec, jsonMapper);
   }
 
+  /**
+   * Return input source definition for the given input source type name, or
+   * {@code null} if there is no such definition.
+   */
   public InputSourceDefn inputSourceDefnFor(String type)
   {
-    return type == null ? null : inputSourceDefns.get(type);
+    return inputSourceDefns.get(type);
   }
 
+  /**
+   * Return input format definition for the given input format type name, or
+   * {@code null} if there is no such definition.
+   */
   public InputFormatDefn inputFormatDefnFor(String type)
   {
-    return type == null ? null : inputFormatDefns.get(type);
+    return inputFormatDefns.get(type);
   }
 
   public Map<String, InputFormatDefn> formats()

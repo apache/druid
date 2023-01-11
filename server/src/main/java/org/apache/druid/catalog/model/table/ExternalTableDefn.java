@@ -263,6 +263,8 @@ public class ExternalTableDefn extends TableDefn
   public void validate(ResolvedTable table)
   {
     for (PropertyDefn<?> propDefn : properties().values()) {
+      // Validate everything except the input source and input format: those
+      // are done elsewhere since they are complex and require context.
       if (propDefn != SOURCE_PROPERTY_DEFN && propDefn != FORMAT_PROPERTY_DEFN) {
         propDefn.validate(table.property(propDefn.name()), table.jsonMapper());
       }

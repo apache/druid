@@ -85,13 +85,19 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
    */
   public static final String OBJECT_GLOB_PARAMETER = "objectGlob";
 
+  /**
+   * External data table spec property that let's the user define one bucket in the catalog,
+   * so that the corresponding table function can supply just the relative path names within
+   * that bucket. That is, if the user sets this, Druid will generate the {@code objects}
+   * field from this entry and files provided in the table function.
+   */
   public static final String BUCKET_PROPERTY = "bucket";
 
   private static final ParameterDefn URI_PARAM_DEFN = new Parameter(URIS_PARAMETER, ParameterType.VARCHAR_ARRAY, true);
   private static final ParameterDefn PREFIXES_PARAM_DEFN = new Parameter(PREFIXES_PARAMETER, ParameterType.VARCHAR_ARRAY, true);
   private static final ParameterDefn BUCKET_PARAM_DEFN = new Parameter(BUCKET_PARAMETER, ParameterType.VARCHAR, true);
   private static final ParameterDefn PATHS_PARAM_DEFN = new Parameter(PATHS_PARAMETER, ParameterType.VARCHAR_ARRAY, true);
-  private static final ParameterDefn OBJECTS_GLOB_PARAM_DEFN = new Parameter(OBJECT_GLOB_PARAMETER, ParameterType.VARCHAR, true);
+  private static final ParameterDefn OBJECT_GLOB_PARAM_DEFN = new Parameter(OBJECT_GLOB_PARAMETER, ParameterType.VARCHAR, true);
   private static final List<ParameterDefn> SECURITY_PARAMS = Arrays.asList(
       new Parameter(ACCESS_KEY_ID_PARAMETER, ParameterType.VARCHAR, true),
       new Parameter(SECRET_ACCESS_KEY_PARAMETER, ParameterType.VARCHAR, true),
@@ -174,7 +180,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
             PREFIXES_PARAM_DEFN,
             BUCKET_PARAM_DEFN,
             PATHS_PARAM_DEFN,
-            OBJECTS_GLOB_PARAM_DEFN
+            OBJECT_GLOB_PARAM_DEFN
         ),
         SECURITY_PARAMS
     );
@@ -271,7 +277,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
 
     // Else, if no glob is provided, the user can specify the glob.
     } else if (!sourceMap.containsKey(OBJECT_GLOB_FIELD)) {
-      params.add(OBJECTS_GLOB_PARAM_DEFN);
+      params.add(OBJECT_GLOB_PARAM_DEFN);
     }
 
     // Add security arguments if table does not provide them.

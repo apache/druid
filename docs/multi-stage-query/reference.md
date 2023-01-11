@@ -176,16 +176,16 @@ which provides data directly in the table function. Parameter:
 Example:
 
 ```sql
+SELECT ...
 FROM TABLE(
   inline(
     data => ARRAY[
-    	"a,b",
-    	"c,d"],
+    	'a,b',
+    	'c,d'],
     format => 'csv'
     )
   ) (x VARCHAR, y VARCHAR)
 ```
-
 
 #### `LOCALFILES` Function
 
@@ -210,11 +210,20 @@ you to provide any of the following combinations:
 
 Examples:
 
-```sql
-  -- All files in /tmp, which must be CSV files
-  localfiles(baseDir => '/tmp',
-             format => 'csv')
+To read All files in /tmp, which must be CSV files:
 
+```sql
+SELECT ...
+FROM TABLE(
+  localfiles(
+      baseDir => '/tmp',
+      format => 'csv')
+  ) (x VARCHAR, y VARCHAR)
+```
+
+Some additional variations (omitting the common bits):
+
+```sql
   -- CSV files in /tmp
   localfiles(baseDir => '/tmp',
              filter => '*.csv',
@@ -252,7 +261,7 @@ The S3 input source accepts one of the following patterns:
 * `prefixes` - A list of fully-qualified "folder" prefixes.
 * `bucket` and `paths` - A list of objects relative to the given bucket path.
 
-The `S3` function also accepts the following security properties:
+The `S3` function also accepts the following security parameters:
 
 * `accessKeyId` (`VARCHAR`)
 * `secretAccessKey` (`VARCHAR`)
@@ -272,31 +281,37 @@ The examples omit the format and schema; however you must remember to provide th
 in an actual query.
 
 ```sql
-  TABLE(S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json']))
+SELECT ...
+FROM TABLE(S3(
+    uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+    format => 'csv'))
+  ) (x VARCHAR, y VARCHAR)
 ```
 
+Additional variations, omitting the common bits:
+
 ```sql
-  TABLE(S3(prefixes => ARRAY['s3://foo/bar/', 's3://bar/foo/']))
+  S3(prefixes => ARRAY['s3://foo/bar/', 's3://bar/foo/']))
 ```
 
 ```sql
   -- Not an exact match for the JSON example: the S3 function allows
   -- only one bucket.
-  TABLE(S3(bucket => 's3://foo`,
-           paths => ARRAY['bar/file1.json', 'foo/file2.json']))
+  S3(bucket => 's3://foo`,
+           paths => ARRAY['bar/file1.json', 'foo/file2.json'])
 ```
 
 ```sql
-  TABLE(S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+  S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
            accessKeyId => 'KLJ78979SDFdS2',
-           secretAccessKey => 'KLS89s98sKJHKJKJH8721lljkd'))
+           secretAccessKey => 'KLS89s98sKJHKJKJH8721lljkd')
 ```
 
 ```sql
-  TABLE(S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
+  S3(uris => ARRAY['s3://foo/bar/file.json', 's3://bar/foo/file2.json'],
            accessKeyId => 'KLJ78979SDFdS2',
            secretAccessKey => 'KLS89s98sKJHKJKJH8721lljkd',
-           assumeRoleArn => 'arn:aws:iam::2981002874992:role/role-s3'))
+           assumeRoleArn => 'arn:aws:iam::2981002874992:role/role-s3')
 ```
 
 #### Input Format
@@ -313,6 +328,24 @@ Parameters:
 * `listDelimiter` (`VARCHAR`)
 * `skipHeaderRows` (`BOOLEAN`)
 
+Example for a CSV format with a list delimiter and where we want to skip the first
+input row:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY[
+        'skip me',
+    	'a;foo,b',
+    	'c;bar,d'],
+    format => 'csv',
+    listDelimiter => ';',
+    skipHeaderRows => 1
+    )
+  ) (x VARCHAR, y VARCHAR)
+```
+
 #### Delimited Text Format
 
 The `tsv` format selects the [TSV (Delimited) input format](../ingestion/data-formats.md#tsv-delimited).
@@ -322,11 +355,41 @@ Parameters:
 * `listDelimiter` (`VARCHAR`)
 * `skipHeaderRows` (`BOOLEAN`)
 
+Example for a pipe-separated format with a list delimiter and where we want to skip the first
+input row:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY[
+        'skip me',
+    	'a;foo|b',
+    	'c;bar|d'],
+    format => 'tsv',
+    listDelimiter => ';',
+    skipHeaderRows => 1,
+    delimiter => '|'
+    )
+  ) (x VARCHAR, y VARCHAR)
+```
+
 #### JSON Format
 
 The `json` format selects the
 [JSON input format](../ingestion/data-formats.html#json).
 The JSON format accepts no additional parameters.
+
+Example:
+
+```sql
+SELECT ...
+FROM TABLE(
+  inline(
+    data => ARRAY['{"x": "foo", "y": "bar"}'],
+    format => 'json')
+  ) (x VARCHAR, y VARCHAR)
+```
 
 ### Parameters
 
@@ -480,31 +543,6 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P1M
 - P3M
 - P1Y
-
-The string constant can also include any of the keywords mentioned above:
-
-- `HOUR` - Same as `'PT1H'`
-- `DAY` - Same as `'P1D'`
-- `MONTH` - Same as `'P1M'`
-- `YEAR` - Same as `'P1Y'`
-- `ALL TIME`
-- `ALL` - Alias for `ALL TIME`
-
-Examples:
-
-```SQL
--- Keyword
-PARTITIONED BY HOUR
-
--- String constant
-PARTITIONED BY 'HOUR'
-
--- Or
-PARTITIOND BY 'PT1H'
-
--- TIME_FLOOR function
-PARTITIONED BY TIME_FLOOR(__time, 'PT1H')
-```
 
 For more information about partitioning, see [Partitioning](concepts.md#partitioning).
 

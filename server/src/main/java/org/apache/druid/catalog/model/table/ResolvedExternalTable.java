@@ -82,15 +82,20 @@ public class ResolvedExternalTable
   public ResolvedExternalTable resolve(TableDefnRegistry registry)
   {
     String inputSourceType = CatalogUtils.getString(inputSourceMap, InputSource.TYPE_PROPERTY);
+    if (inputSourceType == null) {
+      throw new IAE("Input source type %s is required", InputSource.TYPE_PROPERTY);
+    }
     inputSourceDefn = registry.inputSourceDefnFor(inputSourceType);
     if (inputSourceDefn == null) {
       throw new IAE("Input source type %s is not registered", inputSourceType);
     }
     if (inputFormatMap != null) {
       String inputFormatType = CatalogUtils.getString(inputFormatMap, InputFormat.TYPE_PROPERTY);
-      inputFormatDefn = registry.inputFormatDefnFor(inputFormatType);
-      if (inputFormatDefn == null) {
-        throw new IAE("Input format type %s is not registered", inputFormatType);
+      if (inputFormatType != null) {
+        inputFormatDefn = registry.inputFormatDefnFor(inputFormatType);
+        if (inputFormatDefn == null) {
+          throw new IAE("Input format type %s is not registered", inputFormatType);
+        }
       }
     }
     return this;

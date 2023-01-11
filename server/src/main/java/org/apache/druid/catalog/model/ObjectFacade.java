@@ -41,7 +41,8 @@ public abstract class ObjectFacade
 
   public boolean booleanProperty(String key)
   {
-    return CatalogUtils.safeCast(property(key), Boolean.class, key) == Boolean.TRUE;
+    Boolean value = CatalogUtils.safeCast(property(key), Boolean.class, key);
+    return value == null ? false : value;
   }
 
   public String stringProperty(String key)

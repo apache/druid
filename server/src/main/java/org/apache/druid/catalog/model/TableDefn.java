@@ -68,6 +68,11 @@ public class TableDefn extends ObjectDefn
     this.columnProperties = toPropertyMap(columnProperties);
   }
 
+  /**
+   * Called after the table definition is added to the registry, along with all
+   * other definitions. Allows external tables to look up additional information,
+   * such as the set of input formats.
+   */
   public void bind(TableDefnRegistry registry)
   {
   }
@@ -98,6 +103,10 @@ public class TableDefn extends ObjectDefn
     }
   }
 
+  /**
+   * Table-specific validation of a column spec. Override for table definitions
+   * that need table-specific validation rules.
+   */
   protected void validateColumn(ColumnSpec colSpec)
   {
   }
