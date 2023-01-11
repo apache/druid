@@ -132,7 +132,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "Test-%d"))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -146,7 +146,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);

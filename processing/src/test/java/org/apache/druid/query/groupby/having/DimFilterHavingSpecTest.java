@@ -86,7 +86,7 @@ public class DimFilterHavingSpecTest
   @Ignore // Doesn't always pass. The check in "eval" is best effort and not guaranteed to detect concurrent usage.
   public void testConcurrentUsage() throws Exception
   {
-    final ExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "Test-%d"));
+    final ExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "DimFilterHavingSpecTest-%d"));
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(new SelectorDimFilter("foo", "1", null), null);
     final List<Future<?>> futures = new ArrayList<>();
 

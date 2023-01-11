@@ -640,7 +640,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
-    ExecutorService executor = Execs.multiThreaded(threadCount, "Test-%d");
+    ExecutorService executor = Execs.multiThreaded(threadCount, "IncrementalIndexTest-%d");
     final long timestamp = System.currentTimeMillis();
     final CountDownLatch latch = new CountDownLatch(threadCount);
     for (int j = 0; j < threadCount; j++) {

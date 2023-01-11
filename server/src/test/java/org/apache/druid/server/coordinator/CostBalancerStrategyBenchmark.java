@@ -46,11 +46,11 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
     return Arrays.asList(
         new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                Execs.multiThreaded(1, "Test-%d")))
+                Execs.multiThreaded(1, "CostBalancerStrategyBenchmark-%d")))
         },
         new CostBalancerStrategy[] {
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
-                Execs.multiThreaded(4, "Test-%d")))
+                Execs.multiThreaded(4, "CostBalancerStrategyBenchmark-%d")))
         }
     );
   }

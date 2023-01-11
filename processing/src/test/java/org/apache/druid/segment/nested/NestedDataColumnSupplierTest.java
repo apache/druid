@@ -202,7 +202,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     final int threads = 10;
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(threads, "Test-%d")
+        Execs.multiThreaded(threads, "NestedDataColumnSupplierTest-%d")
     );
     Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
     final CountDownLatch threadsStartLatch = new CountDownLatch(1);

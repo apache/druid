@@ -147,7 +147,7 @@ public class ServerManagerTest
     queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
-    serverManagerExec = Execs.multiThreaded(2, "Test-%d");
+    serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
     segmentManager = new SegmentManager(
         new SegmentLoader()
         {

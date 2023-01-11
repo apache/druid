@@ -158,7 +158,7 @@ public class HdfsClasspathSetupTest
   public void testConcurrentUpload() throws InterruptedException, ExecutionException, TimeoutException
   {
     final int concurrency = 10;
-    ListeningExecutorService pool = MoreExecutors.listeningDecorator(Execs.multiThreaded(concurrency, "Test-%d"));
+    ListeningExecutorService pool = MoreExecutors.listeningDecorator(Execs.multiThreaded(concurrency, "HdfsClasspathSetupTest-%d"));
     // barrier ensures that all jobs try to add files to classpath at same time.
     final CyclicBarrier barrier = new CyclicBarrier(concurrency);
     final Path expectedJarPath = new Path(finalClasspath, dummyJarFile.getName());

@@ -138,7 +138,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "Test-%d"))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "CostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -152,7 +152,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "CostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -163,9 +163,6 @@ public class CostBalancerStrategyTest
   public void testComputeJointSegmentCost()
   {
     DateTime referenceTime = DateTimes.of("2014-01-01T00:00:00");
-    CostBalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "Test-%d"))
-    );
     double segmentCost = CostBalancerStrategy.computeJointSegmentsCost(
         getSegment(
             100,

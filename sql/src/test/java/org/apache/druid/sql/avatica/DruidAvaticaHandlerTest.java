@@ -819,7 +819,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();
     final ListeningExecutorService exec = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "Test-%d")
+        Execs.multiThreaded(AVATICA_CONFIG.getMaxStatementsPerConnection(), "DruidAvaticaHandlerTest-%d")
     );
     for (int i = 0; i < 2000; i++) {
       final String query = StringUtils.format("SELECT COUNT(*) + %s AS ci FROM foo", i);

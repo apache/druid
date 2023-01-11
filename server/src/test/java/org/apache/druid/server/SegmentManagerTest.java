@@ -205,7 +205,7 @@ public class SegmentManagerTest
   public void setup()
   {
     segmentManager = new SegmentManager(SEGMENT_LOADER);
-    executor = Execs.multiThreaded(SEGMENTS.size(), "Test-%d");
+    executor = Execs.multiThreaded(SEGMENTS.size(), "SegmentManagerTest-%d");
   }
 
   @After

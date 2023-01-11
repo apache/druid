@@ -161,7 +161,7 @@ public class BalanceSegmentsTest
     druidServers = ImmutableList.of(druidServer1, druidServer2, druidServer3, druidServer4);
     peons = ImmutableList.of(peon1, peon2, peon3, peon4);
 
-    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalanceSegmentsTest-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(balancerStrategyExecutor);
 
     broadcastDatasources = Collections.singleton("datasourceBroadcast");

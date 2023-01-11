@@ -77,7 +77,7 @@ public class BalancerStrategyBenchmark
   private int reservoirSize = 1;
   private double percentOfSegmentsToConsider = 100;
   private final BalancerStrategy balancerStrategy = new CostBalancerStrategy(
-      MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"))
+      MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalancerStrategyBenchmark-%d"))
   );
 
   @Setup(Level.Trial)

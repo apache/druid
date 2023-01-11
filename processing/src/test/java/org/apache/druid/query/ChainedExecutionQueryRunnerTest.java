@@ -133,7 +133,7 @@ public class ChainedExecutionQueryRunnerTest
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
-    Future resultFuture = Execs.multiThreaded(1, "Test-%d").submit(
+    Future resultFuture = Execs.multiThreaded(1, "ChainedExecutionQueryRunnerTest-%d").submit(
         new Runnable()
         {
           @Override
@@ -258,7 +258,7 @@ public class ChainedExecutionQueryRunnerTest
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
-    Future resultFuture = Execs.multiThreaded(1, "Test-%d").submit(
+    Future resultFuture = Execs.multiThreaded(1, "ChainedExecutionQueryRunnerTest-%d").submit(
         new Runnable()
         {
           @Override

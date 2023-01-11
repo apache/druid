@@ -121,7 +121,7 @@ public class LoadRuleTest
     EMITTER.start();
     throttler = EasyMock.createMock(ReplicationThrottler.class);
 
-    exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "LoadRuleTest-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 

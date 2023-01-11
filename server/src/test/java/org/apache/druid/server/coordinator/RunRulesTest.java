@@ -136,7 +136,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
@@ -207,7 +207,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
@@ -283,7 +283,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
@@ -388,7 +388,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
@@ -452,7 +452,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -510,7 +510,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
@@ -604,7 +604,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -660,7 +660,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -720,7 +720,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -772,7 +772,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -838,7 +838,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
@@ -903,7 +903,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
@@ -1015,7 +1015,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
@@ -1087,7 +1087,7 @@ public class RunRulesTest
 
     SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster, false);
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
@@ -1166,7 +1166,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     BalancerStrategy balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
@@ -1426,7 +1426,7 @@ public class RunRulesTest
         )
         .build();
 
-    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "Test-%d"));
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
     CostBalancerStrategy balancerStrategy = new CostBalancerStrategy(exec);
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy, Collections.singletonList(dataSegment))

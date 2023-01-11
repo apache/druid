@@ -1364,7 +1364,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testUnifiedAppenderatorsManagerCleanup() throws Exception
   {
-    final ExecutorService exec = Execs.multiThreaded(8, "Test-%d");
+    final ExecutorService exec = Execs.multiThreaded(8, "TaskLifecycleTest-%d");
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         new ForwardingQueryProcessingPool(exec),

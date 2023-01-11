@@ -71,7 +71,7 @@ public class GuavaUtilsTest
   public void testCancelAll()
   {
     int tasks = 3;
-    ExecutorService service = Execs.multiThreaded(tasks, "Test-%d");
+    ExecutorService service = Execs.multiThreaded(tasks, "GuavaUtilsTest-%d");
     ListeningExecutorService exc = MoreExecutors.listeningDecorator(service);
     AtomicInteger index = new AtomicInteger(0);
     //a flag what time to throw exception.

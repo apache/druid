@@ -63,7 +63,7 @@ public class LifecycleTest
     final int numThreads = 10;
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(
         numThreads,
-        "Test-%d"
+        "LifecycleTest-%d"
     ));
 
     final Lifecycle lifecycle = new Lifecycle();

@@ -418,7 +418,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
   )
   {
     ListeningExecutorService executor = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(EXECUTOR_NUM_THREADS, "Test-%d")
+        Execs.multiThreaded(EXECUTOR_NUM_THREADS, "FloatAndDoubleFilteringTest-%d")
     );
 
     List<ListenableFuture<?>> futures = new ArrayList<>();

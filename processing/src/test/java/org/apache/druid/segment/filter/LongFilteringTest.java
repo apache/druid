@@ -433,7 +433,7 @@ public class LongFilteringTest extends BaseFilterTest
       final List<String> expectedRows
   )
   {
-    ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(EXECUTOR_NUM_THREADS, "Test-%d"));
+    ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(EXECUTOR_NUM_THREADS, "LongFilteringTest-%d"));
 
     List<ListenableFuture<?>> futures = new ArrayList<>();
 

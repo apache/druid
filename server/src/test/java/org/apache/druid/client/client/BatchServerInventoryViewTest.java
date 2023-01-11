@@ -425,7 +425,7 @@ public class BatchServerInventoryViewTest
   public void testSameTimeZnode() throws Exception
   {
     final int numThreads = INITIAL_SEGMENTS / 10;
-    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, "Test-%d"));
+    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, "BatchServerInventoryViewTest-%d"));
 
     segmentAnnouncer.announceSegments(testSegments);
 

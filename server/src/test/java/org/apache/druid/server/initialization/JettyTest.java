@@ -286,7 +286,7 @@ public class JettyTest extends BaseJettyTest
   public void testTimeouts() throws Exception
   {
     // test for request timeouts properly not locking up all threads
-    final ExecutorService executor = Execs.multiThreaded(100, "Test-%d");
+    final ExecutorService executor = Execs.multiThreaded(100, "JettyTest-%d");
     final AtomicLong count = new AtomicLong(0);
     final CountDownLatch latch = new CountDownLatch(1000);
     for (int i = 0; i < 10000; i++) {

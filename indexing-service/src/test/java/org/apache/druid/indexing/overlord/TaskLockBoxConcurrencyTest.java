@@ -77,7 +77,7 @@ public class TaskLockBoxConcurrencyTest
         taskStorage,
         new IndexerSQLMetadataStorageCoordinator(objectMapper, derby.metadataTablesConfigSupplier().get(), derbyConnector)
     );
-    service = Execs.multiThreaded(2, "Test-%d");
+    service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }
 
   @After
