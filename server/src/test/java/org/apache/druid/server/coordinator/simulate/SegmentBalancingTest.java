@@ -158,7 +158,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that the segments in the load queue are not considered as over-replicated
-    verifyNoEvent("segment/dropped/count");
+    verifyNotEmitted("segment/dropped/count");
     verifyValue(
         Metric.LOAD_QUEUE_COUNT,
         filter(DruidMetrics.SERVER, historicalT12.getName()),
@@ -192,7 +192,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Run 2: Add new historical, some segments in the queue will be moved
     addServer(historicalT12);
     runCoordinatorCycle();
-    verifyNoEvent(Metric.ASSIGNED_COUNT);
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
     verifyValue(Metric.CANCELLED_LOADS, 5L);
     verifyValue(Metric.MOVED_COUNT, 5L);
 

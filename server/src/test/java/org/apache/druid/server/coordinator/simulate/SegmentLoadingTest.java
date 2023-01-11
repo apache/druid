@@ -145,10 +145,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     verifyNotEmitted(Metric.DROPPED_COUNT);
-    int totalAssignedInRun1
-        = getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2)).intValue()
-          + getValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T3)).intValue();
-    Assert.assertTrue(totalAssignedInRun1 > 0 && totalAssignedInRun1 < 40);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 2L);
 
     // Run 2: Replicas still queued
     // nothing new is assigned to T2, nothing is dropped from T1
@@ -179,10 +176,11 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     verifyNotEmitted(Metric.DROPPED_COUNT);
-    int totalLoadedAfterRun2
-        = historicalT21.getTotalSegments() + historicalT22.getTotalSegments()
-          + historicalT31.getTotalSegments() + historicalT32.getTotalSegments();
-    Assert.assertEquals(totalAssignedInRun1, totalLoadedAfterRun2);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
+
+    loadQueuedSegments();
+    Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
+    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
 
     // Run 5: segment is fully replicated on T2, all replicas will now be dropped from T1
     runCoordinatorCycle();
@@ -222,15 +220,15 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
     verifyValue(Metric.ASSIGNED_COUNT, filter(DruidMetrics.TIER, Tier.T2), 1L);
 
     // Run 2: Replicas still queued
     // nothing new is assigned to T2, nothing is dropped from T1
     runCoordinatorCycle();
 
-    verifyNoEvent(Metric.DROPPED_COUNT);
-    verifyNoEvent(Metric.ASSIGNED_COUNT);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.ASSIGNED_COUNT);
 
     loadQueuedSegments();
     Assert.assertEquals(1, getNumLoadedSegments(historicalT21));
@@ -379,7 +377,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // Verify that all the segments are broadcast to all historicals
     // irrespective of throttle limit
     verifyValue(Metric.BROADCAST_LOADS, filter(DruidMetrics.DATASOURCE, DS.WIKI), 30L);
-    verifyNoEvent(Metric.BROADCAST_DROPS);
+    verifyNotEmitted(Metric.BROADCAST_DROPS);
   }
 
   private int getNumLoadedSegments(DruidServer... servers)
