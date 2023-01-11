@@ -24,6 +24,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rex.RexBuilder;
@@ -58,6 +59,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     this.plannerContext = plannerContext;
     this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
   }
+
 
   @Override
   public void onMatch(RelOptRuleCall call)
@@ -132,8 +134,6 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         lc.getTraitSet(),
         lc,
         PartialDruidQuery.create(lc),
-        (DruidQueryRel) druidQueryRel,
-        unnestDatasourceRel,
         leftFilter,
         plannerContext
     );
