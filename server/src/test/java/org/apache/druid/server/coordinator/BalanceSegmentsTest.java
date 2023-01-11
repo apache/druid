@@ -582,7 +582,7 @@ public class BalanceSegmentsTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(1)
-                                    .withUseBatchedSegmentSampler(false)
+                                    .withUseBatchedSegmentSampler(true)
                                     .withPercentOfSegmentsToConsiderPerMove(40)
                                     .build()
         )
