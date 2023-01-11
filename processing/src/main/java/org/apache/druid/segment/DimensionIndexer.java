@@ -307,6 +307,11 @@ public interface DimensionIndexer<
    * is needed to be able to correctly map per-segment encoded values to global values on the next conversion step,
    * {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues}. The latter method requires sorted encoding
    * values on the input, because {@link DimensionMerger#writeMergedValueDictionary} takes sorted lookups as it's input.
+   *
+   * For columns which do not use the {@link DimensionMerger} to merge dictionary encoded values, this method should
+   * provide a selector which is compatible with the expectations of
+   * {@link DimensionMerger#processMergedRow(ColumnValueSelector)}, which might simply be to pass-through the 'unsorted'
+   * selector.
    */
   ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues);
 

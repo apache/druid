@@ -112,7 +112,8 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      SmooshedFileMapper fileMapper
+      SmooshedFileMapper fileMapper,
+      String rootFieldPath
   )
   {
     this.metadata = metadata;
@@ -125,7 +126,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.fileMapper = fileMapper;
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
-    this.rootFieldPath = getField(Collections.emptyList());
+    this.rootFieldPath = rootFieldPath;
   }
 
   public abstract List<NestedPathPart> parsePath(String path);

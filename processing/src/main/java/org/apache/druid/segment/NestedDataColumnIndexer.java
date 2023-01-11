@@ -142,29 +142,26 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       IncrementalIndex.DimensionDesc desc
   )
   {
-    if (
-        fieldIndexers.size() == 1 &&
-        fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT) &&
-        fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT).getTypes().getSingleType() != null
-    ) {
-      final ColumnValueSelector delegate = makeColumnValueSelector(currEntry, desc);
+    final int dimIndex = desc.getIndex();
+    final ColumnValueSelector<?> rootLiteralSelector = getRootLiteralValueSelector(currEntry, dimIndex);
+    if (rootLiteralSelector != null) {
       return new BaseSingleValueDimensionSelector()
       {
         @Nullable
         @Override
         protected String getValue()
         {
-          final Object o = delegate.getObject();
+          final Object o = rootLiteralSelector.getObject();
           if (o == null) {
             return null;
           }
-          return String.valueOf(o);
+          return o.toString();
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          delegate.inspectRuntimeShape(inspector);
+
         }
       };
     }
@@ -177,79 +174,12 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       IncrementalIndex.DimensionDesc desc
   )
   {
-
-    if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
-      final LiteralFieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      if (rootField.getTypes().getSingleType() != null) {
-        return new ColumnValueSelector<Object>()
-        {
-          @Override
-          public boolean isNull()
-          {
-            final Object o = getObject();
-            return !(o instanceof Number);
-          }
-
-          @Override
-          public float getFloat()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).floatValue();
-          }
-
-          @Override
-          public double getDouble()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).doubleValue();
-          }
-
-          @Override
-          public long getLong()
-          {
-            Object value = getObject();
-            if (value == null) {
-              return 0;
-            }
-            return ((Number) value).longValue();
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-
-          }
-
-          @Nullable
-          @Override
-          public Object getObject()
-          {
-            final int dimIndex = desc.getIndex();
-            final Object[] dims = currEntry.get().getDims();
-            if (0 <= dimIndex && dimIndex < dims.length) {
-              final StructuredData data = (StructuredData) dims[dimIndex];
-              if (data != null) {
-                return data.getValue();
-              }
-            }
-
-            return null;
-          }
-
-          @Override
-          public Class<?> classOfObject()
-          {
-            return Object.class;
-          }
-        };
-      }
+    final int dimIndex = desc.getIndex();
+    final ColumnValueSelector<?> rootLiteralSelector = getRootLiteralValueSelector(currEntry, dimIndex);
+    if (rootLiteralSelector != null) {
+      return rootLiteralSelector;
     }
+
     return new ObjectColumnSelector<StructuredData>()
     {
       @Override
@@ -262,7 +192,6 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
       @Override
       public StructuredData getObject()
       {
-        final int dimIndex = desc.getIndex();
         final Object[] dims = currEntry.get().getDims();
         if (0 <= dimIndex && dimIndex < dims.length) {
           return (StructuredData) dims[dimIndex];
@@ -284,8 +213,9 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
   {
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       LiteralFieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      if (rootField.getTypes().getSingleType() != null) {
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(rootField.getTypes().getSingleType())
+      if (rootField.isSingleType()) {
+        return ColumnCapabilitiesImpl.createDefault()
+                                     .setType(rootField.getTypes().getSingleType())
                                      .setHasNulls(hasNulls);
       }
     }
@@ -335,8 +265,11 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
   @Override
   public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
-      // do the opposite here...
+    final LiteralFieldIndexer rootIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
+    if (fieldIndexers.size() == 1 && rootIndexer != null && rootIndexer.isSingleType()) {
+      // for root only literals, makeColumnValueSelector and makeDimensionSelector automatically unwrap StructuredData
+      // we need to do the opposite here, wrapping selector values with a StructuredData so that they are consistently
+      // typed for the merger
       return new ColumnValueSelector<StructuredData>()
       {
         @Override
@@ -397,7 +330,6 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     throw new UnsupportedOperationException("Not supported");
   }
 
-
   public void mergeFields(SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields)
   {
     for (Map.Entry<String, NestedDataColumnIndexer.LiteralFieldIndexer> entry : fieldIndexers.entrySet()) {
@@ -413,6 +345,86 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     return globalDictionary.getSortedCollector();
   }
 
+  @Nullable
+  private ColumnValueSelector<?> getRootLiteralValueSelector(
+      IncrementalIndexRowHolder currEntry,
+      int dimIndex
+  )
+  {
+    if (fieldIndexers.size() > 1) {
+      return null;
+    }
+    final LiteralFieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
+    if (root == null || !root.isSingleType()) {
+      return null;
+    }
+    return new ColumnValueSelector<Object>()
+    {
+      @Override
+      public boolean isNull()
+      {
+        final Object o = getObject();
+        return !(o instanceof Number);
+      }
+
+      @Override
+      public float getFloat()
+      {
+        Object value = getObject();
+        if (value == null) {
+          return 0;
+        }
+        return ((Number) value).floatValue();
+      }
+
+      @Override
+      public double getDouble()
+      {
+        Object value = getObject();
+        if (value == null) {
+          return 0;
+        }
+        return ((Number) value).doubleValue();
+      }
+
+      @Override
+      public long getLong()
+      {
+        Object value = getObject();
+        if (value == null) {
+          return 0;
+        }
+        return ((Number) value).longValue();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        final Object[] dims = currEntry.get().getDims();
+        if (0 <= dimIndex && dimIndex < dims.length) {
+          final StructuredData data = (StructuredData) dims[dimIndex];
+          if (data != null) {
+            return data.getValue();
+          }
+        }
+
+        return null;
+      }
+
+      @Override
+      public Class<?> classOfObject()
+      {
+        return Object.class;
+      }
+    };
+  }
 
   static class LiteralFieldIndexer
   {
@@ -465,6 +477,11 @@ public class NestedDataColumnIndexer implements DimensionIndexer<StructuredData,
     public NestedLiteralTypeInfo.MutableTypeSet getTypes()
     {
       return typeSet;
+    }
+
+    public boolean isSingleType()
+    {
+      return typeSet.getSingleType() != null;
     }
   }
 }
