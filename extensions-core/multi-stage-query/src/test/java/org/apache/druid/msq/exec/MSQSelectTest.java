@@ -1169,6 +1169,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
+        .setQueryContext(context)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
