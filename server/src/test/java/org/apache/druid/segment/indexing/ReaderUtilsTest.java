@@ -310,4 +310,22 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
     Assert.assertEquals(fullInputSchema, actual);
   }
+
+  @Test
+  public void testGetColumnsRequiredForIngestionWithFlattenTimestamp()
+  {
+    TimestampSpec timestampSpec = new TimestampSpec("CFlat", "iso", null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("B")
+        )
+    );
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "CFlat", "$.C.time")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+
+    Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
+    Assert.assertEquals(ImmutableSet.of("B", "C"), actual);
+  }
 }
