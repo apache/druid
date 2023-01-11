@@ -106,32 +106,17 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   @Override
   public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    final String value;
-    if (selector instanceof DimensionSelector) {
-      final DimensionSelector dimSelector = (DimensionSelector) selector;
-      final IndexedInts row = dimSelector.getRow();
+    final DimensionSelector dimSelector = (DimensionSelector) selector;
+    final IndexedInts row = dimSelector.getRow();
 
-      Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
+    Preconditions.checkState(row.size() < 2, "Not supported for multi-value dimensions");
 
-      if (row.size() == 0) {
-        writeToKeyBuffer(keyBufferPosition, GROUP_BY_MISSING_VALUE, keyBuffer);
-        return 0;
-      }
-      value = dimSelector.lookupName(row.get(0));
-    }
-    // case when the column selector factory is a column value selector
-    // this happens for the column after the unnest
-    else {
-      final ColumnValueSelector columnValueSelector = selector;
-      final Object obj = columnValueSelector.getObject();
-      if (obj != null) {
-        value = obj.toString();
-      } else {
-        writeToKeyBuffer(keyBufferPosition, GROUP_BY_MISSING_VALUE, keyBuffer);
-        return 0;
-      }
+    if (row.size() == 0) {
+      writeToKeyBuffer(keyBufferPosition, GROUP_BY_MISSING_VALUE, keyBuffer);
+      return 0;
     }
 
+    final String value = dimSelector.lookupName(row.get(0));
     final int dictId = reverseDictionary.getInt(value);
     if (dictId == DimensionDictionary.ABSENT_VALUE_ID) {
       final int nextId = dictionary.size();

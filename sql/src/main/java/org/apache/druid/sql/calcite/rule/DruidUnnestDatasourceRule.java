@@ -75,10 +75,10 @@ public class DruidUnnestDatasourceRule extends RelOptRule
     );
     // build this based on the druidUnnestRel
 
-    /*final RelBuilder relBuilder =
+    final RelBuilder relBuilder =
         call.builder()
-            .push(unnestDatasourceRel);*/
+            .push(unnestDatasourceRel);
 
-    call.transformTo(unnestDatasourceRel);
+    call.transformTo(relBuilder.build());
   }
 }

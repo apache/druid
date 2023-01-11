@@ -417,16 +417,10 @@ public class GroupByQueryEngineV2
     {
       switch (capabilities.getType()) {
         case STRING:
-          if (selector instanceof  DimensionSelector) {
-            DimensionSelector dimSelector = (DimensionSelector) selector;
-            if (dimSelector.getValueCardinality() >= 0) {
-              return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
-            } else {
-              // this builds the dictionary on the fly
-              return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
-            }
-          }
-          else {
+          DimensionSelector dimSelector = (DimensionSelector) selector;
+          if (dimSelector.getValueCardinality() >= 0) {
+            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
+          } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
