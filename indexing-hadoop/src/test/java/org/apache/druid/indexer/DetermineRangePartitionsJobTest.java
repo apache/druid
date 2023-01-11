@@ -318,7 +318,7 @@ public class DetermineRangePartitionsJobTest
     this.expectedNumOfShardsForEachSegment = expectedNumOfShardsForEachSegment;
     this.expectedStartEndForEachShard = expectedStartEndForEachShard;
 
-    dataFile = File.createTempFile("test_website_data", "tmp");
+    dataFile = File.createTempFile("test_range_website_data", "tmp");
     dataFile.deleteOnExit();
     tmpDir = FileUtils.createTempDir();
     tmpDir.deleteOnExit();

@@ -461,7 +461,6 @@ public class DeterminePartitionsJob implements Jobby
     private final HadoopDruidIndexerConfig config;
     private final List<List<String>> dimensionGroupingSet;
     private final Map<Long, Integer> intervalIndexes;
-    private final boolean supportNullValue;
 
     DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config)
     {
@@ -479,9 +478,6 @@ public class DeterminePartitionsJob implements Jobby
       } else {
         dimensionGroupingSet.add(partitionDimensions);
       }
-      //here we just keep the single_dim not support null value as before
-      //but actually single_dim can support null values
-      this.supportNullValue = partitionDimensions.size() > 1;
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
@@ -526,8 +522,8 @@ public class DeterminePartitionsJob implements Jobby
           final Iterable<String> dimValues = dims.get(dimension);
           if (dimValues != null && Iterables.size(dimValues) == 1) {
             values[i] = Iterables.getOnlyElement(dimValues);
-          } else if (supportNullValue && (dimValues == null || Iterables.isEmpty(dimValues))) {
-            //just let values[i] be null
+          } else if (dimValues == null || Iterables.isEmpty(dimValues)) {
+            //just let values[i] be null when the dim value is null.
           } else {
             // This dimension is unsuitable for partitioning. Poison it by emitting a negative value.
             numRow = -1;
