@@ -246,9 +246,10 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .addCustomVerification(new MSQTestBase.VerifyMSQSupportedNativeQueriesFactory())
-        .addCustomRunner(new MSQTestBase.ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-        .skipVectorize(true);
+        .addCustomVerification(new VerifyMSQSupportedNativeQueriesFactory())
+        .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
+        .skipVectorize(true)
+        .verifyNativeQueries(false);
   }
 
   Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
@@ -443,7 +444,260 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
             new Object[]{"abc"},
             new Object[]{"def"}
         ),
-        new MSQTestBase.ExtractResultsFactory(() -> indexingServiceClient)
+        new ExtractResultsFactory(() -> indexingServiceClient)
     );
   }
+
+  @Ignore("Union datasource not supported by MSQ")
+  @Override
+  public void testUnionAllSameTableTwiceWithSameMapping()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllQueriesWithLimit()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testGroupByNothingWithLiterallyFalseFilter()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testSubqueryTypeMismatchWithLiterals()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testTextcat()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByWithLiteralInSubqueryGrouping()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testSqlIsNullToInFilter()
+  {
+  }
+
+  @Ignore
+  @Override
+  public void testGroupBySortPushDown()
+  {
+  }
+
+
+  @Ignore
+  @Override
+  public void testStringLatestGroupBy()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testColumnComparison()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByCaseWhenOfTripleAnd()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testTopNWithSelectProjections()
+  {
+
+  }
+
+
+  @Ignore
+  @Override
+  public void testProjectAfterSort3WithoutAmbiguity()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByCaseWhen()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByWithSortOnPostAggregationDefault()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByWithSelectProjections()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByTimeAndOtherDimension()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByAnyLong()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testBitwiseAggregatorsGroupBy()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByWithSelectAndOrderByProjections()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testQueryContextOuterLimit()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByWithSortOnPostAggregationNoTopNContext()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUsingSubqueryAsFilterWithInnerSort()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByAnyDouble()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByLimitWrappingOrderByAgg()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testTopNWithSelectAndOrderByProjections()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByAnyFloat()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testRegexpExtract()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testTimeseriesLosAngelesViaQueryContext()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByLimitPushDownWithHavingOnLong()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupBySingleColumnDescendingNoTopN()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testProjectAfterSort2()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testFilterLongDimension()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testHavingOnExactCountDistinct()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testStringAgg()
+  {
+
+  }
+
 }

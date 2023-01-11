@@ -95,6 +95,7 @@ public class QueryTestBuilder
   protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
   protected boolean queryCannotVectorize;
+  protected boolean verifyNativeQueries = true;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
   protected String expectedLogicalPlan;
@@ -225,6 +226,12 @@ public class QueryTestBuilder
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;
+    return this;
+  }
+
+  public QueryTestBuilder verifyNativeQueries(boolean verifyNativeQueries)
+  {
+    this.verifyNativeQueries = verifyNativeQueries;
     return this;
   }
 

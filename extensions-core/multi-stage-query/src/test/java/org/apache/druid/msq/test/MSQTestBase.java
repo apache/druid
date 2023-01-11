@@ -93,12 +93,9 @@ import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -138,8 +135,6 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.QueryTestBuilder;
-import org.apache.druid.sql.calcite.QueryTestRunner;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -186,7 +181,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -1211,118 +1205,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql);
       }
-    }
-  }
-
-  public static class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactory
-  {
-    private final Supplier<MSQTestOverlordServiceClient> overlordClientSupplier;
-
-    public ExtractResultsFactory(Supplier<MSQTestOverlordServiceClient> overlordClientSupplier)
-    {
-      this.overlordClientSupplier = overlordClientSupplier;
-    }
-
-    @Override
-    public QueryTestRunner.QueryRunStep make(QueryTestBuilder builder, QueryTestRunner.BaseExecuteQuery execStep)
-    {
-      return new QueryTestRunner.BaseExecuteQuery(builder)
-      {
-        final List<QueryTestRunner.QueryResults> extractedResults = new ArrayList<>();
-        MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
-
-        @Override
-        public void run()
-        {
-          for (QueryTestRunner.QueryResults results : execStep.results()) {
-            List<Object[]> queryResults = results.results;
-            if (queryResults == null) {
-              extractedResults.add(results);
-              return;
-            }
-            Assert.assertEquals(
-                "Found multiple rows, cannot extract the actual results from the reports",
-                1,
-                queryResults.size()
-            );
-            Object[] row = queryResults.get(0);
-            Assert.assertEquals(
-                "Found multiple taskIds, cannot extract the actual results from the reports",
-                1,
-                row.length
-            );
-            String taskId = row[0].toString();
-            MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)
-                                                                                .get(MSQTaskReport.REPORT_KEY)
-                                                                                .getPayload();
-            if (payload.getStatus().getStatus().isFailure()) {
-              throw new ISE(
-                  "Query task [%s] failed due to %s",
-                  taskId,
-                  payload.getStatus().getErrorReport().toString()
-              );
-            }
-
-            if (!payload.getStatus().getStatus().isComplete()) {
-              throw new ISE("Query task [%s] should have finished", taskId);
-            }
-            Optional<Pair<RowSignature, List<Object[]>>> signatureListPair = MSQTestBase.getSignatureWithRows(payload.getResults());
-            if (!signatureListPair.isPresent()) {
-              throw new ISE("Results report not present in the task's report payload");
-            }
-            extractedResults.add(results.withResults(signatureListPair.get().rhs));
-          }
-        }
-
-        @Override
-        public List<QueryTestRunner.QueryResults> results()
-        {
-          return extractedResults;
-        }
-      };
-    }
-  }
-
-  public static class VerifyMSQSupportedNativeQueriesFactory implements QueryTestRunner.QueryVerifyStepFactory
-  {
-    @Override
-    public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.BaseExecuteQuery execStep)
-    {
-      return new QueryTestRunner.QueryVerifyStep()
-      {
-        @Override
-        public void verify()
-        {
-          for (QueryTestRunner.QueryResults queryResults : execStep.results()) {
-            QueryTestBuilder builder = execStep.builder();
-            final List<Query<?>> expectedQueries = builder.getExpectedQueries();
-            final boolean unsupportedQuery = expectedQueries.stream().anyMatch(this::isUnsupportedQuery);
-            if (unsupportedQuery) {
-              return;
-            }
-          }
-          new QueryTestRunner.VerifyNativeQueries(execStep).verify();
-        }
-
-        private boolean isUnsupportedQuery(Query<?> query)
-        {
-          if (!Objects.equals(query.getType(), Query.GROUP_BY) && !Objects.equals(query.getType(), Query.SCAN)) {
-            return true;
-          }
-          DataSource dataSource = query.getDataSource();
-          return isUnsupportedDataSource(dataSource);
-        }
-
-        private boolean isUnsupportedDataSource(DataSource dataSource)
-        {
-          if (dataSource instanceof QueryDataSource) {
-            final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-            return isUnsupportedQuery(subQuery);
-          } else {
-            return dataSource.getChildren().stream().anyMatch(this::isUnsupportedDataSource);
-          }
-        }
-      };
     }
   }
 }
