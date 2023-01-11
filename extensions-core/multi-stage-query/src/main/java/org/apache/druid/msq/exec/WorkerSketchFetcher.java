@@ -19,29 +19,33 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.ClusterByPartition;
-import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.java.util.common.Either;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.function.TriConsumer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.Nullable;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Queues up fetching sketches from workers and progressively generates partitions boundaries.
@@ -50,73 +54,26 @@ public class WorkerSketchFetcher implements AutoCloseable
 {
   private static final Logger log = new Logger(WorkerSketchFetcher.class);
   private static final int DEFAULT_THREAD_COUNT = 4;
-  // If the combined size of worker sketches is more than this threshold, SEQUENTIAL merging mode is used.
-  static final long BYTES_THRESHOLD = 1_000_000_000L;
-  // If there are more workers than this threshold, SEQUENTIAL merging mode is used.
-  static final long WORKER_THRESHOLD = 100;
 
-  private final ClusterStatisticsMergeMode clusterStatisticsMergeMode;
-  private final int statisticsMaxRetainedBytes;
   private final WorkerClient workerClient;
-  private final ExecutorService executorService;
+  private final MSQWorkerTaskLauncher workerTaskLauncher;
+
+  private final boolean retryEnabled;
+
+  private AtomicReference<Throwable> isError = new AtomicReference<>();
+  final ExecutorService executorService;
+
 
   public WorkerSketchFetcher(
       WorkerClient workerClient,
-      ClusterStatisticsMergeMode clusterStatisticsMergeMode,
-      int statisticsMaxRetainedBytes
+      MSQWorkerTaskLauncher workerTaskLauncher,
+      boolean retryEnabled
   )
   {
     this.workerClient = workerClient;
-    this.clusterStatisticsMergeMode = clusterStatisticsMergeMode;
     this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
-    this.statisticsMaxRetainedBytes = statisticsMaxRetainedBytes;
-  }
-
-  /**
-   * Submits a request to fetch and generate partitions for the given worker statistics and returns a future for it. It
-   * decides based on the statistics if it should fetch sketches one by one or together.
-   */
-  public CompletableFuture<Either<Long, ClusterByPartitions>> submitFetcherTask(
-      CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
-      List<String> workerTaskIds,
-      StageDefinition stageDefinition,
-      IntSet workersForStage
-  )
-  {
-    ClusterBy clusterBy = stageDefinition.getClusterBy();
-
-    switch (clusterStatisticsMergeMode) {
-      case SEQUENTIAL:
-        return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
-      case PARALLEL:
-        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
-      case AUTO:
-        if (clusterBy.getBucketByCount() == 0) {
-          log.info(
-              "Query[%s] stage[%d] for AUTO mode: chose PARALLEL mode to merge key statistics",
-              stageDefinition.getId().getQueryId(),
-              stageDefinition.getStageNumber()
-          );
-          // If there is no time clustering, there is no scope for sequential merge
-          return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
-        } else if (stageDefinition.getMaxWorkerCount() > WORKER_THRESHOLD
-                   || completeKeyStatisticsInformation.getBytesRetained() > BYTES_THRESHOLD) {
-          log.info(
-              "Query[%s] stage[%d] for AUTO mode: chose SEQUENTIAL mode to merge key statistics",
-              stageDefinition.getId().getQueryId(),
-              stageDefinition.getStageNumber()
-          );
-          return sequentialTimeChunkMerging(completeKeyStatisticsInformation, stageDefinition, workerTaskIds);
-        }
-        log.info(
-            "Query[%s] stage[%d] for AUTO mode: chose PARALLEL mode to merge key statistics",
-            stageDefinition.getId().getQueryId(),
-            stageDefinition.getStageNumber()
-        );
-        return inMemoryFullSketchMerging(stageDefinition, workerTaskIds, workersForStage);
-      default:
-        throw new IllegalStateException("No fetching strategy found for mode: " + clusterStatisticsMergeMode);
-    }
+    this.workerTaskLauncher = workerTaskLauncher;
+    this.retryEnabled = retryEnabled;
   }
 
   /**
@@ -124,247 +81,208 @@ public class WorkerSketchFetcher implements AutoCloseable
    * This is faster than fetching them timechunk by timechunk but the collector will be downsampled till it can fit
    * on the controller, resulting in less accurate partition boundries.
    */
-  CompletableFuture<Either<Long, ClusterByPartitions>> inMemoryFullSketchMerging(
-      StageDefinition stageDefinition,
-      List<String> workerTaskIds,
-      IntSet workersForStage
+  public void inMemoryFullSketchMerging(
+      Consumer<Consumer<ControllerQueryKernel>> kernelActions,
+      StageId stageId,
+      Set<String> taskIds,
+      TriConsumer<ControllerQueryKernel, Integer, MSQFault> retryOperation
   )
   {
-    CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture = new CompletableFuture<>();
 
-    // Create a new key statistics collector to merge worker sketches into
-    final ClusterByStatisticsCollector mergedStatisticsCollector =
-        stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
-    final int workerCount = workersForStage.size();
-    // Guarded by synchronized mergedStatisticsCollector
-    final Set<Integer> finishedWorkers = new HashSet<>();
+    for (String taskId : taskIds) {
+      try {
+        int workerNumber = MSQTasks.workerFromTaskId(taskId);
+        executorService.submit(() -> {
+          fetchStatsFromWorker(
+              kernelActions,
+              () -> workerClient.fetchClusterByStatisticsSnapshot(
+                  taskId,
+                  stageId.getQueryId(),
+                  stageId.getStageNumber()
+              ),
+              taskId,
+              (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(
+                  stageId,
+                  workerNumber,
+                  snapshot
+              ),
+              retryOperation
+          );
+        });
+      }
+      catch (RejectedExecutionException rejectedExecutionException) {
+        if (isError.get() == null) {
+          throw rejectedExecutionException;
+        } else {
+          // throw worker error exception
+          throw new ISE("Unable to fetch partitions %s", isError.get());
+        }
+      }
+    }
+  }
 
-    log.info(
-        "Fetching stats using %s for stage[%d] for workers[%s] ",
-        ClusterStatisticsMergeMode.PARALLEL,
-        stageDefinition.getStageNumber(),
-        workersForStage.stream().map(Object::toString).collect(Collectors.joining(","))
-    );
+  private void fetchStatsFromWorker(
+      Consumer<Consumer<ControllerQueryKernel>> kernelActions,
+      Supplier<ListenableFuture<ClusterByStatisticsSnapshot>> fetchStatsSupplier,
+      String taskId,
+      BiConsumer<ControllerQueryKernel, ClusterByStatisticsSnapshot> successKernelOperation,
+      TriConsumer<ControllerQueryKernel, Integer, MSQFault> retryOperation
+  )
+  {
+    if (isError.get() != null) {
+      executorService.shutdownNow();
+      return;
+    }
+    int worker = MSQTasks.workerFromTaskId(taskId);
+    try {
+      workerTaskLauncher.waitUntilWorkersReady(ImmutableSet.of(worker));
+    }
+    catch (InterruptedException interruptedException) {
+      isError.compareAndSet(null, interruptedException);
+      executorService.shutdownNow();
+      return;
+    }
 
-    // Submit a task for each worker to fetch statistics
-    workersForStage.forEach(workerNo -> {
-      executorService.submit(() -> {
-        ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
-            workerClient.fetchClusterByStatisticsSnapshot(
-                workerTaskIds.get(workerNo),
-                stageDefinition.getId().getQueryId(),
-                stageDefinition.getStageNumber()
-            );
+    // if task is not the latest task. It must have retried.
+    if (!workerTaskLauncher.isTaskLatest(taskId)) {
+      log.info(
+          "Task[%s] is no longer the latest task for worker[%d], hence ignoring fetching stats from this worker",
+          taskId,
+          worker
+      );
+      return;
+    }
+
+    ListenableFuture<ClusterByStatisticsSnapshot> fetchFuture = fetchStatsSupplier.get();
+
+    SettableFuture<Boolean> kernelActionFuture = SettableFuture.create();
+
+    Futures.addCallback(fetchFuture, new FutureCallback<ClusterByStatisticsSnapshot>()
+    {
+      @Override
+      public void onSuccess(@Nullable ClusterByStatisticsSnapshot result)
+      {
         try {
-          ClusterByStatisticsSnapshot clusterByStatisticsSnapshot = snapshotFuture.get();
-          if (clusterByStatisticsSnapshot == null) {
-            throw new ISE("Worker %s returned null sketch, this should never happen", workerNo);
-          }
-          synchronized (mergedStatisticsCollector) {
-            mergedStatisticsCollector.addAll(clusterByStatisticsSnapshot);
-            finishedWorkers.add(workerNo);
-
-            if (finishedWorkers.size() == workerCount) {
-              log.debug("Query [%s] Received all statistics, generating partitions", stageDefinition.getId().getQueryId());
-              partitionFuture.complete(stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector));
+          kernelActions.accept((queryKernel) -> {
+            try {
+              successKernelOperation.accept(queryKernel, result);
+              // we do not want to have too many key collector sketches in the event queue as that cause memory issues
+              // blocking the executor service thread until the kernel operation is finished.
+              // so we would have utmost DEFAULT_THREAD_COUNT number of sketches in the queue.
+              kernelActionFuture.set(true);
             }
-          }
+            catch (Exception e) {
+              failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+            }
+          });
         }
         catch (Exception e) {
-          synchronized (mergedStatisticsCollector) {
-            if (!partitionFuture.isDone()) {
-              partitionFuture.completeExceptionally(e);
-              mergedStatisticsCollector.clear();
-            }
-          }
+          failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
         }
-      });
+
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+
+        if (retryEnabled) {
+          //add to retry queue
+          try {
+            kernelActions.accept((kernel) -> {
+              try {
+                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId));
+                kernelActionFuture.set(false);
+
+              }
+              catch (Exception e) {
+                failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+              }
+            });
+            kernelActionFuture.set(false);
+          }
+          catch (Exception e) {
+            failFutureAndShutDownExecutorService(e, taskId, kernelActionFuture);
+          }
+        } else {
+          failFutureAndShutDownExecutorService(t, taskId, kernelActionFuture);
+        }
+
+      }
     });
 
-    return partitionFuture;
+    FutureUtils.getUnchecked(kernelActionFuture, true);
+  }
+
+  private void failFutureAndShutDownExecutorService(
+      Throwable t,
+      String taskId,
+      SettableFuture<Boolean> kernelActionFuture
+  )
+  {
+    if (isError.compareAndSet(null, t)) {
+      log.error(t, "Failed while fetching stats from task[%s]", taskId);
+    }
+    executorService.shutdownNow();
+    kernelActionFuture.setException(t);
   }
 
   /**
    * Fetches cluster statistics from all workers and generates partition boundaries from them one time chunk at a time.
    * This takes longer due to the overhead of fetching sketches, however, this prevents any loss in accuracy from
-   * downsampling on the controller.
+   * down sampling on the controller.
    */
-  CompletableFuture<Either<Long, ClusterByPartitions>> sequentialTimeChunkMerging(
+  public void sequentialTimeChunkMerging(
+      Consumer<Consumer<ControllerQueryKernel>> kernelActions,
       CompleteKeyStatisticsInformation completeKeyStatisticsInformation,
-      StageDefinition stageDefinition,
-      List<String> workerTaskIds
+      StageId stageId,
+      Set<String> tasks,
+      TriConsumer<ControllerQueryKernel, Integer, MSQFault> retryOperation
   )
   {
-    SequentialFetchStage sequentialFetchStage = new SequentialFetchStage(
-        stageDefinition,
-        workerTaskIds,
-        completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().entrySet().iterator()
-    );
-
-    log.info(
-        "Fetching stats using %s for stage[%d] for tasks[%s]",
-        ClusterStatisticsMergeMode.SEQUENTIAL,
-        stageDefinition.getStageNumber(),
-        String.join("", workerTaskIds)
-    );
-    sequentialFetchStage.submitFetchingTasksForNextTimeChunk();
-    return sequentialFetchStage.getPartitionFuture();
-  }
-
-  private class SequentialFetchStage
-  {
-    private final StageDefinition stageDefinition;
-    private final List<String> workerTaskIds;
-    private final Iterator<Map.Entry<Long, Set<Integer>>> timeSegmentVsWorkerIdIterator;
-    private final CompletableFuture<Either<Long, ClusterByPartitions>> partitionFuture;
-    // Final sorted list of partition boundaries. This is appended to after statistics for each time chunk are gathered.
-    private final List<ClusterByPartition> finalPartitionBoundries;
-
-    public SequentialFetchStage(
-        StageDefinition stageDefinition,
-        List<String> workerTaskIds,
-        Iterator<Map.Entry<Long, Set<Integer>>> timeSegmentVsWorkerIdIterator
-    )
-    {
-      this.finalPartitionBoundries = new ArrayList<>();
-      this.stageDefinition = stageDefinition;
-      this.workerTaskIds = workerTaskIds;
-      this.timeSegmentVsWorkerIdIterator = timeSegmentVsWorkerIdIterator;
-      this.partitionFuture = new CompletableFuture<>();
+    if (!completeKeyStatisticsInformation.isComplete()) {
+      throw new ISE("All worker partial key information not received for stage[%d]", stageId.getStageNumber());
     }
 
-    /**
-     * Submits the tasks to fetch key statistics for the time chunk pointed to by {@link #timeSegmentVsWorkerIdIterator}.
-     * Once the statistics have been gathered from all workers which have them, generates partitions and adds it to
-     * {@link #finalPartitionBoundries}, stiching the partitions between time chunks using
-     * {@link #abutAndAppendPartitionBoundries(List, List)} to make them continuous.
-     *
-     * The time chunks returned by {@link #timeSegmentVsWorkerIdIterator} should be in ascending order for the partitions
-     * to be generated correctly.
-     *
-     * If {@link #timeSegmentVsWorkerIdIterator} doesn't have any more values, assumes that partition boundaries have
-     * been successfully generated and completes {@link #partitionFuture} with the result.
-     *
-     * Completes the future with an error as soon as the number of partitions exceed max partition count for the stage
-     * definition.
-     */
-    public void submitFetchingTasksForNextTimeChunk()
-    {
-      if (!timeSegmentVsWorkerIdIterator.hasNext()) {
-        partitionFuture.complete(Either.value(new ClusterByPartitions(finalPartitionBoundries)));
-      } else {
-        Map.Entry<Long, Set<Integer>> entry = timeSegmentVsWorkerIdIterator.next();
-        // Time chunk for which partition boundries are going to be generated for
-        Long timeChunk = entry.getKey();
-        Set<Integer> workerIdsWithTimeChunk = entry.getValue();
-        // Create a new key statistics collector to merge worker sketches into
-        ClusterByStatisticsCollector mergedStatisticsCollector =
-            stageDefinition.createResultKeyStatisticsCollector(statisticsMaxRetainedBytes);
-        // Guarded by synchronized mergedStatisticsCollector
-        Set<Integer> finishedWorkers = new HashSet<>();
+    completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
-        log.debug("Query [%s]. Submitting request for statistics for time chunk %s to %s workers",
-                  stageDefinition.getId().getQueryId(),
-                  timeChunk,
-                  workerIdsWithTimeChunk.size());
-
-        // Submits a task for every worker which has a certain time chunk
-        for (int workerNo : workerIdsWithTimeChunk) {
+      for (String taskId : tasks) {
+        int workerNumber = MSQTasks.workerFromTaskId(taskId);
+        if (wks.contains(workerNumber)) {
           executorService.submit(() -> {
-            ListenableFuture<ClusterByStatisticsSnapshot> snapshotFuture =
-                workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
-                    workerTaskIds.get(workerNo),
-                    stageDefinition.getId().getQueryId(),
-                    stageDefinition.getStageNumber(),
+            fetchStatsFromWorker(
+                kernelActions,
+                () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
+                    taskId,
+                    stageId.getQueryId(),
+                    stageId.getStageNumber(),
                     timeChunk
-                );
+                ),
+                taskId,
+                (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(
+                    stageId,
+                    workerNumber,
+                    timeChunk,
+                    snapshot
+                ),
+                retryOperation
+            );
 
-            try {
-              ClusterByStatisticsSnapshot snapshotForTimeChunk = snapshotFuture.get();
-              if (snapshotForTimeChunk == null) {
-                throw new ISE("Worker %s returned null sketch for %s, this should never happen", workerNo, timeChunk);
-              }
-              synchronized (mergedStatisticsCollector) {
-                mergedStatisticsCollector.addAll(snapshotForTimeChunk);
-                finishedWorkers.add(workerNo);
-
-                if (finishedWorkers.size() == workerIdsWithTimeChunk.size()) {
-                  Either<Long, ClusterByPartitions> longClusterByPartitionsEither =
-                      stageDefinition.generatePartitionsForShuffle(mergedStatisticsCollector);
-
-                  log.debug("Query [%s]. Received all statistics for time chunk %s, generating partitions",
-                            stageDefinition.getId().getQueryId(),
-                            timeChunk);
-
-                  long totalPartitionCount = finalPartitionBoundries.size() + getPartitionCountFromEither(longClusterByPartitionsEither);
-                  if (totalPartitionCount > stageDefinition.getMaxPartitionCount()) {
-                    // Fail fast if more partitions than the maximum have been reached.
-                    partitionFuture.complete(Either.error(totalPartitionCount));
-                    mergedStatisticsCollector.clear();
-                  } else {
-                    List<ClusterByPartition> timeSketchPartitions = longClusterByPartitionsEither.valueOrThrow().ranges();
-                    abutAndAppendPartitionBoundries(finalPartitionBoundries, timeSketchPartitions);
-                    log.debug("Query [%s]. Finished generating partitions for time chunk %s, total count so far %s",
-                              stageDefinition.getId().getQueryId(),
-                              timeChunk,
-                              finalPartitionBoundries.size());
-                    submitFetchingTasksForNextTimeChunk();
-                  }
-                }
-              }
-            }
-            catch (Exception e) {
-              synchronized (mergedStatisticsCollector) {
-                if (!partitionFuture.isDone()) {
-                  partitionFuture.completeExceptionally(e);
-                  mergedStatisticsCollector.clear();
-                }
-              }
-            }
           });
         }
       }
-    }
-
-    /**
-     * Takes a list of sorted {@link ClusterByPartitions} {@param timeSketchPartitions} and adds it to a sorted list
-     * {@param finalPartitionBoundries}. If {@param finalPartitionBoundries} is not empty, the end time of the last
-     * partition of {@param finalPartitionBoundries} is changed to abut with the starting time of the first partition
-     * of {@param timeSketchPartitions}.
-     *
-     * This is used to make the partitions generated continuous.
-     */
-    private void abutAndAppendPartitionBoundries(
-        List<ClusterByPartition> finalPartitionBoundries,
-        List<ClusterByPartition> timeSketchPartitions
-    )
-    {
-      if (!finalPartitionBoundries.isEmpty()) {
-        // Stitch up the end time of the last partition with the start time of the first partition.
-        ClusterByPartition clusterByPartition = finalPartitionBoundries.remove(finalPartitionBoundries.size() - 1);
-        finalPartitionBoundries.add(new ClusterByPartition(clusterByPartition.getStart(), timeSketchPartitions.get(0).getStart()));
-      }
-      finalPartitionBoundries.addAll(timeSketchPartitions);
-    }
-
-    public CompletableFuture<Either<Long, ClusterByPartitions>> getPartitionFuture()
-    {
-      return partitionFuture;
-    }
+    });
   }
+
 
   /**
-   * Gets the partition size from an {@link Either}. If it is an error, the long denotes the number of partitions
-   * (in the case of creating too many partitions), otherwise checks the size of the list.
+   * Returns {@link Throwable} if error, else null
    */
-  private static long getPartitionCountFromEither(Either<Long, ClusterByPartitions> either)
+  public Throwable getError()
   {
-    if (either.isError()) {
-      return either.error();
-    } else {
-      return either.valueOrThrow().size();
-    }
+    return isError.get();
   }
+
 
   @Override
   public void close()

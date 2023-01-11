@@ -88,6 +88,9 @@ services:
       service: indexer
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - druid_msq_intermediate_storage_enable=true
+      - druid_msq_intermediate_storage_type=local
+      - druid_msq_intermediate_storage_basePath=/shared/durablestorage/
     volumes:
       # Test data
       - ../../resources:/resources
