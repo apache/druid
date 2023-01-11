@@ -559,6 +559,11 @@ public class SqlTestFramework
     return injector;
   }
 
+  public SqlEngine engine()
+  {
+    return engine;
+  }
+
   public ObjectMapper queryJsonMapper()
   {
     return injector.getInstance(ObjectMapper.class);

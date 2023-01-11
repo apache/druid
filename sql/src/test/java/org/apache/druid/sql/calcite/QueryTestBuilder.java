@@ -270,6 +270,11 @@ public class QueryTestBuilder
     return this;
   }
 
+  public List<Query<?>> getExpectedQueries()
+  {
+    return expectedQueries;
+  }
+
   public QueryTestRunner build()
   {
     return new QueryTestRunner(this);

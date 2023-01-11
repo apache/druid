@@ -93,9 +93,12 @@ import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -183,6 +186,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -1210,12 +1214,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-
-  public static class ExtractResults implements QueryTestRunner.QueryRunStepFactory
+  public static class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactory
   {
     private final Supplier<MSQTestOverlordServiceClient> overlordClientSupplier;
 
-    public ExtractResults(Supplier<MSQTestOverlordServiceClient> overlordClientSupplier)
+    public ExtractResultsFactory(Supplier<MSQTestOverlordServiceClient> overlordClientSupplier)
     {
       this.overlordClientSupplier = overlordClientSupplier;
     }
@@ -1226,6 +1229,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return new QueryTestRunner.BaseExecuteQuery(builder)
       {
         final List<QueryTestRunner.QueryResults> extractedResults = new ArrayList<>();
+        MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
 
         @Override
         public void run()
@@ -1248,7 +1252,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 row.length
             );
             String taskId = row[0].toString();
-            MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
             MSQTaskReportPayload payload = (MSQTaskReportPayload) overlordClient.getReportForTask(taskId)
                                                                                 .get(MSQTaskReport.REPORT_KEY)
                                                                                 .getPayload();
@@ -1275,6 +1278,49 @@ public class MSQTestBase extends BaseCalciteQueryTest
         public List<QueryTestRunner.QueryResults> results()
         {
           return extractedResults;
+        }
+      };
+    }
+  }
+
+  public static class VerifyMSQSupportedNativeQueriesFactory implements QueryTestRunner.QueryVerifyStepFactory
+  {
+    @Override
+    public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.BaseExecuteQuery execStep)
+    {
+      return new QueryTestRunner.QueryVerifyStep()
+      {
+        @Override
+        public void verify()
+        {
+          for (QueryTestRunner.QueryResults queryResults : execStep.results()) {
+            QueryTestBuilder builder = execStep.builder();
+            final List<Query<?>> expectedQueries = builder.getExpectedQueries();
+            final boolean unsupportedQuery = expectedQueries.stream().anyMatch(this::isUnsupportedQuery);
+            if (unsupportedQuery) {
+              return;
+            }
+          }
+          new QueryTestRunner.VerifyNativeQueries(execStep).verify();
+        }
+
+        private boolean isUnsupportedQuery(Query<?> query)
+        {
+          if (!Objects.equals(query.getType(), Query.GROUP_BY) && !Objects.equals(query.getType(), Query.SCAN)) {
+            return true;
+          }
+          DataSource dataSource = query.getDataSource();
+          return isUnsupportedDataSource(dataSource);
+        }
+
+        private boolean isUnsupportedDataSource(DataSource dataSource)
+        {
+          if (dataSource instanceof QueryDataSource) {
+            final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+            return isUnsupportedQuery(subQuery);
+          } else {
+            return dataSource.getChildren().stream().anyMatch(this::isUnsupportedDataSource);
+          }
         }
       };
     }

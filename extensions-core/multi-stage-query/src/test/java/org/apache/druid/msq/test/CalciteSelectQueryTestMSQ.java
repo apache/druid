@@ -112,7 +112,10 @@ import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
@@ -127,7 +130,6 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   public void setup2()
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
-
   }
 
   @After
@@ -244,7 +246,8 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .addCustomRunner(new MSQTestBase.ExtractResults(() -> indexingServiceClient))
+        .addCustomVerification(new MSQTestBase.VerifyMSQSupportedNativeQueriesFactory())
+        .addCustomRunner(new MSQTestBase.ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true);
   }
 
@@ -299,10 +302,19 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
               .build();
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "1"))
+              .tmpDir(new File(temporaryFolder.newFolder(), "2"))
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(indexSchemaDifferentDim3M1Types)
               .rows(ROWS2)
+              .buildMMappedIndex();
+          break;
+        case DATASOURCE3:
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(temporaryFolder.newFolder(), "3"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(INDEX_SCHEMA_NUMERIC_DIMS)
+              .rows(ROWS1_WITH_NUMERIC_DIMS)
               .buildMMappedIndex();
           break;
         default:
@@ -431,7 +443,7 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
             new Object[]{"abc"},
             new Object[]{"def"}
         ),
-        new MSQTestBase.ExtractResults(() -> indexingServiceClient)
+        new MSQTestBase.ExtractResultsFactory(() -> indexingServiceClient)
     );
   }
 }
