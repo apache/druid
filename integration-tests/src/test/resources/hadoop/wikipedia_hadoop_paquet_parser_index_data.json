@@ -91,18 +91,7 @@
       },
       "transformSpec": {
         "filter": null,
-        "transforms": [
-          {
-            "type": "expression",
-            "name": "userTransformed",
-            "expression": "\"user\""
-          },
-          {
-            "type": "expression",
-            "name": "regionAndCity",
-            "expression": "concat(\"region\", \"city\")"
-          }
-        ]
+        "transforms": %%TRANSFORMS%%
       }
     },
     "ioConfig": {

@@ -20,6 +20,7 @@
 package org.apache.druid.tests.hadoop;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -27,6 +28,8 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -151,8 +154,34 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
               "%%INPUT_PATHS%%",
               path
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%TRANSFORMS%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableList.of(
+                      ImmutableMap.of("type", "expression", "name", "userTransformed", "expression", "user"),
+                      ImmutableMap.of("type", "expression", "name", "regionAndCity", "expression", "concat(region,city)")
+                  )
+              )
+          );
 
           return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      final Function<String, String> queryTransform = query -> {
+        try {
+          query = StringUtils.replace(
+              query,
+              "%%EXPECTED_NUMBER_SUM_RESULT%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableMap.of("sum_added", 3090, "sum_deleted", 712, "sum_delta", 2378)
+              )
+          );
+          return query;
         }
         catch (Exception e) {
           throw new RuntimeException(e);
@@ -164,6 +193,81 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
           BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
+          false,
+          true,
+          true,
+          new Pair<>(false, false)
+      );
+    }
+  }
+
+  @Test
+  public void testHadoopParquetParserWithDifferentSchemaTest() throws Exception
+  {
+    /*
+    This test reads from three parquet files, each with a different schema.
+    The difference in the schema is shown below:
+    File 1's columns: userRenamed, continent, country, added, deleted, deltaRenamed
+    File 2's columns: user, continentRenamed, country, added, delta
+    File 3's columns: user, continent, countryRenamed, deleted, delta
+
+    Note that `deleted` was dropped from File 2 and `added` was dropped from File 3
+     */
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
+    try (
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
+    ) {
+      final Function<String, String> specPathsTransform = spec -> {
+        try {
+          String path = "/batch_index/multiple_schema_parquet";
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_PATHS%%",
+              path
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%TRANSFORMS%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableList.of(
+                      ImmutableMap.of("type", "expression", "name", "userTransformed", "expression", "nvl(user,userRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "countryFlat", "expression", "nvl(countryFlat,countryRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "continentFlat", "expression", "nvl(continentFlat,continentRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "delta", "expression", "nvl(delta,deltaRenamed)"),
+                      ImmutableMap.of("type", "expression", "name", "regionAndCity", "expression", "concat(region,city)")
+                  )
+              )
+          );
+
+          return spec;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      final Function<String, String> queryTransform = query -> {
+        try {
+          query = StringUtils.replace(
+              query,
+              "%%EXPECTED_NUMBER_SUM_RESULT_0831%%",
+              jsonMapper.writeValueAsString(
+                  ImmutableMap.of("sum_added", 1602, "sum_deleted", 497, "sum_delta", 2378)
+              )
+          );
+          return query;
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTest(
+          indexDatasource,
+          BATCH_TASK_WITH_PARQUET_PARSER_RENAME,
+          specPathsTransform,
+          BATCH_QUERIES_RESOURCE_FOR_PARQUET_PARSER_RENAME,
+          queryTransform,
           false,
           true,
           true,

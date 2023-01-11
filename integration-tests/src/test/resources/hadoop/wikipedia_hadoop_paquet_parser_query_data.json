@@ -20,9 +20,9 @@
     "query":{
       "queryType" : "timeseries",
       "dataSource": "%%DATASOURCE%%",
-      "granularity":"day",
+      "granularity":"week",
       "intervals":[
-        "2013-08-31T00:00/2013-09-01T00:00"
+        "2013-08-31T00:00/2013-09-02T00:00"
       ],
       "filter":null,
       "aggregations":[
@@ -53,9 +53,9 @@
     },
     "expectedResults":[
       {
-        "timestamp" : "2013-08-31T00:00:00.000Z",
+        "timestamp" : "2013-08-26T00:00:00.000Z",
         "result" : {
-          "quantilesSketch":5,
+          "quantilesSketch":10,
           "approxCountTheta":5.0,
           "approxCountHLL":5
         }
@@ -67,9 +67,9 @@
     "query":{
       "queryType" : "timeseries",
       "dataSource": "%%DATASOURCE%%",
-      "granularity":"day",
+      "granularity":"week",
       "intervals":[
-        "2013-08-31T00:00/2013-09-01T00:00"
+        "2013-08-31T00:00/2013-09-02T00:00"
       ],
       "filter":null,
       "aggregations":[
@@ -107,15 +107,50 @@
     },
     "expectedResults":[
       {
-        "timestamp" : "2013-08-31T00:00:00.000Z",
+        "timestamp" : "2013-08-26T00:00:00.000Z",
         "result" : {
           "first_user":"nuclear",
-          "last_user":"stringer",
-          "first_countryFlat":"United States",
           "first_continentFlat":"North America",
           "first_namespace":"article",
-          "first_regionAndCity":"Bay AreaSan Francisco"
+          "last_user":"stringer",
+          "first_regionAndCity":"Bay AreaSan Francisco",
+          "first_countryFlat":"United States"
         }
+      }
+    ]
+  },
+  {
+    "description": "timeseries, number sum aggs, all",
+    "query":{
+      "queryType" : "timeseries",
+      "dataSource": "%%DATASOURCE%%",
+      "granularity":"week",
+      "intervals":[
+        "2013-08-31T00:00/2013-09-02T00:00"
+      ],
+      "filter":null,
+      "aggregations":[
+        {
+          "type": "longSum",
+          "name": "sum_added",
+          "fieldName": "added"
+        },
+        {
+          "type":"longSum",
+          "name":"sum_deleted",
+          "fieldName":"deleted"
+        },
+        {
+          "type": "longSum",
+          "name": "sum_delta",
+          "fieldName": "delta"
+        }
+      ]
+    },
+    "expectedResults":[
+      {
+        "timestamp" : "2013-08-26T00:00:00.000Z",
+        "result" : %%EXPECTED_NUMBER_SUM_RESULT%%
       }
     ]
   }
