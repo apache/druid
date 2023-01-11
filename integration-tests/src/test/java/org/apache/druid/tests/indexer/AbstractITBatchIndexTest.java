@@ -180,6 +180,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
+  protected void doTestQuery(String dataSource, String queryFilePath)
+  {
+    doTestQuery(dataSource, queryFilePath, Function.identity());
+  }
+
   protected void doTestQuery(String dataSource, String queryFilePath, Function<String, String> queryTransform)
   {
     try {
