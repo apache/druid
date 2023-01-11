@@ -158,7 +158,7 @@ public class WorkerChatHandlerTest
     @Override
     public MSQWorkerTask task()
     {
-      return new MSQWorkerTask("controller", "ds", 1, new HashMap<>());
+      return new MSQWorkerTask("controller", "ds", 1, new HashMap<>(), 0);
     }
 
     @Override
