@@ -28,10 +28,10 @@ It accepts optional arguments such as list of services, total memory, and a conf
 By default, the services started by `bin/start-druid` will use all processors, up to 80% memory on the system, and will read the configuration files in `conf/druid/auto` for all other settings.
 For details about possible arguments, run `bin/start-druid --help`.
 
-## Single server reference configurations (depricated)
+## Single server reference configurations (deprecated)
 
 Druid includes a set of reference configurations and launch scripts for single-machine deployments.
-These congurations are depricated in favor of the `bin/start-druid` script documneted above.
+These congurations are deprecated in favor of the `bin/start-druid` script documneted above.
 These configuration bundles are located in `conf/druid/single-server/`.
 
 |Configuration|Sizing|Launch command|Configuration directory|
