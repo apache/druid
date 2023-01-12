@@ -25,7 +25,10 @@ title: "Single server deployment"
 Druid includes a launch script, `bin/start-druid` that automatically sets various memory-related parameters based on available processors and memory.
 It accepts optional arguments such as list of services, total memory, and a config directory to override default JVM arguments and service-specific runtime properties.
 
-By default, the services started by `bin/start-druid` will use all processors, up to 80% memory on the system, and will read the configuration files in `conf/druid/auto` for all other settings.
+By default, the services started by `bin/start-druid`:
+- use all processors
+- can use up to 80% memory on the system
+- apply the configuration files in `conf/druid/auto` for all other settings.
 For details about possible arguments, run `bin/start-druid --help`.
 
 ## Single server reference configurations (deprecated)
