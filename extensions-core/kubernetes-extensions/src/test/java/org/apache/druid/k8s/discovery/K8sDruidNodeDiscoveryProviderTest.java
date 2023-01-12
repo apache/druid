@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.kubernetes.client.util.Watch;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,6 +41,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import static org.easymock.EasyMock.mock;
+
 public class K8sDruidNodeDiscoveryProviderTest
 {
   private static final Logger LOGGER = new Logger(K8sDruidNodeDiscoveryProviderTest.class);
@@ -47,31 +50,31 @@ public class K8sDruidNodeDiscoveryProviderTest
   private final DiscoveryDruidNode testNode1 = new DiscoveryDruidNode(
       new DruidNode("druid/router", "test-host1", true, 80, null, true, false),
       NodeRole.ROUTER,
-      null
+      ImmutableMap.of("lookupNodeService", mock(LookupNodeService.class))
   );
 
   private final DiscoveryDruidNode testNode2 = new DiscoveryDruidNode(
       new DruidNode("druid/router", "test-host2", true, 80, null, true, false),
       NodeRole.ROUTER,
-      null
+      ImmutableMap.of("lookupNodeService", mock(LookupNodeService.class))
   );
 
   private final DiscoveryDruidNode testNode3 = new DiscoveryDruidNode(
       new DruidNode("druid/router", "test-host3", true, 80, null, true, false),
       NodeRole.ROUTER,
-      null
+      ImmutableMap.of("lookupNodeService", mock(LookupNodeService.class))
   );
 
   private final DiscoveryDruidNode testNode4 = new DiscoveryDruidNode(
       new DruidNode("druid/router", "test-host4", true, 80, null, true, false),
       NodeRole.ROUTER,
-      null
+      ImmutableMap.of("lookupNodeService", mock(LookupNodeService.class))
   );
 
   private final DiscoveryDruidNode testNode5 = new DiscoveryDruidNode(
       new DruidNode("druid/router", "test-host5", true, 80, null, true, false),
       NodeRole.ROUTER,
-      null
+      ImmutableMap.of("lookupNodeService", mock(LookupNodeService.class))
   );
 
   private final PodInfo podInfo = new PodInfo("testpod", "testns");
