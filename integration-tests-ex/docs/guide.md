@@ -241,7 +241,7 @@ another build task.
 
 ### Choosing the Middle Manager or Indexer
 
-Tests should run on the Middle Manager by default. Tests can optionally runn on the
+Tests should run on the Middle Manager by default. Tests can optionally run on the
 Indexer. To run on Indexer:
 
 * In the environment, `export DRUID_INTEGRATION_TEST_INDEXER=indexer`. (Use `middleManager`

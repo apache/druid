@@ -224,7 +224,7 @@ case $CMD in
     tail_logs $CATEGORY
     ;;
   "travis" )
-    category $1
+    prepare_category $1
     $0 dist
     $0 image
     $0 test $CATEGORY
