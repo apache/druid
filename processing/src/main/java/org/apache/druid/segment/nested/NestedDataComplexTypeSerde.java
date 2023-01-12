@@ -97,7 +97,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     }
     builder.setComplexColumnSupplier(supplier);
 
-    // always use the nested column dimension hanler, regardless what we claim our query time type is
+    // always use the nested column dimension handler, regardless what we claim our query time type is
     builder.setHandlerCapabilities(
         new ColumnCapabilitiesImpl().setType(TYPE)
                                     .setDictionaryEncoded(true)

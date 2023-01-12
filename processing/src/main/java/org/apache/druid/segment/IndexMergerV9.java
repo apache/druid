@@ -906,11 +906,11 @@ public class IndexMergerV9 implements IndexMerger
         );
       }
       for (String metric : adapter.getMetricNames()) {
-        ColumnCapabilities capabilities = adapter.getCapabilities(metric);
-        capabilitiesMap.compute(metric, (m, existingCapabilities) ->
+        final ColumnCapabilities capabilities = adapter.getCapabilities(metric);
+        final ColumnCapabilities merged = capabilitiesMap.compute(metric, (m, existingCapabilities) ->
             mergeCapabilities(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
-        metricTypes.put(metric, capabilities);
+        metricTypes.put(metric, merged);
       }
     }
     for (String dim : mergedDimensions) {

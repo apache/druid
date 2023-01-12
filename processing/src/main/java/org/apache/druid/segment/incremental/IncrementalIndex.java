@@ -478,25 +478,30 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       return timeAndMetricsColumnCapabilities.get(columnName);
     }
     synchronized (dimensionDescs) {
-      if (dimensionDescs.containsKey(columnName)) {
-        return dimensionDescs.get(columnName).getCapabilities();
-      }
+      return dimensionDescs.get(columnName).getCapabilities();
     }
-    return null;
   }
 
   @Nullable
   public ColumnCapabilities getColumnHandlerCapabilities(String columnName)
   {
     if (timeAndMetricsColumnCapabilities.containsKey(columnName)) {
-      return timeAndMetricsColumnCapabilities.get(columnName);
-    }
-    synchronized (dimensionDescs) {
-      if (dimensionDescs.containsKey(columnName)) {
-        return dimensionDescs.get(columnName).getIndexer().getHandlerCapabilities();
+      final ColumnCapabilities capabilities = timeAndMetricsColumnCapabilities.get(columnName);
+      if (capabilities.is(ValueType.COMPLEX)) {
+        // normalize complex type name for these capabilities. the values in timeAndMetricsColumnCapabilities
+        // are direct from the AggregatorFactory, so might be too specific (think build vs merge aggs)
+        // for this method though, we want the 'normal' type name for the capabilities, since this is the true 'output'
+        // type of the column, so use the type from the MetricDesc instead, which is computed by round-tripping through
+        // something like ComplexMetrics.getSerdeForType(valueType.getComplexTypeName()).getTypeName()
+        return ColumnCapabilitiesImpl.copyOf(capabilities)
+                                     .setType(ColumnType.ofComplex(metricDescs.get(columnName).getType()));
       }
+      return capabilities;
     }
-    return null;
+
+    synchronized (dimensionDescs) {
+      return dimensionDescs.get(columnName).getIndexer().getHandlerCapabilities();
+    }
   }
 
   /**
