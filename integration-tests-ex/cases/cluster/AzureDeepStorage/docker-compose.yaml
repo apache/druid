@@ -12,6 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# -------------------------------------------------------------------------
+
+# Cluster for the Azure deep storage test.
+#
+# Required env vars:
+#
+# AZURE_ACCOUNT
+# AZURE_KEY
+# AZURE_CONTAINER
 
 networks:
   druid-it-net:

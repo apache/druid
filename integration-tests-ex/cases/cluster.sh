@@ -51,28 +51,28 @@ fi
 CMD=$1
 shift
 
+# All commands need env vars
+ENV_FILE=$MODULE_DIR/../image/target/env.sh
+if [ ! -f $ENV_FILE ]; then
+	echo "Please build the Docker test image before testing" 1>&2
+	exit 1
+fi
+
+source $ENV_FILE
+
 function category {
 	if [ $# -eq 0 ]; then
 		usage 1>&2
 		exit 1
 	fi
 	export CATEGORY=$1
-
-	# All commands need env vars
-	ENV_FILE=$MODULE_DIR/../image/target/env.sh
-	if [ ! -f $ENV_FILE ]; then
-		echo "Please build the Docker test image before testing" 1>&2
-		exit 1
-	fi
-
-	source $ENV_FILE
 	# The untranslated category is used for the local name of the
 	# shared folder.
 
 	# DRUID_INTEGRATION_TEST_GROUP is used in
 	# docker-compose files and here. Despite the name, it is the
 	# name of the cluster configuration we want to run, not the
-	# test category. Multiple categories an map to the same cluster
+	# test category. Multiple categories can map to the same cluster
 	# definition.
 
 	# Map from category name to shared cluster definition name.
@@ -103,34 +103,6 @@ function category {
 	export TARGET_DIR=$MODULE_DIR/target
 	export SHARED_DIR=$TARGET_DIR/$CATEGORY
 	export ENV_FILE="$TARGET_DIR/${CATEGORY}.env"
-}
-
-function build_override {
-
-	mkdir -p target
-	rm -f "$ENV_FILE"
-	touch "$ENV_FILE"
-
-	# User-local settings?
-	LOCAL_ENV="$HOME/druid-it/${CATEGORY}.env"
-	if [ -f "$LOCAL_ENV" ]; then
-		cat "$LOCAL_ENV" >> "$ENV_FILE"
-	fi
-
-	# Provided override file
-	if [ -n "$OVERRIDE_ENV" ]; then
-		if [ ! -f "$OVERRIDE_ENV" ]; then
-			echo "Environment override file (OVERRIDE_ENV) not found: $OVERRIDE_ENV" 1>&2
-			exit 1
-		fi
-		cat "$OVERRIDE_ENV" >> "$ENV_FILE"
-	fi
-
-    # Add all environment variables of the form druid_*
-    env | grep "^druid_" >> "$ENV_FILE"
-
-    # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
-    export OVERRIDE_ENV="$ENV_FILE"
 }
 
 # Dump lots of information to debug Docker failures when run inside
@@ -165,6 +137,31 @@ function build_shared_dir {
 	chmod -R a+rwx $SHARED_DIR
 }
 
+# Each test must have a default docker-compose.yaml file which corresponds to using
+# the MiddleManager (or no indexer). A test can optionally include a second file called
+# docker-compose-indexer.yaml which uses the Indexer in place of Middle Manager.
+function docker_file {
+	compose_args=""
+	if [ -n "$DRUID_INTEGRATION_TEST_INDEXER" ]; then
+	    # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
+	    # if it is set at all.
+		if [ "$DRUID_INTEGRATION_TEST_INDEXER" != "indexer" ] && [ "$DRUID_INTEGRATION_TEST_INDEXER" != "middleManager" ]
+		then
+		  echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')" 1>&2
+		  exit 1
+		fi
+		if [ "$DRUID_INTEGRATION_TEST_INDEXER" == "indexer" ]; then
+			compose_file=docker-compose-indexer.yaml
+			if [ ! -f "$CLUSTER_DIR/$compose_file" ]; then
+			  echo "DRUID_INTEGRATION_TEST_INDEXER=$DRUID_INTEGRATION_TEST_INDEXER, but $CLUSTER_DIR/$compose_file is missing" 1>&2
+			  exit 1
+		    fi
+		   compose_args="-f $compose_file"
+		fi
+	fi
+	echo $compose_args
+}
+
 # Print environment for debugging
 #env
 
@@ -179,10 +176,9 @@ case $CMD in
 	"up" )
 		category $*
 		echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
-		build_override
 		build_shared_dir
 	    cd $CLUSTER_DIR
-		docker-compose up -d
+		docker-compose `docker_file` up -d
 		# Enable the following for debugging
 		#show_status
 		;;
@@ -196,12 +192,12 @@ case $CMD in
 		# Enable the following for debugging
 		#show_status
 	    cd $CLUSTER_DIR
-		echo OVERRIDE_ENV="$ENV_FILE" docker-compose $CMD
-		OVERRIDE_ENV="$ENV_FILE" docker-compose $CMD
+		echo docker-compose `docker_file` $CMD
+		docker-compose `docker_file` $CMD
 		;;
 	"*" )
 		category $*
 	    cd $CLUSTER_DIR
-		OVERRIDE_ENV="$ENV_FILE" docker-compose $CMD
+		docker-compose `docker_file` $CMD
 		;;
 esac

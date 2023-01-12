@@ -239,3 +239,29 @@ test. Your test will run in parallel with all other IT categories, which is why
 we offered the advice above: the test has to have a good reason to fire up yet
 another build task.
 
+### Choosing the Middle Manager or Indexer
+
+Tests should run on the Middle Manager by default. Tests can optionally runn on the
+Indexer. To run on Indexer:
+
+* In the environment, `export DRUID_INTEGRATION_TEST_INDEXER=indexer`. (Use `middleManager`
+  otherwise. If the variable is not set, `middleManager` is the default.)
+* The `cluster/<category>/docker-compose.yaml` file should be for the Middle manager. Create
+  a separate file called `cluster/<category>/docker-compose-indexer.yaml` to define the
+  Indexer-based cluster.
+* The test `src/test/resources/cluster/<category>/docker.yaml` file should contain a conditional
+  entry to select define either the Middle Manager or Indexer. Example:
+
+```yaml
+  middlemanager:
+    if: middleManager
+    instances:
+      - port: 8091
+  indexer:
+    if: indexer
+    instances:
+      - port: 8091
+```
+
+Now, the test will run on Indexer if the above environment variable is set, Middle Manager
+otherwise.

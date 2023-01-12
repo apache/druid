@@ -400,7 +400,6 @@ public class Initializer
   private final ResolvedConfig clusterConfig;
   private final Injector injector;
   private final Lifecycle lifecycle;
-  private MetastoreClient metastoreClient;
   private DruidClusterClient clusterClient;
 
   private Initializer(Builder builder)

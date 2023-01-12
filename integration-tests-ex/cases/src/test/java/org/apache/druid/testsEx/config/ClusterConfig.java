@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testsEx.config.ServiceConfig.DruidConfig;
 import org.apache.druid.testsEx.config.ServiceConfig.ZKConfig;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Java representation of the test configuration YAML.
@@ -164,7 +166,24 @@ public class ClusterConfig
 
   public ResolvedConfig resolve(String clusterName)
   {
-    return new ResolvedConfig(clusterName, resolveIncludes());
+    Set<String> configTags = createConfigTags();
+    return new ResolvedConfig(clusterName, resolveIncludes(), configTags);
+  }
+
+  /**
+   * Create the set of configuration tags for this run. At present, the only options
+   * are "middleManager" or "indexer" corresponding to the value of the
+   * {@code DRUID_INTEGRATION_TEST_INDEXER} env var which says whether this cluster has
+   * an indexer or middle manager.
+   */
+  private Set<String> createConfigTags()
+  {
+    String indexer = "middleManager";
+    String indexerValue = System.getenv("DRUID_INTEGRATION_TEST_INDEXER");
+    if (indexerValue != null) {
+      indexer = indexerValue;
+    }
+    return ImmutableSet.of(indexer);
   }
 
   public ClusterConfig resolveIncludes()
