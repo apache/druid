@@ -80,10 +80,11 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postCounters(CounterSnapshotsTree snapshotsTree) throws IOException
+  public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree) throws IOException
   {
+    final String path = StringUtils.format("/counters/%s", StringUtils.urlEncode(workerId));
     doRequest(
-        new RequestBuilder(HttpMethod.POST, "/counters")
+        new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(jsonMapper, snapshotsTree),
         IgnoreHttpResponseHandler.INSTANCE
     );

@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import com.google.common.base.Preconditions;
-
 import javax.annotation.Nullable;
 
 /**
@@ -35,8 +33,8 @@ public class MSQException extends RuntimeException
       final MSQFault fault
   )
   {
-    super(fault.getCodeWithMessage(), cause);
-    this.fault = Preconditions.checkNotNull(fault, "fault");
+    super(MSQFaultUtils.generateMessageWithErrorCode(fault), cause);
+    this.fault = fault;
   }
 
   public MSQException(final MSQFault fault)

@@ -117,7 +117,7 @@ public class ITMultiStageQuery
       ));
     }
 
-    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
+    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);

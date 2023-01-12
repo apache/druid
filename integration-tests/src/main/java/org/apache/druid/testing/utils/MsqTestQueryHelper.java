@@ -168,6 +168,11 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     );
   }
 
+  public void pollTaskIdForSuccess(String taskId) throws Exception
+  {
+    Assert.assertEquals(pollTaskIdForCompletion(taskId), TaskState.SUCCESS);
+  }
+
   /**
    * Fetches status reports for a given task
    */
@@ -255,7 +260,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
         );
       }
       String taskId = sqlTaskStatus.getTaskId();
-      pollTaskIdForCompletion(taskId);
+      pollTaskIdForSuccess(taskId);
       compareResults(taskId, queryWithResults);
     }
   }
