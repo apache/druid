@@ -316,7 +316,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
   {
     TimestampSpec timestampSpec = new TimestampSpec("CFlat", "iso", null);
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Arrays.asList(
+        ImmutableList.of(
             new StringDimensionSchema("B")
         )
     );
