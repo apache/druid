@@ -655,4 +655,55 @@ public class ForkingTaskRunnerTest
     forkingTaskRunner.saveRunningTasks();
     Assert.assertEquals(task.getId(), forkingTaskRunner.restore().get(0).lhs.getId());
   }
+
+  @Test
+  public void testCannotRestoreTasks() throws Exception
+  {
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            ImmutableList.of(),
+            false,
+            new Period("PT0S"),
+            new Period("PT10S"),
+            ImmutableList.of(),
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null,
+            false,
+            ImmutableList.of(
+                temporaryFolder.newFolder().getAbsolutePath(),
+                temporaryFolder.newFolder().getAbsolutePath()
+            )
+        ),
+        new WorkerConfig(),
+        new Properties(),
+        new NoopTaskLogs(),
+        new DefaultObjectMapper(),
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new StartupLoggingConfig()
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        ProcessHolder processHolder = Mockito.mock(ProcessHolder.class);
+        Mockito.doNothing().when(processHolder).registerWithCloser(ArgumentMatchers.any());
+        Mockito.doNothing().when(processHolder).shutdown();
+        return processHolder;
+      }
+
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    Task task = NoopTask.create();
+    forkingTaskRunner.run(task);
+    forkingTaskRunner.saveRunningTasks();
+    Assert.assertTrue(forkingTaskRunner.restore().isEmpty());
+  }
 }
