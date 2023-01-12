@@ -42,6 +42,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -318,7 +319,7 @@ public class DetermineRangePartitionsJobTest
     this.expectedNumOfShardsForEachSegment = expectedNumOfShardsForEachSegment;
     this.expectedStartEndForEachShard = expectedStartEndForEachShard;
 
-    dataFile = File.createTempFile("test_range_website_data", "tmp");
+    dataFile = Files.createTempFile("test_range_website_data", "tmp").toFile();
     dataFile.deleteOnExit();
     tmpDir = FileUtils.createTempDir();
     tmpDir.deleteOnExit();
