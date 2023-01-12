@@ -1052,7 +1052,7 @@ license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
 version: 0.4.11
-# libraries:
+libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
 
 ---
