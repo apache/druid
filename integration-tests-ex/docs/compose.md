@@ -236,3 +236,56 @@ To define a test cluster, do the following:
 * If you need multiple instances of the same service, extend that service
   twice, and define distinct names and port numbers.
 * Add any test-specific environment configuration required.
+
+## Generating `docker-compose.yaml` Files
+
+Each test has somewhat different needs for its test cluster. Yet, there is a
+great amount of consistency across test clusters and across services. The result,
+if we create files by hand, is a great amount of copy/paste redundancy, with all
+the problems that copy/paste implies.
+
+As an alternative, the framework provides a simple-minded way to generate the
+`docker-compose.yaml` file using a simple Bash-based template mechanism. To use
+this:
+
+* Create your test cluster directory: `cluster/<category>`.
+* Create a file in that directory called `docker-compose.sh`.
+* The minimal file appears below:
+
+```bash
+set -e
+
+TEMPLATE=$0
+export MODULE_DIR=$(cd $(dirname $0) && pwd)
+CATEGORY=$(basename $MODULE_DIR)
+
+. $MODULE_DIR/../Common/gen-docker.sh
+
+# Custom functions go here
+
+gen_compose_file $CATEGORY
+```
+
+The above will generate a "generic" cluster: one of each kind of service, with
+either a Middle Manager or Indexer depending on the `DRUID_INTEGRATION_TEST_INDEXER`
+env var.
+
+You customize your specific cluster by "overriding" (really, just replacing) the
+various Bash functions that do the generation. See any of the existing files for
+examples.
+
+For example, you can:
+
+* Add test-specific environment config to one, some or all services.
+* Add or remove services.
+* Create multiples of selected services.
+
+The advantage is that, as Druid evolves and we change the basics, those changes
+are automatically propagated to all test clusters.
+
+Once you've created your file, the test framework will re-generate the
+`docker-compose.yaml` file on each run to reflect any per-run customization.
+The generated file is found in `target/cluster/<category>/docker-compose.yaml`.
+As with all generated files: resist the temptation to change the generated file:
+change the template instead.
+

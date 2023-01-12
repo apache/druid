@@ -137,11 +137,28 @@ function build_shared_dir {
 	chmod -R a+rwx $SHARED_DIR
 }
 
-# Each test must have a default docker-compose.yaml file which corresponds to using
+# Either generate the docker-compose file, or use "static" versions.
+function docker_file {
+
+	# If a template exists, generate the docker-compose.yaml file. Copy over the Common
+	# folder.
+	if [ -f "$CLUSTER_DIR/docker-compose.sh" ]; then
+		export COMPOSE_DIR=$TARGET_DIR/cluster/$CATEGORY
+		$CLUSTER_DIR/docker-compose.sh
+		cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
+	else
+		# Else, use the existing non-template file in place.
+		export COMPOSE_DIR=$CLUSTER_DIR
+		choose_static_file
+	fi
+}
+
+# Each test that uses static (non-generated) docker-compose files
+# must have a default docker-compose.yaml file which corresponds to using
 # the MiddleManager (or no indexer). A test can optionally include a second file called
 # docker-compose-indexer.yaml which uses the Indexer in place of Middle Manager.
-function docker_file {
-	compose_args=""
+function choose_static_file {
+	export DOCKER_ARGS=""
 	if [ -n "$DRUID_INTEGRATION_TEST_INDEXER" ]; then
 	    # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
 	    # if it is set at all.
@@ -156,10 +173,9 @@ function docker_file {
 			  echo "DRUID_INTEGRATION_TEST_INDEXER=$DRUID_INTEGRATION_TEST_INDEXER, but $CLUSTER_DIR/$compose_file is missing" 1>&2
 			  exit 1
 		    fi
-		   compose_args="-f $compose_file"
+		   export DOCKER_ARGS="-f $compose_file"
 		fi
 	fi
-	echo $compose_args
 }
 
 # Print environment for debugging
@@ -177,27 +193,30 @@ case $CMD in
 		category $*
 		echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
 		build_shared_dir
-	    cd $CLUSTER_DIR
-		docker-compose `docker_file` up -d
+		docker_file
+	    cd $COMPOSE_DIR
+		docker-compose $DOCKER_ARGS up -d
 		# Enable the following for debugging
 		#show_status
 		;;
 	"status" )
 		category $*
-	    cd $CLUSTER_DIR
+		docker_file
+	    cd $COMPOSE_DIR
 		show_status
 		;;
 	"down" )
 		category $*
 		# Enable the following for debugging
 		#show_status
-	    cd $CLUSTER_DIR
-		echo docker-compose `docker_file` $CMD
-		docker-compose `docker_file` $CMD
+		docker_file
+	    cd $COMPOSE_DIR
+		docker-compose $DOCKER_ARGS $CMD
 		;;
 	"*" )
 		category $*
-	    cd $CLUSTER_DIR
-		docker-compose `docker_file` $CMD
+		docker_file
+	    cd $COMPOSE_DIR
+		docker-compose $DOCKER_ARGS $CMD
 		;;
 esac
