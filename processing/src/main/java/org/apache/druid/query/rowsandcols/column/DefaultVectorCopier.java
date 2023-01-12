@@ -34,7 +34,7 @@ public class DefaultVectorCopier implements VectorCopier
   public void copyInto(Object[] into, int intoStart)
   {
     final int numRows = accessor.numRows();
-    if ((intoStart + (long) numRows) > Integer.MAX_VALUE) {
+    if (Integer.MAX_VALUE - numRows < intoStart) {
       throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
     }
 

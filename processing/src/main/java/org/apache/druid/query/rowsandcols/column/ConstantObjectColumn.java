@@ -108,7 +108,7 @@ public class ConstantObjectColumn implements Column
   {
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
-        if ((intoStart + (long) numRows) > Integer.MAX_VALUE) {
+        if (Integer.MAX_VALUE - numRows < intoStart) {
           throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
         }
         Arrays.fill(into, intoStart, intoStart + numRows, obj);

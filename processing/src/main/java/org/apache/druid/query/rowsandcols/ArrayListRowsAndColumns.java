@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -69,6 +70,9 @@ import java.util.function.Function;
  */
 public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumns
 {
+  @SuppressWarnings("rawtypes")
+  private static final HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = makeAsMap();
+
   private final ArrayList<RowType> rows;
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
@@ -105,6 +109,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       int endOffset
   )
   {
+    if (endOffset - startOffset < 0) {
+      throw new ISE("endOffset[%,d] - startOffset[%,d] was somehow negative!?");
+    }
     this.rows = rows;
     this.rowAdapter = rowAdapter;
     this.rowSignature = rowSignature;
@@ -188,202 +195,16 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
 
   @Nullable
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public <T> T as(Class<T> clazz)
   {
-    if (ClusteredGroupPartitioner.class.equals(clazz)) {
-      return (T) new ClusteredGroupPartitioner()
-      {
-        @Override
-        public int[] computeBoundaries(List<String> columns)
-        {
-          if (numRows() == 0) {
-            return new int[]{};
-          }
-
-          boolean allInSignature = true;
-          for (String column : columns) {
-            if (!rowSignature.contains(column)) {
-              allInSignature = false;
-            }
-          }
-
-          if (allInSignature) {
-            return computeBoundariesAllInSignature(columns);
-          } else {
-            return computeBoundariesSomeAppended(columns);
-          }
-        }
-
-        /**
-         * Computes boundaries assuming all columns are defined as in the signature.  Given that
-         * ArrayListRowsAndColumns is a fundamentally row-oriented data structure, using a row-oriented
-         * algorithm should prove better than the column-oriented implementation in DefaultClusteredGroupPartitioner
-         *
-         * @param columns the columns to partition on as in {@link #computeBoundaries(List)}
-         * @return the partition boundaries as in {@link #computeBoundaries(List)}
-         */
-        private int[] computeBoundariesAllInSignature(List<String> columns)
-        {
-          ArrayList<Comparator<Object>> comparators = new ArrayList<>(columns.size());
-          ArrayList<Function<RowType, Object>> adapters = new ArrayList<>(columns.size());
-          for (String column : columns) {
-            final Optional<ColumnType> columnType = rowSignature.getColumnType(column);
-            if (columnType.isPresent()) {
-              comparators.add(Comparator.nullsFirst(columnType.get().getStrategy()));
-              adapters.add(rowAdapter.columnFunction(column));
-            } else {
-              throw new ISE("column didn't exist!?  Other method should've been called...");
-            }
-          }
-
-          IntList boundaries = new IntArrayList();
-          Object[] prevVal = new Object[comparators.size()];
-          Object[] nextVal = new Object[comparators.size()];
-
-          int numRows = endOffset - startOffset;
-
-          boundaries.add(0);
-          RowType currRow = rows.get(startOffset);
-          for (int i = 0; i < adapters.size(); ++i) {
-            prevVal[i] = adapters.get(i).apply(currRow);
-          }
-
-          for (int i = 1; i < numRows; ++i) {
-            currRow = rows.get(startOffset + i);
-            for (int j = 0; j < adapters.size(); ++j) {
-              nextVal[j] = adapters.get(j).apply(currRow);
-            }
-
-            for (int j = 0; j < comparators.size(); ++j) {
-              final int comparison = comparators.get(j).compare(prevVal[j], nextVal[j]);
-              if (comparison != 0) {
-                // Swap references
-                Object[] tmpRef = prevVal;
-                prevVal = nextVal;
-                nextVal = tmpRef;
-
-                boundaries.add(i);
-                break;
-              }
-            }
-          }
-          boundaries.add(numRows);
-
-          return boundaries.toIntArray();
-        }
-
-        /**
-         * Computes boundaries including some columns that were appended later.  In this case, we are fundamentally
-         * mixing some row-oriented format with some column-oriented format. It's hard to determine if there's really
-         * an optimized form for this (or, really, it's hard to know if the optimized form would actually be worth
-         * the code complexity), so just fall back to the DefaultClusteredGroupPartitioner to compute these boundaries,
-         * the optimizations that come from re-using the ArrayListRowsAndColumns will continue to exist.
-         *
-         * @param columns the columns to partition on as in {@link #computeBoundaries(List)}
-         * @return the partition boundaries as in {@link #computeBoundaries(List)}
-         */
-        private int[] computeBoundariesSomeAppended(List<String> columns)
-        {
-          return new DefaultClusteredGroupPartitioner(ArrayListRowsAndColumns.this).computeBoundaries(columns);
-        }
-
-
-        @Override
-        public ArrayList<RowsAndColumns> partitionOnBoundaries(List<String> partitionColumns)
-        {
-          final int[] boundaries = computeBoundaries(partitionColumns);
-          if (boundaries.length < 2) {
-            return new ArrayList<>();
-          }
-
-          ArrayList<RowsAndColumns> retVal = new ArrayList<>(boundaries.length - 1);
-
-          for (int i = 1; i < boundaries.length; ++i) {
-            int start = boundaries[i - 1];
-            int end = boundaries[i];
-            retVal.add(limited(start, end));
-          }
-
-          return retVal;
-        }
-      };
+    final Function<ArrayListRowsAndColumns, ?> fn = AS_MAP.get(clazz);
+    if (fn == null) {
+      return null;
     }
-
-    if (NaiveSortMaker.class.equals(clazz)) {
-      if (startOffset != 0) {
-        throw new ISE(
-            "The NaiveSortMaker should happen on the first RAC, start was [%,d], end was [%,d]",
-            startOffset,
-            endOffset
-        );
-      }
-      if (endOffset == rows.size()) {
-        // In this case, we are being sorted along with other RowsAndColumns objects, we don't have an optimized
-        // implementation for that, so just return null
-        return null;
-      }
-
-      // When we are doing a naive sort and we are dealing with the first sub-window from ourselves, then we assume
-      // that we will see all of the other sub-windows as well, we can run through them and then sort the underlying
-      // rows at the very end.
-      return (T) (NaiveSortMaker) ordering -> new NaiveSortMaker.NaiveSorter()
-      {
-        private int currEnd = endOffset;
-
-        @Override
-        public RowsAndColumns moreData(RowsAndColumns rac)
-        {
-          if (currEnd == rows.size()) {
-            // It's theoretically possible that this object is used in a place where it sees a bunch of parts from
-            // the same ArrayListRowsAndColumns and then, continues to receive more and more RowsAndColumns objects
-            // from other ArrayListRowsAndColumns.  In that case, we can
-            //   1. do a localized sort
-            //   2. continue to build up the other objects
-            //   3. once all objects are complete, do a merge-sort between them and return that
-            //
-            // This is not currently implemented, however, as the code cannot actually ever generate that sequence
-            // of objects.  Additionally, if the code ever did generate that sequence, the proper solution could be
-            // to implement something else differently (perhaps use a different type of RowsAndColumns entirely).
-            // As such, we leave this implementation as an exercise for the future when it is better known why the
-            // code needed to work with this specific series of concrete objects.
-            throw new ISE("More data came after completing the ArrayList, not supported yet.");
-          }
-
-          if (rac instanceof ArrayListRowsAndColumns) {
-            ArrayListRowsAndColumns<RowType> arrayRac = (ArrayListRowsAndColumns<RowType>) rac;
-            if (arrayRac.startOffset != currEnd) {
-              throw new ISE(
-                  "ArrayRAC instances seen out-of-order!? currEnd[%,d], arrayRac[%,d][%,d]",
-                  currEnd,
-                  arrayRac.startOffset,
-                  arrayRac.endOffset
-              );
-            }
-            currEnd = arrayRac.endOffset;
-
-            return null;
-          } else {
-            throw new ISE("Expected an ArrayListRowsAndColumns, got[%s], fall back to default?", rac.getClass());
-          }
-        }
-
-        @Override
-        public RowsAndColumns complete()
-        {
-          if (currEnd != rows.size()) {
-            throw new ISE("Didn't see all of the rows? currEnd[%,d], rows.size()[%,d]", currEnd, rows.size());
-          }
-
-          final ArrayListRowsAndColumns<RowType> retVal = limited(0, rows.size());
-          retVal.sort(ordering);
-          return retVal;
-        }
-      };
-    }
-
-    return null;
+    return (T) fn.apply(this);
   }
+
 
   @Override
   public void addColumn(String name, Column column)
@@ -492,5 +313,222 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
           }
         }
     );
+  }
+
+  @SuppressWarnings("rawtypes")
+  private static HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> makeAsMap()
+  {
+    HashMap<Class<?>, Function<ArrayListRowsAndColumns, ?>> retVal = new HashMap<>();
+
+    retVal.put(
+        ClusteredGroupPartitioner.class,
+        (Function<ArrayListRowsAndColumns, ClusteredGroupPartitioner>) rac -> rac.new MyClusteredGroupPartitioner()
+    );
+
+    retVal.put(
+        NaiveSortMaker.class,
+        (Function<ArrayListRowsAndColumns, NaiveSortMaker>) rac -> {
+          if (rac.startOffset != 0) {
+            throw new ISE(
+                "The NaiveSortMaker should happen on the first RAC, start was [%,d], end was [%,d]",
+                rac.startOffset,
+                rac.endOffset
+            );
+          }
+          if (rac.endOffset == rac.rows.size()) {
+            // In this case, we are being sorted along with other RowsAndColumns objects, we don't have an optimized
+            // implementation for that, so just return null
+            //noinspection ReturnOfNull
+            return null;
+          }
+
+          // When we are doing a naive sort and we are dealing with the first sub-window from ourselves, then we assume
+          // that we will see all of the other sub-windows as well, we can run through them and then sort the underlying
+          // rows at the very end.
+          return rac.new MyNaiveSortMaker();
+        }
+    );
+
+    return retVal;
+  }
+
+  private class MyClusteredGroupPartitioner implements ClusteredGroupPartitioner
+  {
+    @Override
+    public int[] computeBoundaries(List<String> columns)
+    {
+      if (numRows() == 0) {
+        return new int[]{};
+      }
+
+      boolean allInSignature = true;
+      for (String column : columns) {
+        if (!rowSignature.contains(column)) {
+          allInSignature = false;
+        }
+      }
+
+      if (allInSignature) {
+        return computeBoundariesAllInSignature(columns);
+      } else {
+        return computeBoundariesSomeAppended(columns);
+      }
+    }
+
+    /**
+     * Computes boundaries assuming all columns are defined as in the signature.  Given that
+     * ArrayListRowsAndColumns is a fundamentally row-oriented data structure, using a row-oriented
+     * algorithm should prove better than the column-oriented implementation in DefaultClusteredGroupPartitioner
+     *
+     * @param columns the columns to partition on as in {@link #computeBoundaries(List)}
+     * @return the partition boundaries as in {@link #computeBoundaries(List)}
+     */
+    private int[] computeBoundariesAllInSignature(List<String> columns)
+    {
+      ArrayList<Comparator<Object>> comparators = new ArrayList<>(columns.size());
+      ArrayList<Function<RowType, Object>> adapters = new ArrayList<>(columns.size());
+      for (String column : columns) {
+        final Optional<ColumnType> columnType = rowSignature.getColumnType(column);
+        if (columnType.isPresent()) {
+          comparators.add(Comparator.nullsFirst(columnType.get().getStrategy()));
+          adapters.add(rowAdapter.columnFunction(column));
+        } else {
+          throw new ISE("column didn't exist!?  Other method should've been called...");
+        }
+      }
+
+      IntList boundaries = new IntArrayList();
+      Object[] prevVal = new Object[comparators.size()];
+      Object[] nextVal = new Object[comparators.size()];
+
+      int numRows = endOffset - startOffset;
+
+      boundaries.add(0);
+      RowType currRow = rows.get(startOffset);
+      for (int i = 0; i < adapters.size(); ++i) {
+        prevVal[i] = adapters.get(i).apply(currRow);
+      }
+
+      for (int i = 1; i < numRows; ++i) {
+        currRow = rows.get(startOffset + i);
+        for (int j = 0; j < adapters.size(); ++j) {
+          nextVal[j] = adapters.get(j).apply(currRow);
+        }
+
+        for (int j = 0; j < comparators.size(); ++j) {
+          final int comparison = comparators.get(j).compare(prevVal[j], nextVal[j]);
+          if (comparison != 0) {
+            // Swap references
+            Object[] tmpRef = prevVal;
+            prevVal = nextVal;
+            nextVal = tmpRef;
+
+            boundaries.add(i);
+            break;
+          }
+        }
+      }
+      boundaries.add(numRows);
+
+      return boundaries.toIntArray();
+    }
+
+    /**
+     * Computes boundaries including some columns that were appended later.  In this case, we are fundamentally
+     * mixing some row-oriented format with some column-oriented format. It's hard to determine if there's really
+     * an optimized form for this (or, really, it's hard to know if the optimized form would actually be worth
+     * the code complexity), so just fall back to the DefaultClusteredGroupPartitioner to compute these boundaries,
+     * the optimizations that come from re-using the ArrayListRowsAndColumns will continue to exist.
+     *
+     * @param columns the columns to partition on as in {@link #computeBoundaries(List)}
+     * @return the partition boundaries as in {@link #computeBoundaries(List)}
+     */
+    private int[] computeBoundariesSomeAppended(List<String> columns)
+    {
+      return new DefaultClusteredGroupPartitioner(ArrayListRowsAndColumns.this).computeBoundaries(columns);
+    }
+
+
+    @Override
+    public ArrayList<RowsAndColumns> partitionOnBoundaries(List<String> partitionColumns)
+    {
+      final int[] boundaries = computeBoundaries(partitionColumns);
+      if (boundaries.length < 2) {
+        return new ArrayList<>();
+      }
+
+      ArrayList<RowsAndColumns> retVal = new ArrayList<>(boundaries.length - 1);
+
+      for (int i = 1; i < boundaries.length; ++i) {
+        int start = boundaries[i - 1];
+        int end = boundaries[i];
+        retVal.add(limited(start, end));
+      }
+
+      return retVal;
+    }
+  }
+
+  private class MyNaiveSortMaker implements NaiveSortMaker
+  {
+
+    @Override
+    public NaiveSorter make(ArrayList<ColumnWithDirection> ordering)
+    {
+      return new NaiveSorter()
+      {
+        private int currEnd = endOffset;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public RowsAndColumns moreData(RowsAndColumns rac)
+        {
+          if (currEnd == rows.size()) {
+            // It's theoretically possible that this object is used in a place where it sees a bunch of parts from
+            // the same ArrayListRowsAndColumns and then, continues to receive more and more RowsAndColumns objects
+            // from other ArrayListRowsAndColumns.  In that case, we can
+            //   1. do a localized sort
+            //   2. continue to build up the other objects
+            //   3. once all objects are complete, do a merge-sort between them and return that
+            //
+            // This is not currently implemented, however, as the code cannot actually ever generate that sequence
+            // of objects.  Additionally, if the code ever did generate that sequence, the proper solution could be
+            // to implement something else differently (perhaps use a different type of RowsAndColumns entirely).
+            // As such, we leave this implementation as an exercise for the future when it is better known why the
+            // code needed to work with this specific series of concrete objects.
+            throw new ISE("More data came after completing the ArrayList, not supported yet.");
+          }
+
+          if (rac instanceof ArrayListRowsAndColumns) {
+            ArrayListRowsAndColumns<RowType> arrayRac = (ArrayListRowsAndColumns<RowType>) rac;
+            if (arrayRac.startOffset != currEnd) {
+              throw new ISE(
+                  "ArrayRAC instances seen out-of-order!? currEnd[%,d], arrayRac[%,d][%,d]",
+                  currEnd,
+                  arrayRac.startOffset,
+                  arrayRac.endOffset
+              );
+            }
+            currEnd = arrayRac.endOffset;
+
+            return null;
+          } else {
+            throw new ISE("Expected an ArrayListRowsAndColumns, got[%s], fall back to default?", rac.getClass());
+          }
+        }
+
+        @Override
+        public RowsAndColumns complete()
+        {
+          if (currEnd != rows.size()) {
+            throw new ISE("Didn't see all of the rows? currEnd[%,d], rows.size()[%,d]", currEnd, rows.size());
+          }
+
+          final ArrayListRowsAndColumns<RowType> retVal = limited(0, rows.size());
+          retVal.sort(ordering);
+          return retVal;
+        }
+      };
+    }
   }
 }
