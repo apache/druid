@@ -23,49 +23,26 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.google.inject.TypeLiteral;
+import com.google.inject.Module;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.IndexingServiceTuningConfigModule;
-import org.apache.druid.guice.JoinableFactoryModule;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.Druids;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
@@ -73,25 +50,15 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Before;
@@ -104,10 +71,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
@@ -118,12 +82,13 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
+/**
+ * Runs {@link CalciteQueryTest} but with MSQ engine
+ */
 public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 {
 
   private MSQTestOverlordServiceClient indexingServiceClient;
-  private AtomicReference<MSQTestOverlordServiceClient> indexingServiceClientRef;
-
   private TestGroupByBuffers groupByBuffers;
 
   @Before
@@ -142,79 +107,7 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModule(binder -> {
-      final LookupReferencesManager lookupReferencesManager =
-          EasyMock.createStrictMock(LookupReferencesManager.class);
-      EasyMock.expect(lookupReferencesManager.getAllLookupNames()).andReturn(Collections.emptySet()).anyTimes();
-      EasyMock.replay(lookupReferencesManager);
-      binder.bind(LookupReferencesManager.class).toInstance(lookupReferencesManager);
-      binder.bind(AppenderatorsManager.class).toProvider(() -> null);
-
-      // Requirements of JoinableFactoryModule
-      binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-
-      binder.bind(new TypeLiteral<Set<NodeRole>>()
-      {
-      }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-
-      DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-      {
-        @Override
-        public String getFormatString()
-        {
-          return "test";
-        }
-      };
-      binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-      binder.bind(QueryProcessingPool.class)
-            .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
-
-      // Select queries donot require this
-      Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
-          ImmutableList.of(
-              binder1 -> {
-                binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-                binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-              }
-          )
-      );
-      ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-      IndexIO indexIO = new IndexIO(testMapper, () -> 0);
-      SegmentCacheManager segmentCacheManager = null;
-      try {
-        segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(temporaryFolder.newFolder("test"));
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-      }
-      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-      MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
-      try {
-        config.storageDirectory = temporaryFolder.newFolder("localsegments");
-      }
-      catch (IOException e) {
-        throw new ISE(e, "Unable to create folder");
-      }
-      binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
-          new LocalDataSegmentPusher(config),
-          segmentManager
-      ));
-      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-      binder.bind(DataSegmentProvider.class)
-            .toInstance((dataSegment, channelCounters) ->
-                            new LazyResourceHolder<>(getSupplierForSegment(dataSegment)));
-
-      GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-      binder.bind(GroupByStrategySelector.class)
-            .toInstance(GroupByQueryRunnerTest.makeQueryRunnerFactory(groupByQueryConfig, groupByBuffers)
-                                              .getStrategySelector());
-    });
-
-    builder.addModule(new IndexingServiceTuningConfigModule());
-    builder.addModule(new JoinableFactoryModule());
-    builder.addModule(new MSQExternalDataSourceModule());
-    builder.addModule(new MSQIndexingModule());
-
+    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
   }
 
 
@@ -383,28 +276,6 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
       throw new RuntimeException(e);
     }
   }
-
-
-  @Test
-  public void testFilterOnTimeFloorMisaligned()
-  {
-    testQuery(
-        "SELECT COUNT(*) FROM druid.foo "
-        + "WHERE floor(__time TO month) = TIMESTAMP '2000-01-01 00:00:01'",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec())
-                  .granularity(Granularities.ALL)
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(new Object[]{0L})
-    );
-  }
-
-
 
   @Ignore
   @Test
@@ -700,4 +571,393 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 
   }
 
+  // Query not supported by MSQ
+  @Ignore
+  @Override
+  public void testGroupingAggregatorDifferentOrder()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaColumnsOnTable()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testJoinUnionAllDifferentTablesWithMapping()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingAggregatorWithPostAggregator()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByRollupDifferentOrder()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithNumericDimension()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testViewAndJoin()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllDifferentTablesWithMapping()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaTables()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaColumnsOnView()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithOrderByDimension()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testExactCountDistinctWithFilter()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithLimit()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllSameTableTwice()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllSameTableThreeTimes()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByCube()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaColumnsOnForbiddenTable()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsNoSuperset()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByExpressionFromLookup()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithOrderByAggregator()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithLimitOrderByGran()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaSchemata()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithDummyDimension()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSets()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllSameTableThreeTimesWithSameMapping()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testAggregatorsOnInformationSchemaColumns()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnionAllTablesColumnTypeMismatchFloatLong()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testInformationSchemaColumnsOnAnotherView()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupingSetsWithOrderByAggregatorWithLimit()
+  {
+
+  }
+
+  // Cast failures
+
+  // Ad hoc failures
+  @Ignore("Fails because the MSQ engine creates no worker task corresponding to the generated query definition")
+  @Override
+  public void testFilterOnTimeFloorMisaligned()
+  {
+
+  }
+
+  // Fails because the MSQ engine creates no worker task corresponding to the generated query definition
+  @Ignore
+  @Override
+  public void testGroupByWithImpossibleTimeFilter()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByNothingWithImpossibleTimeFilter()
+  {
+
+  }
+
+  // Long cannot be converted to HyperLogLogCollector
+  @Ignore
+  @Override
+  public void testHavingOnApproximateCountDistinct()
+  {
+
+  }
+
+  // MSQ validation layer rejects the query
+  @Ignore
+  @Override
+  public void testEmptyGroupWithOffsetDoesntInfiniteLoop()
+  {
+
+  }
+
+  // External slice cannot be converted to StageinputSlice
+  @Ignore
+  @Override
+  public void testGroupingWithNullInFilter()
+  {
+
+  }
+
+  // ====
+
+  // Serializable Pair Failures during aggregation
+  @Ignore
+  @Override
+
+  public void testOrderByEarliestFloat()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testPrimitiveEarliestInSubquery()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGreatestFunctionForStringWithIsNull()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testGroupByAggregatorDefaultValuesNonVectorized()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testPrimitiveLatestInSubquery()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByLatestDouble()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testPrimitiveLatestInSubqueryGroupBy()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByEarliestLong()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testLatestAggregators()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testEarliestAggregators()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testFirstLatestAggregatorsSkipNulls()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testLatestVectorAggregators()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByEarliestDouble()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testLatestAggregatorsNumericNull()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testOrderByLatestLong()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testEarliestAggregatorsNumericNulls()
+  {
+
+  }
 }

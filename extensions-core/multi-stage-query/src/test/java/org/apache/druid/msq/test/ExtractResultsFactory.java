@@ -33,10 +33,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+/**
+ * {@link org.apache.druid.sql.calcite.QueryTestRunner.QueryRunStep} that extracts the results from the reports so that
+ * they can be used in the subsequent verification steps
+ */
 public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactory
 {
   private final Supplier<MSQTestOverlordServiceClient> overlordClientSupplier;
 
+  /**
+   * @param overlordClientSupplier Supplier to the overlord client which contains the reports for the test run. A
+   *                               supplier is required because the step is instantiated when the overlord client might
+   *                               not be instantiated however when we fetch the results, the overlord client must be
+   *                               instantiated by the query framework
+   */
   public ExtractResultsFactory(Supplier<MSQTestOverlordServiceClient> overlordClientSupplier)
   {
     this.overlordClientSupplier = overlordClientSupplier;
@@ -48,7 +58,8 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
     return new QueryTestRunner.BaseExecuteQuery(builder)
     {
       final List<QueryTestRunner.QueryResults> extractedResults = new ArrayList<>();
-      MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
+
+      final MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
 
       @Override
       public void run()
@@ -59,6 +70,8 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
             extractedResults.add(results);
             return;
           }
+          // For a single run, only a single query results containing a single row must be fetched, since UNION is not
+          // currently supported by MSQ
           Assert.assertEquals(
               "Found multiple rows, cannot extract the actual results from the reports",
               1,
