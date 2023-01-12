@@ -188,7 +188,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     private final LifecycleLock lifecycleLock = new LifecycleLock();
 
     private final AtomicReference<Closeable> watchRef = new AtomicReference<>();
-    private static final Closeable STOP_MARKER = () -> {};
+    private static final Closeable STOP_MARKER = () -> {
+    };
 
     private final NodeRole nodeRole;
     private final BaseNodeRoleWatcher baseNodeRoleWatcher;
@@ -270,12 +271,31 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
               if (item != null && item.type != null && item.object != null) {
                 switch (item.type) {
                   case WatchResult.ADDED:
-                    baseNodeRoleWatcher.childAdded(item.object.getNode());
+                    if (item.object.getNode().getServices() == null || item.object.getNode().getServices().isEmpty()) {
+                      LOGGER.warn(
+                          "no services found on [%s] druid [%s] node [%s], skipping",
+                          item.type,
+                          item.object.getNode().getNodeRole(),
+                          item.object.getNode().getDruidNode().getHostAndPort()
+                      );
+                    } else {
+                      baseNodeRoleWatcher.childAdded(item.object.getNode());
+                    }
                     break;
                   case WatchResult.DELETED:
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode());
+                    if (item.object.getNode().getServices() == null || item.object.getNode().getServices().isEmpty()) {
+                      LOGGER.warn(
+                          "no services found on [%s] druid [%s] node [%s], skipping",
+                          item.type,
+                          item.object.getNode().getNodeRole(),
+                          item.object.getNode().getDruidNode().getHostAndPort()
+                      );
+                    } else {
+                      baseNodeRoleWatcher.childRemoved(item.object.getNode());
+                    }
                     break;
                   default:
+                    // Ignore all other types as only pod ADD and DELETE matter.
                 }
 
                 // This should be updated after the action has been dealt with successfully
@@ -344,7 +364,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
       try {
         LOGGER.info("Stopping NodeRoleWatcher for [%s]...", nodeRole);
         // STOP_MARKER cannot throw exceptions on close(), so this is OK.
-        CloseableUtils.closeAndSuppressExceptions(STOP_MARKER, e -> {});
+        CloseableUtils.closeAndSuppressExceptions(STOP_MARKER, e -> {
+        });
         watchExecutor.shutdownNow();
 
         if (!watchExecutor.awaitTermination(15, TimeUnit.SECONDS)) {
