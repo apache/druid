@@ -29,7 +29,7 @@ Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transf
 
 You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to "flatten" nested data for ingestion.
 
-Druid supports directly ingesting nested data with the following formats: JSON, Parquet, Avro, ORC.
+Druid supports directly ingesting nested data with the following formats: JSON, Parquet, Avro, ORC, Protobuf.
 
 ## Example nested data
 

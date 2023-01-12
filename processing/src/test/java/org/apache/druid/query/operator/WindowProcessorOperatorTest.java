@@ -57,10 +57,13 @@ public class WindowProcessorOperatorTest
         InlineScanOperator.make(rac)
     );
 
-    op.open();
-    Assert.assertTrue(op.hasNext());
-    Assert.assertSame(rac, op.next());
-    Assert.assertFalse(op.hasNext());
-    op.close(true);
+    new OperatorTestHelper()
+        .withPushFn(
+            rowsAndColumns -> {
+              Assert.assertSame(rac, rowsAndColumns);
+              return true;
+            }
+        )
+        .runToCompletion(op);
   }
 }

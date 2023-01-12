@@ -65,7 +65,11 @@ public class MSQWarningsTest extends MSQTestBase
   @Before
   public void setUp3() throws IOException
   {
-    toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
+    File tempFile = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable.gz");
+
+    // Rename the file and the file's extension from .tmp to .gz to prevent issues with 'parsing' the file
+    toRead = new File(tempFile.getParentFile(), "unparseable.gz");
+    tempFile.renameTo(toRead);
     toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     rowSignature = RowSignature.builder()
@@ -335,7 +339,9 @@ public class MSQWarningsTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(ROLLUP_CONTEXT)
+                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(DEFAULT_MSQ_CONTEXT)
+                                                                                .putAll(ROLLUP_CONTEXT_PARAMS)
+                                                                                .build())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)

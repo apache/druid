@@ -33,8 +33,6 @@ import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
-
 @SuppressWarnings("unchecked")
 public class WindowFramedAggregateProcessorTest
 {
@@ -52,9 +50,8 @@ public class WindowFramedAggregateProcessorTest
         "yay", new IntArrayColumn(new int[]{1, 2, 3})
     ));
 
-    final RowsAndColumns processed = proc.process(new AsOnlyTestRowsAndColumns(theFrame, theAggs, rac)
+    final RowsAndColumns processed = proc.process(new AsOnlyTestRowsAndColumns()
     {
-      @Nullable
       @Override
       public <T> T as(Class<T> clazz)
       {

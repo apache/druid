@@ -40,28 +40,21 @@ public class WindowProcessorOperator implements Operator
   }
 
   @Override
-  public void open()
+  public void go(Receiver receiver)
   {
-    child.open();
-  }
+    child.go(new Receiver()
+    {
+      @Override
+      public boolean push(RowsAndColumns rac)
+      {
+        return receiver.push(windowProcessor.process(rac));
+      }
 
-  @Override
-  public RowsAndColumns next()
-  {
-    return windowProcessor.process(child.next());
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    return child.hasNext();
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-    if (cascade) {
-      child.close(cascade);
-    }
+      @Override
+      public void completed()
+      {
+        receiver.completed();
+      }
+    });
   }
 }

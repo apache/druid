@@ -193,6 +193,7 @@
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by upgrading hadoop-auth version -->
@@ -374,6 +375,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
        <!--

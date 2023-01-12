@@ -122,6 +122,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -449,10 +450,13 @@ public class CliOverlord extends ServerRunnable
 
       root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
+      RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
+      JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
+
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{
-              WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
+              rewriteHandler,
               JettyServerInitUtils.getJettyRequestLogHandler(),
               JettyServerInitUtils.wrapWithDefaultGzipHandler(
                   root,

@@ -268,6 +268,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 );
                               }}
                             />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT MIN(__time), MAX(__time) FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelectExpressions([
+                                      F.min(C('__time')).as('min_time'),
+                                      F.max(C('__time')).as('max_time'),
+                                    ])
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
+                                  true,
+                                );
+                              }}
+                            />
                             {parsedQuery && parsedQuery.getFirstTableName() !== tableName && (
                               <MenuItem
                                 icon={IconNames.EXCHANGE}

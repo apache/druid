@@ -66,6 +66,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -74,12 +76,33 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
+
+  @Parameterized.Parameters(name = "{index}:with context {0}")
+  public static Collection<Object[]> data()
+  {
+    Object[][] data = new Object[][]{
+        {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
+        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
+        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+    };
+    return Arrays.asList(data);
+  }
+
+  @Parameterized.Parameter(0)
+  public String contextName;
+
+  @Parameterized.Parameter(1)
+  public Map<String, Object> context;
+
   @Test
   public void testCalculator()
   {
@@ -101,7 +124,7 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("EXPR$0")
-                           .context(defaultScanQueryContext(resultSignature))
+                           .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -109,6 +132,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(new Object[]{2L})).verifyResults();
   }
 
@@ -129,13 +153,14 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
-                           .context(defaultScanQueryContext(resultSignature))
+                           .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build()
         )
+        .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, !useDefault ? "" : null},
@@ -164,6 +189,7 @@ public class MSQSelectTest extends MSQTestBase
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .columns("dim2", "m1")
                               .context(defaultScanQueryContext(
+                                  context,
                                   RowSignature.builder()
                                               .add("dim2", ColumnType.STRING)
                                               .add("m1", ColumnType.LONG)
@@ -175,6 +201,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, "en"},
             new Object[]{1L, "ru"},
@@ -207,7 +234,7 @@ public class MSQSelectTest extends MSQTestBase
                                                       ))
                                                       .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
                                                           "a0")))
-                                                      .setContext(DEFAULT_MSQ_CONTEXT)
+                                                      .setContext(context)
                                                       .build())
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -219,6 +246,7 @@ public class MSQSelectTest extends MSQTestBase
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .setQueryContext(context)
         .verifyResults();
   }
 
@@ -249,7 +277,7 @@ public class MSQSelectTest extends MSQTestBase
                             null
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -266,6 +294,7 @@ public class MSQSelectTest extends MSQTestBase
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .build())
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{6f, 1L},
@@ -294,13 +323,13 @@ public class MSQSelectTest extends MSQTestBase
                                     .setInterval(querySegmentSpec(Filtration.eternity()))
                                     .setGranularity(Granularities.ALL)
                                     .setDimensions(dimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
-                                    .setContext(DEFAULT_MSQ_CONTEXT)
+                                    .setContext(context)
                                     .build()
                     )
                     .setInterval(querySegmentSpec(Filtration.eternity()))
                     .setGranularity(Granularities.ALL)
                     .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -314,6 +343,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
+        .setQueryContext(context)
         .verifyResults();
   }
 
@@ -353,6 +383,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .columns("dim2", "m1", "m2")
                                     .context(
                                         defaultScanQueryContext(
+                                            context,
                                             RowSignature.builder()
                                                         .add("dim2", ColumnType.STRING)
                                                         .add("m1", ColumnType.FLOAT)
@@ -371,6 +402,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                     .context(
                                         defaultScanQueryContext(
+                                            context,
                                             RowSignature.builder().add("m1", ColumnType.FLOAT).build()
                                         )
                                     )
@@ -419,7 +451,7 @@ public class MSQSelectTest extends MSQTestBase
 
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -442,6 +474,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
+        .setQueryContext(context)
         .verifyResults();
   }
 
@@ -482,6 +515,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .columns("dim2", "m1", "m2")
                                     .context(
                                         defaultScanQueryContext(
+                                            context,
                                             RowSignature.builder()
                                                         .add("dim2", ColumnType.STRING)
                                                         .add("m1", ColumnType.FLOAT)
@@ -535,7 +569,7 @@ public class MSQSelectTest extends MSQTestBase
 
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -558,6 +592,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
+        .setQueryContext(context)
         .verifyResults();
   }
 
@@ -588,7 +623,7 @@ public class MSQSelectTest extends MSQTestBase
                             null
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -608,6 +643,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{6f, 6d},
@@ -647,7 +683,7 @@ public class MSQSelectTest extends MSQTestBase
                             3
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -667,6 +703,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{6f, 6d},
@@ -704,7 +741,7 @@ public class MSQSelectTest extends MSQTestBase
                             2
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -724,6 +761,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{5f, 5d},
@@ -768,7 +806,7 @@ public class MSQSelectTest extends MSQTestBase
                     )
                     .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)))
                     .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
@@ -783,6 +821,7 @@ public class MSQSelectTest extends MSQTestBase
                 + "  )\n"
                 + ") group by 1")
         .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
         .setExpectedMSQSpec(
             MSQSpec
@@ -815,6 +854,7 @@ public class MSQSelectTest extends MSQTestBase
             CoreMatchers.instanceOf(SqlPlanningException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"from <EOF>\""))
         ))
+        .setQueryContext(context)
         .verifyPlanningErrors();
   }
 
@@ -823,6 +863,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("SELECT * FROM INFORMATION_SCHEMA.SCHEMATA")
+        .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
@@ -838,6 +879,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("SELECT * FROM sys.segments")
+        .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
@@ -853,6 +895,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("select s.segment_id, s.num_rows, f.dim1 from sys.segments as s, foo as f")
+        .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
@@ -869,6 +912,7 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("with segment_source as (SELECT * FROM sys.segments) "
                 + "select segment_source.segment_id, segment_source.num_rows from segment_source")
+        .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(SqlPlanningException.class),
@@ -899,6 +943,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("dim2", "m1")
                            .context(defaultScanQueryContext(
+                               context,
                                RowSignature.builder()
                                            .add("dim2", ColumnType.STRING)
                                            .add("m1", ColumnType.LONG)
@@ -911,6 +956,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, "en"},
             new Object[]{1L, "ru"},
@@ -933,12 +979,13 @@ public class MSQSelectTest extends MSQTestBase
                                               .dataSource(CalciteTests.DATASOURCE1)
                                               .intervals(querySegmentSpec(Filtration.eternity()))
                                               .columns("dim3")
-                                              .context(defaultScanQueryContext(resultSignature))
+                                              .context(defaultScanQueryContext(context, resultSignature))
                                               .build())
                                    .columnMappings(ColumnMappings.identity(resultSignature))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .build())
         .setExpectedRowSignature(resultSignature)
+        .setQueryContext(context)
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{ImmutableList.of("a", "b")},
             new Object[]{ImmutableList.of("b", "c")},
@@ -952,10 +999,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testGroupByWithMultiValue()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", true)
-                                              .build();
+    Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
     RowSignature rowSignature = RowSignature.builder()
                                             .add("dim3", ColumnType.STRING)
                                             .add("cnt1", ColumnType.LONG)
@@ -963,7 +1007,7 @@ public class MSQSelectTest extends MSQTestBase
 
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
-        .setQueryContext(context)
+        .setQueryContext(localContext)
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(
@@ -981,7 +1025,7 @@ public class MSQSelectTest extends MSQTestBase
                                    )
                                    .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
                                        "a0")))
-                                   .setContext(context)
+                                   .setContext(localContext)
                                    .build()
                    )
                    .columnMappings(
@@ -1003,18 +1047,20 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testGroupByWithMultiValueWithoutGroupByEnable()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", false)
-                                              .build();
+    Map<String, Object> localContext = enableMultiValueUnnesting(context, false);
 
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
-        .setQueryContext(context)
+        .setQueryContext(localContext)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."))
+            ThrowableMessageMatcher.hasMessage(
+                !FAULT_TOLERANCE.equals(contextName)
+                ? CoreMatchers.containsString(
+                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+                :
+                CoreMatchers.containsString("exceeded max relaunch count")
+            )
         ))
         .verifyExecutionError();
   }
@@ -1022,10 +1068,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testGroupByWithMultiValueMvToArray()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", true)
-                                              .build();
+    Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("EXPR$0", ColumnType.STRING_ARRAY)
@@ -1034,7 +1077,7 @@ public class MSQSelectTest extends MSQTestBase
 
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
-        .setQueryContext(context)
+        .setQueryContext(localContext)
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(GroupByQuery.builder()
                                                       .setDataSource(CalciteTests.DATASOURCE1)
@@ -1058,7 +1101,7 @@ public class MSQSelectTest extends MSQTestBase
                                                                            )
                                                           )
                                                       )
-                                                      .setContext(context)
+                                                      .setContext(localContext)
                                                       .build()
                                    )
                                    .columnMappings(
@@ -1079,10 +1122,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testGroupByArrayWithMultiValueMvToArray()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", true)
-                                              .build();
+    Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
 
     RowSignature rowSignature = RowSignature.builder()
                                             .add("EXPR$0", ColumnType.STRING_ARRAY)
@@ -1102,7 +1142,7 @@ public class MSQSelectTest extends MSQTestBase
 
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by MV_TO_ARRAY(dim3)")
-        .setQueryContext(context)
+        .setQueryContext(localContext)
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(GroupByQuery.builder()
                                                       .setDataSource(CalciteTests.DATASOURCE1)
@@ -1126,7 +1166,7 @@ public class MSQSelectTest extends MSQTestBase
                                                           )
                                                       )
                                                       .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                                                      .setContext(context)
+                                                      .setContext(localContext)
                                                       .build()
                                    )
                                    .columnMappings(
@@ -1144,21 +1184,24 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
+
   @Test
   public void testGroupByWithMultiValueMvToArrayWithoutGroupByEnable()
   {
-    Map<String, Object> context = ImmutableMap.<String, Object>builder()
-                                              .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("groupByEnableMultiValueUnnesting", false)
-                                              .build();
+    Map<String, Object> localContext = enableMultiValueUnnesting(context, false);
 
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
-        .setQueryContext(context)
+        .setQueryContext(localContext)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."))
+            ThrowableMessageMatcher.hasMessage(
+                !FAULT_TOLERANCE.equals(contextName)
+                ? CoreMatchers.containsString(
+                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+                :
+                CoreMatchers.containsString("exceeded max relaunch count")
+            )
         ))
         .verifyExecutionError();
   }
@@ -1186,12 +1229,12 @@ public class MSQSelectTest extends MSQTestBase
                             )
                         )
                     )
-                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .setContext(context)
                     .build();
 
     testSelectQuery()
         .setSql("select __time, count(dim3) as cnt1 from foo group by __time")
-        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .setQueryContext(context)
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(expectedQuery)
                                    .columnMappings(
@@ -1224,8 +1267,10 @@ public class MSQSelectTest extends MSQTestBase
                                             .add("cnt1", ColumnType.LONG)
                                             .build();
 
+
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
+        .setQueryContext(context)
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(GroupByQuery.builder()
                                                       .setDataSource(CalciteTests.DATASOURCE1)
@@ -1241,7 +1286,7 @@ public class MSQSelectTest extends MSQTestBase
                                                       ))
                                                       .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
                                                           "a0")))
-                                                      .setContext(DEFAULT_MSQ_CONTEXT)
+                                                      .setContext(context)
                                                       .build())
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
@@ -1254,13 +1299,15 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
-    File successFile = new File(
-        localFileStorageDir,
-        DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
-    );
+    if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
+      new File(
+          localFileStorageDir,
+          DurableStorageUtils.getSuccessFilePath("query-test-query", 0, 0)
+      );
 
-    Mockito.verify(localFileStorageConnector, Mockito.times(2))
-               .write(ArgumentMatchers.endsWith("__success"));
+      Mockito.verify(localFileStorageConnector, Mockito.times(2))
+             .write(ArgumentMatchers.endsWith("__success"));
+    }
   }
 
   @Test
@@ -1318,6 +1365,7 @@ public class MSQSelectTest extends MSQTestBase
                 .build())
         .setExpectedMSQFault(new CannotParseExternalDataFault(
             "Unable to add the row to the frame. Type conversion might be required."))
+        .setQueryContext(context)
         .verifyResults();
   }
 
@@ -1353,5 +1401,14 @@ public class MSQSelectTest extends MSQTestBase
         new Object[]{Collections.singletonList("d"), 1L}
     ));
     return expected;
+  }
+
+  private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)
+  {
+    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put("groupByEnableMultiValueUnnesting", value)
+                                                   .build();
+    return localContext;
   }
 }

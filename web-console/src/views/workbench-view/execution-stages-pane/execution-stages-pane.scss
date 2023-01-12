@@ -41,6 +41,17 @@
     opacity: 0.6;
   }
 
+  .sort-marker {
+    font-style: italic;
+    opacity: 0.6;
+  }
+
+  .error-warning {
+    position: absolute;
+    top: 7px;
+    right: 3px;
+  }
+
   .counter-spacer {
     position: relative;
     height: 5px;

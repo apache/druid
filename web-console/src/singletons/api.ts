@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
 export class Api {
@@ -24,6 +24,25 @@ export class Api {
 
   static initialize(config?: AxiosRequestConfig): void {
     Api.instance = axios.create(config);
+
+    // Intercept the request and if we get an error (status code > 2xx) and we have a "message" in the response then
+    // show it as it will be more informative than the default "Request failed with status code xxx" message.
+    Api.instance.interceptors.response.use(
+      resp => resp,
+      (error: AxiosError) => {
+        const responseData = error.response?.data;
+        const message = responseData?.message;
+        if (typeof message === 'string') {
+          return Promise.reject(new Error(message));
+        }
+
+        if (error.config.method?.toLowerCase() === 'get' && typeof responseData === 'string') {
+          return Promise.reject(new Error(responseData));
+        }
+
+        return Promise.reject(error);
+      },
+    );
   }
 
   static getDefaultConfig(): AxiosRequestConfig {

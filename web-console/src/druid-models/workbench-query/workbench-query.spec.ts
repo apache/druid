@@ -507,6 +507,19 @@ describe('WorkbenchQuery', () => {
       expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
       expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
     });
+
+    it('works with REPLACE (unparsable with comment at start)', () => {
+      const sql = sane`
+        -- Hello world SELECT
+
+        REPLACE INTO trips2 OVERWRITE ALL
+        WITH kttm_data AS (SELECT *
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
   });
 
   describe('#extractCteHelpers', () => {

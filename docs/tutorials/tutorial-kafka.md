@@ -30,7 +30,7 @@ The tutorial guides you through the steps to load sample nested clickstream data
 
 ## Prerequisites
 
-Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [auto](../operations/single-server.md#druid-auto-start) single-machine configuration and have it running on your local machine. You don't need to have loaded any data.
+Before you follow the steps in this tutorial, download Druid as described in the [quickstart](index.md) using the [automatic single-machine configuration](../operations/single-server.md) and have it running on your local machine. You don't need to have loaded any data.
 
 ## Download and start Kafka
 
@@ -76,15 +76,14 @@ In this section, you download sample data to the tutorial's directory and send t
 
    ```bash
    cd sample-data
-   curl -O https://druid.apache.org/docs/latest/assets/files/kttm-nested-data.json.tgz
-   tar -xzf kttm-nested-data.json.tgz
+   curl -O https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz
    ```
 
 3. In your Kafka root directory, run the following commands to post sample events to the `kttm` Kafka topic:
 
    ```bash
    export KAFKA_OPTS="-Dfile.encoding=UTF-8"
-   ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm < ./sample-data/kttm-nested-data.json
+   gzcat ./sample-data/kttm-nested-v2-2019-08-25.json.gz | ./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic kttm
    ```
 
 ## Load data into Druid

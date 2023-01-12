@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,12 +56,15 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   //this is used in the temporary paths on the hdfs unique to an hadoop indexing task
   private final String uniqueId;
 
+  private final Map<String, Object> context;
+
   @JsonCreator
   public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
       @JsonProperty("tuningConfig") @Nullable HadoopTuningConfig tuningConfig,
-      @JsonProperty("uniqueId") @Nullable String uniqueId
+      @JsonProperty("uniqueId") @Nullable String uniqueId,
+      @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
@@ -69,6 +73,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? HadoopTuningConfig.makeDefaultTuningConfig() : tuningConfig;
     this.uniqueId = uniqueId == null ? UUIDUtils.generateUuid() : uniqueId;
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
   }
 
   //for unit tests
@@ -78,7 +83,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
       HadoopTuningConfig tuningConfig
   )
   {
-    this(dataSchema, ioConfig, tuningConfig, null);
+    this(dataSchema, ioConfig, tuningConfig, null, null);
   }
 
   @JsonProperty("dataSchema")
@@ -108,13 +113,20 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     return uniqueId;
   }
 
+  @JsonProperty("context")
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
   public HadoopIngestionSpec withDataSchema(DataSchema schema)
   {
     return new HadoopIngestionSpec(
         schema,
         ioConfig,
         tuningConfig,
-        uniqueId
+        uniqueId,
+        context
     );
   }
 
@@ -124,7 +136,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         dataSchema,
         config,
         tuningConfig,
-        uniqueId
+        uniqueId,
+        context
     );
   }
 
@@ -134,7 +147,19 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         dataSchema,
         ioConfig,
         config,
-        uniqueId
+        uniqueId,
+        context
+    );
+  }
+
+  public HadoopIngestionSpec withContext(Map<String, Object> context)
+  {
+    return new HadoopIngestionSpec(
+        dataSchema,
+        ioConfig,
+        tuningConfig,
+        uniqueId,
+        context
     );
   }
 
