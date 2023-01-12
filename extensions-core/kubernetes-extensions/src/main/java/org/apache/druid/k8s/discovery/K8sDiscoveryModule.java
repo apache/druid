@@ -39,11 +39,8 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.DruidNode;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 
 public class K8sDiscoveryModule implements DruidModule
 {
