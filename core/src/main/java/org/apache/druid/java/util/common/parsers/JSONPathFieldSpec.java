@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.parsers;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.jayway.jsonpath.JsonPath;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.List;
@@ -123,6 +124,11 @@ public class JSONPathFieldSpec
   public static JSONPathFieldSpec createTreeField(String name, List<String> nodes)
   {
     return new JSONPathFieldSpec(JSONPathFieldType.TREE, name, null, nodes);
+  }
+
+  public static String getCompilePath(String expr)
+  {
+    return JsonPath.compile(expr).getPath();
   }
 
   @Override
