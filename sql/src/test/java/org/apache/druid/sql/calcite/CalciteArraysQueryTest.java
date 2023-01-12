@@ -52,7 +52,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
-import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
@@ -2819,7 +2818,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
-        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 DESC LIMIT 2 ",
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(UnnestDataSource.create(
@@ -2830,20 +2829,24 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .dimension(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
-                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
-                .threshold(2)
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(4)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
-            ),
+        ),
         useDefault ?
         ImmutableList.of(
             new Object[]{"", 3L},
-            new Object[]{"d", 1L}
+            new Object[]{"a", 1L},
+            new Object[]{"b", 2L},
+            new Object[]{"c", 1L}
         ) :
         ImmutableList.of(
             new Object[]{null, 2L},
-            new Object[]{"d", 1L}
+            new Object[]{"", 1L},
+            new Object[]{"a", 1L},
+            new Object[]{"b", 2L}
         )
     );
   }
@@ -2878,26 +2881,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .limit(3)
                   .build()
         ),
-        useDefault ?
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{""},
-            new Object[]{""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{null},
-            new Object[]{null}
+            new Object[]{"b"}
         )
     );
   }

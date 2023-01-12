@@ -66,15 +66,14 @@ public class DruidUnnestDatasourceRule extends RelOptRule
         uncollectRel.getRowType()
     );
 
-
     DruidUnnestDatasourceRel unnestDatasourceRel = new DruidUnnestDatasourceRel(
         uncollectRel,
         druidQueryRel.withPartialQuery(druidQueryRel.getPartialDruidQuery().withSelectProject(queryProject)),
         logicalProject,
         plannerContext
     );
-    // build this based on the druidUnnestRel
 
+    // build this based on the druidUnnestRel
     final RelBuilder relBuilder =
         call.builder()
             .push(unnestDatasourceRel);

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.type.RelDataType;
@@ -136,6 +137,12 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
         unnestProject,
         getPlannerContext()
     );
+  }
+
+  @Override
+  public RelWriter explainTerms(RelWriter pw)
+  {
+    return super.explainTerms(pw);
   }
 
   @Override

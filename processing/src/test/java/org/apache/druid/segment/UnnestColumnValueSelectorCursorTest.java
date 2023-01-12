@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -570,7 +569,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     Assert.assertFalse(unnestCursor.isDoneOrInterrupted());
   }
 
-  @Test(expected = UOE.class)
+  @Test
   public void test_list_unnest_cursors_dimSelector()
   {
     List<Object> inputList = Arrays.asList(
@@ -592,7 +591,9 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         OUTPUT_NAME,
         IGNORE_SET
     );
-    unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
+    // should return a column value selector for this case
+    ColumnValueSelector<?> colSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
+    Assert.assertNotNull(colSelector);
   }
 
   @Test

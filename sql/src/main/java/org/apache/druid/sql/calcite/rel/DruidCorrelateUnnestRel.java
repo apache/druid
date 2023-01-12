@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
@@ -27,6 +28,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.JoinRelType;
@@ -81,7 +83,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   }
 
   /**
-   * Create an instance from a Join that is based on two {@link DruidRel} inputs.
+   * Create an instance from a Correlate that is based on a {@link DruidRel} and a {@link DruidUnnestDatasourceRel} inputs.
    */
   public static DruidCorrelateUnnestRel create(
       final Correlate correlateRel,
@@ -133,6 +135,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     }
 
     final DruidUnnestDatasourceRel unnestDatasourceRel = (DruidUnnestDatasourceRel) right;
+
+
     final RowSignature rowSignature = RowSignatures.fromRelDataType(
         correlateRel.getRowType().getFieldNames(),
         correlateRel.getRowType()
@@ -160,6 +164,9 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
 
+    // the unnest project is needed in case of a virtual column
+    // unnest(mv_to_array(dim_1)) is reconciled as unnesting a MVD dim_1 not requiring a virtual column
+    // while unnest(array(dim_2,dim_3)) is understood as unnesting a virtual column which is an array over dim_2 and dim_3 elements
     boolean unnestProjectNeeded = false;
     getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
@@ -180,8 +187,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       }
     }
 
-
-    // add the unnest project to the partial query
+    // add the unnest project to the partial query if required
     // This is necessary to handle the virtual columns on the unnestProject
     PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
     return partialDruidQuery.build(
@@ -220,6 +226,28 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
   }
 
+  // This is required to br overwritten as Calcite uses this method
+  // to maintain a map if equivalent DruidCorrelateUnnestRel or in general any Rel nodes.
+  // Without this method overwritten multiple RelNodes will produce the same key
+  // which makes the planner plan incorrectly.
+  @Override
+  public RelWriter explainTerms(RelWriter pw)
+  {
+    final String queryString;
+    final DruidQuery druidQuery = toDruidQueryForExplaining();
+
+    try {
+      queryString = getPlannerContext().getJsonMapper().writeValueAsString(druidQuery.getQuery());
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    return pw.item("query", queryString)
+             .item("signature", druidQuery.getOutputRowSignature());
+  }
+
+  // This is called from the DruidRelToDruidRule which converts from the NONE convention to the DRUID convention
   @Override
   public DruidCorrelateUnnestRel asDruidConvention()
   {
@@ -244,20 +272,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     return ImmutableList.of(left, right);
   }
-
-  /*@Override
-  public void replaceInput(int ordinalInParent, RelNode p)
-  {
-    correlateRel.replaceInput(ordinalInParent, p);
-
-    if (ordinalInParent == 0) {
-      this.left = p;
-    } else if (ordinalInParent == 1) {
-      this.right = p;
-    } else {
-      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
-    }
-  }*/
 
   @Override
   public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
