@@ -578,85 +578,6 @@ public class ForkingTaskRunnerTest
   }
 
   @Test
-  public void testTaskRestore()
-  {
-    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
-        new ForkingTaskRunnerConfig(),
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            ImmutableList.of(),
-            true,
-            new Period("PT0S"),
-            new Period("PT10S"),
-            ImmutableList.of(),
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false,
-            null
-        ),
-        new WorkerConfig(),
-        new Properties(),
-        new NoopTaskLogs(),
-        new DefaultObjectMapper(),
-        new DruidNode("middleManager", "host", false, 8091, null, true, false),
-        new StartupLoggingConfig()
-    )
-    {
-      @Override
-      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
-      {
-        ProcessHolder processHolder = Mockito.mock(ProcessHolder.class);
-        Mockito.doNothing().when(processHolder).registerWithCloser(ArgumentMatchers.any());
-        Mockito.doNothing().when(processHolder).shutdown();
-        return processHolder;
-      }
-
-      @Override
-      public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
-      {
-        final Map<File, TaskRestoreInfo> taskRestoreInfos = new HashMap<>();
-        for (File baseDir : taskConfig.getBaseTaskDirs()) {
-          File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
-          if (restoreFile.exists()) {
-            try {
-              taskRestoreInfos.put(baseDir, jsonMapper.readValue(restoreFile, TaskRestoreInfo.class));
-            }
-            catch (Exception e) {
-              LOG.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
-            }
-          }
-        }
-
-        List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
-        for (Map.Entry<File, TaskRestoreInfo> entry : taskRestoreInfos.entrySet()) {
-          final TaskRestoreInfo taskRestoreInfo = entry.getValue();
-          for (final String taskId : taskRestoreInfo.getRunningTasks()) {
-            retVal.add(Pair.of(NoopTask.create(taskId, 0), Futures.immediateFuture(TaskStatus.running(taskId))));
-          }
-        }
-
-        if (!retVal.isEmpty()) {
-          LOG.info("Restored %,d tasks: %s", retVal.size(), Joiner.on(", ").join(retVal));
-        }
-
-        return retVal;
-      }
-
-    };
-
-    forkingTaskRunner.setNumProcessorsPerTask();
-    Task task = NoopTask.create();
-    forkingTaskRunner.run(task);
-    forkingTaskRunner.saveRunningTasks();
-    Assert.assertEquals(task.getId(), forkingTaskRunner.restore().get(0).lhs.getId());
-  }
-
-  @Test
   public void testCannotRestoreTasks() throws Exception
   {
     ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
@@ -703,7 +624,6 @@ public class ForkingTaskRunnerTest
     forkingTaskRunner.setNumProcessorsPerTask();
     Task task = NoopTask.create();
     forkingTaskRunner.run(task);
-    forkingTaskRunner.saveRunningTasks();
     Assert.assertTrue(forkingTaskRunner.restore().isEmpty());
   }
 }
