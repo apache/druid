@@ -36,11 +36,6 @@ Druid supports a variety of ingestion options. Once you're done with this tutori
 
 You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
 
-Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
-
-In addition, Druid includes several [bundled non-automatic profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4GiB RAM) to x-large (64 CPU, 512GiB RAM). 
-We won't use those here, but for more information, see [Single server deployment](../operations/single-server.md). For additional information on deploying Druid services across clustered machines, see [Clustered deployment](./cluster.md).
-
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
@@ -70,7 +65,7 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 
 ## Start up Druid services
 
-Start up Druid services using the `auto` single-machine configuration.
+Start up Druid services using the automatic single-machine configuration.
 This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
 
 You can view that setting and others in the configuration files in the `conf/druid/auto`. 
