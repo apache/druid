@@ -110,7 +110,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   )
   {
     if (endOffset - startOffset < 0) {
-      throw new ISE("endOffset[%,d] - startOffset[%,d] was somehow negative!?");
+      throw new ISE("endOffset[%,d] - startOffset[%,d] was somehow negative!?", endOffset, startOffset);
     }
     this.rows = rows;
     this.rowAdapter = rowAdapter;
