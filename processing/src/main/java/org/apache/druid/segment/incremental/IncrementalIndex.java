@@ -883,7 +883,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
                                            .setDictionaryValuesUnique(true)
                                            .setDictionaryValuesSorted(false);
       case COMPLEX:
-        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
+        return ColumnCapabilitiesImpl.createDefault().setType(type).setHasNulls(true);
       default:
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
@@ -1038,7 +1038,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         this.type = valueType.toString();
       } else if (valueType.is(ValueType.COMPLEX)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType)
+        capabilities = ColumnCapabilitiesImpl.createDefault()
+                                             .setType(valueType)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
         ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(valueType.getComplexTypeName());
         if (serde != null) {
