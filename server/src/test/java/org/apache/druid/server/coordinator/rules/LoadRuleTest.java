@@ -31,6 +31,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
@@ -72,7 +73,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -121,7 +121,7 @@ public class LoadRuleTest
     EMITTER.start();
     throttler = EasyMock.createMock(ReplicationThrottler.class);
 
-    exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "LoadRuleTest-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(exec);
     cachingCostBalancerStrategy = new CachingCostBalancerStrategy(ClusterCostCache.builder().build(), exec);
 
