@@ -28,7 +28,7 @@ This tutorial shows you how to load data files into Apache Druid using a remote 
 
 For this tutorial, we'll assume that you've already completed the previous
 [batch ingestion tutorial](tutorial-batch.md) using Druid's native batch ingestion system and are using the
-`auto` single-machine configuration as described in the [quickstart](../operations/single-server.md#druid-auto-start).
+automatic single-machine configuration as described in the [quickstart](../operations/single-server.md).
 
 ## Install Docker
 
