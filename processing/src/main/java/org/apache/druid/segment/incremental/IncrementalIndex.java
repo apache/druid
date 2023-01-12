@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
@@ -583,7 +584,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
           dimsKeySize += encodedKeyComponent.getEffectiveSizeBytes();
         }
         catch (ParseException pe) {
-          parseExceptionMessages.add(pe.getMessage());
+          parseExceptionMessages.add(StringUtils.format("Problem parsing dimension: [%s], error: [%s]", dimension, pe.getMessage()));
         }
         if (wasNewDim) {
           // unless this is the first row we are processing, all newly discovered columns will be sparse

@@ -371,7 +371,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
             throw e;
           } else {
             log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-            parseExceptionsHolder.add(e.getMessage());
+            parseExceptionsHolder.add(StringUtils.format("Problem parsing aggregator: [%s], error: [%s]", metrics[i].getName(), e.getMessage()));
           }
         }
       }
