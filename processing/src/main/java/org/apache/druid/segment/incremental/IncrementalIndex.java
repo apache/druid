@@ -478,7 +478,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       return timeAndMetricsColumnCapabilities.get(columnName);
     }
     synchronized (dimensionDescs) {
-      return dimensionDescs.get(columnName).getCapabilities();
+      final DimensionDesc desc = dimensionDescs.get(columnName);
+      return desc != null ? desc.getCapabilities() : null;
     }
   }
 
@@ -499,8 +500,10 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       return capabilities;
     }
 
+
     synchronized (dimensionDescs) {
-      return dimensionDescs.get(columnName).getIndexer().getHandlerCapabilities();
+      final DimensionDesc desc = dimensionDescs.get(columnName);
+      return desc != null ? desc.getIndexer().getHandlerCapabilities() : null;
     }
   }
 
