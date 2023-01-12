@@ -22,15 +22,21 @@ package org.apache.druid.sql.calcite.rel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCost;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.logical.LogicalCorrelate;
+import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -43,34 +49,55 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
+  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("unnest");
+
+  private final Filter leftFilter;
   private final PartialDruidQuery partialQuery;
   private final PlannerConfig plannerConfig;
-  private final LogicalCorrelate logicalCorrelate;
-  private final RelNode left;
-  private final RelNode right;
-  private final Filter baseFilter;
+  private final Correlate correlateRel;
+  private RelNode left;
+  private RelNode right;
 
-  public DruidCorrelateUnnestRel(
+  private DruidCorrelateUnnestRel(
       RelOptCluster cluster,
       RelTraitSet traitSet,
-      LogicalCorrelate logicalCorrelateRel,
+      Correlate correlateRel,
       PartialDruidQuery partialQuery,
       Filter baseFilter,
       PlannerContext plannerContext
   )
   {
     super(cluster, traitSet, plannerContext);
-    this.logicalCorrelate = logicalCorrelateRel;
+    this.correlateRel = correlateRel;
     this.partialQuery = partialQuery;
+    this.left = correlateRel.getLeft();
+    this.right = correlateRel.getRight();
+    this.leftFilter = baseFilter;
     this.plannerConfig = plannerContext.getPlannerConfig();
-    this.left = logicalCorrelateRel.getLeft();
-    this.right = logicalCorrelateRel.getRight();
-    this.baseFilter = baseFilter;
   }
 
+  /**
+   * Create an instance from a Join that is based on two {@link DruidRel} inputs.
+   */
+  public static DruidCorrelateUnnestRel create(
+      final Correlate correlateRel,
+      final Filter leftFilter,
+      final PlannerContext plannerContext
+  )
+  {
+    return new DruidCorrelateUnnestRel(
+        correlateRel.getCluster(),
+        correlateRel.getTraitSet(),
+        correlateRel,
+        PartialDruidQuery.create(correlateRel),
+        leftFilter,
+        plannerContext
+    );
+  }
 
   @Nullable
   @Override
@@ -85,9 +112,9 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     return new DruidCorrelateUnnestRel(
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
-        logicalCorrelate,
+        correlateRel,
         newQueryBuilder,
-        baseFilter,
+        leftFilter,
         getPlannerContext()
     );
   }
@@ -95,11 +122,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public DruidQuery toDruidQuery(boolean finalizeAggregations)
   {
-    final RowSignature rowSignature = RowSignatures.fromRelDataType(
-        logicalCorrelate.getRowType().getFieldNames(),
-        logicalCorrelate.getRowType()
-    );
-
     final DruidRel<?> druidQueryRel = (DruidRel<?>) left;
     final DruidQuery leftQuery = Preconditions.checkNotNull((druidQueryRel).toDruidQuery(false), "leftQuery");
     final DataSource leftDataSource;
@@ -111,6 +133,11 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     }
 
     final DruidUnnestDatasourceRel unnestDatasourceRel = (DruidUnnestDatasourceRel) right;
+    final RowSignature rowSignature = RowSignatures.fromRelDataType(
+        correlateRel.getRowType().getFieldNames(),
+        correlateRel.getRowType()
+    );
+
     final DruidExpression expression = Expressions.toDruidExpression(
         getPlannerContext(),
         rowSignature,
@@ -153,20 +180,17 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       }
     }
 
-    // create the unnest data source to use in the partial query
-    UnnestDataSource unnestDataSource =
-        UnnestDataSource.create(
-            leftDataSource,
-            dimOrExpToUnnest,
-            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
-            null
-        );
 
     // add the unnest project to the partial query
     // This is necessary to handle the virtual columns on the unnestProject
     PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
     return partialDruidQuery.build(
-        unnestDataSource,
+        UnnestDataSource.create(
+            leftDataSource,
+            dimOrExpToUnnest,
+            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
+            null
+        ),
         rowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
@@ -184,7 +208,16 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
-    return toDruidQuery(false);
+    return partialQuery.build(
+        DUMMY_DATA_SOURCE,
+        RowSignatures.fromRelDataType(
+            correlateRel.getRowType().getFieldNames(),
+            correlateRel.getRowType()
+        ),
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        false
+    );
   }
 
   @Override
@@ -193,19 +226,38 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     return new DruidCorrelateUnnestRel(
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
-        logicalCorrelate.copy(
-            logicalCorrelate.getTraitSet(),
-            left,
-            right,
-            logicalCorrelate.getCorrelationId(),
-            logicalCorrelate.getRequiredColumns(),
-            logicalCorrelate.getJoinType()
+        correlateRel.copy(
+            correlateRel.getTraitSet(),
+            correlateRel.getInputs()
+                        .stream()
+                        .map(input -> RelOptRule.convert(input, DruidConvention.instance()))
+                        .collect(Collectors.toList())
         ),
         partialQuery,
-        baseFilter,
+        leftFilter,
         getPlannerContext()
     );
   }
+
+  @Override
+  public List<RelNode> getInputs()
+  {
+    return ImmutableList.of(left, right);
+  }
+
+  /*@Override
+  public void replaceInput(int ordinalInParent, RelNode p)
+  {
+    correlateRel.replaceInput(ordinalInParent, p);
+
+    if (ordinalInParent == 0) {
+      this.left = p;
+    } else if (ordinalInParent == 1) {
+      this.right = p;
+    } else {
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
+    }
+  }*/
 
   @Override
   public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
@@ -213,17 +265,36 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     return new DruidCorrelateUnnestRel(
         getCluster(),
         traitSet,
-        (LogicalCorrelate) logicalCorrelate.copy(logicalCorrelate.getTraitSet(), inputs),
+        correlateRel.copy(correlateRel.getTraitSet(), inputs),
         getPartialDruidQuery(),
-        baseFilter,
+        leftFilter,
         getPlannerContext()
     );
   }
 
   @Override
+  public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
+  {
+    double cost;
+
+    if (DruidJoinQueryRel.computeLeftRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(left))) {
+      cost = CostEstimates.COST_SUBQUERY;
+    } else {
+      cost = partialQuery.estimateCost();
+      if (correlateRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
+        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+      }
+    }
+
+    return planner.getCostFactory().makeCost(cost, 0, 0);
+  }
+
+  @Override
   public Set<String> getDataSourceNames()
   {
-    final Set<String> retVal = new HashSet<>(((DruidRel<?>) left).getDataSourceNames());
+    final Set<String> retVal = new HashSet<>();
+    retVal.addAll(((DruidRel<?>) left).getDataSourceNames());
+    retVal.addAll(((DruidRel<?>) right).getDataSourceNames());
     return retVal;
   }
 }

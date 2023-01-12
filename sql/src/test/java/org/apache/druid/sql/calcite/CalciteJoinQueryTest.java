@@ -4651,6 +4651,46 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  public void testBasicLimit(Map<String, Object> queryContext)
+  {
+    testQuery(
+        "SELECT druid.broadcast.dim4\n"
+        + "FROM druid.numfoo\n"
+        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
+        + "LIMIT 2",
+        queryContext,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
+                        "j0.",
+                        equalsCondition(
+                            makeColumnExpression("dim4"),
+                            makeColumnExpression("j0.dim4")
+                        ),
+                        JoinType.INNER
+
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("j0.dim4")
+                .limit(2)
+                .legacy(false)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"a"}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
   public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext)
 
   {

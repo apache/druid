@@ -52,7 +52,9 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
+import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -2806,6 +2808,46 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestWithGroupByOrderByWithLimit()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 DESC LIMIT 2 ",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(UnnestDataSource.create(
+                    new TableDataSource(CalciteTests.DATASOURCE3),
+                    "dim3",
+                    "EXPR$0",
+                    null
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
+                .threshold(2)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+            ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"d", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{null, 2L},
+            new Object[]{"d", 1L}
+        )
+    );
+  }
+
 
   @Test
   public void testUnnestWithLimit()

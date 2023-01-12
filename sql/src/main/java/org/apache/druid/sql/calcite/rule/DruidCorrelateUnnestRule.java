@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
@@ -59,80 +60,88 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
   }
 
+  @Override
+  public boolean matches(RelOptRuleCall call)
+  {
+    final DruidRel<?> left = call.rel(1);
+    final DruidRel<?> right = call.rel(2);
+
+    return left.getPartialDruidQuery() != null
+           && right.getPartialDruidQuery() != null;
+  }
 
   @Override
   public void onMatch(RelOptRuleCall call)
   {
-    LogicalCorrelate logicalCorrelate = call.rel(0);
-    final DruidRel<?> druidQueryRel = call.rel(1);
-    DruidUnnestDatasourceRel unnestDatasourceRel = call.rel(2);
+    final Correlate correlate = call.rel(0);
+    final DruidRel<?> left = call.rel(1);
+    DruidUnnestDatasourceRel right = call.rel(2);
+
+
+    final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
+
     final Filter leftFilter;
     final DruidRel<?> newLeft;
-    final RexBuilder rexBuilder = logicalCorrelate.getCluster().getRexBuilder();
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
-    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (druidQueryRel instanceof DruidQueryRel);
+    final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
-    if (druidQueryRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
-        && (isLeftDirectAccessPossible || druidQueryRel.getPartialDruidQuery().getWhereFilter() == null)) {
+    if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
+        && (isLeftDirectAccessPossible || left.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the correlate, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
-      final RelNode leftScan = druidQueryRel.getPartialDruidQuery().getScan();
-      final Project leftProject = druidQueryRel.getPartialDruidQuery().getSelectProject();
-      leftFilter = druidQueryRel.getPartialDruidQuery().getWhereFilter();
+      final RelNode leftScan = left.getPartialDruidQuery().getScan();
+      final Project leftProject = left.getPartialDruidQuery().getSelectProject();
+      leftFilter = left.getPartialDruidQuery().getWhereFilter();
 
       // Left-side projection expressions rewritten to be on top of the correlate.
       newProjectExprs.addAll(leftProject.getProjects());
-      newLeft = druidQueryRel.withPartialQuery(PartialDruidQuery.create(leftScan));
+      newLeft = left.withPartialQuery(PartialDruidQuery.create(leftScan));
     } else {
       // Leave left as-is. Write input refs that do nothing.
-      for (int i = 0; i < druidQueryRel.getRowType().getFieldCount(); i++) {
-        newProjectExprs.add(rexBuilder.makeInputRef(logicalCorrelate.getRowType().getFieldList().get(i).getType(), i));
+      for (int i = 0; i < left.getRowType().getFieldCount(); i++) {
+        newProjectExprs.add(rexBuilder.makeInputRef(correlate.getRowType().getFieldList().get(i).getType(), i));
       }
-      newLeft = druidQueryRel;
+      newLeft = left;
       leftFilter = null;
     }
 
 
-    if (unnestDatasourceRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
+    if (right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT) {
       for (final RexNode rexNode : RexUtil.shift(
-          unnestDatasourceRel.getPartialDruidQuery()
-                             .getSelectProject()
-                             .getProjects(),
+          right.getPartialDruidQuery()
+               .getSelectProject()
+               .getProjects(),
           newLeft.getRowType().getFieldCount()
       )) {
         newProjectExprs.add(rexNode);
       }
     } else {
       // Leave right as-is. Write input refs that do nothing.
-      for (int i = 0; i < unnestDatasourceRel.getRowType().getFieldCount(); i++) {
+      for (int i = 0; i < right.getRowType().getFieldCount(); i++) {
         newProjectExprs.add(
             rexBuilder.makeInputRef(
-                logicalCorrelate.getRowType()
-                                .getFieldList()
-                                .get(druidQueryRel.getRowType().getFieldCount() + i)
-                                .getType(),
+                correlate.getRowType()
+                         .getFieldList()
+                         .get(left.getRowType().getFieldCount() + i)
+                         .getType(),
                 newLeft.getRowType().getFieldCount() + i
             )
         );
       }
     }
 
-    LogicalCorrelate lc = logicalCorrelate.copy(
-        logicalCorrelate.getTraitSet(),
+    Correlate corr = correlate.copy(
+        correlate.getTraitSet(),
         newLeft,
-        unnestDatasourceRel,
-        logicalCorrelate.getCorrelationId(),
-        logicalCorrelate.getRequiredColumns(),
-        logicalCorrelate.getJoinType()
+        right,
+        correlate.getCorrelationId(),
+        correlate.getRequiredColumns(),
+        correlate.getJoinType()
     );
 
-
-    DruidCorrelateUnnestRel newRel = new DruidCorrelateUnnestRel(
-        lc.getCluster(),
-        lc.getTraitSet(),
-        lc,
-        PartialDruidQuery.create(lc),
+    final DruidCorrelateUnnestRel druidCorr = DruidCorrelateUnnestRel.create(
+        corr,
         leftFilter,
         plannerContext
     );
@@ -140,11 +149,11 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
     final RelBuilder relBuilder =
         call.builder()
-            .push(newRel)
+            .push(druidCorr)
             .project(RexUtil.fixUp(
                 rexBuilder,
                 newProjectExprs,
-                RelOptUtil.getFieldTypeList(lc.getRowType())
+                RelOptUtil.getFieldTypeList(druidCorr.getRowType())
             ));
 
     call.transformTo(relBuilder.build());
