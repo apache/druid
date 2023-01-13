@@ -473,14 +473,14 @@ public class SqlTestFramework
     }
 
     @Provides
-    @Singleton
+    @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
       return componentSupplier.createCongolmerate(builder, resourceCloser);
     }
 
     @Provides
-    @Singleton
+    @LazySingleton
     public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector)
     {
       return builder.componentSupplier.createJoinableFactoryWrapper(

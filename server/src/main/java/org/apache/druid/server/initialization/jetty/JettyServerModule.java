@@ -187,7 +187,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides
-  @Singleton
+  @LazySingleton
   public JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
   {
     final JacksonJsonProvider provider = new JacksonJsonProvider();
@@ -196,7 +196,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides
-  @Singleton
+  @LazySingleton
   public JacksonSmileProvider getJacksonSmileProvider(@Smile ObjectMapper objectMapper)
   {
     final JacksonSmileProvider provider = new JacksonSmileProvider();
@@ -517,7 +517,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides
-  @Singleton
+  @LazySingleton
   public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
   {
     return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
