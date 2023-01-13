@@ -126,6 +126,8 @@ public class TaskToolbox
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
 
+  private final TaskMetadata taskMetadata;
+
 
   public TaskToolbox(
       TaskConfig config,
@@ -166,7 +168,8 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId
+      String attemptId,
+      TaskMetadata taskMetadata
   )
   {
     this.config = config;
@@ -209,6 +212,7 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.taskMetadata = taskMetadata;
   }
 
   public TaskConfig getConfig()
@@ -466,6 +470,11 @@ public class TaskToolbox
     return attemptId;
   }
 
+  public TaskMetadata getTaskMetadata()
+  {
+    return taskMetadata;
+  }
+
   public static class Builder
   {
     private TaskConfig config;
@@ -507,6 +516,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private TaskMetadata taskMetadata;
 
     public Builder()
     {
@@ -551,6 +561,7 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
+      this.taskMetadata = other.taskMetadata;
     }
 
     public Builder config(final TaskConfig config)
@@ -787,6 +798,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder taskMetadata(final TaskMetadata taskMetadata)
+    {
+      this.taskMetadata = taskMetadata;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -828,7 +845,8 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId
+          attemptId,
+          taskMetadata
       );
     }
   }

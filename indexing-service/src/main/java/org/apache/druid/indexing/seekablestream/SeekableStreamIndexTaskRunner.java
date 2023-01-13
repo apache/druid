@@ -377,7 +377,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         toolbox.getIndexingTmpDir(),
         row -> row != null && task.withinMinMaxRecordTime(row),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        toolbox.getTaskMetadata()
     );
 
     initializeSequences();

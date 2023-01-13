@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskMetadata;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -771,7 +772,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
         rowFilter,
         determinePartitionsMeters,
-        determinePartitionsParseExceptionHandler
+        determinePartitionsParseExceptionHandler,
+        new TaskMetadata(getId(), getGroupId(), getDataSource(), getDataSource())
+
     )) {
       while (inputRowIterator.hasNext()) {
         final InputRow inputRow = inputRowIterator.next();

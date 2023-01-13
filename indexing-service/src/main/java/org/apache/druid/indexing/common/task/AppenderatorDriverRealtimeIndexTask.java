@@ -47,6 +47,7 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskMetadata;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -397,7 +398,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
           }
         }
         catch (ParseException e) {
-          handleParseException(e);
+          handleParseException(e, toolbox.getTaskMetadata());
         }
       }
 
@@ -637,9 +638,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     return metricsMap;
   }
 
-  private void handleParseException(ParseException pe)
+  private void handleParseException(ParseException pe, TaskMetadata taskMetadata)
   {
-    parseExceptionHandler.handle(pe);
+    parseExceptionHandler.handle(pe, taskMetadata.toMap());
 
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > spec.getTuningConfig().getMaxParseExceptions()) {

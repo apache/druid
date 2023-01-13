@@ -110,6 +110,7 @@ public class TaskToolboxFactory
   private final ShuffleClient shuffleClient;
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final TaskMetadata taskMetadata;
 
   @Inject
   public TaskToolboxFactory(
@@ -150,7 +151,8 @@ public class TaskToolboxFactory
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      @AttemptId String attemptId
+      @AttemptId String attemptId,
+      TaskMetadata taskMetadata
   )
   {
     this.config = config;
@@ -191,6 +193,7 @@ public class TaskToolboxFactory
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.taskMetadata = taskMetadata;
   }
 
   public TaskToolbox build(Task task)
@@ -240,6 +243,7 @@ public class TaskToolboxFactory
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
+        .taskMetadata(taskMetadata)
         .build();
   }
 }

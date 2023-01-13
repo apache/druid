@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.indexing.common.TaskMetadata;
 import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
@@ -55,6 +56,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   private final Predicate<InputRow> rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
+  private final TaskMetadata taskMetadata;
 
   /**
    * Either parser or inputFormat shouldn't be null.
@@ -67,7 +69,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
       File indexingTmpDir,
       Predicate<InputRow> rowFilter,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      TaskMetadata taskMetadata
   )
   {
     if (parser == null && inputFormat == null) {
@@ -88,6 +91,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
+    this.taskMetadata = taskMetadata;
   }
 
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
@@ -120,7 +124,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
         CloseableIterators.withEmptyBaggage(iterable.iterator()),
         rowFilter,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        taskMetadata
     );
     return Lists.newArrayList(rowIterator);
   }
@@ -148,7 +153,8 @@ class StreamChunkParser<RecordType extends ByteEntity>
           byteEntityReader.read(),
           rowFilter,
           rowIngestionMeters,
-          parseExceptionHandler
+          parseExceptionHandler,
+          taskMetadata
       )) {
         rowIterator.forEachRemaining(rows::add);
       }

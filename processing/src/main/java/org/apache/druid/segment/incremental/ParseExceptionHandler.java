@@ -26,9 +26,11 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * A handler for {@link ParseException}s thrown during ingestion. Based on the given configuration, this handler can
@@ -63,6 +65,37 @@ public class ParseExceptionHandler
       this.savedParseExceptionReports = new CircularBuffer<>(maxSavedParseExceptions);
     } else {
       this.savedParseExceptionReports = null;
+    }
+  }
+
+  public void handle(@Nullable ParseException e, Map<String, Object> taskMetadata)
+  {
+    if (e == null) {
+      return;
+    }
+
+    if (e.isFromPartiallyValidRow()) {
+      rowIngestionMeters.incrementProcessedWithError();
+    } else {
+      rowIngestionMeters.incrementUnparseable();
+    }
+
+    logParseExceptionHelper(e);
+
+    if (savedParseExceptionReports != null) {
+      ParseExceptionReport parseExceptionReport = new ParseExceptionReport(
+          e.getInput(),
+          e.isFromPartiallyValidRow() ? "processedWithError" : "unparseable",
+          e.isFromPartiallyValidRow()
+          ? ((UnparseableColumnsParseException) e).getColumnExceptionMessages()
+          : ImmutableList.of(e.getMessage()),
+          e.getTimeOfExceptionMillis()
+      );
+      savedParseExceptionReports.add(parseExceptionReport);
+    }
+
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError() > maxAllowedParseExceptions) {
+      throw new RE("Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
     }
   }
 

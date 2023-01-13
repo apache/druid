@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskMetadata;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -206,7 +207,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable InputFormat inputFormat,
       Predicate<InputRow> rowFilter,
       RowIngestionMeters ingestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      TaskMetadata taskMetadata
   ) throws IOException
   {
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
@@ -220,7 +222,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         inputSourceReader.read(ingestionMeters),
         rowFilter,
         ingestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        taskMetadata
     );
   }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexing.common.TaskMetadata;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -40,6 +41,7 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
   private final Predicate<InputRow> filter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
+  private final TaskMetadata taskMetadata;
 
   private InputRow next;
 
@@ -47,13 +49,15 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
       CloseableIterator<InputRow> delegate,
       Predicate<InputRow> filter,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      TaskMetadata taskMetadata
   )
   {
     this.delegate = delegate;
     this.filter = filter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
+    this.taskMetadata = taskMetadata;
   }
 
   @Override
@@ -76,7 +80,7 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
         break;
       }
       catch (ParseException e) {
-        parseExceptionHandler.handle(e);
+        parseExceptionHandler.handle(e, taskMetadata.toMap());
       }
     }
     return next != null;
