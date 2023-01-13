@@ -307,7 +307,8 @@ public class WorkerImpl implements Worker
         criticalWarningCodes,
         controllerClient,
         id(),
-        MSQTasks.getHostFromSelfNode(selfDruidNode)
+        MSQTasks.getHostFromSelfNode(selfDruidNode),
+        context.emitter()
     );
 
     closer.register(msqWarningReportPublisher);

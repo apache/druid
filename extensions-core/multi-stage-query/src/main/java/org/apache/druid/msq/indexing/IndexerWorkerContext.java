@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
@@ -247,6 +248,12 @@ public class IndexerWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  @Override
+  public Emitter emitter()
+  {
+    return toolbox.getEmitter();
   }
 
   private synchronized OverlordClient makeOverlordClient()

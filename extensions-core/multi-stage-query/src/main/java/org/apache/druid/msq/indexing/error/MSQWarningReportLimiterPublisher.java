@@ -20,6 +20,10 @@
 package org.apache.druid.msq.indexing.error;
 
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.ControllerClient;
 
 import javax.annotation.Nullable;
@@ -44,6 +48,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
   private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
   private final ControllerClient controllerClient;
   private final String workerId;
+  private final Emitter emitter;
 
   @Nullable
   private final String host;
@@ -74,7 +79,8 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       Set<String> criticalWarningCodes,
       ControllerClient controllerClient,
       String workerId,
-      @Nullable String host
+      @Nullable String host,
+      Emitter emitter
   )
   {
     this.delegate = delegate;
@@ -84,6 +90,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
     this.controllerClient = controllerClient;
     this.workerId = workerId;
     this.host = host;
+    this.emitter = emitter;
   }
 
   @Override
@@ -107,6 +114,12 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       if (totalLimit != -1 && totalCount > totalLimit) {
         return;
       }
+    }
+    if (CannotParseExternalDataFault.CODE.equals(errorCode)) {
+      MSQErrorReport msqFault = MSQErrorReport.fromException(workerId, host, stageNumber, e);
+      msqFault.getFault().getErrorMessage();
+      AlertBuilder alertBuilder = new AlertBuilder.createEmittable(emitter, msqFault.getTaskId() + msqFault.getFault().getErrorMessage() + msqFault.getStageNumber());
+      emitter.emit(ServiceEventBuilder);
     }
 
     long limitForFault = errorCodeToLimit.getOrDefault(errorCode, -1L);
