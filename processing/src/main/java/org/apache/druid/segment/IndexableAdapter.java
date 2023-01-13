@@ -49,8 +49,6 @@ public interface IndexableAdapter
 
   BitmapValues getBitmapValues(String dimension, int dictId);
 
-  String getMetricType(String metric);
-
   ColumnCapabilities getCapabilities(String column);
 
   Metadata getMetadata();

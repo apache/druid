@@ -29,8 +29,10 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.NestedDataComplexColumn;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -161,14 +163,15 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         throw new ISE("Column[%s] is multi-value, do not ask for a single-value selector", spec.getDimension());
       }
 
-      @SuppressWarnings("unchecked")
-      final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
-          columnCache.getColumn(spec.getDimension());
-
-      // dictionaryEncodedColumn is not null because of holder null check above
-      assert dictionaryEncodedColumn != null;
-      final SingleValueDimensionVectorSelector selector =
-          dictionaryEncodedColumn.makeSingleValueDimensionVectorSelector(offset);
+      final BaseColumn column = columnCache.getColumn(spec.getDimension());
+      final SingleValueDimensionVectorSelector selector;
+      if (column instanceof DictionaryEncodedColumn) {
+        selector = ((DictionaryEncodedColumn<?>) column).makeSingleValueDimensionVectorSelector(offset);
+      } else if (column instanceof NestedDataComplexColumn) {
+        selector = ((NestedDataComplexColumn) column).makeSingleValueDimensionVectorSelector(Collections.emptyList(), offset);
+      } else {
+        selector = NilVectorSelector.create(offset);
+      }
 
       return spec.decorate(selector);
     };
