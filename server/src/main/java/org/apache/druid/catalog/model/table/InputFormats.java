@@ -168,10 +168,8 @@ public class InputFormats
       }
       ResolvedTable resolvedTable = table.resolvedTable();
       Map<String, Object> jsonMap = toMap(table);
-      if (!jsonMap.containsKey(COLUMNS_FIELD)) {
-        // Make up a column just so that validation will pass.
-        jsonMap.put(COLUMNS_FIELD, Collections.singletonList("a"));
-      }
+      // Make up a column just so that validation will pass.
+      jsonMap.putIfAbsent(COLUMNS_FIELD, Collections.singletonList("a"));
       convert(jsonMap, resolvedTable.jsonMapper());
     }
 

@@ -114,11 +114,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
    */
   private SqlNode createArrayLiteral(Object value)
   {
-    List<?> list;
-    if (value instanceof List) {
-      list = (List<?>) value;
-    }
-    list = Arrays.asList((Object[]) value);
+    List<?> list = Arrays.asList((Object[]) value);
     List<SqlNode> args = new ArrayList<>(list.size());
     for (Object element : list) {
       if (element == null) {

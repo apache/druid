@@ -56,7 +56,7 @@ public interface TableFunction
 
     private final String name;
 
-    private ParameterType(String name)
+    ParameterType(String name)
     {
       this.name = name;
     }

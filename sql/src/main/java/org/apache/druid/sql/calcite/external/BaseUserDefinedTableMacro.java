@@ -177,8 +177,8 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
       }
       List<?> arg = (List<?>) o;
       List<Object> revised = new ArrayList<>(arg.size());
-      for (int i = 0; i < arg.size(); i++) {
-        Object element = coerce(arg.get(i), elementType);
+      for (Object value : arg) {
+        Object element = coerce(value, elementType);
         if (element == null) {
           throw new NonLiteralException();
         }

@@ -105,7 +105,7 @@ public interface ModelProperties
     }
   }
 
-  public static class SimplePropertyDefn<T> extends BasePropertyDefn<T>
+  class SimplePropertyDefn<T> extends BasePropertyDefn<T>
   {
     public final Class<T> valueClass;
 
@@ -178,7 +178,7 @@ public interface ModelProperties
   }
 
 
-  public static class ObjectPropertyDefn<T> extends BasePropertyDefn<T>
+  class ObjectPropertyDefn<T> extends BasePropertyDefn<T>
   {
     public final Class<T> valueClass;
 

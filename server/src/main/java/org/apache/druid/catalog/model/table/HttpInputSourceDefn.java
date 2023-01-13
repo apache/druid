@@ -93,7 +93,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   public static final String PASSWORD_PARAMETER = "password";
   public static final String PASSWORD_ENV_VAR_PARAMETER = "passwordEnvVar";
 
-  private static final List<ParameterDefn> URI_PARAMS = Arrays.asList(
+  private static final List<ParameterDefn> URI_PARAMS = Collections.singletonList(
       new Parameter(URIS_PARAMETER, ParameterType.VARCHAR_ARRAY, true)
   );
 

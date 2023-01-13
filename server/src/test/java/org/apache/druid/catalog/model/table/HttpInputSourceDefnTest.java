@@ -76,7 +76,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
   }
 
   @Test
-  public void testInvalidTemplate() throws URISyntaxException
+  public void testInvalidTemplate()
   {
     // No format: valid. Format can be provided via a table function
     TableMetadata table = TableBuilder.external("foo")
@@ -128,7 +128,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
   }
 
   @Test
-  public void testNoFormatWithTemplate() throws URISyntaxException
+  public void testNoFormatWithTemplate()
   {
     // No format: valid. Format can be provided via a table function
     TableMetadata table = TableBuilder.external("foo")

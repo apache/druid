@@ -193,7 +193,7 @@ public class S3InputSourceDefnTest
   }
 
   @Test
-  public void testValidateNoColumns() throws URISyntaxException
+  public void testValidateNoColumns()
   {
     // If a format is provided, then columns must also be provided.
     S3InputSource s3InputSource = s3InputSource(
@@ -549,7 +549,7 @@ public class S3InputSourceDefnTest
   }
 
   @Test
-  public void testFullTableSpecHappyPath() throws URISyntaxException
+  public void testFullTableSpecHappyPath()
   {
     S3InputSourceConfig config = new S3InputSourceConfig(null, null, "foo", null);
     S3InputSource s3InputSource = s3InputSource(
@@ -586,7 +586,7 @@ public class S3InputSourceDefnTest
   }
 
   @Test
-  public void testTableSpecWithoutConfig() throws URISyntaxException
+  public void testTableSpecWithoutConfig()
   {
     S3InputSource s3InputSource = s3InputSource(
         Arrays.asList("s3://foo/bar/", "s3://mumble/"), null, null, "*.csv");
@@ -630,7 +630,7 @@ public class S3InputSourceDefnTest
   }
 
   @Test
-  public void testTableSpecWithBucketAndFormat() throws URISyntaxException
+  public void testTableSpecWithBucketAndFormat()
   {
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", S3StorageDruidModule.SCHEME))
@@ -672,7 +672,7 @@ public class S3InputSourceDefnTest
   }
 
   @Test
-  public void testTableSpecAsConnection() throws URISyntaxException
+  public void testTableSpecAsConnection()
   {
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", S3StorageDruidModule.SCHEME))

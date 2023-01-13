@@ -71,7 +71,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
   }
 
   @Test
-  public void testValidateNoColumns() throws URISyntaxException
+  public void testValidateNoColumns()
   {
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))

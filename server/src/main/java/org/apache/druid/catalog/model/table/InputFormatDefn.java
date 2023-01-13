@@ -37,7 +37,7 @@ public interface InputFormatDefn
 {
   /**
    * @return the string used to identify the input format type in the serialized
-   * JSON for the input format. This is also the value used in the {@link format}
+   * JSON for the input format. This is also the value used in the {@code format}
    * property for SQL functions.
    */
   String typeValue();
@@ -76,7 +76,7 @@ public interface InputFormatDefn
    * @param jsonMapper the mapper to use to perform conversions
    *
    * @return an input format as defined by the arguments
-   * @throws IAE if the arguments are not valid
+   * @throws org.apache.druid.java.util.common.IAE if the arguments are not valid
    */
   InputFormat convertFromArgs(
       Map<String, Object> args,
@@ -92,7 +92,7 @@ public interface InputFormatDefn
    *              a JSON map
    *
    * @return an input format as defined by the table spec
-   * @throws IAE if the spec is not valid
+   * @throws org.apache.druid.java.util.common.IAE if the spec is not valid
    */
   InputFormat convertFromTable(ResolvedExternalTable table);
 }

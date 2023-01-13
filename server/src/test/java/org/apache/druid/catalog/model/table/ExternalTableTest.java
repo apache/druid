@@ -204,7 +204,7 @@ public class ExternalTableTest extends BaseExternTableTest
 
   @Test
   @Ignore
-  public void localDocExample() throws URISyntaxException
+  public void localDocExample()
   {
     Map<String, Object> sourceMap = ImmutableMap.of(
         "type", LocalInputSource.TYPE_KEY,
