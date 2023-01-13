@@ -86,7 +86,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
   public static final String OBJECT_GLOB_PARAMETER = "objectGlob";
 
   /**
-   * External data table spec property that let's the user define one bucket in the catalog,
+   * External data table spec property that lets the user define one bucket in the catalog,
    * so that the corresponding table function can supply just the relative path names within
    * that bucket. That is, if the user sets this, Druid will generate the {@code objects}
    * field from this entry and files provided in the table function.
@@ -158,7 +158,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
       }
       if (hasGlob) {
         throw new IAE(
-            "The %s property cannot be provided when the the %s property is set",
+            "The %s property cannot be provided when the %s property is set",
             OBJECT_GLOB_FIELD,
             BUCKET_PROPERTY
         );

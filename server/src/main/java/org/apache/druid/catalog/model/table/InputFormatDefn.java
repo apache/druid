@@ -66,8 +66,8 @@ public interface InputFormatDefn
    * correspond to the defined parameters. The map provided is guaranteed to have
    * a value for each parameter defined as non-optional, and those values will be
    * of the type defined in the parameter. The map will also contain values for
-   * the input source: the format should values that don't correspond to parameters
-   * it defined.
+   * the input source: the format should ignore values that don't correspond to
+   * parameters it defined.
    *
    * @param args       the actual arguments for the defined parameters
    * @param columns    the columns provided in SQL, typically via the `EXTEND` clause,

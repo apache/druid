@@ -122,7 +122,7 @@ public class CatalogUtils
     if (value instanceof Integer) {
       return (Integer) value;
     }
-    return (Long) value;
+    return safeCast(value, Long.class, key);
   }
 
   public static String getString(Map<String, Object> map, String key)

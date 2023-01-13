@@ -39,7 +39,7 @@ import java.util.Map;
  * </pre</code>
  * <p>
  * Calcite provides actual arguments as an array, with null values for arguments
- * which the user did not provided. That form is not helpful for this use case.
+ * which the user did not provide. That form is not helpful for this use case.
  * The caller converts those a map, with only the actual arguments set. The
  * call also provides a row schema, obtained from the Calcite {@code EXTEND}
  * extension. The result is an {@link ExternalTableSpec} which the caller uses

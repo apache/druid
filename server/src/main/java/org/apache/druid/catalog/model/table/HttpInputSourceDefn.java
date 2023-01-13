@@ -249,6 +249,9 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   private void convertUriTemplateArgs(Map<String, Object> jsonMap, String uriTemplate, Map<String, Object> args)
   {
     List<String> uriStrings = CatalogUtils.getStringArray(args, URIS_PARAMETER);
+    if (CollectionUtils.isNullOrEmpty(uriStrings)) {
+      throw new IAE("One or more URIs is required in parameter %s", URIS_PARAMETER);
+    }
     final Matcher m = templateMatcher(uriTemplate);
     final List<String> uris = uriStrings.stream()
         .map(uri -> m.replaceFirst(uri))

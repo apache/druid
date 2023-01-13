@@ -52,8 +52,6 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
    */
   public static final String BASE_DIR_PARAMETER = "baseDir";
 
-  // Note name "fileFilter", not "filter". These properties mix in with
-  // others and "filter" is a bit too generic in that context.
   public static final String FILTER_PARAMETER = "filter";
   public static final String FILES_PARAMETER = "files";
 
@@ -215,7 +213,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
       final String baseDir = CatalogUtils.getString(sourceMap, BASE_DIR_FIELD);
       if (Strings.isNullOrEmpty(baseDir)) {
         throw new IAE(
-            "When an inline external table is used with a table function, %s must be set",
+            "When a local external table is used with a table function, %s must be set",
             BASE_DIR_FIELD
         );
       }
@@ -224,7 +222,7 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
       final String filterParam = CatalogUtils.getString(args, FILTER_PARAMETER);
       final boolean hasFilesParam = !CollectionUtils.isNullOrEmpty(filesParam);
       final boolean hasFilterParam = !Strings.isNullOrEmpty(filterParam);
-      if (!hasFiles && !hasFilter && !hasFilesParam && !hasFilterParam) {
+      if (!hasFilter && !hasFilesParam && !hasFilterParam) {
         throw new IAE(
             "For a local input source, set either %s or %s",
             FILES_PARAMETER,

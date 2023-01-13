@@ -44,6 +44,7 @@ public class InlineInputSourceDefn extends FormattedInputSourceDefn
 {
   public static final String TYPE_KEY = InlineInputSource.TYPE_KEY;
   public static final String DATA_PROPERTY = "data";
+  public static final String DATA_FIELD = "data";
 
   @Override
   public String typeValue()
@@ -99,7 +100,7 @@ public class InlineInputSourceDefn extends FormattedInputSourceDefn
           DATA_PROPERTY
       );
     }
-    jsonMap.put("data", String.join("\n", data));
+    jsonMap.put(DATA_FIELD, String.join("\n", data));
   }
 
   @Override
@@ -125,9 +126,9 @@ public class InlineInputSourceDefn extends FormattedInputSourceDefn
     // list of rows. The user will usually provide a trailing newline which should
     // not be interpreted as an empty data row. That is, if the data ends with
     // a newline, the inline input source will interpret that as a blank line, oddly.
-    String data = CatalogUtils.getString(jsonMap, "data");
+    String data = CatalogUtils.getString(jsonMap, DATA_FIELD);
     if (data != null && !data.endsWith("\n")) {
-      jsonMap.put("data", data + "\n");
+      jsonMap.put(DATA_FIELD, data + "\n");
     }
   }
 }
