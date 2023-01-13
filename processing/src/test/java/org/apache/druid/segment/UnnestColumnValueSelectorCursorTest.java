@@ -578,7 +578,7 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         Collections.singletonList("j")
     );
 
-    List<String> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", "j");
+    List<String> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", null);
 
     //Create base cursor
     ListCursor listCursor = new ListCursor(inputList);
@@ -592,8 +592,16 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         IGNORE_SET
     );
     // should return a column value selector for this case
-    ColumnValueSelector<?> colSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
-    Assert.assertNotNull(colSelector);
+    ColumnValueSelector<?> unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
+    int k = 0;
+    while (!unnestCursor.isDone()) {
+      Object valueSelectorVal = unnestColumnValueSelector.getObject();
+      k++;
+      unnestCursor.advance();
+    }
+    Assert.assertEquals(k, 9);
+    unnestCursor.reset();
+    Assert.assertNotNull(unnestColumnValueSelector);
   }
 
   @Test

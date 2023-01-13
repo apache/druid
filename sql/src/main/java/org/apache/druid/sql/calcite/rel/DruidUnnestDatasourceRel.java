@@ -39,6 +39,17 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ * The Rel node to capture the unnest (or uncollect) part in a query. This covers 2 cases:
+ *
+ * Case 1:
+ * If this is an unnest on a constant and no input table is required, the final query is built using
+ * an UnnestDataSource with a base InlineDataSource in this rel.
+ *
+ * Case 2:
+ * If the unnest has an input table, this rel resolves the unnest part and delegates the rel to be consumed by other
+ * rule ({@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
+ */
 public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
 {
   private final Uncollect uncollect;
@@ -101,6 +112,10 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
     }
     Expr parsed = expression.parse(getPlannerContext().getExprMacroTable());
     ExprEval eval = parsed.eval(InputBindings.nilBindings());
+
+    // If query unnests a constant expression and not use any table
+    // the unnest would be on an inline data source
+    // with the input column being called "inline" in the native query
     UnnestDataSource dataSource = UnnestDataSource.create(
         InlineDataSource.fromIterable(
             Collections.singletonList(new Object[]{eval.value()}),

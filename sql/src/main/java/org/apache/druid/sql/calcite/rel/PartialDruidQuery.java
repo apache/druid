@@ -54,7 +54,6 @@ public class PartialDruidQuery
   private final RelNode scan;
   private final Filter whereFilter;
   private final Project selectProject;
-  // add an unnestProject
   private final Project unnestProject;
   private final Aggregate aggregate;
   private final Filter havingFilter;

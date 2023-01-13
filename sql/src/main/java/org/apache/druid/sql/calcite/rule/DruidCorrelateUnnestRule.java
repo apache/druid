@@ -40,6 +40,26 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This class creates the rule to abide by for creating correlations during unnest.
+ * Typically, Calcite plans the unnest query such as
+ * SELECT * from numFoo, unnest(dim3) in the following way:
+ * 80:LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
+ *   6:LogicalTableScan(subset=[rel#74:Subset#0.NONE.[]], table=[[druid, numfoo]])
+ *   78:Uncollect(subset=[rel#79:Subset#3.NONE.[]])
+ *     76:LogicalProject(subset=[rel#77:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
+ *       7:LogicalValues(subset=[rel#75:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
+ *
+ *  {@link DruidUnnestDatasourceRule} takes care of the Uncollect(last 3 lines) to generate a {@link DruidUnnestDatasourceRel}
+ *  thereby reducing the logical plan to:
+ *        LogicalCorrelate
+ *           /       \
+ *      DruidRel    DruidUnnestDataSourceRel
+ *
+ *  This forms the premise of this rule. The goal is to transform the above-mentioned structure in the tree
+ *  with a new rel {@link DruidCorrelateUnnestRel} which shall be created here.
+ *
+ */
 public class DruidCorrelateUnnestRule extends RelOptRule
 {
   private final PlannerContext plannerContext;
@@ -69,6 +89,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
            && uncollectRel.getPartialDruidQuery() != null;
   }
 
+
   @Override
   public void onMatch(RelOptRuleCall call)
   {
@@ -87,8 +108,8 @@ public class DruidCorrelateUnnestRule extends RelOptRule
 
     if (druidRel.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && (isLeftDirectAccessPossible || druidRel.getPartialDruidQuery().getWhereFilter() == null)) {
-      // Swap the druidRel-side projection above the correlate, so the druidRel side is a simple scan or mapping. This helps us
-      // avoid subqueries.
+      // Swap the druidRel-side projection above the correlate, so the druidRel side is a simple scan or mapping.
+      // This helps us avoid subqueries.
       final RelNode leftScan = druidRel.getPartialDruidQuery().getScan();
       final Project leftProject = druidRel.getPartialDruidQuery().getSelectProject();
       druidRelFilter = druidRel.getPartialDruidQuery().getWhereFilter();
@@ -115,7 +136,6 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         newProjectExprs.add(rexNode);
       }
     } else {
-      // Leave druidUnnestDatasourceRel as-is. Write input refs that do nothing.
       for (int i = 0; i < druidUnnestDatasourceRel.getRowType().getFieldCount(); i++) {
         newProjectExprs.add(
             rexBuilder.makeInputRef(

@@ -3070,7 +3070,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"a"},
             new Object[]{"b"},
             new Object[]{""},
-            new Object[]{""}
+            useDefault ?
+            new Object[]{""} : new Object[]{null}
         )
     );
   }

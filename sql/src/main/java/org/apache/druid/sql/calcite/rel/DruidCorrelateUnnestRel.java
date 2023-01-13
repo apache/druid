@@ -53,6 +53,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * This is the DruidRel to handle correlated rel nodes to be used for unnest.
+ * Each correlate can be perceived as a join with the join type being inner
+ * the left of a correlate as seen in the rule {@link org.apache.druid.sql.calcite.rule.DruidCorrelateUnnestRule}
+ * is the {@link DruidQueryRel} while the right will always be an {@link DruidUnnestDatasourceRel}.
+ *
+ * Since this is a subclass of DruidRel it is automatically considered by other rules that involves DruidRels.
+ * Some example being SELECT_PROJECT and SORT_PROJECT rules in {@link org.apache.druid.sql.calcite.rule.DruidRules.DruidQueryRule}
+ */
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("unnest");
@@ -189,6 +198,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 
     // add the unnest project to the partial query if required
     // This is necessary to handle the virtual columns on the unnestProject
+    // Also create the unnest datasource to be used by the partial query
     PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
     return partialDruidQuery.build(
         UnnestDataSource.create(
@@ -226,8 +236,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     );
   }
 
-  // This is required to br overwritten as Calcite uses this method
-  // to maintain a map if equivalent DruidCorrelateUnnestRel or in general any Rel nodes.
+  // This is required to be overwritten as Calcite uses this method
+  // to maintain a map of equivalent DruidCorrelateUnnestRel or in general any Rel nodes.
   // Without this method overwritten multiple RelNodes will produce the same key
   // which makes the planner plan incorrectly.
   @Override
@@ -296,7 +306,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     } else {
       cost = partialQuery.estimateCost();
       if (correlateRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
-        cost *= CostEstimates.MULTIPLIER_FILTER; // treating inner join like a filter on left table
+        cost *= CostEstimates.MULTIPLIER_FILTER;
       }
     }
 
