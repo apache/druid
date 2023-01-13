@@ -36,20 +36,6 @@ import javax.annotation.Nullable;
 public interface ColumnCapabilities extends TypeSignature<ValueType>
 {
   /**
-   * Column type, good to know so caller can know what to expect and which optimal selector to use
-   */
-  @Override
-  ValueType getType();
-
-  @Nullable
-  @Override
-  String getComplexTypeName();
-
-  @Nullable
-  @Override
-  TypeSignature<ValueType> getElementType();
-
-  /**
    * Is the column dictionary encoded? If so, a DimensionDictionarySelector may be used instead of using a value
    * selector, allowing algorithms to operate on primitive integer dictionary ids rather than the looked up dictionary
    * values

@@ -125,7 +125,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           maxRowCount,
           maxBytesInMemory,
           false,
-          true
+          true,
+          false
       );
     }
 
@@ -149,7 +150,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           maxRowCount,
           maxBytesInMemory,
           false,
-          true
+          true,
+          false
       );
     }
 

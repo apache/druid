@@ -1523,7 +1523,7 @@ public class NewestSegmentFirstPolicyTest
             null,
             new UserCompactionTaskQueryTuningConfig(
                 null,
-                new OnheapIncrementalIndex.Spec(true),
+                new OnheapIncrementalIndex.Spec(true, false),
                 null,
                 1000L,
                 null,
@@ -1558,7 +1558,7 @@ public class NewestSegmentFirstPolicyTest
             null,
             new UserCompactionTaskQueryTuningConfig(
                 null,
-                new OnheapIncrementalIndex.Spec(false),
+                new OnheapIncrementalIndex.Spec(false, false),
                 null,
                 1000L,
                 null,

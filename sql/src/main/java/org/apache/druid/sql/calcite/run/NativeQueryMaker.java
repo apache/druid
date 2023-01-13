@@ -266,6 +266,8 @@ public class NativeQueryMaker implements QueryMaker
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
         coercedValue = String.valueOf(value);
+      } else if (value instanceof Boolean) {
+        coercedValue = String.valueOf(value);
       } else if (value instanceof Collection) {
         // Iterate through the collection, coercing each value. Useful for handling selects of multi-value dimensions.
         final List<String> valueStrings = ((Collection<?>) value).stream()

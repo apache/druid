@@ -480,10 +480,10 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public int processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return 0;
+          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
         }
       };
 

@@ -88,7 +88,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     Map<String, DimensionHandler> dimensionHandlerMap = Maps.newLinkedHashMap();
     for (String dim : availableDimensions) {
       final ColumnHolder columnHolder = getColumnHolder(dim);
-      ColumnCapabilities capabilities = columnHolder.getCapabilities();
+      ColumnCapabilities capabilities = columnHolder.getHandlerCapabilities();
       DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
       dimensionHandlerMap.put(dim, handler);
     }
