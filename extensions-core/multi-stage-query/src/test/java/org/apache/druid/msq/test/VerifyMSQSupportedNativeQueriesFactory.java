@@ -29,9 +29,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Custom {@link org.apache.druid.sql.calcite.QueryTestRunner.QueryVerifyStep} for the MSQ run queries. Since all the
- * query types are not supported therefore we skip the {@link org.apache.druid.sql.calcite.QueryTestRunner.VerifyNativeQueries}
- * check for some query types
+ * Custom {@link QueryTestRunner.QueryVerifyStep} for the MSQ run queries. Since all the query types are not supported
+ * therefore we skip the {@link QueryTestRunner.VerifyNativeQueries} check for some query types
  */
 public class VerifyMSQSupportedNativeQueriesFactory implements QueryTestRunner.QueryVerifyStepFactory
 {

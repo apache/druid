@@ -34,8 +34,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
- * {@link org.apache.druid.sql.calcite.QueryTestRunner.QueryRunStep} that extracts the results from the reports so that
- * they can be used in the subsequent verification steps
+ * {@link QueryTestRunner.QueryRunStep} that extracts the results from the reports so that they can be used in the
+ * subsequent verification steps
  */
 public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactory
 {
