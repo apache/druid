@@ -578,7 +578,6 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
         Collections.singletonList("j")
     );
 
-    List<String> expectedResults = Arrays.asList("a", "b", "c", "e", "f", "g", "h", "i", null);
 
     //Create base cursor
     ListCursor listCursor = new ListCursor(inputList);
@@ -595,7 +594,6 @@ public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandling
     ColumnValueSelector<?> unnestColumnValueSelector = unnestCursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_NAME));
     int k = 0;
     while (!unnestCursor.isDone()) {
-      Object valueSelectorVal = unnestColumnValueSelector.getObject();
       k++;
       unnestCursor.advance();
     }

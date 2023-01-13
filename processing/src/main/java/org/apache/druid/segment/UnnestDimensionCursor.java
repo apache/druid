@@ -413,7 +413,7 @@ public class UnnestDimensionCursor implements Cursor
     public int get(int idx)
     {
       // to support rows which have only null values
-      // need to check if rhe value is not null and the size is greater than 0
+      // need to check if the value is not null and the size is greater than 0
       if (indexedIntsForCurrentRow != null && indexedIntsForCurrentRow.size() > 0) {
         return indexedIntsForCurrentRow.get(index);
       }
