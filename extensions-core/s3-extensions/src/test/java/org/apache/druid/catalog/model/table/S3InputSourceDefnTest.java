@@ -43,7 +43,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;

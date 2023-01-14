@@ -187,7 +187,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides
-  @LazySingleton
+  @Singleton
   public JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
   {
     final JacksonJsonProvider provider = new JacksonJsonProvider();
@@ -196,7 +196,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @Provides
-  @LazySingleton
+  @Singleton
   public JacksonSmileProvider getJacksonSmileProvider(@Smile ObjectMapper objectMapper)
   {
     final JacksonSmileProvider provider = new JacksonSmileProvider();
