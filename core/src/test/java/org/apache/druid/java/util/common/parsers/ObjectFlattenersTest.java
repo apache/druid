@@ -40,7 +40,8 @@ public class ObjectFlattenersTest
           true,
           ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "extract", "$.bar"))
       ),
-      FLATTENER_MAKER
+      FLATTENER_MAKER,
+      true
   );
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

@@ -67,7 +67,7 @@ services:
   # See https://hub.docker.com/_/mysql
   # The image will intialize the user and DB upon first start.
   metadata:
-    #    platform: linux/x86_64  - Add when running on M1 Macs
+    platform: linux/x86_64  #- Add when running on M1 Macs
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata
     command:

@@ -54,7 +54,11 @@ public class ParquetHadoopInputRowParser implements InputRowParser<Group>
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
-    this.groupFlattener = ObjectFlatteners.create(flattenSpec, new ParquetGroupFlattenerMaker(this.binaryAsString));
+    this.groupFlattener = ObjectFlatteners.create(
+        flattenSpec,
+        new ParquetGroupFlattenerMaker(this.binaryAsString),
+        false
+    );
     this.parser = new MapInputRowParser(parseSpec);
   }
 

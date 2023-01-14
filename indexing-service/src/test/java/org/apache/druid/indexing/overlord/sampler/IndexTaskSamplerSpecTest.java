@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -96,6 +97,7 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
     Capture<InputFormat> capturedInputFormat = EasyMock.newCapture();
     Capture<DataSchema> capturedDataSchema = EasyMock.newCapture();
     Capture<SamplerConfig> capturedSamplerConfig = EasyMock.newCapture();
+    Capture<TuningConfig> capturedTuningConfig = EasyMock.newCapture();
 
     IndexTaskSamplerSpec spec = MAPPER.readValue(json, IndexTaskSamplerSpec.class);
 
@@ -103,7 +105,8 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
         EasyMock.capture(capturedInputSource),
         EasyMock.capture(capturedInputFormat),
         EasyMock.capture(capturedDataSchema),
-        EasyMock.capture(capturedSamplerConfig)
+        EasyMock.capture(capturedSamplerConfig),
+        EasyMock.capture(capturedTuningConfig)
     )).andReturn(new SamplerResponse(0, 0, null));
 
     replayAll();

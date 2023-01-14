@@ -53,8 +53,11 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   }
 
   @Override
-  public Set<String> discoverRootFields(Group obj)
+  public Set<String> discoverRootFields(Group obj, boolean discoverNestedFields)
   {
+    if (discoverNestedFields) {
+      return obj.getType().getFields().stream().map(Type::getName).collect(Collectors.toSet());
+    }
     return obj.getType()
               .getFields()
               .stream()

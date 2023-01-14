@@ -52,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 public class OrcReaderTest extends InitializedNullHandlingTest
 {
@@ -416,6 +417,112 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals("2", Iterables.getOnlyElement(row.getDimension("struct_list_struct_int")));
       Assert.assertEquals("5", Iterables.getOnlyElement(row.getDimension("map_struct_int")));
+
+      Assert.assertEquals(7500, actualRowCount);
+    }
+  }
+
+  @Test
+  public void testNestedColumnSchemaless() throws IOException
+  {
+    final OrcInputFormat inputFormat = new OrcInputFormat(
+        new JSONPathSpec(true, ImmutableList.of()),
+        null,
+        new Configuration()
+    );
+    final InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        new DimensionsSpec(
+            ImmutableList.of()
+        ),
+        ColumnsFilter.all(),
+        null,
+        true
+    );
+    final FileEntity entity = new FileEntity(new File("example/orc-file-11-format.orc"));
+
+    final InputEntityReader reader = inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
+
+    List<String> dims = ImmutableList.of(
+        "boolean1",
+        "byte1",
+        "short1",
+        "int1",
+        "long1",
+        "float1",
+        "double1",
+        "bytes1",
+        "string1",
+        "middle",
+        "list",
+        "map",
+        "ts",
+        "decimal1"
+    );
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int actualRowCount = 0;
+
+      // Check the first row
+      Assert.assertTrue(iterator.hasNext());
+      InputRow row = iterator.next();
+
+      Assert.assertEquals(dims, row.getDimensions());
+      actualRowCount++;
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "list",
+              ImmutableList.of(
+                  ImmutableMap.of("int1", 1, "string1", "bye"),
+                  ImmutableMap.of("int1", 2, "string1", "sigh")
+              )
+          ),
+          row.getRaw("middle")
+      );
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("int1", 3, "string1", "good"),
+              ImmutableMap.of("int1", 4, "string1", "bad")
+          ),
+          row.getRaw("list")
+      );
+      Assert.assertEquals(
+          ImmutableMap.of(),
+          row.getRaw("map")
+      );
+      Assert.assertEquals(DateTimes.of("2000-03-12T15:00:00.0Z"), row.getTimestamp());
+
+      while (iterator.hasNext()) {
+        actualRowCount++;
+        row = iterator.next();
+        Assert.assertEquals(dims, row.getDimensions());
+      }
+
+      // Check the last row
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "list",
+              ImmutableList.of(
+                  ImmutableMap.of("int1", 1, "string1", "bye"),
+                  ImmutableMap.of("int1", 2, "string1", "sigh")
+              )
+          ),
+          row.getRaw("middle")
+      );
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("int1", 100000000, "string1", "cat"),
+              ImmutableMap.of("int1", -100000, "string1", "in"),
+              ImmutableMap.of("int1", 1234, "string1", "hat")
+          ),
+          row.getRaw("list")
+      );
+      Assert.assertEquals(
+          ImmutableMap.of(
+              "chani", ImmutableMap.of("int1", 5, "string1", "chani"),
+              "mauddib", ImmutableMap.of("int1", 1, "string1", "mauddib")
+          ),
+          row.getRaw("map")
+      );
 
       Assert.assertEquals(7500, actualRowCount);
     }

@@ -50,7 +50,11 @@ public class AvroParsers
       flattenSpec = JSONPathSpec.DEFAULT;
     }
 
-    return ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType));
+    return ObjectFlatteners.create(
+        flattenSpec,
+        new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType),
+        false
+    );
   }
 
   public static List<InputRow> parseGenericRecord(

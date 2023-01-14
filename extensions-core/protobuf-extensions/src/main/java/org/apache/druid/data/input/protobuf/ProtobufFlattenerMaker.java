@@ -63,9 +63,11 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
   }
 
   @Override
-  public Iterable<String> discoverRootFields(Map<String, Object> obj)
+  public Iterable<String> discoverRootFields(Map<String, Object> obj, boolean discoverNestedFields)
   {
-    // in the future we can just return obj.keySet(), but for now this doesnt expect nested fields...
+    if (discoverNestedFields) {
+      return obj.keySet();
+    }
     Set<String> rootFields = Sets.newHashSetWithExpectedSize(obj.keySet().size());
     for (Map.Entry<String, Object> entry : obj.entrySet()) {
       if (entry.getValue() instanceof List || entry.getValue() instanceof Map) {

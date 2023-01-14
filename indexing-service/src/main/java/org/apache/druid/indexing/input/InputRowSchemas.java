@@ -26,9 +26,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -47,7 +49,7 @@ public class InputRowSchemas
   /**
    * Creates an {@link InputRowSchema} from a given {@link DataSchema}.
    */
-  public static InputRowSchema fromDataSchema(final DataSchema dataSchema)
+  public static InputRowSchema fromDataSchema(final DataSchema dataSchema, @Nullable final TuningConfig tuningConfig)
   {
     return new InputRowSchema(
         dataSchema.getTimestampSpec(),
@@ -60,7 +62,8 @@ public class InputRowSchemas
         ),
         Arrays.stream(dataSchema.getAggregators())
               .map(AggregatorFactory::getName)
-              .collect(Collectors.toSet())
+              .collect(Collectors.toSet()),
+        tuningConfig != null ? tuningConfig.getAppendableIndexSpec().useNestedColumnIndexerForSchemaDiscovery() : false
     );
   }
 

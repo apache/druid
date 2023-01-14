@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
@@ -60,6 +61,7 @@ public class InputSourceProcessor
    */
   public static SegmentsAndCommitMetadata process(
       DataSchema dataSchema,
+      TuningConfig tuningConfig,
       BatchAppenderatorDriver driver,
       PartitionsSpec partitionsSpec,
       InputSource inputSource,
@@ -82,6 +84,7 @@ public class InputSourceProcessor
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             tmpDir,
             dataSchema,
+            tuningConfig,
             inputSource,
             inputFormat,
             AbstractBatchIndexTask.defaultRowFilter(granularitySpec),

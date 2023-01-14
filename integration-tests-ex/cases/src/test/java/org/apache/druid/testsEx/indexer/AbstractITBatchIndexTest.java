@@ -155,14 +155,23 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     return fileString;
   }
 
+  protected void doTestQuery(String dataSource, String queryFilePath)
+  {
+    doTestQuery(dataSource, queryFilePath, false);
+  }
+
   /**
    * Reads native queries from a file and runs against the provided datasource.
    */
-  protected void doTestQuery(String dataSource, String queryFilePath)
+  protected void doTestQuery(String dataSource, String queryFilePath, boolean isSql)
   {
     try {
       String query = getStringFromFileAndReplaceDatasource(queryFilePath, dataSource);
-      queryHelper.testQueriesFromString(query);
+      if (isSql) {
+        sqlQueryHelper.testQueriesFromString(query);
+      } else {
+        queryHelper.testQueriesFromString(query);
+      }
     }
     catch (Exception e) {
       LOG.error(e, "Error while running test query at path " + queryFilePath);
@@ -255,6 +264,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         queryFilePath,
         waitForNewVersion,
         runTestQueries,
+        false,
         waitForSegmentsToLoad,
         segmentAvailabilityConfirmationPair
     );
@@ -267,6 +277,31 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath,
       boolean waitForNewVersion,
       boolean runTestQueries,
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws IOException
+  {
+    doIndexTest(
+        dataSource,
+        indexTaskFilePath,
+        taskSpecTransform,
+        queryFilePath,
+        waitForNewVersion,
+        runTestQueries,
+        false,
+        waitForSegmentsToLoad,
+        segmentAvailabilityConfirmationPair
+    );
+  }
+
+  protected void doIndexTest(
+      String dataSource,
+      String indexTaskFilePath,
+      Function<String, String> taskSpecTransform,
+      String queryFilePath,
+      boolean waitForNewVersion,
+      boolean runTestQueries,
+      boolean isSqlQueries,
       boolean waitForSegmentsToLoad,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
@@ -288,7 +323,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         segmentAvailabilityConfirmationPair
     );
     if (runTestQueries) {
-      doTestQuery(dataSource, queryFilePath);
+      doTestQuery(dataSource, queryFilePath, isSqlQueries);
     }
   }
 

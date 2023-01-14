@@ -175,6 +175,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             toolbox.getIndexingTmpDir(),
             dataSchema,
+            tuningConfig,
             inputSource,
             inputFormat,
             determineIntervals ? Objects::nonNull : AbstractBatchIndexTask.defaultRowFilter(granularitySpec),

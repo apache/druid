@@ -111,8 +111,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
   @Override
-  public Set<String> discoverRootFields(final GenericRecord obj)
+  public Set<String> discoverRootFields(final GenericRecord obj, boolean discoverNestedFields)
   {
+    if (discoverNestedFields) {
+      return obj.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());
+    }
     return obj.getSchema()
               .getFields()
               .stream()

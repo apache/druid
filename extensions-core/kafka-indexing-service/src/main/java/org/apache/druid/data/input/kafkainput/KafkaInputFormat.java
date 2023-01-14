@@ -82,7 +82,13 @@ public class KafkaInputFormat implements InputFormat
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
     SettableByteEntity<KafkaRecordEntity> settableByteEntitySource = (SettableByteEntity<KafkaRecordEntity>) source;
-    InputRowSchema newInputRowSchema = new InputRowSchema(dummyTimestampSpec, inputRowSchema.getDimensionsSpec(), inputRowSchema.getColumnsFilter());
+    InputRowSchema newInputRowSchema = new InputRowSchema(
+        dummyTimestampSpec,
+        inputRowSchema.getDimensionsSpec(),
+        inputRowSchema.getColumnsFilter(),
+        inputRowSchema.getMetricNames(),
+        inputRowSchema.shouldDiscoverNestedColumns()
+    );
     return new KafkaInputReader(
         inputRowSchema,
         settableByteEntitySource,

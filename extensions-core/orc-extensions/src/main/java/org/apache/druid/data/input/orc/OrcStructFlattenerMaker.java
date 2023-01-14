@@ -55,8 +55,11 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   }
 
   @Override
-  public Iterable<String> discoverRootFields(OrcStruct obj)
+  public Iterable<String> discoverRootFields(OrcStruct obj, boolean discoverNestedFields)
   {
+    if (discoverNestedFields) {
+      return obj.getSchema().getFieldNames();
+    }
     List<String> fields = obj.getSchema().getFieldNames();
     List<TypeDescription> children = obj.getSchema().getChildren();
     List<String> primitiveFields = new ArrayList<>();

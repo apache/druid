@@ -207,6 +207,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
 
       final SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
+          tuningConfig,
           driver,
           partitionsSpec,
           inputSource,

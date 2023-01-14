@@ -67,6 +67,7 @@ public class CsvInputSourceSamplerTest
         inputSource,
         inputFormat,
         dataSchema,
+        null,
         null
     );
 

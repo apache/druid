@@ -32,7 +32,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
+import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.categories.HighAvailability;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.config.DruidTestRunner;

@@ -767,6 +767,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
         tmpDir,
         ingestionSchema.getDataSchema(),
+        ingestionSchema.getTuningConfig(),
         inputSource,
         inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
         rowFilter,
@@ -921,6 +922,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
       SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
+          tuningConfig,
           driver,
           partitionsSpec,
           inputSource,
