@@ -12,16 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# -------------------------------------------------------------------------
-
-# Cluster for the Google Cluster Storage (GCS) deep storage test.
-#
-# Required env vars:
-#
-# GOOGLE_BUCKET
-# GOOGLE_PREFIX
-# GOOGLE_APPLICATION_CREDENTIALS - must point to a file that holds the Google
-#   credentials. Mounted into each Druid container.
 
 networks:
   druid-it-net:
@@ -48,19 +38,11 @@ services:
     container_name: coordinator
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
       # The frequency with which the coordinator polls the database
       # for changes. The DB population code has to wait at least this
       # long for the coordinator to notice changes.
       - druid_manager_segments_pollDuration=PT5S
       - druid_coordinator_period=PT10S
-    volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
       - metadata
@@ -72,14 +54,6 @@ services:
     container_name: overlord
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
-    volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
       - metadata
@@ -90,14 +64,6 @@ services:
       service: broker
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
-    volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
@@ -107,14 +73,6 @@ services:
       service: router
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
-    volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
@@ -124,14 +82,6 @@ services:
       service: historical
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
-    volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
 
@@ -141,15 +91,8 @@ services:
       service: indexer
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=${GOOGLE_BUCKET}
-      - druid_google_prefix=${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Mount credentials file
-      - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
       # Test data
-      - ../data:/resources
+      - ../../resources:/resources
     depends_on:
       - zookeeper
