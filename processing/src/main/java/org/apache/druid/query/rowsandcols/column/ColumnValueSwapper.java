@@ -17,29 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.column;
 
-import java.util.ArrayList;
-import java.util.function.Function;
-
-public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
+/**
+ * A semantic interface for use with {@link Column} objects.
+ *
+ * This is used to swap values inside of a column.  Note that this interface fundamentally mutates the underlying
+ * column.  If a column cannot support mutation, it should not return return an implementation of this interface.
+ */
+public interface ColumnValueSwapper
 {
-  public ConcatRowsAndColumnsTest()
-  {
-    super(ConcatRowsAndColumns.class);
-  }
-
-  public static Function<MapOfColumnsRowsAndColumns, ConcatRowsAndColumns> MAKER = input -> {
-    int rowsPerChunk = Math.max(1, input.numRows() / 4);
-
-    ArrayList<RowsAndColumns> theRac = new ArrayList<>();
-
-    int startId = 0;
-    while (startId < input.numRows()) {
-      theRac.add(new LimitedRowsAndColumns(input, startId, Math.min(input.numRows(), startId + rowsPerChunk)));
-      startId += rowsPerChunk;
-    }
-
-    return new ConcatRowsAndColumns(theRac);
-  };
+  /**
+   * Swaps the values at the two row ids.  There is no significant to "right" and "left", it's just easier to name
+   * the parameters that way.
+   *
+   * @param lhs the left-hand-side rowId
+   * @param rhs the right-hand-side rowId
+   */
+  void swapValues(int lhs, int rhs);
 }

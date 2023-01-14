@@ -19,25 +19,54 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.operator.window.value.ShiftedColumnAccessorBase;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class ColumnAccessorBasedColumn implements Column
+public class LimitedColumn implements Column
 {
-  private final ColumnAccessor base;
+  private final Column column;
+  private final int start;
+  private final int end;
 
-  public ColumnAccessorBasedColumn(
-      ColumnAccessor base
-  )
+  public LimitedColumn(Column column, int start, int end)
   {
-    this.base = base;
+    this.column = column;
+    this.start = start;
+    this.end = end;
   }
 
   @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
-    return base;
+    final ColumnAccessor columnAccessor = column.toAccessor();
+    return new ShiftedColumnAccessorBase(columnAccessor)
+    {
+      @Override
+      public int numRows()
+      {
+        return end - start;
+      }
+
+      @Override
+      protected int getActualValue(int rowNum)
+      {
+        int retVal = start + rowNum;
+        if (retVal >= end) {
+          throw new ISE("Index out of bounds[%d] >= [%d], start[%s]", retVal, end, start);
+        }
+        return retVal;
+      }
+
+      @Override
+      protected boolean outsideBounds(int rowNum)
+      {
+        return false;
+      }
+    };
   }
 
   @Nullable

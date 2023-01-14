@@ -17,29 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query.rowsandcols.column;
 
-import java.util.ArrayList;
-import java.util.function.Function;
+import org.apache.druid.java.util.common.ISE;
 
-public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
+public class DefaultVectorCopier implements VectorCopier
 {
-  public ConcatRowsAndColumnsTest()
+  ColumnAccessor accessor;
+
+  public DefaultVectorCopier(ColumnAccessor accessor)
   {
-    super(ConcatRowsAndColumns.class);
+    this.accessor = accessor;
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, ConcatRowsAndColumns> MAKER = input -> {
-    int rowsPerChunk = Math.max(1, input.numRows() / 4);
-
-    ArrayList<RowsAndColumns> theRac = new ArrayList<>();
-
-    int startId = 0;
-    while (startId < input.numRows()) {
-      theRac.add(new LimitedRowsAndColumns(input, startId, Math.min(input.numRows(), startId + rowsPerChunk)));
-      startId += rowsPerChunk;
+  @Override
+  public void copyInto(Object[] into, int intoStart)
+  {
+    final int numRows = accessor.numRows();
+    if (Integer.MAX_VALUE - numRows < intoStart) {
+      throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
     }
 
-    return new ConcatRowsAndColumns(theRac);
-  };
+    for (int i = 0; i < numRows; ++i) {
+      into[intoStart + i] = accessor.getObject(i);
+    }
+  }
 }
