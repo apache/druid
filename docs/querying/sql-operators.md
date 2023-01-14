@@ -37,7 +37,7 @@ sidebar_label: "Operators"
 
 Operators in [Druid SQL](./sql.md) typically operate on one or two values and return a result based on the values. Types of operators in Druid SQL include arithmetic, comparison, logical, and more, as described here. 
 
-When performing math operations, Druid uses the integer datatype unless there are double or float values. If double or float values are involved, Druid uses double. Note that the highest precision way to store digits in Druid are 64-bit integers (long) or 64-bit floats (double). For example, Druid may return incorrect results for doubles if the number of digits exceeds 2^52.
+When performing math operations, Druid uses the integer datatype unless there are double or float values. If double or float values are involved, Druid uses double. Note that the highest precision way to store digits in Druid are 64-bit integers (long) or 64-bit floats (double). In essence, a double can represent 52 binary digits, so Druid may return incorrect results for doubles if the number of digits exceeds 2^52.
 
 For more information about how Java handles primitive data types and how it may impact the results you get, see [Primitive data types in Java are a matter of precision](https://blogs.oracle.com/javamagazine/post/java-primitive-datatypes-int-float-double).
 
