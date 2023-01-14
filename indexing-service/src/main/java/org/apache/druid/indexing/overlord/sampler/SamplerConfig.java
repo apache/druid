@@ -92,13 +92,13 @@ public class SamplerConfig
 
   /**
    * Maximum number of bytes in memory that the {@link org.apache.druid.segment.incremental.IncrementalIndex} used by
-   * {@link InputSourceSampler#sample(InputSource, InputFormat, DataSchema, SamplerConfig)} will be allowed to
-   * accumulate before aborting sampling. Particularly useful for limiting footprint of sample operations as well as
-   * overall response size from sample requests. However, it is not directly correlated to response size since it
-   * also contains the "raw" input data, so actual responses will likely be at least twice the size of this value,
-   * depending on factors such as number of transforms, aggregations in the case of rollup, whether all columns
-   * of the input are present in the dimension spec, and so on. If it is preferred to control client response size,
-   * use {@link SamplerConfig#getMaxClientResponseBytes()} instead.
+   * {@link InputSourceSampler#sample(InputSource, InputFormat, DataSchema, SamplerConfig, org.apache.druid.segment.indexing.TuningConfig)}
+   * will be allowed to accumulate before aborting sampling. Particularly useful for limiting footprint of sample
+   * operations as well as overall response size from sample requests. However, it is not directly correlated to
+   * response size since it also contains the "raw" input data, so actual responses will likely be at least twice the
+   * size of this value, depending on factors such as number of transforms, aggregations in the case of rollup, whether
+   * all columns of the input are present in the dimension spec, and so on. If it is preferred to control client
+   * response size, use {@link SamplerConfig#getMaxClientResponseBytes()} instead.
    */
   public long getMaxBytesInMemory()
   {
