@@ -63,7 +63,7 @@ public class InputRowSchemas
         Arrays.stream(dataSchema.getAggregators())
               .map(AggregatorFactory::getName)
               .collect(Collectors.toSet()),
-        tuningConfig != null ? tuningConfig.getAppendableIndexSpec().useNestedColumnIndexerForSchemaDiscovery() : false
+        tuningConfig != null && tuningConfig.getAppendableIndexSpec().useNestedColumnIndexerForSchemaDiscovery()
     );
   }
 
