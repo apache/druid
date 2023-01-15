@@ -2,7 +2,7 @@
   {
     "description": "select all things",
     "query": {
-      "query": "SELECT \"__time\",\"continent\",\"country\",\"city\",\"added\",\"unpatrolled\",\"delta\",\"language\",\"robot\",\"deleted\",\"newPage\",\"namespace\",\"anonymous\",\"page\",\"region\",\"user\" FROM \"%%DATASOURCE%%\""
+      "query": "SELECT \"__time\",\"continent\",\"country\",\"city\",\"added\",\"unpatrolled\",\"delta\",\"language\",\"robot\",\"deleted\",\"newPage\",\"namespace\",\"anonymous\",\"page\",\"region\",\"user\" FROM \"%%DATASOURCE%%\" ORDER BY __time"
     },
     "expectedResults": [
       {"__time":"2013-08-31T01:02:33.000Z","continent":"North America","country":"United States","city":"San Francisco","added":57,"unpatrolled":"true","delta":-143,"language":"en","robot":"false","deleted":200,"newPage":"true","namespace":"article","anonymous":"false","page":"Gypsy Danger","region":"Bay Area","user":"nuclear"},
