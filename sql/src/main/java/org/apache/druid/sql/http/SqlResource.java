@@ -177,25 +177,21 @@ public class SqlResource
     @Override
     public void incrementSuccess()
     {
-
     }
 
     @Override
     public void incrementFailed()
     {
-
     }
 
     @Override
     public void incrementInterrupted()
     {
-
     }
 
     @Override
     public void incrementTimedOut()
     {
-
     }
   }
 
@@ -209,19 +205,16 @@ public class SqlResource
       headers.put(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
     }
 
-    return new SqlResourceQueryResultPusher(req, sqlQueryId, stmt, sqlQuery, headers);
+    return new SqlResourceQueryResultPusher(req, stmt, sqlQuery, headers);
   }
 
   private class SqlResourceQueryResultPusher extends QueryResultPusher
   {
-
-    private final String sqlQueryId;
     private final HttpStatement stmt;
     private final SqlQuery sqlQuery;
 
     public SqlResourceQueryResultPusher(
         HttpServletRequest req,
-        String sqlQueryId,
         HttpStatement stmt,
         SqlQuery sqlQuery,
         Map<String, String> headers
@@ -233,11 +226,10 @@ public class SqlResource
           SqlResource.this.responseContextConfig,
           SqlResource.this.selfNode,
           SqlResource.QUERY_METRIC_COUNTER,
-          sqlQueryId,
+          stmt.sqlQueryId(),
           MediaType.APPLICATION_JSON_TYPE,
           headers
       );
-      this.sqlQueryId = sqlQueryId;
       this.stmt = stmt;
       this.sqlQuery = sqlQuery;
     }
@@ -345,9 +337,9 @@ public class SqlResource
         public void recordFailure(Exception e)
         {
           if (sqlQuery.queryContext().isDebug()) {
-            log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+            log.warn(e, "Exception while processing sqlQueryId[%s]", stmt.sqlQueryId());
           } else {
-            log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+            log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", stmt.sqlQueryId());
           }
           stmt.reporter().failed(e);
         }

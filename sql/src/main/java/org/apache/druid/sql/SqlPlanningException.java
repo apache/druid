@@ -32,7 +32,6 @@ import org.apache.druid.query.BadQueryException;
  */
 public class SqlPlanningException extends BadQueryException
 {
-
   public enum PlanningError
   {
     SQL_PARSE_ERROR(SQL_PARSE_FAILED_ERROR_CODE, SqlParseException.class.getName()),
@@ -103,5 +102,4 @@ public class SqlPlanningException extends BadQueryException
   {
     super(cause, errorCode, errorMessage, errorClass, null);
   }
-
 }

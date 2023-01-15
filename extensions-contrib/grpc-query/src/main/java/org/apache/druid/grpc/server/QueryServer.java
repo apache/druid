@@ -1,28 +1,57 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.grpc.server;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import org.druid.grpc.proto.QueryGrpc;
 import org.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.druid.grpc.proto.QueryOuterClass.QueryResponse;
+
+import javax.inject.Inject;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 
 public class QueryServer
 {
   private static final Logger logger = Logger.getLogger(QueryServer.class.getName());
 
+  private final QueryDriver driver;
   private Server server;
 
-  private void start() throws IOException {
+  @Inject
+  public QueryServer(QueryDriver driver)
+  {
+    this.driver = driver;
+  }
+
+  public void start() throws IOException {
     /* The port on which the server should run */
     int port = 50051;
     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
-        .addService(new QueryImpl())
+        .addService(new QueryImpl(driver))
         .build()
         .start();
     logger.info("Server started, listening on " + port);
@@ -41,7 +70,7 @@ public class QueryServer
     });
   }
 
-  private void stop() throws InterruptedException {
+  public void stop() throws InterruptedException {
     if (server != null) {
       server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
     }
@@ -50,27 +79,27 @@ public class QueryServer
   /**
    * Await termination on the main thread since the grpc library uses daemon threads.
    */
-  private void blockUntilShutdown() throws InterruptedException {
+  public void blockUntilShutdown() throws InterruptedException {
     if (server != null) {
       server.awaitTermination();
     }
   }
 
-  /**
-   * Main launches the server from the command line.
-   */
-  public static void main(String[] args) throws IOException, InterruptedException {
-    final QueryServer server = new QueryServer();
-    server.start();
-    server.blockUntilShutdown();
-  }
-
   static class QueryImpl extends QueryGrpc.QueryImplBase {
 
+    private final QueryDriver driver;
+
+    public QueryImpl(QueryDriver driver)
+    {
+      this.driver = driver;
+
+    }
     @Override
     public void submitQuery(QueryRequest request, StreamObserver<QueryResponse> responseObserver)
     {
+      QueryResponse reply = driver.submitQuery(request);
+      responseObserver.onNext(reply);
+      responseObserver.onCompleted();
     }
   }
-
 }
