@@ -27,25 +27,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.inject.Scope;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
-import com.sun.jersey.api.core.DefaultResourceConfig;
-import com.sun.jersey.api.core.ResourceConfig;
-import com.sun.jersey.core.spi.component.ComponentScope;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.spi.container.WebApplication;
-import com.sun.jersey.spi.container.servlet.WebConfig;
-import org.apache.druid.guice.DruidScopes;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
@@ -100,7 +91,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -147,60 +137,6 @@ public class JettyServerModule extends JerseyServletModule
                .to(StandardResponseHeaderFilterHolder.class);
 
     MetricsModule.register(binder, JettyMonitor.class);
-  }
-
-  public static class DruidGuiceContainer extends GuiceContainer
-  {
-    private final Set<Class<?>> resources;
-    private final Injector injector;
-
-    private WebApplication webapp;
-
-    @Inject
-    public DruidGuiceContainer(
-        Injector injector,
-        @JSR311Resource Set<Class<?>> resources
-    )
-    {
-      super(injector);
-      this.injector = injector;
-      this.resources = resources;
-    }
-
-    @Override
-    protected ResourceConfig getDefaultResourceConfig(
-        Map<String, Object> props, WebConfig webConfig
-    )
-    {
-      return new DefaultResourceConfig(resources);
-    }
-
-    @Override
-    protected void initiate(ResourceConfig config, WebApplication webapp)
-    {
-      this.webapp = webapp;
-      // We need to initiate the webapp ourselves so that we can register the lazy singleton annotation with
-      // the app such that it realizes that it is Singleton scoped.
-      webapp.initiate(config, new ServletGuiceComponentProviderFactory(config, injector)
-      {
-        @Override
-        public Map<Scope, ComponentScope> createScopeMap()
-        {
-          Map<Scope, ComponentScope> retVal = super.createScopeMap();
-
-          // Add the LazySingleton scope to the known scopes.
-          retVal.put(DruidScopes.SINGLETON, ComponentScope.Singleton);
-
-          return retVal;
-        }
-      });
-    }
-
-    @Override
-    public WebApplication getWebApplication()
-    {
-      return webapp;
-    }
   }
 
   @Provides
@@ -522,7 +458,8 @@ public class JettyServerModule extends JerseyServletModule
     );
 
     if (!config.isShowDetailedJettyErrors()) {
-      server.setErrorHandler(new ErrorHandler() {
+      server.setErrorHandler(new ErrorHandler()
+      {
         @Override
         public boolean isShowServlet()
         {
