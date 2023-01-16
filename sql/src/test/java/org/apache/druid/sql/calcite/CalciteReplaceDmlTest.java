@@ -36,7 +36,6 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -54,13 +53,6 @@ import static org.junit.Assert.assertEquals;
 
 public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
-  private static final Map<String, Object> REPLACE_ALL_TIME_CHUNKS = ImmutableMap.of(
-      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-      "{\"type\":\"all\"}",
-      DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-      DruidSqlParserUtils.ALL
-  );
-
   protected Map<String, Object> addReplaceTimeChunkToQueryContext(Map<String, Object> context, String replaceTimeChunks)
   {
     return ImmutableMap.<String, Object>builder()

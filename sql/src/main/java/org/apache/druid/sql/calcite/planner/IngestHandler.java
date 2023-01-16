@@ -42,6 +42,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.DruidSqlDelete;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -342,6 +343,57 @@ public abstract class IngestHandler extends QueryHandler
             String.join(",", replaceIntervals)
         );
       }
+    }
+  }
+
+  /**
+   * Handler for the DELETE statement.
+   */
+  protected static class DeleteHandler extends IngestHandler
+  {
+    private final DruidSqlDelete sqlNode;
+
+    public DeleteHandler(
+        SqlStatementHandler.HandlerContext handlerContext,
+        DruidSqlDelete sqlNode,
+        SqlExplain explain
+    ) throws ValidationException
+    {
+      super(
+          handlerContext,
+          sqlNode,
+          convertQuery(sqlNode),
+          explain
+      );
+      this.sqlNode = sqlNode;
+    }
+
+    @Override
+    public SqlNode sqlNode()
+    {
+      return sqlNode;
+    }
+
+    @Override
+    protected DruidSqlIngest ingestNode()
+    {
+      return sqlNode;
+    }
+
+    @Override
+    public void validate() throws ValidationException
+    {
+      if (!handlerContext.plannerContext().engineHasFeature(EngineFeature.CAN_REPLACE)) {
+        throw new ValidationException(StringUtils.format(
+            "Cannot execute REPLACE with SQL engine '%s'.",
+            handlerContext.engine().name())
+        );
+      }
+      super.validate();
+      handlerContext.queryContextMap().put(
+          DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+          DruidSqlParserUtils.ALL
+      );
     }
   }
 }

@@ -52,6 +52,8 @@ import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
 import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
 import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
+import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -74,6 +76,13 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .build();
+
+  protected static final Map<String, Object> REPLACE_ALL_TIME_CHUNKS = ImmutableMap.of(
+      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+      "{\"type\":\"all\"}",
+      DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+      DruidSqlParserUtils.ALL
+  );
 
   protected static final RowSignature FOO_TABLE_SIGNATURE =
       RowSignature.builder()

@@ -33,6 +33,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.parser.DruidSqlDelete;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -158,6 +159,8 @@ public class DruidPlanner implements Closeable
         return new IngestHandler.InsertHandler(handlerContext, (DruidSqlInsert) query, explain);
       } else if (query instanceof DruidSqlReplace) {
         return new IngestHandler.ReplaceHandler(handlerContext, (DruidSqlReplace) query, explain);
+      } else if (query instanceof DruidSqlDelete) {
+        return new IngestHandler.DeleteHandler(handlerContext, (DruidSqlDelete) query, explain);
       }
     }
 
