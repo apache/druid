@@ -213,6 +213,7 @@ UI
 UIs
 URI
 URIs
+uris
 UTF-16
 UTF-8
 UTF8
@@ -1275,6 +1276,7 @@ kafka.timestamp
 keyColumnName
 keyFormat
 listDelimiter
+timestamp
 timestampColumnName
 timestampSpec
 urls

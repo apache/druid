@@ -32,6 +32,15 @@ sidebar_label: Reference
 This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
 usage, refer to the [Examples](examples.md) page.
 
+`INSERT` and `REPLACE` load data into a Druid datasource from either an external input source, or from another
+datasource. When loading from an external datasource, you typically must provide the kind of input source,
+the data format, and the schema (signature) of the input file. Druid provides *table functions* to allow you to
+specify the external file. There are two kinds. `EXTERN` works with the JSON-serialized specs for the three
+items, using the same JSON you would use in native ingest. A set of other, input-source-specific functions
+use SQL syntax to specify the format and the input schema. There is one function for each input source. The
+input-source-specific functions allow you to use SQL query parameters to specify the set of files (or URIs),
+making it easy to reuse the same SQL statement for each ingest: just specify the set of files to use each time.
+
 ### `EXTERN` Function
 
 Use the `EXTERN` function to read external data. The function has two variations.
@@ -54,7 +63,9 @@ FROM TABLE(
 
 1. Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
 2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
-3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is used to map the external data into the SQL layer.
+3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a
+   `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
+   used to map the external data into the SQL layer.
 
 Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. (See the next
 section for more detail on `EXTEND`). This format also uses named arguments to make the
@@ -72,7 +83,7 @@ FROM TABLE(
 ```
 
 The input source and format are as above. The columns are expressed as in a SQL `CREATE TABLE`.
-Example: `(timestamp VARCHAR, metric VARCHAR, value BIGINT)`. An optional `EXTEND` keyword
+Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `EXTEND` keyword
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
 For more information, see [Read external data with EXTERN](concepts.md#extern).
@@ -156,7 +167,7 @@ so is simpler than writing a script to insert the array into the SQL text.
 #### `HTTP` Function
 
 The `HTTP` table function represents the
-[HTTP input source](../ingestion/native-batch-input-sources.md#http-input-source)
+[HTTP input source](../ingestion/native-batch-input-source.md#http-input-source)
 to read from an HTTP server. The function accepts the following arguments:
 
 * `userName` (`VARCHAR`) -  Same as JSON `httpAuthenticationUsername`.
@@ -168,7 +179,7 @@ to read from an HTTP server. The function accepts the following arguments:
 #### `INLINE` Function
 
 The `INLINE` table function represents the
-[Inline input source](../ingestion/native-batch-input-sources.md#inline-input-source)
+[Inline input source](../ingestion/native-batch-input-source.md#inline-input-source)
 which provides data directly in the table function. Parameter:
 
 * `data` (`ARRAY` of `VARCHAR`) - Data lines, without a trailing newline, as an array.
@@ -190,7 +201,7 @@ FROM TABLE(
 #### `LOCALFILES` Function
 
 The `LOCALFILES` table function represents the
-[Local input source](../ingestion/native-batch-input-sources.md#local-input-source) which reads
+[Local input source](../ingestion/native-batch-input-source.md#local-input-source) which reads
 files from the file system of the node running Druid. This is most useful for single-node
 installations. The function accepts the following parameters:
 
@@ -242,7 +253,7 @@ Some additional variations (omitting the common bits):
 #### `S3` Function
 
 The `S3` table function represents the
-[S3 input source](../ingestion/native-batch-input-sources.md#s3-input-source) which reads
+[S3 input source](../ingestion/native-batch-input-source.md#s3-input-source) which reads
 files from an S3 bucket. The function accepts the following parameters to specify the
 objects to read:
 
@@ -250,7 +261,7 @@ objects to read:
 * `prefix` (`VARCHAR`) - Corresponds to the JSON `prefixes` property, but allows a single
   prefix.
 * `bucket` (`VARCHAR`) - Corresponds to the `bucket` field of the `objects` JSON field. SQL
-  does not have syntax for an array of objects. Instead, this function taks a single bucket,
+  does not have syntax for an array of objects. Instead, this function takes a single bucket,
   and one or more objects within that bucket.
 * `paths` (`ARRAY` of `VARCHAR`) - Corresponds to the `path` fields of the `object` JSON field.
   All paths are within the single `bucket` parameter.
@@ -271,12 +282,12 @@ The `S3` table function does not support either the `clientConfig` or `proxyConf
 JSON properties.
 
 If you need the full power of the S3 input source, then consider the use of the `extern`
-function, which accepts the full S3 input source serializd as JSON. Alternatively,
+function, which accepts the full S3 input source serialized as JSON. Alternatively,
 create a catalog external table that has the full set of properties, leaving just the
 `uris` or `paths` to be provided at query time.
 
 Examples, each of which correspond to an example on the
-[S3 input source](../ingestion/native-batch-input-sources.md#s3-input-source) page.
+[S3 input source](../ingestion/native-batch-input-source.md#s3-input-source) page.
 The examples omit the format and schema; however you must remember to provide those
 in an actual query.
 
@@ -318,7 +329,7 @@ Additional variations, omitting the common bits:
 
 Each of the table functions above requires that you specify a format using the `format`
 parameter which accepts a value the same as the format names used for `EXTERN` and described
-for [each input source](../ingestion/native-batch-input-sources.md).
+for [each input source](../ingestion/native-batch-input-source.md).
 
 #### CSV Format
 
@@ -457,7 +468,8 @@ INSERT consists of the following parts:
 
 1. Optional [context parameters](./reference.md#context-parameters).
 2. An `INSERT INTO <dataSource>` clause at the start of your query, such as `INSERT INTO your-table`.
-3. A clause for the data you want to insert, such as `SELECT ... FROM ...`. You can use [EXTERN](#extern) to reference external tables using `FROM TABLE(EXTERN(...))`.
+3. A clause for the data you want to insert, such as `SELECT ... FROM ...`. You can use [`EXTERN`](#extern-function)
+   to reference external tables using `FROM TABLE(EXTERN(...))`.
 4. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 5. An optional [CLUSTERED BY](#clustered-by) clause.
 
@@ -526,7 +538,7 @@ The following granularity arguments are accepted:
   LIMIT or OFFSET at the outer level of your `INSERT` or `REPLACE` query, you must set `PARTITIONED BY` to `ALL` or `ALL TIME`.
 
 Earlier versions required the `TIME_FLOOR` notation to specify a granularity other than the keywords.
-In the current version, the string contant provides a simpler equivalent soution.
+In the current version, the string constant provides a simpler equivalent solution.
 
 The following ISO 8601 periods are supported for `TIME_FLOOR` and the string constant:
 
