@@ -56,6 +56,13 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
 
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
+  private final boolean discoverNestedFields;
+
+  public ProtobufFlattenerMaker(boolean discoverNestedFields)
+  {
+    this.discoverNestedFields = discoverNestedFields;
+  }
+
   @Override
   public JsonProvider getJsonProvider()
   {
@@ -63,7 +70,7 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
   }
 
   @Override
-  public Iterable<String> discoverRootFields(Map<String, Object> obj, boolean discoverNestedFields)
+  public Iterable<String> discoverRootFields(Map<String, Object> obj)
   {
     if (discoverNestedFields) {
       return obj.keySet();

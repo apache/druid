@@ -92,14 +92,22 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
+  private final boolean discoverNestedFields;
+
   /**
    * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
    * @param binaryAsString boolean to encode the byte[] as a string.
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnionsByType)
+  public AvroFlattenerMaker(
+      final boolean fromPigAvroStorage,
+      final boolean binaryAsString,
+      final boolean extractUnionsByType,
+      final boolean discoverNestedFields
+  )
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
+    this.discoverNestedFields = discoverNestedFields;
 
     this.avroJsonProvider = new GenericAvroJsonProvider(extractUnionsByType);
     this.jsonPathConfiguration =
@@ -111,7 +119,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   }
 
   @Override
-  public Set<String> discoverRootFields(final GenericRecord obj, boolean discoverNestedFields)
+  public Set<String> discoverRootFields(final GenericRecord obj)
   {
     if (discoverNestedFields) {
       return obj.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());

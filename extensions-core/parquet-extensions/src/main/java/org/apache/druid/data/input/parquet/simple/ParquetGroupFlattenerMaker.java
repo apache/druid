@@ -41,7 +41,9 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   private final ParquetGroupConverter converter;
   private final JsonProvider parquetJsonProvider;
 
-  public ParquetGroupFlattenerMaker(boolean binaryAsString)
+  private final boolean discoverNestedFields;
+
+  public ParquetGroupFlattenerMaker(boolean binaryAsString, boolean discoverNestedFields)
   {
     this.converter = new ParquetGroupConverter(binaryAsString);
     this.parquetJsonProvider = new ParquetGroupJsonProvider(converter);
@@ -50,10 +52,11 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
                                               .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
+    this.discoverNestedFields = discoverNestedFields;
   }
 
   @Override
-  public Set<String> discoverRootFields(Group obj, boolean discoverNestedFields)
+  public Set<String> discoverRootFields(Group obj)
   {
     if (discoverNestedFields) {
       return obj.getType().getFields().stream().map(Type::getName).collect(Collectors.toSet());

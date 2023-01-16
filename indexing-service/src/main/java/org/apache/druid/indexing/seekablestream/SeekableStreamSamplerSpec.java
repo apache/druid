@@ -115,7 +115,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
       );
     }
 
-    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig, tuningConfig != null ? tuningConfig.convertToTaskTuningConfig() : null);
+    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig, tuningConfig == null ? null : tuningConfig.convertToTaskTuningConfig());
   }
 
   protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> createRecordSupplier();

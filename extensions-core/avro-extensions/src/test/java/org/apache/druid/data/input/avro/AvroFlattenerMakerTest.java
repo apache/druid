@@ -41,9 +41,9 @@ import java.util.Map;
 public class AvroFlattenerMakerTest
 {
   private static final AvroFlattenerMaker FLATTENER_WITHOUT_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, false);
+      new AvroFlattenerMaker(false, false, false, false);
   private static final AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, true);
+      new AvroFlattenerMaker(false, false, true, false);
 
   private static final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
 
@@ -78,7 +78,7 @@ public class AvroFlattenerMakerTest
   @Test
   public void jsonPathExtractorExtractUnionsByType()
   {
-    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
 
     // Unmamed types are accessed by type
 
@@ -160,7 +160,8 @@ public class AvroFlattenerMakerTest
   @Test
   public void testDiscovery()
   {
-    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
+    final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
 
     SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
 
@@ -180,7 +181,7 @@ public class AvroFlattenerMakerTest
             "someInt",
             "timestamp"
         ),
-        ImmutableSet.copyOf(flattener.discoverRootFields(input, false))
+        ImmutableSet.copyOf(flattener.discoverRootFields(input))
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -205,7 +206,7 @@ public class AvroFlattenerMakerTest
             "someInt",
             "timestamp"
         ),
-        ImmutableSet.copyOf(flattener.discoverRootFields(input, true))
+        ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
     );
   }
 

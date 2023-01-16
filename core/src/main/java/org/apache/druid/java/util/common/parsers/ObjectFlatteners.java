@@ -48,8 +48,7 @@ public class ObjectFlatteners
 
   public static <T> ObjectFlattener<T> create(
       @Nullable final JSONPathSpec flattenSpecInput,
-      final FlattenerMaker<T> flattenerMaker,
-      boolean discoverNestedColumns
+      final FlattenerMaker<T> flattenerMaker
   )
   {
     final Map<String, Function<T, Object>> extractors = new LinkedHashMap<>();
@@ -154,7 +153,7 @@ public class ObjectFlatteners
           public Set<String> keySet()
           {
             if (flattenSpec.isUseFieldDiscovery()) {
-              final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj, discoverNestedColumns);
+              final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj);
               if (extractors.isEmpty() && rootFields instanceof Set) {
                 return (Set<String>) rootFields;
               } else {
@@ -221,7 +220,7 @@ public class ObjectFlatteners
     /**
      * List all "root" fields, optionally filtering to include only fields that contain primitive and lists of primitive values
      */
-    Iterable<String> discoverRootFields(T obj, boolean discoverNestedFields);
+    Iterable<String> discoverRootFields(T obj);
 
     /**
      * Get a top level field from a "json" object

@@ -52,8 +52,7 @@ public class AvroParsers
 
     return ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType),
-        false
+        new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType, false)
     );
   }
 

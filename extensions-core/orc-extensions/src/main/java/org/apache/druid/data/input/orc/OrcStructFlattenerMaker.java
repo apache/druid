@@ -43,7 +43,9 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   private final JsonProvider orcJsonProvider;
   private final OrcStructConverter converter;
 
-  OrcStructFlattenerMaker(boolean binaryAsString)
+  private final boolean discoverNestedFields;
+
+  OrcStructFlattenerMaker(boolean binaryAsString, boolean disocverNestedFields)
   {
     this.converter = new OrcStructConverter(binaryAsString);
     this.orcJsonProvider = new OrcStructJsonProvider(converter);
@@ -52,10 +54,11 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
                                               .mappingProvider(new NotImplementedMappingProvider())
                                               .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                               .build();
+    this.discoverNestedFields = disocverNestedFields;
   }
 
   @Override
-  public Iterable<String> discoverRootFields(OrcStruct obj, boolean discoverNestedFields)
+  public Iterable<String> discoverRootFields(OrcStruct obj)
   {
     if (discoverNestedFields) {
       return obj.getSchema().getFieldNames();

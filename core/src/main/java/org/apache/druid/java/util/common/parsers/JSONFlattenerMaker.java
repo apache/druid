@@ -57,14 +57,17 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
   private final boolean keepNullValues;
 
+  private final boolean discoverNestedFields;
 
-  public JSONFlattenerMaker(boolean keepNullValues)
+
+  public JSONFlattenerMaker(boolean keepNullValues, boolean discoverNestedFields)
   {
     this.keepNullValues = keepNullValues;
+    this.discoverNestedFields = discoverNestedFields;
   }
 
   @Override
-  public Iterable<String> discoverRootFields(final JsonNode obj, boolean discoverNestedFields)
+  public Iterable<String> discoverRootFields(final JsonNode obj)
   {
     if (discoverNestedFields) {
       return obj::fieldNames;

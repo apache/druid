@@ -38,7 +38,8 @@ public class JSONFlattenerMakerTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  private static final JSONFlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true);
+  private static final JSONFlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true, false);
+  private static final JSONFlattenerMaker FLATTENER_MAKER_NESTED = new JSONFlattenerMaker(true, true);
 
   @Test
   public void testStrings() throws JsonProcessingException
@@ -191,11 +192,11 @@ public class JSONFlattenerMakerTest
     Assert.assertTrue(node.isObject());
     Assert.assertEquals(
         ImmutableSet.of("bool", "int", "long", "float", "double", "binary", "list", "anotherList"),
-        ImmutableSet.copyOf(FLATTENER_MAKER.discoverRootFields(node, false))
+        ImmutableSet.copyOf(FLATTENER_MAKER.discoverRootFields(node))
     );
     Assert.assertEquals(
         ImmutableSet.of("bool", "int", "long", "float", "double", "binary", "list", "anotherList", "nested"),
-        ImmutableSet.copyOf(FLATTENER_MAKER.discoverRootFields(node, true))
+        ImmutableSet.copyOf(FLATTENER_MAKER_NESTED.discoverRootFields(node))
     );
   }
 }

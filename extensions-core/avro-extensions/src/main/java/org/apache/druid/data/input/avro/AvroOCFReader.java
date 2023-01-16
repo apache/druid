@@ -66,8 +66,12 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
     this.readerSchema = readerSchema;
     this.recordFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(false, binaryAsString, extractUnionsByType),
-        inputRowSchema.shouldDiscoverNestedColumns()
+        new AvroFlattenerMaker(
+            false,
+            binaryAsString,
+            extractUnionsByType,
+            inputRowSchema.shouldDiscoverNestedColumns()
+        )
     );
   }
 
