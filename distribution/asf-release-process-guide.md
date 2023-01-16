@@ -320,30 +320,6 @@ apache-druid-0.17.0-src.tar.gz.asc
 apache-druid-0.17.0-src.tar.gz.sha512
 ```
 
-#### Build artifacts for Hadoop-3
-
-```bash
-$ mvn clean install -Phadoop3,apache-release,dist,rat -DskipTests -Dgpg.keyname=<your GPG key fingerprint>
-```
-
-This should produce the following artifacts:
-
-```plaintext
-apache-druid-0.17.0-bin.tar.gz
-apache-druid-0.17.0-bin.tar.gz.asc
-apache-druid-0.17.0-bin.tar.gz.sha512
-apache-druid-0.17.0-src.tar.gz
-apache-druid-0.17.0-src.tar.gz.asc
-apache-druid-0.17.0-src.tar.gz.sha512
-```
-
-You can ignore the src artifacts as they are the same as the main profile. The binary artifacts should be renamed to include the suffix `hadoop3`. So the final artifacts would be as follows:  
-```plaintext
-apache-druid-0.17.0-hadoop3-bin.tar.gz
-apache-druid-0.17.0-hadoop3-bin.tar.gz.asc
-apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512
-```
-
 Ensure that the GPG key fingerprint used in the `mvn install` command matches your release signing key in https://dist.apache.org/repos/dist/release/druid/KEYS.                                                                                               
  
 ### Verify checksums
@@ -353,8 +329,6 @@ $ diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | cut -d ' ' -f1) <(cat apa
 ...
 $ diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
 ...
-$ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <(cat apache-druid-0.17.0-hadoop3-bin.tar.gz.sha512 ; echo)
-...
 ```
 
 ### Verify GPG signatures
@@ -363,8 +337,6 @@ $ diff <(shasum -a512 apache-druid-0.17.0-hadoop3-bin.tar.gz | cut -d ' ' -f1) <
 $ gpg --verify apache-druid-0.17.0-bin.tar.gz.asc apache-druid-0.17.0-bin.tar.gz
 ...
 $ gpg --verify apache-druid-0.17.0-src.tar.gz.asc apache-druid-0.17.0-src.tar.gz
-...
-$ gpg --verify apache-druid-0.17.0-hadoop3-bin.tar.gz.asc apache-druid-0.17.0-hadoop3-bin.tar.gz
 ...
 ```
 

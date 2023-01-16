@@ -660,11 +660,6 @@ jobs:
 
         " && false; }
 
-    - <<: *security_vulnerabilities
-      name: "security vulnerabilities with Hadoop3"
-      env:
-        - HADOOP_PROFILE='-Phadoop3'
-
 # Travis CI only supports per build (and not per-job notifications): https://github.com/travis-ci/travis-ci/issues/9888
 notifications:
   email:
