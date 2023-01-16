@@ -22,6 +22,10 @@ TEMPLATE=$0
 export MODULE_DIR=$(cd $(dirname $0) && pwd)
 CATEGORY=$(basename $MODULE_DIR)
 
+# MSQ uses the indexer by default. This should be fixed: it should be MM
+# by default, and indexer only if the following variable is set.
+DRUID_INTEGRATION_TEST_INDEXER=indexer
+
 . $MODULE_DIR/../Common/gen-docker.sh
 
 

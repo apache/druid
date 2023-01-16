@@ -23,7 +23,7 @@
 set -e
 
 # Enable for debugging
-#set -x
+set -x
 
 export DRUID_DEV=$(cd $(dirname $0) && pwd)
 
@@ -98,7 +98,7 @@ function tail_logs
 function build_override {
 
 	mkdir -p target
-	OVERRIDE_FILE="override.env"
+	OVERRIDE_FILE="$(pwd)/target/override.env"
 	rm -f "$OVERRIDE_FILE"
 	touch "$OVERRIDE_FILE"
 
@@ -126,8 +126,7 @@ function build_override {
     # environment into the container.
 
     # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
-    target_dir=`pwd`
-    export OVERRIDE_ENV="$target_dir/$OVERRIDE_FILE"
+    export OVERRIDE_ENV="$OVERRIDE_FILE"
 }
 
 function prepare_category {

@@ -143,7 +143,7 @@ function docker_file {
 	# If a template exists, generate the docker-compose.yaml file. Copy over the Common
 	# folder.
 	if [ -f "$CLUSTER_DIR/docker-compose.sh" ]; then
-		export COMPOSE_DIR=$TARGET_DIR/cluster/$CATEGORY
+		export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
 		$CLUSTER_DIR/docker-compose.sh
 		cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
 	else
@@ -186,9 +186,9 @@ function verify_docker_file {
 	fi
 
     # The docker compose file must have been generated via up
-	export COMPOSE_DIR=$TARGET_DIR/cluster/$CATEGORY
+	export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
 	if [ ! -f "$COMPOSE_DIR/docker-compose.yaml" ]; then
-		echo "$COMPOSE_DIR/docker-compose.yaml is missing. Is cluster up? Did you do a clean after up?" 1>&2
+		echo "$COMPOSE_DIR/docker-compose.yaml is missing. Is cluster up? Did you do a 'clean' after 'up'?" 1>&2
 	fi
 }
 
