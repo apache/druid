@@ -26,11 +26,11 @@ CATEGORY=$(basename $MODULE_DIR)
 
 
 # Override
-function gen_custom_indexer_env {
-	cat << EOF
-      - druid_msq_intermediate_storage_enable=true
-      - druid_msq_intermediate_storage_type=local
-      - druid_msq_intermediate_storage_basePath=/shared/durablestorage/
+function gen_indexer_env {
+	gen_common_env \
+        "druid_msq_intermediate_storage_enable=true" \
+        "druid_msq_intermediate_storage_type=local" \
+        "druid_msq_intermediate_storage_basePath=/shared/durablestorage/" \
 EOF
 }
 

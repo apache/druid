@@ -30,26 +30,25 @@ CATEGORY=$(basename $MODULE_DIR)
 . $MODULE_DIR/../Common/gen-docker.sh
 
 # The first coordinator uses the inherited properties.
-function gen_coord_one {
+function gen_coordinator_one {
 	druid_service_header "coordinator-one" "coordinator"
 	cat << EOF
     container_name: coordinator-one
 EOF
-	gen_common_env
-	gen_coord_env
-	gen_custom_coord_env
-	cat << EOF
-      - DRUID_INSTANCE=one
-      - druid_host=coordinator-one
-EOF
+    gen_coordinator_env_file
+	gen_coordinator_env \
+		"DRUID_INSTANCE=one" \
+    	"druid_host=coordinator-one"
+    gen_coordinator_volumes
 	gen_depends metadata
 }
 
 # Generates a header for a service which is not inhertited: where
 # we have to spell out the details.
 function gen_custom_service {
-	service=$1
-	port=$2
+	base=$1
+	service=$2
+	port=$3
 	cat << EOF
   $service:
     image: \${DRUID_IT_IMAGE_NAME}
@@ -62,29 +61,33 @@ function gen_custom_service {
     env_file:
       - ../Common/environment-configs/common.env
 EOF
+    if [ -n "$base" ]; then
+    	cat << EOF
+      - ../Common/environment-configs/$base.env
+EOF
+    fi
+    cat << EOF
+      - \${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=\${DRUID_INTEGRATION_TEST_GROUP}
+EOF
 }
 
 # Generates a second coordinator as a custom service since we can't
 # reuse the standard ports.
-function gen_coord_two {
+function gen_coordinator_two {
 	cat << EOF
   # The second Coordinator (and Overlord) cannot extend
   # The base service: they need distinct ports.
 EOF
-	gen_custom_service "coordinator-two" 120
+	gen_custom_service "coordinator" "coordinator-two" 120
 	cat << EOF
-      - ../Common/environment-configs/coordinator.env
+      - DRUID_INSTANCE=two
+      - druid_host=coordinator-two
     ports:
       - 18081:8081
       - 18281:8281
       - 15006:8000
-EOF
-	gen_common_env
-	gen_coord_env
-	gen_custom_coord_env
-	cat << EOF
-      - DRUID_INSTANCE=two
-      - druid_host=coordinator-two
 EOF
 	gen_depends metadata
 }
@@ -92,8 +95,8 @@ EOF
 # Generate the coordinator for this test which is, in fact, two nodes.
 # Override
 function gen_coordinator {
-	gen_coord_one
-	gen_coord_two
+	gen_coordinator_one
+	gen_coordinator_two
 }
 
 # Generate the first overlord using the inherited properties.
@@ -102,33 +105,25 @@ function gen_overlord_one {
 	cat << EOF
     container_name: overlord-one
 EOF
-	gen_common_env
-	gen_overlord_env
-	gen_custom_overlord_env
-	cat << EOF
-      - DRUID_INSTANCE=one
-      - druid_host=overlord-one
-EOF
+    gen_overlord_env_file
+	gen_overlord_env \
+      "DRUID_INSTANCE=one" \
+      "druid_host=overlord-one"
+    gen_overlord_volumes
 	gen_depends metadata
 }
 
 # Generate a second overlord as a custom service since we can't
 # reuse the standard ports.
 function gen_overlord_two {
-	gen_custom_service "overlord-two" 110
+	gen_custom_service "overlord" "overlord-two" 110
 	cat << EOF
-      - ../Common/environment-configs/overlord.env
+      - DRUID_INSTANCE=two
+      - druid_host=overlord-two
     ports:
       - 18090:8090
       - 18290:8290
       - 15009:8000
-EOF
-	gen_common_env
-	gen_overlord_env
-	gen_custom_overlord_env
-	cat << EOF
-      - DRUID_INSTANCE=two
-      - druid_host=overlord-two
 EOF
 	gen_depends metadata
 }
@@ -160,22 +155,20 @@ function gen_custom_node_role {
   # no environment file: the needed environment settings are
   # given here.
 EOF
-	gen_custom_service "custom-node-role" 90
-	cat << EOF
-    ports:
-      - 50011:50011
-      - 9301:9301
-      - 9501:9501
-      - 5010:8000
-EOF
-	gen_common_env
+	gen_custom_service "" "custom-node-role" 90
 	cat << EOF
       - DRUID_SERVICE=custom-node-role
       - SERVICE_DRUID_JAVA_OPTS=-Xmx64m -Xms64m
       - druid_host=custom-node-role
       - druid_auth_basic_common_cacheDirectory=/tmp/authCache/custom_node_role
       - druid_server_https_crlPath=/tls/revocations.crl
+    ports:
+      - 50011:50011
+      - 9301:9301
+      - 9501:9501
+      - 5010:8000
 EOF
+	gen_common_volumes
 }
 
 # Generate the custom node role

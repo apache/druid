@@ -44,32 +44,23 @@ EOF
 }
 
 # Override
-function gen_custom_env {
-	cat << EOF
-      - AWS_REGION=\${AWS_REGION}
-      - druid_s3_accessKey=\${AWS_ACCESS_KEY_ID}
-      - druid_s3_secretKey=\${AWS_SECRET_ACCESS_KEY}
-EOF
-}
-
-# Override
-function gen_custom_indexer_env {
-	cat << EOF
-      - druid_storage_type=s3
-      - druid_storage_bucket=\${DRUID_CLOUD_BUCKET}
-      # Using DRUID_CLOUD_PATH env as baseKey as well.
-      - druid_storage_baseKey=\${DRUID_CLOUD_PATH}
-EOF
+function gen_common_env {
+	gen_env \
+        "AWS_REGION=\${AWS_REGION}" \
+        "druid_s3_accessKey=\${AWS_ACCESS_KEY_ID}" \
+        "druid_s3_secretKey=\${AWS_SECRET_ACCESS_KEY}" \
+        "druid_storage_type=s3" \
+        "druid_storage_bucket=\${DRUID_CLOUD_BUCKET}" \
+        "druid_storage_baseKey=\${DRUID_CLOUD_PATH}" \
+        $*
 }
 
 # This test mounts its data from a different location than other tests.
 # Override
 function gen_indexer_volumes {
-	cat << EOF
-    volumes:
-      # Test data
-      - ../data:/resources
-EOF
+    # Test data
+	gen_common_volumes \
+        "../data:/resources"
 }
 
 gen_compose_file $CATEGORY

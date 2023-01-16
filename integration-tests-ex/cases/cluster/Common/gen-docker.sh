@@ -121,32 +121,6 @@ function druid_service_header {
 EOF
 }
 
-function gen_custom_env {
-	:
-}
-
-function gen_common_env {
-	cat << EOF
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=\${DRUID_INTEGRATION_TEST_GROUP}
-EOF
-	gen_custom_env
-}
-
-function gen_coord_env {
-	cat << EOF
-      # The frequency with which the coordinator polls the database
-      # for changes. The DB population code has to wait at least this
-      # long for the coordinator to notice changes.
-      - druid_manager_segments_pollDuration=PT5S
-      - druid_coordinator_period=PT10S
-EOF
-}
-
-function gen_custom_coord_env {
-	:
-}
-
 function gen_depends {
 	cat << EOF
     depends_on:
@@ -162,50 +136,105 @@ EOF
 EOF
 }
 
-function gen_druid_volumes {
-	cat << EOF
+# Generate volumes, if any. It is not legal to have a volumes tag
+# with no content, so generate the tag only if volumes exist.
+function gen_volumes {
+	if [ $# -gt 0 ]; then
+	    cat << EOF
     volumes:
 EOF
+        for vol in $*; do
+        	cat << EOF
+      - $vol
+EOF
+        done
+    fi
 }
 
-function gen_coord_volumes {
-	:
+# Generate the environment, if any. It is not legal to have a environment tag
+# with no content, so generate the tag only if environment exist.
+function gen_env {
+	if [ $# -gt 0 ]; then
+	    cat << EOF
+    environment:
+EOF
+        for pair in $*; do
+        	cat << EOF
+      - $pair
+EOF
+        done
+    fi
 }
 
-function gen_coord_service {
-	druid_service_header $1 "coordinator"
-	gen_common_env
-	gen_coord_env
-	gen_custom_coord_env
-	gen_druid_volumes
-	gen_coord_volumes
+# Generate env files, if any. It is not legal to have a env_file tag
+# with no content, so generate the tag only if env files exist.
+function gen_env_files {
+	if [ $# -gt 0 ]; then
+	    cat << EOF
+    env_file:
+EOF
+        for file in $*; do
+        	cat << EOF
+      - $file
+EOF
+        done
+    fi
+}
+
+function gen_common_volumes {
+	gen_volumes $*
+}
+
+function gen_common_env_files {
+	gen_env_files $*
+}
+
+function gen_common_env {
+	gen_env $*
+}
+
+function gen_coordinator_env_file {
+	gen_common_env_files $*
+}
+
+function gen_coordinator_env {
+	gen_common_env $*
+}
+
+function gen_coordinator_volumes {
+	gen_common_volumes $*
+}
+
+function gen_master_service {
+	druid_service_header $1 $2
+	gen_$2_env_file
+	gen_$2_env
+	gen_$2_volumes
 	gen_depends metadata
+}
+
+function gen_coordinator_service {
+	gen_master_service $1 "coordinator"
 }
 
 function gen_coordinator {
-	gen_coord_service "coordinator"
+	gen_coordinator_service "coordinator"
+}
+
+function gen_overlord_env_file {
+	gen_common_env_files $*
 }
 
 function gen_overlord_env {
-	:
-}
-
-function gen_custom_overlord_env {
-	:
+	gen_common_env $*
 }
 
 function gen_overlord_volumes {
-	:
+	gen_common_volumes $*
 }
 
 function gen_overlord_service {
-	druid_service_header $1 "overlord"
-	gen_common_env
-	gen_overlord_env
-	gen_custom_overlord_env
-	gen_druid_volumes
-	gen_overlord_volumes
-	gen_depends metadata
+	gen_master_service $1 "overlord"
 }
 
 function gen_overlord {
@@ -214,66 +243,80 @@ function gen_overlord {
 
 function gen_simple_service {
 	druid_service_header $1
-	gen_common_env
-	gen_custom_$1_env
-	gen_druid_volumes
+	gen_$1_env_file
+	gen_$1_env
 	gen_$1_volumes
 	gen_depends
 }
 
-function gen_custom_broker_env {
-	:
+function gen_broker_env_file {
+	gen_common_env_files $*
+}
+
+function gen_broker_env {
+	gen_common_env $*
+}
+
+function gen_broker_volumes {
+	gen_common_volumes $*
 }
 
 function gen_broker {
 	gen_simple_service "broker"
 }
 
-function gen_custom_router_env {
-	:
+function gen_router_env {
+	gen_common_env $*
 }
 
-function gen_broker_volumes {
-	:
+function gen_router_env_file {
+	gen_common_env_files $*
+}
+
+function gen_router_volumes {
+	gen_common_volumes $*
 }
 
 function gen_router {
 	gen_simple_service "router"
 }
 
-function gen_router_volumes {
-	:
+function gen_historical_env {
+	gen_common_env $*
 }
 
-function gen_custom_historical_env {
-	:
+function gen_historical_env_file {
+	gen_common_env_files $*
+}
+
+function gen_historical_volumes {
+	gen_common_volumes $*
 }
 
 function gen_historical {
 	gen_simple_service "historical"
 }
 
-function gen_historical_volumes {
-	:
+function gen_indexer_env {
+	gen_common_env $*
 }
 
-function gen_custom_indexer_env {
-	:
-}
-
-function gen_indexer_volumes {
-	:
-}
-
-function gen_custom_middlemanager_env {
-	gen_custom_indexer_env
+function gen_indexer_env_file {
+	gen_common_env_files $*
 }
 
 function gen_indexer_volumes {
-	cat << EOF
-      # Test data
-      - ../../resources:/resources
-EOF
+	gen_common_volumes $*
+}
+
+function gen_middlemanager_env {
+	gen_indexer_env $*
+}
+
+function gen_indexer_volumes {
+	# Test data
+	gen_common_volumes \
+		"../../resources:/resources"
 }
 
 function gen_indexer {
@@ -289,11 +332,14 @@ function gen_indexer {
 		fi
 	fi
 	druid_service_header $indexer
-	gen_common_env
-	gen_custom_${indexer}_env
-	gen_druid_volumes
+	gen_indexer_env_file
+	gen_${indexer}_env
 	gen_indexer_volumes
 	gen_depends
+}
+
+function gen_services {
+	:
 }
 
 function gen_custom_services {

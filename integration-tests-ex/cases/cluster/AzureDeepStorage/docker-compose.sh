@@ -42,24 +42,22 @@ EOF
 }
 
 # Override
-function gen_custom_env {
-	cat << EOF
-      - druid_test_loadList=druid-azure-extensions
-      - druid_storage_type=azure
-      - druid_azure_account=\${AZURE_ACCOUNT}
-      - druid_azure_key=\${AZURE_KEY}
-      - druid_azure_container=\${AZURE_CONTAINER}
-EOF
+function gen_common_env {
+	gen_env \
+        "druid_test_loadList=druid-azure-extensions" \
+        "druid_storage_type=azure" \
+        "druid_azure_account=\${AZURE_ACCOUNT}" \
+        "druid_azure_key=\${AZURE_KEY}" \
+        "druid_azure_container=\${AZURE_CONTAINER}" \
+        $*
 }
 
 # This test mounts its data from a different location than other tests.
 # Override
 function gen_indexer_volumes {
-	cat << EOF
-    volumes:
-      # Test data
-      - ../data:/resources
-EOF
+    # Test data
+	gen_common_volumes \
+        "../data:/resources"
 }
 
 gen_compose_file $CATEGORY

@@ -43,33 +43,30 @@ EOF
 }
 
 # Override
-function gen_custom_env {
-	cat << EOF
-      - druid_test_loadList=druid-google-extensions
-      - druid_storage_type=google
-      - druid_google_bucket=\${GOOGLE_BUCKET}
-      - druid_google_prefix=\${GOOGLE_PREFIX}
-      - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
-EOF
+function gen_common_env {
+	gen_env \
+      "druid_test_loadList=druid-google-extensions" \
+      "druid_storage_type=google" \
+      "druid_google_bucket=\${GOOGLE_BUCKET}" \
+      "druid_google_prefix=\${GOOGLE_PREFIX}" \
+      "GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json" \
+      $*
 }
 
 # Override
-function gen_druid_volumes {
-	cat << EOF
-    volumes:
-      # Mount credentials file
-      - \${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
-EOF
+function gen_common_volumes {
+    # Mount credentials file
+	gen_volumes \
+        "\${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json" \
+        $*
 }
 
 # This test mounts its data from a different location than other tests.
 # Override
 function gen_indexer_volumes {
-	cat << EOF
-    volumes:
-      # Test data
-      - ../data:/resources
-EOF
+    # Test data
+	gen_common_volumes \
+        "../data:/resources"
 }
 
 gen_compose_file $CATEGORY

@@ -178,6 +178,20 @@ function choose_static_file {
 	fi
 }
 
+function verify_docker_file {
+	if [ -f "$CLUSTER_DIR/docker-compose.yaml" ]; then
+		# Use the existing non-template file in place.
+		export COMPOSE_DIR=$CLUSTER_DIR
+		return 0
+	fi
+
+    # The docker compose file must have been generated via up
+	export COMPOSE_DIR=$TARGET_DIR/cluster/$CATEGORY
+	if [ ! -f "$COMPOSE_DIR/docker-compose.yaml" ]; then
+		echo "$COMPOSE_DIR/docker-compose.yaml is missing. Is cluster up? Did you do a clean after up?" 1>&2
+	fi
+}
+
 # Print environment for debugging
 #env
 
@@ -209,7 +223,7 @@ case $CMD in
 		category $*
 		# Enable the following for debugging
 		#show_status
-		docker_file
+		verify_docker_file
 	    cd $COMPOSE_DIR
 		docker-compose $DOCKER_ARGS $CMD
 		;;
