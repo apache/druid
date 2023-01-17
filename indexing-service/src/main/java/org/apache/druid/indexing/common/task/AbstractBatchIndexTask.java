@@ -301,7 +301,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     IngestionMode ingestionMode = getIngestionMode();
     final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
-                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
+                                  && getContextValue(Tasks.USE_SHARED_LOCK, true);
     // Respect task context value most.
     if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
       log.info(
