@@ -310,7 +310,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
-        return tryTimeChunkLock(client, intervals);
+        return tryTimeChunkLock(client, intervals, useSharedLock);
       } else {
         return true;
       }
@@ -318,7 +318,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
         taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
-        return tryLockWithDetermineResult(client, result);
+        return tryLockWithDetermineResult(client, result, useSharedLock);
       } else {
         // This branch is the only one that will not initialize taskLockHelper.
         return true;
@@ -353,13 +353,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
-          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
+          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet())),
+          useSharedLock
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
       taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
       segmentCheckFunction.accept(result.lockGranularity, segments);
-      return tryLockWithDetermineResult(client, result);
+      return tryLockWithDetermineResult(client, result, useSharedLock);
     }
   }
 
@@ -388,11 +389,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  private boolean tryLockWithDetermineResult(TaskActionClient client, LockGranularityDetermineResult result)
-      throws IOException
+  private boolean tryLockWithDetermineResult(
+      TaskActionClient client,
+      LockGranularityDetermineResult result,
+      boolean useSharedLock
+  ) throws IOException
   {
     if (result.lockGranularity == LockGranularity.TIME_CHUNK) {
-      return tryTimeChunkLock(client, Preconditions.checkNotNull(result.intervals, "intervals"));
+      return tryTimeChunkLock(
+          client,
+          Preconditions.checkNotNull(result.intervals, "intervals"),
+          useSharedLock
+      );
     } else {
       return taskLockHelper.verifyAndLockExistingSegments(
           client,
@@ -402,7 +410,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
 
-  protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
+  protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals, boolean useSharedLock)
+      throws IOException
   {
     // The given intervals are first converted to align with segment granularity. This is because,
     // when an overwriting task finds a version for a given input row, it expects the interval
@@ -433,7 +442,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
 
       prev = cur;
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
+      TaskLockType taskLockType = useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(taskLockType, cur));
       if (lock == null) {
         return false;
       }

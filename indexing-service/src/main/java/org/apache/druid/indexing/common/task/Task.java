@@ -160,6 +160,7 @@ public interface Task
   String getClasspathPrefix();
 
   /**
+   *
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
    * Overlord. If this method throws an exception, the task should be considered a failure.

@@ -509,7 +509,7 @@ public class TaskQueueTest extends IngestionTestBase
     @Override
     public boolean isReady(TaskActionClient taskActionClient) throws Exception
     {
-      return tryTimeChunkLock(taskActionClient, ImmutableList.of(interval));
+      return tryTimeChunkLock(taskActionClient, ImmutableList.of(interval), false);
     }
 
     @Override

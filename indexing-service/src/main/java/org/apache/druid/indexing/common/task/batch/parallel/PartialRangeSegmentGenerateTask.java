@@ -153,7 +153,8 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   {
     return tryTimeChunkLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
+        getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals(),
+        false
     );
   }
 
