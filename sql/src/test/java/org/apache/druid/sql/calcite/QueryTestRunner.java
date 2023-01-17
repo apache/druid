@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
@@ -618,9 +619,7 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    if (config.isRunningMSQ() && !builder.msqCompatible) {
-      return;
-    }
+    Assume.assumeTrue(!config.isRunningMSQ() || builder.msqCompatible);
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
