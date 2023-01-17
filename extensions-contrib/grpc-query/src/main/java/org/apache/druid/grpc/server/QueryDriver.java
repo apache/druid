@@ -28,7 +28,6 @@ import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -69,6 +68,17 @@ import java.util.Optional;
  */
 public class QueryDriver
 {
+  /**
+   * Internal runtime exception to report request errors.
+   */
+  private static class RequestError extends RuntimeException
+  {
+    public RequestError(String msg)
+    {
+      super(msg);
+    }
+  }
+
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
 
@@ -98,6 +108,8 @@ public class QueryDriver
       final ResultSet thePlan = stmt.plan();
       final SqlRowTransformer rowTransformer = thePlan.createRowTransformer();
       final ByteString results = encodeResults(request.getResultFormat(), thePlan, rowTransformer);
+      stmt.reporter().succeeded(0); // TODO: real byte count (of payload)
+      stmt.close();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.OK)
@@ -107,13 +119,26 @@ public class QueryDriver
           .build();
     }
     catch (ForbiddenException e) {
+      stmt.reporter().failed(e);
+      stmt.close();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.UNAUTHORIZED)
           .setErrorMessage(Access.DEFAULT_ERROR_MESSAGE)
           .build();
     }
+    catch (RequestError e) {
+      stmt.reporter().failed(e);
+      stmt.close();
+      return QueryResponse.newBuilder()
+          .setQueryId(stmt.sqlQueryId())
+          .setStatus(QueryStatus.REQUEST_ERROR)
+          .setErrorMessage(Access.DEFAULT_ERROR_MESSAGE)
+          .build();
+    }
     catch (SqlPlanningException e) {
+      stmt.reporter().failed(e);
+      stmt.close();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.INVALID_SQL)
@@ -121,6 +146,8 @@ public class QueryDriver
           .build();
     }
     catch (IOException | RuntimeException e) {
+      stmt.reporter().failed(e);
+      stmt.close();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.RUNTIME_ERROR)
@@ -132,6 +159,8 @@ public class QueryDriver
     // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
     // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
     catch (AssertionError e) {
+      stmt.reporter().failed(e);
+      stmt.close();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.RUNTIME_ERROR)
@@ -205,8 +234,9 @@ public class QueryDriver
         return new SqlParameter(SqlType.VARCHAR, value.getStringValue());
       case NULLVALUE:
       case VALUE_NOT_SET:
-      default:
         return null;
+      default:
+        throw new RequestError("Invalid parameter type: " + value.getValueCase().name());
     }
   }
 
@@ -426,7 +456,7 @@ public class QueryDriver
       case PROTOBUF_RESPONSE:
         throw new UnsupportedOperationException(); // TODO
       default:
-        throw new IAE("Unsupported query result format");
+        throw new RequestError("Unsupported query result format");
     }
     GrpcResultsAccumulator accumulator = new GrpcResultsAccumulator(writer);
     accumulator.push(thePlan.run());

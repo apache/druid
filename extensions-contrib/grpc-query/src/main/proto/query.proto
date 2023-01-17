@@ -24,13 +24,15 @@ service Query {
 }
 
 enum QueryResultFormat {
-  CSV = 0;
-  JSON_OBJECT = 1;
-  JSON_ARRAY = 2;
-  JSON_OBJECT_LINES = 3;
-  JSON_ARRAY_LINES = 4;
-  PROTOBUF_INLINE = 5;
-  PROTOBUF_RESPONSE = 6;
+  UNKNOWN_FORMAT = 0;  // Default value. An old server will see this value
+                       // (and fail the request) if a new client passes a new format.
+  CSV = 1;
+  JSON_OBJECT = 2;
+  JSON_ARRAY = 3;
+  JSON_OBJECT_LINES = 4;
+  JSON_ARRAY_LINES = 5;
+  PROTOBUF_INLINE = 6;
+  PROTOBUF_RESPONSE = 7;
 }
 
 message QueryParameter {
@@ -56,22 +58,28 @@ message QueryRequest {
 }
 
 enum QueryStatus {
-  OK = 0;
-  UNAUTHORIZED = 1;
-  INVALID_SQL = 2;
-  RUNTIME_ERROR = 3;
+  UNKNOWN_STATUS = 0; // Default value which means "unknown failure". Older clients
+                      // will see this value if a future version adds a new failure
+                      // type.
+  OK = 1;
+  UNAUTHORIZED = 2;
+  REQUEST_ERROR = 3;
+  INVALID_SQL = 4;
+  RUNTIME_ERROR = 5;
 }
 
 enum DruidType {
-  STRING = 0;
-  LONG = 1;
-  DOUBLE = 2;
-  FLOAT = 3;
-  STRING_ARRAY = 4;
-  LONG_ARRAY = 5;
-  DOUBLE_ARRAY = 6;
-  FLOAT_ARRAY = 7;
-  COMPLEX = 8;
+  UNKNOWN_TYPE = 0; // Default value for unknown, or for future new values
+                    // as seen by old clients.
+  STRING = 1;
+  LONG = 2;
+  DOUBLE = 3;
+  FLOAT = 4;
+  STRING_ARRAY = 5;
+  LONG_ARRAY = 6;
+  DOUBLE_ARRAY = 7;
+  FLOAT_ARRAY = 8;
+  COMPLEX = 9;
 }
 
 message ColumnSchema {
