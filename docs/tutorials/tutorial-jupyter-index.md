@@ -58,7 +58,7 @@ Make sure you meet the following requirements before starting the Jupyter-based 
           ```bash
           # Start Jupyter Notebook on port 3001
           jupyter notebook --port 3001
-      ```
+          ```
 
 - An available Druid instance. You can use the `micro-quickstart` configuration described in [Quickstart (local)](./index.md). The tutorials assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 
