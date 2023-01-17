@@ -142,18 +142,18 @@ function build_shared_dir {
 # docker-compose-indexer.yaml which uses the Indexer in place of Middle Manager.
 function docker_file {
 	compose_args=""
-	if [ -n "$DRUID_INTEGRATION_TEST_INDEXER" ]; then
-	    # Sanity check: DRUID_INTEGRATION_TEST_INDEXER must be "indexer" or "middleManager"
+	if [ -n "$USE_INDEXER" ]; then
+	    # Sanity check: USE_INDEXER must be "indexer" or "middleManager"
 	    # if it is set at all.
-		if [ "$DRUID_INTEGRATION_TEST_INDEXER" != "indexer" ] && [ "$DRUID_INTEGRATION_TEST_INDEXER" != "middleManager" ]
+		if [ "$USE_INDEXER" != "indexer" ] && [ "$USE_INDEXER" != "middleManager" ]
 		then
-		  echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')" 1>&2
+		  echo "USE_INDEXER must be 'indexer' or 'middleManager' (is '$USE_INDEXER')" 1>&2
 		  exit 1
 		fi
-		if [ "$DRUID_INTEGRATION_TEST_INDEXER" == "indexer" ]; then
+		if [ "$USE_INDEXER" == "indexer" ]; then
 			compose_file=docker-compose-indexer.yaml
 			if [ ! -f "$CLUSTER_DIR/$compose_file" ]; then
-			  echo "DRUID_INTEGRATION_TEST_INDEXER=$DRUID_INTEGRATION_TEST_INDEXER, but $CLUSTER_DIR/$compose_file is missing" 1>&2
+			  echo "USE_INDEXER=$USE_INDEXER, but $CLUSTER_DIR/$compose_file is missing" 1>&2
 			  exit 1
 		    fi
 		   compose_args="-f $compose_file"
