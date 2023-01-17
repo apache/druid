@@ -23,7 +23,7 @@ export MODULE_DIR=$(cd $(dirname $0) && pwd)
 CATEGORY=$(basename $MODULE_DIR)
 
 # This test seems to prefer the indexer.
-export DRUID_INTEGRATION_TEST_INDEXER="indexer"
+export USE_INDEXER="indexer"
 
 . $MODULE_DIR/../Common/gen-docker.sh
 

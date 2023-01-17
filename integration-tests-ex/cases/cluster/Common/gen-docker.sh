@@ -19,7 +19,7 @@
 # Generates docker-compose.yaml files for a test. Avoids the need for
 # copy/paste to create test configs. Also automatically switches from
 # MiddleManager to Indexer based on the setting of the
-# DRUID_INTEGRATION_TEST_INDEXER env var.
+# USE_INDEXER env var.
 #
 # This script acts like a simple template engine. Since the generated
 # files are simple, using shell commands for the template is not quite
@@ -321,13 +321,13 @@ function gen_indexer_volumes {
 
 function gen_indexer {
 	indexer="middlemanager"
-	if [ -n "$DRUID_INTEGRATION_TEST_INDEXER" ]; then
-	    if [ "$DRUID_INTEGRATION_TEST_INDEXER" == "indexer" ]; then
+	if [ -n "$USE_INDEXER" ]; then
+	    if [ "$USE_INDEXER" == "indexer" ]; then
 	    	indexer="indexer"
-	    elif [ "$DRUID_INTEGRATION_TEST_INDEXER" == "middleManager" ]; then
+	    elif [ "$USE_INDEXER" == "middleManager" ]; then
 	    	indexer="middlemanager" # Note lower case spelling
 		else
-		  echo "DRUID_INTEGRATION_TEST_INDEXER must be 'indexer' or 'middleManager' (is '$DRUID_INTEGRATION_TEST_INDEXER')" 1>&2
+		  echo "USE_INDEXER must be 'indexer' or 'middleManager' (is '$USE_INDEXER')" 1>&2
 		  exit 1
 		fi
 	fi

@@ -267,7 +267,7 @@ gen_compose_file $CATEGORY
 ```
 
 The above will generate a "generic" cluster: one of each kind of service, with
-either a Middle Manager or Indexer depending on the `DRUID_INTEGRATION_TEST_INDEXER`
+either a Middle Manager or Indexer depending on the `USE_INDEXER`
 env var.
 
 You customize your specific cluster by "overriding" (really, just replacing) the

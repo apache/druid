@@ -244,7 +244,7 @@ another build task.
 Tests should run on the Middle Manager by default. Tests can optionally run on the
 Indexer. To run on Indexer:
 
-* In the environment, `export DRUID_INTEGRATION_TEST_INDEXER=indexer`. (Use `middleManager`
+* In the environment, `export USE_INDEXER=indexer`. (Use `middleManager`
   otherwise. If the variable is not set, `middleManager` is the default.)
 
 Then, there are two ways to handle indexer-specific configuration: the crude-but-effective
@@ -268,7 +268,7 @@ depending on the environment variable mentioned above.
 #### Client Configuration
 
 The client will choose Middle Manager or Indexer automatially if you set the
-`DRUID_INTEGRATION_TEST_INDEXER` environment variable in your IDE. (When run via the build
+`USE_INDEXER` environment variable in your IDE. (When run via the build
 process, the environment variable is already set.)
 
 * The test `src/test/resources/cluster/<category>/docker.yaml` file should contain a conditional
