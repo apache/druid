@@ -151,10 +151,10 @@ jobs:
 
   its:
     needs: unit-tests
-    uses: apache/druid/.github/workflows/it.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
 
   revised-its:
     needs: unit-tests
-    uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha
     with:
       druid_it_image_name: "${{ needs.build.outputs.DRUID_IT_IMAGE_NAME }}"
