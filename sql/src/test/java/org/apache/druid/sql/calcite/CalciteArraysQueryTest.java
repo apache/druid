@@ -3123,6 +3123,61 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testUnnestWithGroupByOrderByOnVirtualColumn()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d24, COUNT(*) FROM druid.numfoo, UNNEST(ARRAY[dim2, dim4]) AS unnested(d24) GROUP BY d24 ORDER BY d24 DESC ",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            "v0",
+                            "EXPR$0",
+                            null
+                        ))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"dim2\",\"dim4\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(new OrderByColumnSpec(
+                                    "_d0",
+                                    OrderByColumnSpec.Direction.DESCENDING,
+                                    StringComparators.LEXICOGRAPHIC
+                                ))
+                                .build()
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"b", 3L},
+            new Object[]{"abc", 1L},
+            new Object[]{"a", 5L},
+            new Object[]{"", 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"b", 3L},
+            new Object[]{"abc", 1L},
+            new Object[]{"a", 5L},
+            new Object[]{"", 1L},
+            new Object[]{null, 2L}
+        )
+    );
+  }
+
+  @Test
   public void testUnnestWithJoinOnTheLeft()
   {
     skipVectorize();
