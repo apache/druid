@@ -3681,4 +3681,58 @@ public interface Function extends NamedFunction
       return HumanReadableBytes.UnitSystem.DECIMAL;
     }
   }
+
+
+  class DateExpandFunction implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "date_expand";
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 3);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG_ARRAY;
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval expr = args.get(0).eval(bindings);
+      final long time = expr.asLong();
+
+      final int start = args.get(1).eval(bindings).asInt();
+      final int end = args.get(2).eval(bindings).asInt();
+
+
+      Long[] s = new Long[end - start + 1];
+
+      for (int second = start; second <= end; second++) {
+        s[second - start] = time + second;
+      }
+
+      return ExprEval.ofLongArray(s);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayOutput()
+    {
+      return true;
+    }
+  }
 }
