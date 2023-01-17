@@ -23,6 +23,7 @@ import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.druid.grpc.proto.QueryGrpc;
 import org.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.druid.grpc.proto.QueryOuterClass.QueryResponse;
@@ -34,6 +35,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
+/**
+ * Basic gRPC server adapted from the gRPC examples. Delegates to the
+ * {@link QueryDriver} class to do the actual work of running the query.
+ * <p>
+ * This class is preliminary. It is good enough for unit tests, but a bit more work
+ * is needed to integrate this class into the Druid server. One question: must we
+ * run another web server or is there a way to reuse the existing Jetty server?
+ * <p>
+ * Also, how will authorization be handled in the gRPC path?
+ */
 public class QueryServer
 {
   private static final Logger logger = Logger.getLogger(QueryServer.class.getName());
@@ -47,7 +58,8 @@ public class QueryServer
     this.driver = driver;
   }
 
-  public void start() throws IOException {
+  public void start() throws IOException
+  {
     /* The port on which the server should run */
     int port = 50051;
     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
@@ -55,14 +67,17 @@ public class QueryServer
         .build()
         .start();
     logger.info("Server started, listening on " + port);
-    Runtime.getRuntime().addShutdownHook(new Thread() {
+    Runtime.getRuntime().addShutdownHook(new Thread()
+    {
       @Override
-      public void run() {
+      public void run()
+      {
         // Use stderr here since the logger may have been reset by its JVM shutdown hook.
         System.err.println("*** shutting down gRPC server since JVM is shutting down");
         try {
           QueryServer.this.stop();
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           e.printStackTrace(System.err);
         }
         System.err.println("*** server shut down");
@@ -70,7 +85,8 @@ public class QueryServer
     });
   }
 
-  public void stop() throws InterruptedException {
+  public void stop() throws InterruptedException
+  {
     if (server != null) {
       server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
     }
@@ -79,14 +95,15 @@ public class QueryServer
   /**
    * Await termination on the main thread since the grpc library uses daemon threads.
    */
-  public void blockUntilShutdown() throws InterruptedException {
+  public void blockUntilShutdown() throws InterruptedException
+  {
     if (server != null) {
       server.awaitTermination();
     }
   }
 
-  static class QueryImpl extends QueryGrpc.QueryImplBase {
-
+  static class QueryImpl extends QueryGrpc.QueryImplBase
+  {
     private final QueryDriver driver;
 
     public QueryImpl(QueryDriver driver)
@@ -94,10 +111,13 @@ public class QueryServer
       this.driver = driver;
 
     }
+
     @Override
     public void submitQuery(QueryRequest request, StreamObserver<QueryResponse> responseObserver)
     {
-      QueryResponse reply = driver.submitQuery(request);
+      // TODO: How will we get the auth result for gRPC?
+      AuthenticationResult authResult = null;
+      QueryResponse reply = driver.submitQuery(request, authResult);
       responseObserver.onNext(reply);
       responseObserver.onCompleted();
     }
