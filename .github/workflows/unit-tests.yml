@@ -35,7 +35,7 @@ jobs:
       matrix:
         sql_compatibility: [ false, true ]
     name: (openjdk8) unit tests (sql-compatibility=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/reusable-unit-tests-workflow.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests-workflow.yml@update_uts_gha
     with:
       jdk: 8
       sql_compatibility: ${{ matrix.sql_compatibility }}
@@ -47,7 +47,7 @@ jobs:
         jdk: [11, 17]
         sql_compatibility: [ false, true ]
     name: (openjdk${{ matrix.jdk }}) unit tests (sql-compatibility=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/reusable-unit-tests-workflow.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests-workflow.yml@update_uts_gha
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
