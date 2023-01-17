@@ -21,17 +21,15 @@ package org.apache.druid.sql.calcite.external;
 
 import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.catalog.model.table.HttpTableDefn;
+import org.apache.druid.catalog.model.table.HttpInputSourceDefn;
 
 public class HttpOperatorConversion extends CatalogExternalTableOperatorConversion
 {
   public static final String FUNCTION_NAME = "http";
 
   @Inject
-  public HttpOperatorConversion(
-      final TableDefnRegistry registry
-  )
+  public HttpOperatorConversion(final TableDefnRegistry registry)
   {
-    super(FUNCTION_NAME, registry, HttpTableDefn.TABLE_TYPE, registry.jsonMapper());
+    super(FUNCTION_NAME, registry, HttpInputSourceDefn.TYPE_KEY, registry.jsonMapper());
   }
 }
