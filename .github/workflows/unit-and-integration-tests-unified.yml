@@ -1,0 +1,160 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Unit & Integration tests CI
+on:
+  push:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+  pull_request:
+    branches:
+      - master
+      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '8', '11', '17' ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+      - name: Cache Maven m2 repository
+        id: maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-${{ matrix.jdk }}
+      - name: Cache targets
+        id: target
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./target
+            ./extendedset/target
+            ./hll/target
+            ./processing/target
+            ./server/target
+            ./indexing-hadoop/target
+            ./web-console/target
+            ./indexing-service/target
+            ./services/target
+            ./benchmarks/target
+            ./distribution/target
+            ./integration-tests/target
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
+      - name: Cache image
+        id: docker_container
+        uses: actions/cache@v3
+        with:
+          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ hashFiles('**/pom.xml') }}
+          path: |
+            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+          restore-keys: |
+            druid-container-jdk${{ matrix.jdk }}.tar.gz-
+      - name: Load docker image
+        if: steps.docker_container.outputs.cache-hit == 'true'
+        run: |
+          docker load --input druid-container-jdk${{ matrix.jdk }}.tar.gz
+          docker images
+      - name: Setup java
+        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
+      - name: Maven build
+        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+        id: maven_build
+        run: |
+          ./it.sh ci
+      - name: Container build
+        if: steps.docker_container.outputs.cache-hit != 'true'
+        run: |
+          ./it.sh image
+          source ./integration-tests-ex/image/target/env.sh
+          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+      - name: Set docker image name
+        id: docker_image_name
+        run: |
+          source ./integration-tests-ex/image/target/env.sh
+          echo "DRUID_IT_IMAGE_NAME=$(echo $DRUID_IT_IMAGE_NAME | sed 's/\./_/g; s/\//_/g; s/\:/-/g')" >> $GITHUB_OUTPUT
+      #- name: Upload image
+      #  if: steps.docker_env.outputs.cache-hit != 'true'
+      #  uses: ishworkh/docker-image-artifact-upload@v1
+      #  with:
+      #    image: "${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}"
+      #    retention_days: "2"
+      - name: Save docker container to archive
+        run: |
+          source ./integration-tests-ex/image/target/env.sh
+          echo $DRUID_IT_IMAGE_NAME
+          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
+      #- name: Upload image
+      #  if: steps.docker_env.outputs.cache-hit != 'true'
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
+      #    path: ./${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
+      #    retention-days: "1"
+    outputs:
+      DRUID_IT_IMAGE_NAME: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}
+
+  unit-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        sql_compatibility: [ false, true ]
+    name: jdk8, sql-compat=${{ matrix.sql_compatibility }}
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
+    needs: build
+    with:
+      jdk: 8
+      sql_compatibility: ${{ matrix.sql_compatibility }}
+
+  unit-tests-phase2:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [11, 17]
+        sql_compatibility: [ false, true ]
+    name: jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }}
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
+    needs: unit-tests
+    with:
+      jdk: ${{ matrix.jdk }}
+      sql_compatibility: ${{ matrix.sql_compatibility }}
+
+  its:
+    needs: unit-tests
+    uses: apache/druid/.github/workflows/it.yml@master
+
+  revised-its:
+    needs: unit-tests
+    uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@master
+    with:
+      druid_it_image_name: "${{ needs.build.outputs.DRUID_IT_IMAGE_NAME }}"

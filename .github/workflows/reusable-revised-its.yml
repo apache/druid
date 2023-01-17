@@ -1,0 +1,107 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Revised Integration Tests shared workflow
+on:
+  workflow_call:
+    inputs:
+      script:
+        description: 'Which IT script to run'
+        required: true
+        type: string
+      build_jdk:
+        description: 'Which jdk version was used to build'
+        required: true
+        type: string
+      runtime_jdk:
+        description: 'Which JDK version to use at runtime'
+        required: true
+        type: string
+      use_indexer:
+        description: 'Which indexer to use'
+        required: true
+        type: string
+      druid_it_image_name:
+        required: true
+        type: string
+
+env:
+  MVN: mvn -B
+  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+  MAVEN_SKIP_TESTS: -P skip-tests
+  MAVEN_OPTS: -Xmx3000m
+  JVM_RUNTIME: -Djvm.runtime=${{ inputs.runtime_jdk }}
+  USE_INDEXER: ${{ inputs.use_indexer }}
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+      ##- name: Setup java
+      ##  uses: actions/setup-java@v3
+      ##  with:
+      ##    distribution: 'zulu'
+      ##    java-version: ${{ inputs.build_jdk }}
+      - name: Restore Maven repository
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
+      ##- name: Restore targets
+      ##  uses: actions/cache/restore@v3
+      ##  with:
+      ##    path: |
+      ##      ./target
+      ##      ./extendedset/target
+      ##      ./hll/target
+      ##      ./processing/target
+      ##      ./server/target
+      ##      ./indexing-hadoop/target
+      ##      ./web-console/target
+      ##      ./indexing-service/target
+      ##      ./services/target
+      ##      ./benchmarks/target
+      ##      ./distribution/target
+      ##      ./integration-tests/target
+      ##    key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ hashFiles('**/pom.xml') }}
+      #- name: Restore docker env
+      #  id: docker
+      #  uses: actions/cache/restore@v3
+      #  with:
+      #    path: ./integration-tests-ex/image/target/env.sh
+      #    key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-docker-env-${{ hashFiles('**/pom.xml') }}
+      #- name: Download image
+      #  uses: ishworkh/docker-image-artifact-download@v1
+      #  with:
+      #    image: "${{ inputs.druid_it_image_name }}-jdk${{ inputs.build_jdk }}"
+      #- name: Download docker image
+      #  uses: actions/download-artifact@v3
+      #  with:
+      #    name: ${{ inputs.druid_it_image_name }}-jdk${{ inputs.build_jdk }}.tar.gz
+      - name: Retrieve cached docker image
+        uses: actions/cache/restore@v3
+        with:
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          path: |
+            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+      - name: Load docker image
+        run: |
+          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          docker images
+      - name: Run IT
+        run: ${{ inputs.script }}
