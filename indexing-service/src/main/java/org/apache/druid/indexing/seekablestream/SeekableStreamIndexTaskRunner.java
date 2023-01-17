@@ -63,6 +63,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -424,6 +425,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       appenderator = task.newAppenderator(toolbox, fireDepartmentMetrics, rowIngestionMeters, parseExceptionHandler);
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
+      // Restorable i.e streaming tasks prefer a shared lock
+      TaskLockType lockType =
+          task.getContextValue(Tasks.USE_SHARED_LOCK, true) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
 
       // Start up, set up initial sequences.
       final Object restoredMetadata = driver.startJob(
@@ -432,7 +436,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               if (lockGranularityToUse == LockGranularity.SEGMENT) {
                 return toolbox.getTaskActionClient().submit(
                     new SegmentLockAcquireAction(
-                        TaskLockType.EXCLUSIVE,
+                        lockType,
                         segmentId.getInterval(),
                         segmentId.getVersion(),
                         segmentId.getShardSpec().getPartitionNum(),
@@ -442,7 +446,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               } else {
                 final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
-                        TaskLockType.EXCLUSIVE,
+                        lockType,
                         segmentId.getInterval(),
                         1000L
                     )
