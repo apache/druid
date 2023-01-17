@@ -120,10 +120,11 @@ public class KillUnusedSegmentsTest
         )
     ).thenAnswer(invocation -> {
       DateTime maxEndTime = invocation.getArgument(1);
+      long maxEndMillis = maxEndTime.getMillis();
       List<Interval> unusedIntervals =
           unusedSegments.stream()
                         .map(DataSegment::getInterval)
-                        .filter(i -> i.getEnd().isBefore(maxEndTime))
+                        .filter(i -> i.getEnd().getMillis() <= maxEndMillis)
                         .collect(Collectors.toList());
 
       int limit = invocation.getArgument(2);

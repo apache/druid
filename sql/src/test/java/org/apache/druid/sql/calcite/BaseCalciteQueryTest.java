@@ -114,7 +114,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -892,6 +891,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           results.get(i)
       );
     }
+    Assert.assertEquals(expectedResults.size(), results.size());
   }
 
   public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)

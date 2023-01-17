@@ -44,15 +44,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
@@ -553,18 +549,14 @@ public class SQLMetadataStorageActionHandlerTest
   private Integer getUnmigratedTaskCount()
   {
     return handler.getConnector().retryWithHandle(
-        new HandleCallback<Integer>()
-        {
-          @Override
-          public Integer withHandle(Handle handle) throws SQLException
-          {
-            String sql = String.format(Locale.ENGLISH,
-                                       "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
-                                       entryTable);
-            ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
-            resultSet.next();
-            return resultSet.getInt(1);
-          }
+        handle -> {
+          String sql = StringUtils.format(
+              "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
+              entryTable
+          );
+          ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
+          resultSet.next();
+          return resultSet.getInt(1);
         }
     );
   }

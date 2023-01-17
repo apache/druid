@@ -1243,7 +1243,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {inputQueryState.isLoading() && <Loader />}
           {inputQueryState.error && (
-            <CenterMessage>{`Error: ${inputQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{inputQueryState.getErrorMessage()}</CenterMessage>
           )}
         </>
       );
@@ -1479,7 +1479,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {parserQueryState.isLoading() && <Loader />}
           {parserQueryState.error && (
-            <CenterMessage>{`Error: ${parserQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{parserQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -1721,7 +1721,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {timestampQueryState.isLoading() && <Loader />}
           {timestampQueryState.error && (
-            <CenterMessage>{`Error: ${timestampQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{timestampQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -1900,7 +1900,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {transformQueryState.isLoading() && <Loader />}
           {transformQueryState.error && (
-            <CenterMessage>{`Error: ${transformQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{transformQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -2112,7 +2112,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {filterQueryState.isLoading() && <Loader />}
           {filterQueryState.error && (
-            <CenterMessage>{`Error: ${filterQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{filterQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );
@@ -2297,7 +2297,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )}
           {schemaQueryState.isLoading() && <Loader />}
           {schemaQueryState.error && (
-            <CenterMessage>{`Error: ${schemaQueryState.getErrorMessage()}`}</CenterMessage>
+            <CenterMessage>{schemaQueryState.getErrorMessage()}</CenterMessage>
           )}
         </div>
       );

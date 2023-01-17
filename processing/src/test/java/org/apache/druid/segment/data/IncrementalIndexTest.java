@@ -33,8 +33,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -105,6 +107,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public IncrementalIndexTest(String indexType, String mode, boolean isPreserveExistingMetrics) throws JsonProcessingException
   {
+    NestedDataModule.registerHandlersAndSerde();
     this.isPreserveExistingMetrics = isPreserveExistingMetrics;
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setSimpleTestingIndexSchema("rollup".equals(mode), isPreserveExistingMetrics, (AggregatorFactory[]) args[0])
@@ -639,7 +642,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
-    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    ExecutorService executor = Execs.multiThreaded(threadCount, "IncrementalIndexTest-%d");
     final long timestamp = System.currentTimeMillis();
     final CountDownLatch latch = new CountDownLatch(threadCount);
     for (int j = 0; j < threadCount; j++) {

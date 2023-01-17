@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.PeekingIterator;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.BaseColumn;
@@ -51,15 +50,22 @@ import java.util.TreeMap;
 public class NestedDataColumnMerger implements DimensionMergerV9
 {
   private static final Logger log = new Logger(NestedDataColumnMerger.class);
-  public static final Comparator<Pair<Integer, PeekingIterator<Long>>> LONG_MERGING_COMPARATOR =
-      DictionaryMergingIterator.makePeekingComparator();
-  public static final Comparator<Pair<Integer, PeekingIterator<Double>>> DOUBLE_MERGING_COMPARATOR =
-      DictionaryMergingIterator.makePeekingComparator();
+
+  public static final Comparator<PeekingIterator<String>> STRING_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
+  public static final Comparator<PeekingIterator<Long>> LONG_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
+  public static final Comparator<PeekingIterator<Double>> DOUBLE_MERGING_COMPARATOR =
+      SimpleDictionaryMergingIterator.makePeekingComparator();
 
   private final String name;
+  private final IndexSpec indexSpec;
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
+  private final ProgressIndicator progressIndicator;
   private final Closer closer;
 
-  private NestedDataColumnSerializer serializer;
+  private ColumnDescriptor.Builder descriptorBuilder;
+  private GenericColumnSerializer<?> serializer;
 
   public NestedDataColumnMerger(
       String name,
@@ -71,7 +77,9 @@ public class NestedDataColumnMerger implements DimensionMergerV9
   {
 
     this.name = name;
-    this.serializer = new NestedDataColumnSerializer(name, indexSpec, segmentWriteOutMedium, progressIndicator, closer);
+    this.indexSpec = indexSpec;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
+    this.progressIndicator = progressIndicator;
     this.closer = closer;
   }
 
@@ -112,34 +120,50 @@ public class NestedDataColumnMerger implements DimensionMergerV9
       }
     }
 
-    serializer.open();
-    serializer.serializeFields(mergedFields);
-
     int cardinality = 0;
+    descriptorBuilder = new ColumnDescriptor.Builder();
+
+    final NestedDataColumnSerializer defaultSerializer = new NestedDataColumnSerializer(
+        name,
+        indexSpec,
+        segmentWriteOutMedium,
+        progressIndicator,
+        closer
+    );
+    serializer = defaultSerializer;
+
+    final ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.serializerBuilder()
+                                                                   .withTypeName(NestedDataComplexTypeSerde.TYPE_NAME)
+                                                                   .withDelegate(serializer)
+                                                                   .build();
+    descriptorBuilder.setValueType(ValueType.COMPLEX)
+                     .setHasMultipleValues(false)
+                     .addSerde(partSerde);
+
+    defaultSerializer.open();
+    defaultSerializer.serializeFields(mergedFields);
+
     if (numMergeIndex > 1) {
-      DictionaryMergingIterator<String> dictionaryMergeIterator = new DictionaryMergingIterator<>(
+      SimpleDictionaryMergingIterator<String> dictionaryMergeIterator = new SimpleDictionaryMergingIterator<>(
           sortedLookups,
-          StringDimensionMergerV9.DICTIONARY_MERGING_COMPARATOR,
-          true
+          STRING_MERGING_COMPARATOR
       );
-      DictionaryMergingIterator<Long> longDictionaryMergeIterator = new DictionaryMergingIterator<>(
+      SimpleDictionaryMergingIterator<Long> longDictionaryMergeIterator = new SimpleDictionaryMergingIterator<>(
           sortedLongLookups,
-          LONG_MERGING_COMPARATOR,
-          true
+          LONG_MERGING_COMPARATOR
       );
-      DictionaryMergingIterator<Double> doubleDictionaryMergeIterator = new DictionaryMergingIterator<>(
+      SimpleDictionaryMergingIterator<Double> doubleDictionaryMergeIterator = new SimpleDictionaryMergingIterator<>(
           sortedDoubleLookups,
-          DOUBLE_MERGING_COMPARATOR,
-          true
+          DOUBLE_MERGING_COMPARATOR
       );
-      serializer.serializeStringDictionary(() -> dictionaryMergeIterator);
-      serializer.serializeLongDictionary(() -> longDictionaryMergeIterator);
-      serializer.serializeDoubleDictionary(() -> doubleDictionaryMergeIterator);
+      defaultSerializer.serializeStringDictionary(() -> dictionaryMergeIterator);
+      defaultSerializer.serializeLongDictionary(() -> longDictionaryMergeIterator);
+      defaultSerializer.serializeDoubleDictionary(() -> doubleDictionaryMergeIterator);
       cardinality = dictionaryMergeIterator.getCardinality();
     } else if (numMergeIndex == 1) {
-      serializer.serializeStringDictionary(sortedLookup.getSortedStrings());
-      serializer.serializeLongDictionary(sortedLookup.getSortedLongs());
-      serializer.serializeDoubleDictionary(sortedLookup.getSortedDoubles());
+      defaultSerializer.serializeStringDictionary(sortedLookup.getSortedStrings());
+      defaultSerializer.serializeLongDictionary(sortedLookup.getSortedLongs());
+      defaultSerializer.serializeDoubleDictionary(sortedLookup.getSortedDoubles());
       cardinality = sortedLookup.size();
     }
 
@@ -184,12 +208,12 @@ public class NestedDataColumnMerger implements DimensionMergerV9
     closer.register(col);
 
     if (col instanceof CompressedNestedDataComplexColumn) {
-      return getSortedIndexFromV1QueryableAdapter(mergedFields, col);
+      return getSortedIndexFromV1QueryableAdapterNestedColumn(mergedFields, col);
     }
     return null;
   }
 
-  private GlobalDictionarySortedCollector getSortedIndexFromV1QueryableAdapter(
+  private GlobalDictionarySortedCollector getSortedIndexFromV1QueryableAdapterNestedColumn(
       SortedMap<String, NestedLiteralTypeInfo.MutableTypeSet> mergedFields,
       BaseColumn col
   )
@@ -244,15 +268,7 @@ public class NestedDataColumnMerger implements DimensionMergerV9
   @Override
   public ColumnDescriptor makeColumnDescriptor()
   {
-    return new ColumnDescriptor.Builder()
-        .setValueType(ValueType.COMPLEX)
-        .setHasMultipleValues(false)
-        .addSerde(ComplexColumnPartSerde.serializerBuilder()
-                                        .withTypeName(NestedDataComplexTypeSerde.TYPE_NAME)
-                                        .withDelegate(serializer)
-                                        .build()
-        )
-        .build();
+    return descriptorBuilder.build();
   }
 
   private <T> boolean allNull(Indexed<T> dimValues)

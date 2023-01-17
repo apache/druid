@@ -24,19 +24,23 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.druid.common.config.NullHandlingTest;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FileEntity;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.BaseSequence.IteratorMaker;
@@ -54,7 +58,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -68,11 +72,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 import static org.junit.Assert.assertThrows;
 
@@ -82,11 +86,13 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private File segmentDirectory;
+  private long segmentSize;
 
   private final IndexIO indexIO = TestHelper.getTestIndexIO();
   private DimensionsSpec dimensionsSpec;
   private List<AggregatorFactory> metrics;
-  private List<InputRow> rows;
+
+  private InputStats inputStats;
 
   @Before
   public void setUp() throws IOException
@@ -102,7 +108,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         new CountAggregatorFactory("cnt"),
         new HyperUniquesAggregatorFactory("met_s", "strCol")
     );
-    rows = ImmutableList.of(
+    final List<InputRow> rows = ImmutableList.of(
         new MapBasedInputRow(
             DateTimes.of("2000"),
             ImmutableList.of("strCol", "dblCol"),
@@ -121,7 +127,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         )
     );
 
-    createTestSetup();
+    inputStats = new InputStatsImpl();
+    persistSegment(rows);
   }
 
   @Test
@@ -169,6 +176,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -184,7 +192,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     metrics = ImmutableList.of();
 
     List<String> columnNames = ImmutableList.of("longCol", "a", "b");
-    rows = ImmutableList.of(
+    final List<InputRow> rows = ImmutableList.of(
         new MapBasedInputRow(
             DateTimes.utc(1667115726217L),
             columnNames,
@@ -217,10 +225,14 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         )
     );
 
-    createTestSetup();
+    persistSegment(rows);
 
+    final InputStats inputStats = new InputStatsImpl();
     final DruidSegmentReader reader = new DruidSegmentReader(
-        makeInputEntityWithParams(Intervals.of("2022-10-30/2022-10-31"), columnNames, null),
+        new BytesCountingInputEntity(
+            makeInputEntity(Intervals.of("2022-10-30/2022-10-31"), segmentDirectory, columnNames, null),
+            inputStats
+        ),
         indexIO,
         new TimestampSpec("__time", "iso", null),
         dimensionsSpec,
@@ -233,10 +245,8 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    List<InputRow> expectedRows = new ArrayList<>();
-    expectedRows.add(rows.get(2));
-    expectedRows.add(rows.get(1));
-    Assert.assertEquals(expectedRows, readRows(reader));
+    Assert.assertEquals(Arrays.asList(rows.get(2), rows.get(1)), readRows(reader));
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -247,32 +257,27 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     );
 
     Assert.assertFalse(reader.intermediateRowIterator().hasNext());
-    Assert.assertEquals(
-        Collections.emptyList(),
-        readRows(reader)
-    );
-  }
-
-  @Test
-  public void testDruidTombstoneSegmentReaderBadEntity()
-  {
-    assertThrows(ClassCastException.class, () -> {
-      new DruidTombstoneSegmentReader(
-          new FileEntity(null));
-    });
+    Assert.assertTrue(readRows(reader).isEmpty());
   }
 
   @Test
   public void testDruidTombstoneSegmentReaderNotCreatedFromTombstone()
   {
-    Exception exception = assertThrows(IllegalArgumentException.class, () -> {
-      new DruidTombstoneSegmentReader(makeInputEntity(Intervals.of("2000/P1D")));
-    });
-    String expectedMessage =
-        "DruidSegmentInputEntity must be created from a tombstone but is not.";
-    String actualMessage = exception.getMessage();
-    Assert.assertEquals(expectedMessage, actualMessage);
-
+    Exception exception = assertThrows(
+        IllegalArgumentException.class,
+        () -> new DruidTombstoneSegmentReader(
+            makeInputEntity(
+                Intervals.of("2000/P1D"),
+                segmentDirectory,
+                Collections.emptyList(),
+                Collections.emptyList()
+            )
+        )
+    );
+    Assert.assertEquals(
+        "DruidSegmentInputEntity must be created from a tombstone.",
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -320,6 +325,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -362,6 +368,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -405,6 +412,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -446,6 +454,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -482,6 +491,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -529,6 +539,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -576,6 +587,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -623,6 +635,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         ),
         readRows(reader)
     );
+    Assert.assertEquals(segmentSize, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -670,14 +683,17 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     Assert.assertTrue("Sequence is not closed", isSequenceClosed.booleanValue());
   }
 
-  private DruidSegmentInputEntity makeInputEntity(final Interval interval)
+  private InputEntity makeInputEntity(final Interval interval)
   {
-    return makeInputEntity(interval, segmentDirectory, ImmutableList.of("strCol", "dblCol"), ImmutableList.of("cnt", "met_s"));
-  }
-
-  private DruidSegmentInputEntity makeInputEntityWithParams(final Interval interval, final List<String> dimensions, final List<String> metrics)
-  {
-    return makeInputEntity(interval, segmentDirectory, dimensions, metrics);
+    return new BytesCountingInputEntity(
+        makeInputEntity(
+            interval,
+            segmentDirectory,
+            ImmutableList.of("strCol", "dblCol"),
+            ImmutableList.of("cnt", "met_s")
+        ),
+        inputStats
+    );
   }
 
   public static DruidSegmentInputEntity makeInputEntity(
@@ -688,42 +704,12 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   )
   {
     return new DruidSegmentInputEntity(
-        new SegmentCacheManager()
+        new NoopSegmentCacheManager()
         {
-          @Override
-          public boolean isSegmentCached(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
           @Override
           public File getSegmentFiles(DataSegment segment)
           {
             return segmentDirectory;
-          }
-
-          @Override
-          public void cleanup(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public boolean reserve(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public boolean release(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-          {
-            throw new UnsupportedOperationException();
           }
         },
         DataSegment.builder()
@@ -741,45 +727,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
   public static DruidSegmentInputEntity makeTombstoneInputEntity(final Interval interval)
   {
     return new DruidSegmentInputEntity(
-        new SegmentCacheManager()
-        {
-          @Override
-          public boolean isSegmentCached(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public File getSegmentFiles(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public void cleanup(DataSegment segment)
-          {
-            throw new UnsupportedOperationException("unused");
-          }
-
-          @Override
-          public boolean reserve(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public boolean release(DataSegment segment)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-          {
-            throw new UnsupportedOperationException();
-
-          }
-        },
+        new NoopSegmentCacheManager(),
         DataSegment.builder()
                    .dataSource("ds")
                    .interval(Intervals.of("2000/P1D"))
@@ -791,7 +739,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
         interval
     );
   }
-
 
   private List<InputRow> readRows(DruidSegmentReader reader) throws IOException
   {
@@ -815,7 +762,6 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     return rows;
   }
 
-
   private static HyperLogLogCollector makeHLLC(final String... values)
   {
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
@@ -825,7 +771,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
     return collector;
   }
 
-  private void createTestSetup() throws IOException
+  private void persistSegment(List<InputRow> rows) throws IOException
   {
     final IncrementalIndex incrementalIndex =
         IndexBuilder.create()
@@ -850,6 +796,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
           new IndexSpec(),
           null
       );
+      segmentSize = FileUtils.getFileSize(segmentDirectory);
     }
     finally {
       incrementalIndex.close();

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -31,6 +32,7 @@ import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -44,6 +46,8 @@ import org.apache.druid.storage.StorageConnector;
 
 import javax.annotation.Nullable;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MSQTasks
 {
@@ -53,6 +57,10 @@ public class MSQTasks
   static final String GENERIC_QUERY_FAILED_MESSAGE = "Query failed";
 
   private static final String TASK_ID_PREFIX = "query-";
+
+  private static final String WORKER_NUMBER = "workerNumber";
+  // taskids are in the form 12dsa1-worker9_0. see method workerTaskId() for more details.
+  private static final Pattern WORKER_PATTERN = Pattern.compile(".*-worker(?<" + WORKER_NUMBER + ">[0-9]+)_[0-9]+");
 
   /**
    * Returns a controller task ID given a SQL query id.
@@ -65,9 +73,32 @@ public class MSQTasks
   /**
    * Returns a worker task ID given a SQL query id.
    */
-  public static String workerTaskId(final String controllerTaskId, final int workerNumber)
+  public static String workerTaskId(final String controllerTaskId, final int workerNumber, final int retryCount)
   {
-    return StringUtils.format("%s-worker%d", controllerTaskId, workerNumber);
+    return StringUtils.format("%s-worker%d_%d", controllerTaskId, workerNumber, retryCount);
+  }
+
+  /**
+   * Extract worker from taskId or throw exception if unable to parse out the worker.
+   */
+  public static int workerFromTaskId(final String taskId)
+  {
+    final Matcher matcher = WORKER_PATTERN.matcher(taskId);
+    if (matcher.matches()) {
+      try {
+        String worker = matcher.group(WORKER_NUMBER);
+        return Integer.parseInt(worker);
+      }
+      catch (NumberFormatException e) {
+        throw new ISE(e, "Unable to parse worker out of task %s", taskId);
+      }
+    } else {
+      throw new ISE(
+          "Desired pattern %s to extract worker from task id %s did not match ",
+          WORKER_PATTERN.pattern(),
+          taskId
+      );
+    }
   }
 
   /**
@@ -194,7 +225,7 @@ public class MSQTasks
       logMessage.append("; host ").append(errorReport.getHost());
     }
 
-    logMessage.append(": ").append(errorReport.getFault().getCodeWithMessage());
+    logMessage.append(": ").append(MSQFaultUtils.generateMessageWithErrorCode(errorReport.getFault()));
 
     if (errorReport.getExceptionStackTrace() != null) {
       if (errorReport.getFault() instanceof UnknownFault) {

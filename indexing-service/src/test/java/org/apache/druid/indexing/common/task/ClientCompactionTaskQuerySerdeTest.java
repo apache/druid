@@ -252,7 +252,7 @@ public class ClientCompactionTaskQuerySerdeTest
             new ParallelIndexTuningConfig(
                 null,
                 null,
-                new OnheapIncrementalIndex.Spec(true),
+                new OnheapIncrementalIndex.Spec(true, false),
                 40000,
                 2000L,
                 null,
@@ -316,7 +316,7 @@ public class ClientCompactionTaskQuerySerdeTest
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
-            new OnheapIncrementalIndex.Spec(true),
+            new OnheapIncrementalIndex.Spec(true, false),
             40000,
             2000L,
             30000L,
