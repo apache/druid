@@ -76,6 +76,8 @@ public class QueryTestBuilder
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
     ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
+
+    boolean isRunningMSQ();
   }
 
   protected final QueryTestConfig config;
@@ -94,6 +96,7 @@ public class QueryTestBuilder
   @Nullable
   protected Consumer<ExpectedException> expectedExceptionInitializer;
   protected boolean skipVectorize;
+  protected boolean msqCompatible;
   protected boolean queryCannotVectorize;
   protected boolean verifyNativeQueries = true;
   protected AuthConfig authConfig = new AuthConfig();
@@ -226,6 +229,12 @@ public class QueryTestBuilder
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;
+    return this;
+  }
+
+  public QueryTestBuilder msqCompatible(boolean msqCompatible)
+  {
+    this.msqCompatible = msqCompatible;
     return this;
   }
 

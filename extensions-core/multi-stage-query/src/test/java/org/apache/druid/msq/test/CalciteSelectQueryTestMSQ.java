@@ -90,346 +90,45 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(new CalciteTestConfig())
+    return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomVerification(new VerifyMSQSupportedNativeQueriesFactory())
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(false);
+        .verifyNativeQueries(false)
+        .msqCompatible(msqCompatible);
   }
 
-  @Ignore("Union datasource not supported by MSQ")
+  @Ignore
   @Override
-  public void testUnionAllSameTableTwiceWithSameMapping()
+  public void testCannotInsertWithNativeEngine()
   {
 
   }
 
   @Ignore
   @Override
-  public void testUnionAllQueriesWithLimit()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testGroupByNothingWithLiterallyFalseFilter()
+  public void testCannotReplaceWithNativeEngine()
   {
 
   }
 
   @Ignore
   @Override
-  public void testSubqueryTypeMismatchWithLiterals()
+  public void testRequireTimeConditionSimpleQueryNegative()
   {
 
   }
 
   @Ignore
   @Override
-  public void testTextcat()
+  public void testRequireTimeConditionSubQueryNegative()
   {
 
   }
 
   @Ignore
   @Override
-  public void testGroupByWithLiteralInSubqueryGrouping()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testSqlIsNullToInFilter()
-  {
-  }
-
-  @Ignore
-  @Override
-  public void testGroupBySortPushDown()
-  {
-  }
-
-
-  @Ignore
-  @Override
-  public void testStringLatestGroupBy()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testColumnComparison()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByCaseWhenOfTripleAnd()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testTopNWithSelectProjections()
-  {
-
-  }
-
-
-  @Ignore
-  @Override
-  public void testProjectAfterSort3WithoutAmbiguity()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByCaseWhen()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByWithSortOnPostAggregationDefault()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByWithSelectProjections()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByTimeAndOtherDimension()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByAnyLong()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testBitwiseAggregatorsGroupBy()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByWithSelectAndOrderByProjections()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testQueryContextOuterLimit()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByWithSortOnPostAggregationNoTopNContext()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testUsingSubqueryAsFilterWithInnerSort()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByAnyDouble()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByLimitWrappingOrderByAgg()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testTopNWithSelectAndOrderByProjections()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByAnyFloat()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testRegexpExtract()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testTimeseriesLosAngelesViaQueryContext()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByLimitPushDownWithHavingOnLong()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupBySingleColumnDescendingNoTopN()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testProjectAfterSort2()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testFilterLongDimension()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testHavingOnExactCountDistinct()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testStringAgg()
-  {
-
-  }
-
-  // Query not supported by MSQ
-  @Ignore
-  @Override
-  public void testGroupingAggregatorDifferentOrder()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaColumnsOnTable()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregators()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testJoinUnionAllDifferentTablesWithMapping()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingAggregatorWithPostAggregator()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByRollupDifferentOrder()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithNumericDimension()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testViewAndJoin()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testUnionAllDifferentTablesWithMapping()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaTables()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaColumnsOnView()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithOrderByDimension()
+  public void testRequireTimeConditionSemiJoinNegative()
   {
 
   }
@@ -443,299 +142,23 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 
   @Ignore
   @Override
-  public void testGroupingSetsWithLimit()
+  public void testUnplannableQueries()
   {
 
   }
 
   @Ignore
   @Override
-  public void testUnionAllSameTableTwice()
+  public void testMaxSubqueryRows()
   {
 
   }
 
   @Ignore
   @Override
-  public void testUnionAllSameTableThreeTimes()
+  public void testQueryWithMoreThanMaxNumericInFilter()
   {
 
   }
 
-  @Ignore
-  @Override
-  public void testGroupByCube()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaColumnsOnForbiddenTable()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsNoSuperset()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByExpressionFromLookup()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithOrderByAggregator()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithLimitOrderByGran()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaSchemata()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithDummyDimension()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSets()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testUnionAllSameTableThreeTimesWithSameMapping()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testAggregatorsOnInformationSchemaColumns()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testUnionAllTablesColumnTypeMismatchFloatLong()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testInformationSchemaColumnsOnAnotherView()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupingSetsWithOrderByAggregatorWithLimit()
-  {
-
-  }
-
-  // Cast failures
-
-  // Ad hoc failures
-  @Ignore("Fails because the MSQ engine creates no worker task corresponding to the generated query definition")
-  @Override
-  public void testFilterOnTimeFloorMisaligned()
-  {
-
-  }
-
-  // Fails because the MSQ engine creates no worker task corresponding to the generated query definition
-  @Ignore
-  @Override
-  public void testGroupByWithImpossibleTimeFilter()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByNothingWithImpossibleTimeFilter()
-  {
-
-  }
-
-  // Long cannot be converted to HyperLogLogCollector
-  @Ignore
-  @Override
-  public void testHavingOnApproximateCountDistinct()
-  {
-
-  }
-
-  // MSQ validation layer rejects the query
-  @Ignore
-  @Override
-  public void testEmptyGroupWithOffsetDoesntInfiniteLoop()
-  {
-
-  }
-
-  // External slice cannot be converted to StageinputSlice
-  @Ignore
-  @Override
-  public void testGroupingWithNullInFilter()
-  {
-
-  }
-
-  // ====
-
-  // Serializable Pair Failures during aggregation
-  @Ignore
-  @Override
-
-  public void testOrderByEarliestFloat()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testPrimitiveEarliestInSubquery()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGreatestFunctionForStringWithIsNull()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testGroupByAggregatorDefaultValuesNonVectorized()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testPrimitiveLatestInSubquery()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByLatestDouble()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testPrimitiveLatestInSubqueryGroupBy()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByEarliestLong()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testLatestAggregators()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testEarliestAggregators()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testFirstLatestAggregatorsSkipNulls()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testLatestVectorAggregators()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByEarliestDouble()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testLatestAggregatorsNumericNull()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testOrderByLatestLong()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testEarliestAggregatorsNumericNulls()
-  {
-
-  }
 }

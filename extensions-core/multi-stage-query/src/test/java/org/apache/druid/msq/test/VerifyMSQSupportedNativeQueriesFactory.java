@@ -42,13 +42,11 @@ public class VerifyMSQSupportedNativeQueriesFactory implements QueryTestRunner.Q
       @Override
       public void verify()
       {
-        for (QueryTestRunner.QueryResults queryResults : execStep.results()) {
-          QueryTestBuilder builder = execStep.builder();
-          final List<Query<?>> expectedQueries = builder.getExpectedQueries();
-          final boolean unsupportedQuery = expectedQueries.stream().anyMatch(this::isUnsupportedQuery);
-          if (unsupportedQuery) {
-            return;
-          }
+        QueryTestBuilder builder = execStep.builder();
+        final List<Query<?>> expectedQueries = builder.getExpectedQueries();
+        final boolean unsupportedQuery = expectedQueries.stream().anyMatch(this::isUnsupportedQuery);
+        if (unsupportedQuery) {
+          return;
         }
         new QueryTestRunner.VerifyNativeQueries(execStep).verify();
       }

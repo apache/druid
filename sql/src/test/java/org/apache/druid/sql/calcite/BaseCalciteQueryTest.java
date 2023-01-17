@@ -266,6 +266,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
+  public boolean msqCompatible = false;
 
   public QueryLogHook queryLogHook;
 
@@ -688,23 +689,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .run();
   }
 
-  public void testQueryWithMSQ(
-      final String sql,
-      final List<Query<?>> expectedQueries,
-      final List<Object[]> expectedResults,
-      final QueryTestRunner.QueryRunStepFactory msqExtractionStepFactory
-  )
-  {
-    testBuilderMSQ()
-        .sql(sql)
-        .expectedQueries(expectedQueries)
-        .expectedResults(expectedResults)
-        .addCustomRunner(msqExtractionStepFactory)
-        .skipVectorize(true)
-        .run();
-  }
-
-
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
@@ -849,18 +833,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     return new QueryTestBuilder(new CalciteTestConfig())
         .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize);
-  }
-
-  protected QueryTestBuilder testBuilderMSQ()
-  {
-    return new QueryTestBuilder(new CalciteTestConfig())
-        .cannotVectorize(cannotVectorize)
-        .skipVectorize(skipVectorize);
+        .skipVectorize(skipVectorize)
+        .msqCompatible(msqCompatible);
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
+    private boolean isRunningMSQ = false;
+
+    public CalciteTestConfig()
+    {
+
+    }
+
+    public CalciteTestConfig(boolean isRunningMSQ)
+    {
+      this.isRunningMSQ = isRunningMSQ;
+    }
+
+
     @Override
     public QueryLogHook queryLogHook()
     {
@@ -895,6 +886,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           expectedResults,
           expectedResultSignature
       );
+    }
+
+    @Override
+    public boolean isRunningMSQ()
+    {
+      return isRunningMSQ;
     }
   }
 
@@ -1022,6 +1019,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  protected void msqCompatible()
+  {
+    msqCompatible = true;
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
