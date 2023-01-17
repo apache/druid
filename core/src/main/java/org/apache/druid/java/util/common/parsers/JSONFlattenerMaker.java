@@ -69,6 +69,8 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
   {
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
     if (discoverNestedFields) {
       return obj::fieldNames;
     }

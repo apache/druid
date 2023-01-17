@@ -58,6 +58,8 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
   @Override
   public Set<String> discoverRootFields(Group obj)
   {
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
     if (discoverNestedFields) {
       return obj.getType().getFields().stream().map(Type::getName).collect(Collectors.toSet());
     }
