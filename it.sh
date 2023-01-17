@@ -31,6 +31,8 @@ function usage
 {
   cat <<EOF
 Usage: $0 cmd [category]
+  ci
+      build Druid and the distribution for CI pipelines
   build
       build Druid and the distribution
   dist
@@ -188,6 +190,9 @@ MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
 case $CMD in
   "help" )
     usage
+    ;;
+  "ci" )
+    mvn clean package dependency:go-offline -P dist $MAVEN_IGNORE -T1.0C
     ;;
   "build" )
     mvn clean package -P dist $MAVEN_IGNORE -T1.0C
