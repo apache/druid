@@ -44,8 +44,7 @@ public class ProtobufInputRowSchema extends InputRowSchema
         new ProtobufTimestampSpec(inputRowSchema.getTimestampSpec()),
         inputRowSchema.getDimensionsSpec(),
         inputRowSchema.getColumnsFilter(),
-        inputRowSchema.getMetricNames(),
-        inputRowSchema.shouldDiscoverNestedColumns()
+        inputRowSchema.getMetricNames()
     );
   }
 

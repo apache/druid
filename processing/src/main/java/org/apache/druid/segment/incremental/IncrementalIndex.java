@@ -276,8 +276,7 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
       final boolean deserializeComplexMetrics,
       final boolean concurrentEventAdd,
       final boolean preserveExistingMetrics,
-      final boolean useMaxMemoryEstimates,
-      final boolean useNestedColumnIndexerForSchemaDiscovery
+      final boolean useMaxMemoryEstimates
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -289,7 +288,8 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.preserveExistingMetrics = preserveExistingMetrics;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
+    this.useNestedColumnIndexerForSchemaDiscovery = incrementalIndexSchema.getDimensionsSpec()
+                                                                          .useNestedColumnIndexerForSchemaDiscovery();
 
     this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();

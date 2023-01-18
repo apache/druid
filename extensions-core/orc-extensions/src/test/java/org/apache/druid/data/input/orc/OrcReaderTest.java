@@ -432,12 +432,9 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     final InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("ts", "millis", null),
-        new DimensionsSpec(
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
-        null,
-        true
+        null
     );
     final FileEntity entity = new FileEntity(new File("example/orc-file-11-format.orc"));
 

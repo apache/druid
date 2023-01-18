@@ -86,8 +86,7 @@ public class KafkaInputFormat implements InputFormat
         dummyTimestampSpec,
         inputRowSchema.getDimensionsSpec(),
         inputRowSchema.getColumnsFilter(),
-        inputRowSchema.getMetricNames(),
-        inputRowSchema.shouldDiscoverNestedColumns()
+        inputRowSchema.getMetricNames()
     );
     return new KafkaInputReader(
         inputRowSchema,

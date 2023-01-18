@@ -35,8 +35,6 @@ public class InputRowSchema
   private final DimensionsSpec dimensionsSpec;
   private final ColumnsFilter columnsFilter;
 
-  private final boolean discoverNestedColumns;
-
   /**
    * Set of metric names for further downstream processing by {@link InputSource}.
    * Empty set if no metric given.
@@ -50,22 +48,20 @@ public class InputRowSchema
       final ColumnsFilter columnsFilter
   )
   {
-    this(timestampSpec, dimensionsSpec, columnsFilter, ImmutableSet.of(), false);
+    this(timestampSpec, dimensionsSpec, columnsFilter, ImmutableSet.of());
   }
 
   public InputRowSchema(
       final TimestampSpec timestampSpec,
       final DimensionsSpec dimensionsSpec,
       final ColumnsFilter columnsFilter,
-      final Set<String> metricNames,
-      boolean discoverNestedColumns
+      final Set<String> metricNames
   )
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
     this.columnsFilter = columnsFilter;
     this.metricNames = metricNames == null ? ImmutableSet.of() : metricNames;
-    this.discoverNestedColumns = discoverNestedColumns;
   }
 
   @NotNull
@@ -96,10 +92,5 @@ public class InputRowSchema
   public ColumnsFilter getColumnsFilter()
   {
     return columnsFilter;
-  }
-
-  public boolean shouldDiscoverNestedColumns()
-  {
-    return discoverNestedColumns;
   }
 }

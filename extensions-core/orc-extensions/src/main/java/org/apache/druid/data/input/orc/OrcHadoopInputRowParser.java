@@ -22,6 +22,7 @@ package org.apache.druid.data.input.orc;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -55,9 +56,13 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
+    final DimensionsSpec dimensionsSpec = parseSpec.getDimensionsSpec();
     this.orcStructFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new OrcStructFlattenerMaker(this.binaryAsString, false)
+        new OrcStructFlattenerMaker(
+            this.binaryAsString,
+            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
     this.parser = new MapInputRowParser(parseSpec);
   }

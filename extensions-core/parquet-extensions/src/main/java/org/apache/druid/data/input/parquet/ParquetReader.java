@@ -68,7 +68,10 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
     this.temporaryDirectory = temporaryDirectory;
     this.flattener = ObjectFlatteners.create(
         flattenSpec,
-        new ParquetGroupFlattenerMaker(binaryAsString, inputRowSchema.shouldDiscoverNestedColumns())
+        new ParquetGroupFlattenerMaker(
+            binaryAsString,
+            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
   }
 

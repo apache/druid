@@ -82,7 +82,10 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
     this.source = source;
     this.flattener = ObjectFlatteners.create(
         flattenSpec,
-        new JSONFlattenerMaker(keepNullColumns, inputRowSchema.shouldDiscoverNestedColumns())
+        new JSONFlattenerMaker(
+            keepNullColumns,
+            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
     this.mapper = mapper;
     this.jsonFactory = new JsonFactory();

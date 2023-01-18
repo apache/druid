@@ -244,8 +244,7 @@ public class DruidInputSourceTest
             DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),
         originalColumnsFilter,
-        ImmutableSet.of(metricName),
-        true
+        ImmutableSet.of(metricName)
     );
     DruidInputSource druidInputSource = new DruidInputSource(
         datasource,
@@ -280,8 +279,7 @@ public class DruidInputSourceTest
             DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
         ),
         originalColumnsFilter,
-        ImmutableSet.of(),
-        true
+        ImmutableSet.of()
     );
     DruidInputSource druidInputSource = new DruidInputSource(
         datasource,

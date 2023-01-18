@@ -134,7 +134,7 @@ public class InputRowSchemasTest extends NullHandlingTest
         null
     );
 
-    InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema, null);
+    InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
     Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
     Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
@@ -163,7 +163,7 @@ public class InputRowSchemasTest extends NullHandlingTest
         null
     );
 
-    InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema, null);
+    InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
     Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
     Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());

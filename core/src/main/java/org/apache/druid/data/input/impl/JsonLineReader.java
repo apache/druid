@@ -61,7 +61,10 @@ public class JsonLineReader extends TextReader
     super(inputRowSchema, source);
     this.flattener = ObjectFlatteners.create(
         flattenSpec,
-        new JSONFlattenerMaker(keepNullColumns, inputRowSchema.shouldDiscoverNestedColumns())
+        new JSONFlattenerMaker(
+            keepNullColumns,
+            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
     this.mapper = mapper;
   }

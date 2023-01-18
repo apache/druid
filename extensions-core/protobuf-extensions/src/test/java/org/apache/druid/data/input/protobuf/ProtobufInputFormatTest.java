@@ -345,10 +345,9 @@ public class ProtobufInputFormatTest
     InputEntityReader reader = protobufInputFormat.createReader(
         new InputRowSchema(
             timestampSpec,
-            new DimensionsSpec(Collections.emptyList()),
+            DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
             null,
-            null,
-            true
+            null
         ),
         entity,
         null

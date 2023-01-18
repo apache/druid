@@ -70,7 +70,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
             false,
             binaryAsString,
             extractUnionsByType,
-            inputRowSchema.shouldDiscoverNestedColumns()
+            inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery()
         )
     );
   }

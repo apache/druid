@@ -7,7 +7,8 @@
         "column": "timestamp"
       },
       "dimensionsSpec": {
-        "dimensions": []
+        "dimensions": [],
+        "useNestedColumnIndexerForSchemaDiscovery": %%USE_NESTED_COLUMN_INDEXER%%
       },
       "metricsSpec": [],
       "granularitySpec": {
@@ -35,11 +36,7 @@
         "maxNumFiles": 1
       },
       "forceGuaranteedRollup": %%FORCE_GUARANTEED_ROLLUP%%,
-      "partitionsSpec": %%PARTITIONS_SPEC%%,
-      "appendableIndexSpec": {
-        "type": "onheap",
-        "useNestedColumnIndexerForSchemaDiscovery": %%USE_NESTED_COLUMN_INDEXER%%
-      }
+      "partitionsSpec": %%PARTITIONS_SPEC%%
     }
   }
 }

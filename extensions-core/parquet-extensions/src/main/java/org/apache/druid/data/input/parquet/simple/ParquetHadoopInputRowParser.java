@@ -22,6 +22,7 @@ package org.apache.druid.data.input.parquet.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -54,9 +55,13 @@ public class ParquetHadoopInputRowParser implements InputRowParser<Group>
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
+    final DimensionsSpec dimensionsSpec = parseSpec.getDimensionsSpec();
     this.groupFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new ParquetGroupFlattenerMaker(this.binaryAsString, false)
+        new ParquetGroupFlattenerMaker(
+            this.binaryAsString,
+            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
     this.parser = new MapInputRowParser(parseSpec);
   }

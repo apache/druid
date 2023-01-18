@@ -121,7 +121,6 @@ public class InputSourceSampler
       final InputSourceReader reader = buildReader(
           nonNullSamplerConfig,
           nonNullDataSchema,
-          tuningConfig,
           inputSource,
           inputFormat,
           tempDir
@@ -253,13 +252,12 @@ public class InputSourceSampler
   private InputSourceReader buildReader(
       SamplerConfig samplerConfig,
       DataSchema dataSchema,
-      TuningConfig tuningConfig,
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
       File tempDir
   )
   {
-    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema, tuningConfig);
+    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
 
     InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
 

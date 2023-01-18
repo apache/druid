@@ -21,6 +21,7 @@ package org.apache.druid.data.input.avro;
 
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -50,9 +51,16 @@ public class AvroParsers
       flattenSpec = JSONPathSpec.DEFAULT;
     }
 
+    final DimensionsSpec dimensionsSpec = parseSpec.getDimensionsSpec();
+
     return ObjectFlatteners.create(
         flattenSpec,
-        new AvroFlattenerMaker(fromPigAvroStorage, binaryAsString, extractUnionsByType, false)
+        new AvroFlattenerMaker(
+            fromPigAvroStorage,
+            binaryAsString,
+            extractUnionsByType,
+            dimensionsSpec != null && dimensionsSpec.useNestedColumnIndexerForSchemaDiscovery()
+        )
     );
   }
 

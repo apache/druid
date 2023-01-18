@@ -202,7 +202,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static FilteringCloseableInputRowIterator inputSourceReader(
       File tmpDir,
       DataSchema dataSchema,
-      TuningConfig tuningConfig,
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
       Predicate<InputRow> rowFilter,
@@ -212,7 +211,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   {
     final InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
-            InputRowSchemas.fromDataSchema(dataSchema, tuningConfig),
+            InputRowSchemas.fromDataSchema(dataSchema),
             inputFormat,
             tmpDir
         )

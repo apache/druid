@@ -412,7 +412,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             tmpDir,
             dataSchema,
-            tuningConfig,
             inputSource,
             inputSource.needsFormat() ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema) : null,
             inputRow -> {

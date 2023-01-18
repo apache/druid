@@ -169,12 +169,9 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
-        new DimensionsSpec(
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(false).build(),
         ColumnsFilter.all(),
-        null,
-        false
+        null
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, ImmutableList.of());
     InputEntityReader reader = createReader(
@@ -209,12 +206,9 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     final String file = "example/flattening/test_nested_1.parquet";
     InputRowSchema schema = new InputRowSchema(
         new TimestampSpec("timestamp", "auto", null),
-        new DimensionsSpec(
-            ImmutableList.of()
-        ),
+        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
         ColumnsFilter.all(),
-        null,
-        true
+        null
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, ImmutableList.of());
     InputEntityReader reader = createReader(
