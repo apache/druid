@@ -51,6 +51,8 @@ Usage: $0 cmd [category]
       show the last 20 lines of each container log
   travis <category>
       run one IT in Travis (build dist, image, run test, tail logs)
+  github <category>
+      run one IT in Github Workflows (run test, tail logs)
   prune
       prune Docker volumes
 
@@ -235,6 +237,14 @@ case $CMD in
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;
+  "github" )
+     if [ -z "$1" ]; then
+       usage
+       exit 1
+     fi
+       $0 test $1
+       $0 tail $1
+       ;;
   "prune" )
     # Caution: this removes all volumes, which is generally what you
     # want when testing.

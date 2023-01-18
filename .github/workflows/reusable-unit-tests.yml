@@ -54,12 +54,6 @@ jobs:
         with:
           node-version: 16.17.0
 
-      - name: Restore Maven repository
-        uses: actions/cache/restore@v3
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ hashFiles('**/pom.xml') }}
-
       - name: setup variables
         run: |
           export base_ref=${{ github.base_ref }}
