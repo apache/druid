@@ -60,9 +60,8 @@ public class ReaderUtils
 
     // Find columns we need to read from the flattenSpec
     if (flattenSpec != null) {
-      if ((dimensionsSpec.getDimensionNames() == null || dimensionsSpec.getDimensionNames().isEmpty()) &&
-          flattenSpec.isUseFieldDiscovery()) {
-        // Schemaless ingestion needs to read all columns
+      if (dimensionsSpec.getDimensions().isEmpty() && flattenSpec.isUseFieldDiscovery()) {
+        // Schemaless ingestion with useFieldDiscovery needs to read all columns
         return fullInputSchema;
       }
 
@@ -126,7 +125,7 @@ public class ReaderUtils
     } else {
       // Without flattenSpec, useFieldDiscovery is default to true and thus needs to read all columns since this is
       // schemaless
-      if ((dimensionsSpec.getDimensionNames() == null || dimensionsSpec.getDimensionNames().isEmpty())) {
+      if (dimensionsSpec.getDimensions().isEmpty()) {
         return fullInputSchema;
       }
     }
