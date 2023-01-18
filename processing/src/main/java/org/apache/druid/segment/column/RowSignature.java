@@ -37,8 +37,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Type signature for a row in a Druid datasource or query result.
@@ -188,6 +190,11 @@ public class RowSignature implements ColumnInspector
     }
 
     return retVal;
+  }
+
+  public Set<Entry<String, ColumnType>> entries()
+  {
+    return columnTypes.entrySet();
   }
 
   @Override

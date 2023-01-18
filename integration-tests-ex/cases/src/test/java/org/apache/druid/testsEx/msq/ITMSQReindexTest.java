@@ -25,6 +25,8 @@ import junitparams.naming.TestCaseName;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
@@ -55,7 +57,6 @@ public class ITMSQReindexTest extends AbstractITBatchIndexTest
         Arrays.asList("wikipedia_merge_index_msq.sql", "wikipedia_merge_reindex_msq.sql", "wikipedia_merge_index_queries.json"),
         Arrays.asList("wikipedia_index_task_with_transform.sql", "wikipedia_reindex_with_transform_msq.sql", "wikipedia_reindex_queries_with_transforms.json")
     );
-
   }
 
   @Test
@@ -65,9 +66,9 @@ public class ITMSQReindexTest extends AbstractITBatchIndexTest
   {
     String indexDatasource = FilenameUtils.removeExtension(sqlFileName);
     String reindexDatasource = FilenameUtils.removeExtension(reIndexSqlFileName);
-    Map<String, Object> context = ImmutableMap.of("finalizeAggregations", false,
-                                                  "maxNumTasks", 5,
-                                                  "groupByEnableMultiValueUnnesting", false);
+    Map<String, Object> context = ImmutableMap.of(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false,
+                                                  MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5,
+                                                  GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
     try {
       submitMSQTaskFromFile(MSQ_TASKS_DIR + sqlFileName,
                             indexDatasource,

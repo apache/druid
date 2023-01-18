@@ -19,15 +19,23 @@
 
 package org.apache.druid.catalog.model.facade;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
+import org.apache.druid.catalog.model.TypeParser;
+import org.apache.druid.catalog.model.TypeParser.ParsedType;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Convenience wrapper on top of a resolved table (a table spec and its corresponding
@@ -38,10 +46,111 @@ public class DatasourceFacade extends TableFacade
 {
   private static final Logger LOG = new Logger(DatasourceFacade.class);
 
+  public static class ColumnFacade
+  {
+    public enum Kind
+    {
+      ANY,
+      TIME,
+      DIMENSION,
+      MEASURE
+    }
+
+    private final ColumnSpec spec;
+    private final ParsedType type;
+
+    public ColumnFacade(ColumnSpec spec)
+    {
+      this.spec = spec;
+      if (Columns.isTimeColumn(spec.name()) && spec.sqlType() == null) {
+        // For __time only, force a type if type is null.
+        this.type = TypeParser.TIME_TYPE;
+      } else {
+        this.type = TypeParser.parse(spec.sqlType());
+      }
+    }
+
+    public ColumnSpec spec()
+    {
+      return spec;
+    }
+
+    public ParsedType type()
+    {
+      return type;
+    }
+
+    public boolean hasType()
+    {
+      return type.kind() != ParsedType.Kind.ANY;
+    }
+
+    public boolean isTime()
+    {
+      return type.kind() == ParsedType.Kind.TIME;
+    }
+
+    public boolean isMeasure()
+    {
+      return type.kind() == ParsedType.Kind.MEASURE;
+    }
+
+    public ColumnType druidType()
+    {
+      switch (type.kind()) {
+        case DIMENSION:
+          return Columns.druidType(spec.sqlType());
+        case TIME:
+          return ColumnType.LONG;
+        case MEASURE:
+          return type.measure().storageType;
+        default:
+          return null;
+      }
+    }
+
+    public String sqlStorageType()
+    {
+      if (isTime()) {
+        // Time is special: its storage type is BIGINT, but SQL requires the
+        // type of TIMESTAMP to allow insertion validation.
+        return Columns.TIMESTAMP;
+      } else {
+        return Columns.sqlType(druidType());
+      }
+    }
+
+    @Override
+    public String toString()
+    {
+      return "{spec=" + spec + ", type=" + type + "}";
+    }
+  }
+
+  private final List<ColumnFacade> columns;
+  private final Map<String, ColumnFacade> columnIndex;
+  private final boolean hasRollup;
 
   public DatasourceFacade(ResolvedTable resolved)
   {
     super(resolved);
+    this.columns = resolved.spec().columns()
+        .stream()
+        .map(col -> new ColumnFacade(col))
+        .collect(Collectors.toList());
+    boolean hasMeasure = false;
+    for (ColumnFacade col : columns) {
+      if (col.isMeasure()) {
+        hasMeasure = true;
+        break;
+      }
+    }
+    this.hasRollup = hasMeasure;
+    ImmutableMap.Builder<String, ColumnFacade> builder = ImmutableMap.builder();
+    for (ColumnFacade col : columns) {
+      builder.put(col.spec.name(), col);
+    }
+    columnIndex = builder.build();
   }
 
   public String segmentGranularityString()
@@ -88,5 +197,26 @@ public class DatasourceFacade extends TableFacade
   public boolean isSealed()
   {
     return booleanProperty(DatasourceDefn.SEALED_PROPERTY);
+  }
+
+  public List<ColumnFacade> columnFacades()
+  {
+    return columns;
+  }
+
+  public ColumnFacade column(String name)
+  {
+    return columnIndex.get(name);
+  }
+
+  public boolean hasRollup()
+  {
+    return hasRollup;
+  }
+
+  public String rollupGrain()
+  {
+    ColumnFacade col = columnIndex.get(Columns.TIME_COLUMN);
+    return col == null ? null : col.type().timeGrain();
   }
 }

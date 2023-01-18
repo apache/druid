@@ -86,6 +86,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -257,7 +258,7 @@ public class SystemSchemaTest extends CalciteTestBase
     );
     cache.start();
     cache.awaitInitialization();
-    druidSchema = new DruidSchema(cache, null);
+    druidSchema = new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER);
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);

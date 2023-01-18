@@ -85,10 +85,10 @@ public class TableDefn extends ObjectDefn
   public void validate(ResolvedTable table)
   {
     validate(table.properties(), table.jsonMapper());
-    validateColumns(table.spec().columns());
+    validateColumns(table.spec().columns(), table.jsonMapper());
   }
 
-  public void validateColumns(List<ColumnSpec> columns)
+  public void validateColumns(List<ColumnSpec> columns, ObjectMapper jsonMapper)
   {
     if (columns == null) {
       return;

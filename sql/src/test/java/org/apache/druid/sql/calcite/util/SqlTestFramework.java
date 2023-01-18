@@ -47,6 +47,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -55,6 +56,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -357,6 +359,8 @@ public class SqlTestFramework
     private final QueryComponentSupplier componentSupplier;
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
+    private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    private NamedSchema extraSchema;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -372,6 +376,18 @@ public class SqlTestFramework
     public Builder mergeBufferCount(int mergeBufferCount)
     {
       this.mergeBufferCount = mergeBufferCount;
+      return this;
+    }
+
+    public Builder catalogResolver(CatalogResolver catalogResolver)
+    {
+      this.catalogResolver = catalogResolver;
+      return this;
+    }
+
+    public Builder extraSchema(NamedSchema extraSchema)
+    {
+      this.extraSchema = extraSchema;
       return this;
     }
 
@@ -408,7 +424,9 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper
+          framework.authorizerMapper,
+          framework.builder.catalogResolver,
+          framework.builder.extraSchema
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -420,7 +438,8 @@ public class SqlTestFramework
           framework.queryJsonMapper(),
           CalciteTests.DRUID_SCHEMA_NAME,
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
-          framework.injector.getInstance(JoinableFactoryWrapper.class)
+          framework.injector.getInstance(JoinableFactoryWrapper.class),
+          framework.builder.catalogResolver
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
@@ -523,6 +542,7 @@ public class SqlTestFramework
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
+  private final Builder builder;
   private final QueryComponentSupplier componentSupplier;
   private final Closer resourceCloser = Closer.create();
   private final Injector injector;
@@ -531,6 +551,7 @@ public class SqlTestFramework
 
   private SqlTestFramework(Builder builder)
   {
+    this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
     Properties properties = new Properties();
     this.componentSupplier.gatherProperties(properties);

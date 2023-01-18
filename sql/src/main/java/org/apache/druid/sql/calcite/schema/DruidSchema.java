@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Table;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
 import javax.inject.Inject;
@@ -30,13 +31,17 @@ public class DruidSchema extends AbstractTableSchema
 {
   private final SegmentMetadataCache segmentCache;
   private final DruidSchemaManager druidSchemaManager;
+  private final CatalogResolver catalogResolver;
 
   @Inject
   public DruidSchema(
-      SegmentMetadataCache segmentCache,
-      final DruidSchemaManager druidSchemaManager)
+      final SegmentMetadataCache segmentCache,
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalogResolver
+  )
   {
     this.segmentCache = segmentCache;
+    this.catalogResolver = catalogResolver;
     if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
       this.druidSchemaManager = druidSchemaManager;
     } else {
@@ -56,7 +61,7 @@ public class DruidSchema extends AbstractTableSchema
       return druidSchemaManager.getTable(name);
     } else {
       DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentCache.getDatasource(name);
-      return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
+      return catalogResolver.resolveDatasource(name, dsMetadata);
     }
   }
 

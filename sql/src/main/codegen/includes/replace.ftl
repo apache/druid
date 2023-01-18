@@ -25,8 +25,7 @@ SqlNode DruidSqlReplaceEof() :
     SqlNodeList columnList = null;
     final Span s;
     SqlInsert sqlInsert;
-    // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-    org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
+    SqlNode partitionedBy = null;
     SqlNodeList clusteredBy = null;
     final Pair<SqlNodeList, SqlNodeList> p;
     SqlNode replaceTimeQuery = null;
@@ -56,11 +55,6 @@ SqlNode DruidSqlReplaceEof() :
       <CLUSTERED> <BY>
       clusteredBy = ClusterItems()
     ]
-    {
-        if (clusteredBy != null && partitionedBy.lhs == null) {
-          throw new ParseException("CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause");
-        }
-    }
     // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
     // The reason for adding EOF here is to ensure that we create a DruidSqlReplace node after the syntax has been
     // validated and throw SQL syntax errors before performing validations in the DruidSqlReplace which can overshadow the
@@ -68,7 +62,7 @@ SqlNode DruidSqlReplaceEof() :
     <EOF>
     {
         sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
-        return new DruidSqlReplace(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy, replaceTimeQuery);
+        return new DruidSqlReplace(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery);
     }
 }
 

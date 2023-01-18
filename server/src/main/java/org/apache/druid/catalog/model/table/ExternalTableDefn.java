@@ -27,8 +27,11 @@ import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.TypeParser;
+import org.apache.druid.catalog.model.TypeParser.ParsedType;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -206,6 +209,11 @@ public class ExternalTableDefn extends TableDefn
   public static final String TABLE_TYPE = "extern";
 
   /**
+   * Column type for external tables.
+   */
+  public static final String EXTERNAL_COLUMN_TYPE = "extern";
+
+  /**
    * Property which holds the input source specification as serialized as JSON.
    */
   public static final String SOURCE_PROPERTY = "source";
@@ -258,13 +266,11 @@ public class ExternalTableDefn extends TableDefn
   public void validate(ResolvedTable table)
   {
     for (PropertyDefn<?> propDefn : properties().values()) {
-      // Validate everything except the input source and input format: those
-      // are done elsewhere since they are complex and require context.
       if (propDefn != SOURCE_PROPERTY_DEFN && propDefn != FORMAT_PROPERTY_DEFN) {
         propDefn.validate(table.property(propDefn.name()), table.jsonMapper());
       }
     }
-    validateColumns(table.spec().columns());
+    validateColumns(table.spec().columns(), table.jsonMapper());
     new ResolvedExternalTable(table).validate(registry);
   }
 
@@ -282,7 +288,14 @@ public class ExternalTableDefn extends TableDefn
   @Override
   protected void validateColumn(ColumnSpec colSpec)
   {
-    // Validate type in next PR
+    ParsedType type = TypeParser.parse(colSpec.sqlType());
+    if (type.kind() == ParsedType.Kind.MEASURE) {
+      throw new IAE(
+          "External column %s cannot use measure SQL type %s",
+          colSpec.name(),
+          colSpec.sqlType()
+      );
+    }
   }
 
   /**

@@ -48,11 +48,17 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -63,20 +69,23 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator.ValidatorContext;
 
 import javax.annotation.Nullable;
 
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 /**
  * Calcite planner. Clone of Calcite's
  * {@link  org.apache.calcite.prepare.PlannerImpl}, as of version 1.21,
- * but with the validator made accessible, and with the minimum of formatting
+ * but with the validator made accessible, with custom versions of the validator
+ * and SQL-to-rel converter, and with the minimum of formatting
  * changes needed to pass Druid's static checks. Note that the resulting code
  * is more Calcite-like than Druid-like. There seemed no value in restructuring
- * the code just to be more Druid-like.
+ * the code just to be more Druid-like any more than necessary to pass checkstyle.
  */
 public class CalcitePlanner implements Planner, ViewExpander
 {
@@ -85,8 +94,10 @@ public class CalcitePlanner implements Planner, ViewExpander
   private final FrameworkConfig frameworkConfig;
   private final Context context;
   private final CalciteConnectionConfig connectionConfig;
+  private final ValidatorContext validatorContext;
 
   /** Holds the trait definitions to be registered with planner. May be null. */
+  @SuppressWarnings("rawtypes")
   private @Nullable final List<RelTraitDef> traitDefs;
 
   private final SqlParser.Config parserConfig;
@@ -108,11 +119,11 @@ public class CalcitePlanner implements Planner, ViewExpander
   // set in STATE_5_CONVERT
   private RelRoot root;
 
-  public CalcitePlanner(FrameworkConfig config)
+  public CalcitePlanner(FrameworkConfig config, ValidatorContext validatorContext)
   {
     this.frameworkConfig = config;
+    this.validatorContext = validatorContext;
     this.defaultSchema = config.getDefaultSchema();
-    this.operatorTable = config.getOperatorTable();
     this.programs = config.getPrograms();
     this.parserConfig = config.getParserConfig();
     this.sqlToRelConverterConfig = config.getSqlToRelConverterConfig();
@@ -122,6 +133,41 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.executor = config.getExecutor();
     this.context = config.getContext();
     this.connectionConfig = connConfig();
+
+    // With the catalog, schemas can provide functions.
+    // Add the necessary indirection. The type factory used here
+    // is the Druid one, since the per-query one is not yet available
+    // here. Nor are built-in function associated with per-query types.
+    this.operatorTable = new ChainedSqlOperatorTable(
+        Arrays.asList(
+            config.getOperatorTable(),
+            new CalciteCatalogReader(
+                CalciteSchema.from(rootSchema(defaultSchema)),
+                CalciteSchema.from(defaultSchema).path(null),
+                DruidTypeSystem.TYPE_FACTORY,
+                connectionConfig
+            )
+       )
+    )
+    {
+      @Override
+      public void lookupOperatorOverloads(final SqlIdentifier opName,
+          SqlFunctionCategory category,
+          SqlSyntax syntax,
+          List<SqlOperator> operatorList,
+          SqlNameMatcher nameMatcher
+      )
+      {
+        // Workaround for a Calcite bug. Built-in operators have no name: opName
+        // is null. The "standard" operator table special-cases null names. The
+        // chained one just goes ahead and dereferences the (null) opName. This
+        // hack makes the chained version work like the base version.
+        if (opName == null) {
+          return;
+        }
+        super.lookupOperatorOverloads(opName, category, syntax, operatorList, nameMatcher);
+      }
+    };
     reset();
   }
 
@@ -207,7 +253,7 @@ public class CalcitePlanner implements Planner, ViewExpander
         planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
       }
     } else {
-      for (RelTraitDef def : this.traitDefs) {
+      for (RelTraitDef<?> def : this.traitDefs) {
         planner.addRelTraitDef(def);
       }
     }
@@ -236,15 +282,25 @@ public class CalcitePlanner implements Planner, ViewExpander
     ensure(State.STATE_3_PARSED);
     final SqlConformance conformance = conformance();
     final CalciteCatalogReader catalogReader = createCatalogReader();
-    this.validator =
-        new BaseDruidSqlValidator(operatorTable, catalogReader, typeFactory,
-            conformance);
+
+    // Use a DruidSqlValidator to handle Druid extensions such as INSERT and REPLACE
+    this.validator = new DruidSqlValidator(
+        operatorTable,
+        catalogReader,
+        typeFactory,
+        conformance,
+        validatorContext
+    );
     this.validator.setIdentifierExpansion(true);
     try {
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
-      throw new ValidationException(e);
+      // Change from Calcite: pass the message explicitly to avoid messages like:
+      // foo.bar.MyException: The real message here
+      // By passing the message, get get the simpler form:
+      // The real message here
+      throw new ValidationException(e.getMessage(), e);
     }
     state = State.STATE_4_VALIDATED;
     return validatedSqlNode;
@@ -276,11 +332,19 @@ public class CalcitePlanner implements Planner, ViewExpander
     return rel(sql).rel;
   }
 
+  /**
+   * Convert the given node to a relational operator. Converts the give node
+   * rather than the one given by {@link #validatedSqlNode}. This is a change
+   * from the original Calcite code. (Though, oddly, Calcite accepted an argument
+   * and didn't use it.) We use the passed-in argument because Druid ignores the
+   * INSERT node: using just the SELECT within the INSERT. The {@code validatedQueryNode}
+   * points to the (unwanted) INSERT, the passed in node is the actual query.
+   */
   @Override
   public RelRoot rel(SqlNode sql)
   {
     ensure(State.STATE_4_VALIDATED);
-    assert validatedSqlNode != null;
+    assert sql != null;
     final RexBuilder rexBuilder = createRexBuilder();
     final RelOptCluster cluster = RelOptCluster.create(planner, rexBuilder);
     final SqlToRelConverter.Config config = SqlToRelConverter.configBuilder()
@@ -288,11 +352,12 @@ public class CalcitePlanner implements Planner, ViewExpander
         .withTrimUnusedFields(false)
         .withConvertTableAccess(false)
         .build();
+
+    // Use the DruidSqlToRelConverter to handle Druid's specialized INSERT/REPLACE semantics
     final SqlToRelConverter sqlToRelConverter =
-        new SqlToRelConverter(this, validator,
+        new DruidSqlToRelConverter(this, validator,
             createCatalogReader(), cluster, convertletTable, config);
-    root =
-        sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
+    root = sqlToRelConverter.convertQuery(sql, false, true);
     root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
     final RelBuilder relBuilder =
         config.getRelBuilderFactory().create(cluster, null);

@@ -535,7 +535,7 @@ The following granularity arguments are accepted:
   first argument must be `__time`.
 - `FLOOR(__time TO TimeUnit)`, where `TimeUnit` is any unit supported by the [FLOOR function](../querying/sql-scalar.md#date-and-time-functions). The first argument must be `__time`.
 - `ALL` or `ALL TIME`, which effectively disables time partitioning by placing all data in a single time chunk. To use
-  LIMIT or OFFSET at the outer level of your `INSERT` or `REPLACE` query, you must set `PARTITIONED BY` to `ALL` or `ALL TIME`.
+  `LIMIT` or `OFFSET` at the outer level of your `INSERT` or `REPLACE` query, you must set `PARTITIONED BY` to `ALL` or `ALL TIME`.
 
 Earlier versions required the `TIME_FLOOR` notation to specify a granularity other than the keywords.
 In the current version, the string constant provides a simpler equivalent solution.
@@ -555,6 +555,31 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P1M
 - P3M
 - P1Y
+
+The string constant can also include any of the keywords mentioned above:
+
+- `HOUR` - Same as `'PT1H'`
+- `DAY` - Same as `'P1D'`
+- `MONTH` - Same as `'P1M'`
+- `YEAR` - Same as `'P1Y'`
+- `ALL TIME`
+- `ALL` - Alias for `ALL TIME`
+
+Examples:
+
+```SQL
+-- Keyword
+PARTITIONED BY HOUR
+
+-- String constant
+PARTITIONED BY 'HOUR'
+
+-- Or
+PARTITIOND BY 'PT1H'
+
+-- TIME_FLOOR function
+PARTITIONED BY TIME_FLOOR(__time, 'PT1H')
+```
 
 For more information about partitioning, see [Partitioning](concepts.md#partitioning).
 

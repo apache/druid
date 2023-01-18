@@ -51,6 +51,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -135,10 +137,19 @@ public class QueryFrameworkUtils
       final PlannerConfig plannerConfig,
       @Nullable final ViewManager viewManager,
       final DruidSchemaManager druidSchemaManager,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver,
+      final NamedSchema extraSchema
   )
   {
-    DruidSchema druidSchema = createMockSchema(injector, conglomerate, walker, plannerConfig, druidSchemaManager);
+    DruidSchema druidSchema = createMockSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        druidSchemaManager,
+        catalogResolver
+    );
     SystemSchema systemSchema =
         CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig, authorizerMapper);
 
@@ -150,6 +161,9 @@ public class QueryFrameworkUtils
     namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
     namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
     namedSchemas.add(new NamedLookupSchema(lookupSchema));
+    if (extraSchema != null) {
+      namedSchemas.add(extraSchema);
+    }
 
     if (viewSchema != null) {
       namedSchemas.add(new NamedViewSchema(viewSchema));
@@ -172,6 +186,9 @@ public class QueryFrameworkUtils
     if (viewSchema != null) {
       rootSchema.add(NamedViewSchema.NAME, viewSchema);
     }
+    if (extraSchema != null) {
+      rootSchema.add(extraSchema.getSchemaName(), extraSchema.getSchema());
+    }
 
     return catalog;
   }
@@ -184,7 +201,17 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(injector, conglomerate, walker, plannerConfig, null, new NoopDruidSchemaManager(), authorizerMapper);
+    return createMockRootSchema(
+        injector,
+        conglomerate,
+        walker,
+        plannerConfig,
+        null,
+        new NoopDruidSchemaManager(),
+        authorizerMapper,
+        NullCatalogResolver.NULL_RESOLVER,
+        null
+    );
   }
 
   private static DruidSchema createMockSchema(
@@ -192,7 +219,8 @@ public class QueryFrameworkUtils
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
-      final DruidSchemaManager druidSchemaManager
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalog
   )
   {
     final SegmentMetadataCache cache = new SegmentMetadataCache(
@@ -221,7 +249,7 @@ public class QueryFrameworkUtils
     }
 
     cache.stop();
-    return new DruidSchema(cache, druidSchemaManager);
+    return new DruidSchema(cache, druidSchemaManager, catalog);
   }
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)

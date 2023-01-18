@@ -87,6 +87,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -236,7 +237,8 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER
     );
 
     lifecycleManager = new SqlLifecycleManager()
