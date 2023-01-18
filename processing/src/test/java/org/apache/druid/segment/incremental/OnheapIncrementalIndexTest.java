@@ -19,17 +19,28 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.guice.annotations.UnstableApi;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * AppendableIndexSpec describes the in-memory indexing method for data ingestion.
- */
-@UnstableApi
-public interface AppendableIndexSpec
+public class OnheapIncrementalIndexTest
 {
-  // Returns a builder of the appendable index.
-  AppendableIndexBuilder builder();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
-  // Returns the default max bytes in memory for this index.
-  long getDefaultMaxBytesInMemory();
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    OnheapIncrementalIndex.Spec spec = new OnheapIncrementalIndex.Spec(true);
+    Assert.assertEquals(spec, MAPPER.readValue(MAPPER.writeValueAsString(spec), OnheapIncrementalIndex.Spec.class));
+  }
+  @Test
+  public void testSpecEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(OnheapIncrementalIndex.Spec.class)
+                  .usingGetClass()
+                  .verify();
+  }
 }

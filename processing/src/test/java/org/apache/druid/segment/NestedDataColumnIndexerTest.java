@@ -46,7 +46,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -548,13 +547,12 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
                 new TimestampSpec(TIME_COL, "millis", null),
                 Granularities.NONE,
                 VirtualColumns.EMPTY,
-                new DimensionsSpec(Collections.emptyList()),
+                DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
                 new AggregatorFactory[0],
                 false
             )
         )
         .setMaxRowCount(1000)
-        .setUseNestedColumnIndexerForSchemaDiscovery(true)
         .build();
     return index;
   }

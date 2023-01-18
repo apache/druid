@@ -28,15 +28,19 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(InputFormat.class)
-public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSourceParallelIndexTest
+public class ITLocalInputSourceAllFormatSchemalessTest extends AbstractLocalInputSourceParallelIndexTest
 {
+  private static final String INDEX_TASK = "/indexer/wikipedia_local_input_source_index_task_schemaless.json";
+  private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_schemaless_queries.json";
+
   @Test
-  public void testAvroInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  public void testAvroInputFormatIndexDataIngestionSpecWithFileSchemaSchemaless() throws Exception
   {
     List fieldList = ImmutableList.of(
         ImmutableMap.of("name", "timestamp", "type", "string"),
@@ -60,42 +64,70 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
                                  "type", "record",
                                  "name", "wikipedia",
                                  "fields", fieldList);
-    doIndexTest(InputFormatDetails.AVRO, ImmutableMap.of("schema", schema), new Pair<>(false, false));
+    doIndexTest(
+        AbstractITBatchIndexTest.InputFormatDetails.AVRO,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        true,
+        ImmutableMap.of("USE_NESTED_COLUMN_INDEXER", true),
+        ImmutableMap.of("schema", schema),
+        new Pair<>(false, false)
+    );
   }
 
   @Test
-  public void testAvroInputFormatIndexDataIngestionSpecWithoutSchema() throws Exception
+  public void testAvroInputFormatIndexDataIngestionSpecNoFileSchemaSchemaless() throws Exception
   {
-    doIndexTest(InputFormatDetails.AVRO, new Pair<>(false, false));
+    doIndexTest(
+        AbstractITBatchIndexTest.InputFormatDetails.AVRO,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        true,
+        ImmutableMap.of("USE_NESTED_COLUMN_INDEXER", true),
+        Collections.emptyMap(),
+        new Pair<>(false, false)
+    );
   }
 
   @Test
-  public void testJsonInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  public void testJsonInputFormatIndexDataIngestionSpecSchemaless() throws Exception
   {
-    doIndexTest(InputFormatDetails.JSON, new Pair<>(false, false));
+    doIndexTest(
+        AbstractITBatchIndexTest.InputFormatDetails.JSON,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        true,
+        ImmutableMap.of("USE_NESTED_COLUMN_INDEXER", true),
+        Collections.emptyMap(),
+        new Pair<>(false, false)
+    );
   }
 
   @Test
-  public void testTsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  public void testParquetInputFormatIndexDataIngestionSpecSchemaless() throws Exception
   {
-    doIndexTest(InputFormatDetails.TSV, ImmutableMap.of("findColumnsFromHeader", true), new Pair<>(false, false));
+    doIndexTest(
+        AbstractITBatchIndexTest.InputFormatDetails.PARQUET,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        true,
+        ImmutableMap.of("USE_NESTED_COLUMN_INDEXER", true),
+        Collections.emptyMap(),
+        new Pair<>(false, false)
+    );
   }
 
   @Test
-  public void testParquetInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  public void testOrcInputFormatIndexDataIngestionSpecSchemaless() throws Exception
   {
-    doIndexTest(InputFormatDetails.PARQUET, new Pair<>(false, false));
-  }
-
-  @Test
-  public void testOrcInputFormatIndexDataIngestionSpecWithSchema() throws Exception
-  {
-    doIndexTest(InputFormatDetails.ORC, new Pair<>(false, false));
-  }
-
-  @Test
-  public void testCsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
-  {
-    doIndexTest(InputFormatDetails.CSV, ImmutableMap.of("findColumnsFromHeader", true), new Pair<>(false, false));
+    doIndexTest(
+        AbstractITBatchIndexTest.InputFormatDetails.ORC,
+        INDEX_TASK,
+        INDEX_QUERIES_RESOURCE,
+        true,
+        ImmutableMap.of("USE_NESTED_COLUMN_INDEXER", true),
+        Collections.emptyMap(),
+        new Pair<>(false, false)
+    );
   }
 }

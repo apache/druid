@@ -34,6 +34,7 @@ public class InputRowSchema
   private final TimestampSpec timestampSpec;
   private final DimensionsSpec dimensionsSpec;
   private final ColumnsFilter columnsFilter;
+
   /**
    * Set of metric names for further downstream processing by {@link InputSource}.
    * Empty set if no metric given.

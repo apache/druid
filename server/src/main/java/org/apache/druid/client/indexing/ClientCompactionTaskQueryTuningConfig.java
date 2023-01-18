@@ -88,7 +88,7 @@ public class ClientCompactionTaskQueryTuningConfig
     if (userCompactionTaskQueryTuningConfig == null) {
       return new ClientCompactionTaskQueryTuningConfig(
           maxRowsPerSegment,
-          new OnheapIncrementalIndex.Spec(preserveExistingMetrics, false),
+          new OnheapIncrementalIndex.Spec(preserveExistingMetrics),
           null,
           null,
           null,
@@ -111,7 +111,7 @@ public class ClientCompactionTaskQueryTuningConfig
     } else {
       AppendableIndexSpec appendableIndexSpecToUse = userCompactionTaskQueryTuningConfig.getAppendableIndexSpec() != null
                                                      ? userCompactionTaskQueryTuningConfig.getAppendableIndexSpec()
-                                                     : new OnheapIncrementalIndex.Spec(preserveExistingMetrics, false);
+                                                     : new OnheapIncrementalIndex.Spec(preserveExistingMetrics);
       return new ClientCompactionTaskQueryTuningConfig(
           maxRowsPerSegment,
           appendableIndexSpecToUse,
