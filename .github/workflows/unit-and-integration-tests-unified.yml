@@ -93,7 +93,7 @@ jobs:
         run: |
           ./it.sh ci
       - name: Container build
-        if: steps.docker_container.outputs.cache-hit != 'true'
+        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh

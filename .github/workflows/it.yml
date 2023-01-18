@@ -117,7 +117,7 @@ jobs:
       use_indexer: ${{ matrix.indexer }}
 
   integration-batch_index_k8s:
-    name: (Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
+    name: (Compile=jdk8, Run=jdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
     runs-on: ubuntu-22.04
     env:
       MVN: mvn --no-snapshot-updates
