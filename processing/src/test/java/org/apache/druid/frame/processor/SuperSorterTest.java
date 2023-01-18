@@ -696,7 +696,7 @@ public class SuperSorterTest
       final File file = new File(tmpDir, StringUtils.format("channel-%d", i));
       files.add(file);
       writableChannels.add(
-          new WritableFrameFileChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null))
+          new WritableFrameFileChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null, ByteTracker.unboundedTracker()))
       );
     }
 

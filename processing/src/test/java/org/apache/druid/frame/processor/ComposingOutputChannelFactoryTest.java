@@ -107,7 +107,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
   {
 
     @Override
-    public OutputChannel openChannel(int partitionNumber) throws IOException
+    public OutputChannel openChannel(int partitionNumber)
     {
       throw new UnsupportedOperationException();
     }

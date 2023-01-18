@@ -246,7 +246,8 @@ public class FrameFile implements Closeable
             log.warn("Could not delete frame file [%s]", file);
           }
           if (byteTracker != null) {
-            byteTracker.release(fileLength);
+            // only release the bytes taken by frames, we don't track the header and footer as of now
+            byteTracker.release(fileLength - footerLength - FrameFileWriter.MAGIC.length);
           }
         });
       }

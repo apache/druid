@@ -21,10 +21,11 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ResourceLimitExceededException;
 
 /**
- * Tracks the byte usage with an upper bound bytes limit. Reservaction of bytes beyond limit throws
+ * Tracks the byte usage with an upper bound bytes limit. Reservation of bytes beyond limit throws
  * {@link ResourceLimitExceededException}.
  */
 public class ByteTracker
@@ -42,8 +43,16 @@ public class ByteTracker
   public synchronized void reserve(long byteCount) throws ResourceLimitExceededException
   {
     Preconditions.checkState(byteCount >= 0, "Can't reserve negative bytes");
+
     if (currentBytes + byteCount > maxBytes) {
-      throw new ResourceLimitExceededException("");
+      throw new ResourceLimitExceededException(
+          StringUtils.format(
+              "Can't allocate any more bytes. maxBytes = %d, currentBytes = %d, requestedBytes = %d",
+              maxBytes,
+              currentBytes,
+              byteCount
+          )
+      );
     }
     currentBytes += byteCount;
   }
@@ -51,7 +60,19 @@ public class ByteTracker
   public synchronized void release(long byteCount)
   {
     Preconditions.checkState(byteCount >= 0, "Can't release negative bytes");
-    Preconditions.checkState(currentBytes >= byteCount, "Can't release more than used bytes");
+    Preconditions.checkState(
+        currentBytes >= byteCount,
+        StringUtils.format(
+            "Can't release more than used bytes. currentBytes : %d, releasingBytes : %d",
+            currentBytes,
+            byteCount
+        )
+    );
     currentBytes -= byteCount;
+  }
+
+  public static ByteTracker unboundedTracker()
+  {
+    return new ByteTracker(Long.MAX_VALUE);
   }
 }

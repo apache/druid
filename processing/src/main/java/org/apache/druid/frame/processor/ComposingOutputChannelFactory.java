@@ -56,7 +56,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
   }
 
   @Override
-  public OutputChannel openChannel(int partitionNumber) throws IOException
+  public OutputChannel openChannel(int partitionNumber)
   {
     ImmutableList.Builder<Supplier<WritableFrameChannel>> writableFrameChannelSuppliersBuilder = ImmutableList.builder();
     ImmutableList.Builder<Supplier<ReadableFrameChannel>> readableFrameChannelSuppliersBuilder = ImmutableList.builder();

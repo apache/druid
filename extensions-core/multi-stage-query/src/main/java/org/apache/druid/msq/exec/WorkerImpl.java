@@ -193,7 +193,7 @@ public class WorkerImpl implements Worker
     this.intermediateSuperSorterStorageTracker = new ByteTracker(
         MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
     );
-    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableShuffleStorageEnabled(
+    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         QueryContext.of(task.getContext())
     );
   }
@@ -483,7 +483,7 @@ public class WorkerImpl implements Worker
     if (channel instanceof ReadableNilFrameChannel) {
       // Build an empty frame file.
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      FrameFileWriter.open(Channels.newChannel(baos), null).close();
+      FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker()).close();
 
       final ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
 

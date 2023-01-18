@@ -22,6 +22,7 @@ package org.apache.druid.frame.file;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.TestIndex;
@@ -57,7 +58,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
     final FrameFileWriter fileWriter = FrameFileWriter.open(Files.newByteChannel(
         file.toPath(),
         StandardOpenOption.WRITE
-    ), null);
+    ), null, ByteTracker.unboundedTracker());
 
     frames.forEach(frame -> {
       try {

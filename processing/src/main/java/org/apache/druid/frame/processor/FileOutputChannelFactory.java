@@ -22,7 +22,6 @@ package org.apache.druid.frame.processor;
 import com.google.common.base.Suppliers;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
-import org.apache.druid.frame.channel.BoundedWritableFrameChannel;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
@@ -72,7 +71,6 @@ public class FileOutputChannelFactory implements OutputChannelFactory
     final File file = new File(fileChannelsDirectory, fileName);
 
     final WritableFrameChannel writableChannel =
-        new BoundedWritableFrameChannel(
             new WritableFrameFileChannel(
               FrameFileWriter.open(
                   Files.newByteChannel(
@@ -80,10 +78,9 @@ public class FileOutputChannelFactory implements OutputChannelFactory
                       StandardOpenOption.CREATE_NEW,
                       StandardOpenOption.WRITE
                   ),
-                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
+                  byteTracker
               )
-            ),
-            byteTracker
         );
 
     final Supplier<ReadableFrameChannel> readableChannelSupplier = Suppliers.memoize(
@@ -112,7 +109,6 @@ public class FileOutputChannelFactory implements OutputChannelFactory
     FileUtils.mkdirp(fileChannelsDirectory);
     final File file = new File(fileChannelsDirectory, name);
     WritableFrameChannel writableFrameFileChannel =
-        new BoundedWritableFrameChannel(
           new WritableFrameFileChannel(
               FrameFileWriter.open(
                   Files.newByteChannel(
@@ -120,10 +116,9 @@ public class FileOutputChannelFactory implements OutputChannelFactory
                       StandardOpenOption.CREATE_NEW,
                       StandardOpenOption.WRITE
                   ),
-                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+                  ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
+                  byteTracker
               )
-          ),
-          byteTracker
         );
     Supplier<FrameFile> frameFileSupplier = Suppliers.memoize(
         () -> {

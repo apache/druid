@@ -28,6 +28,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -136,7 +137,8 @@ public class FrameProcessorExecutorTest
           new WritableFrameFileChannel(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(outFile.toPath())),
-                  null
+                  null,
+                  ByteTracker.unboundedTracker()
               )
           )
       );
@@ -439,7 +441,8 @@ public class FrameProcessorExecutorTest
           writers.add(
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(files.get(i).toPath())),
-                  null
+                  null,
+                  ByteTracker.unboundedTracker()
               )
           );
         }

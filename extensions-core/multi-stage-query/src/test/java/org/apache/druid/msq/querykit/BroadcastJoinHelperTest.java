@@ -28,6 +28,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
@@ -212,7 +213,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     sideStageChannelNumberMap.put(0, 0);
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker())));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);

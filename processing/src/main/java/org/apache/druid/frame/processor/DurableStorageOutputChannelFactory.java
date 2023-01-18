@@ -26,6 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.DurableStoragePartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameFileChannel;
@@ -128,7 +129,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
         new WritableFrameFileChannel(
             FrameFileWriter.open(
                 Channels.newChannel(storageConnector.write(fileName)),
-                null
+                null,
+                ByteTracker.unboundedTracker()
             )
         );
 
@@ -178,7 +180,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
         new WritableFrameFileChannel(
             FrameFileWriter.open(
                 Channels.newChannel(countingOutputStream),
-                ByteBuffer.allocate(Frame.compressionBufferSize(frameSize))
+                ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
+                ByteTracker.unboundedTracker()
             )
         );
 
@@ -250,7 +253,7 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
 
-      FrameFileWriter.open(Channels.newChannel(storageConnector.write(fileName)), null).close();
+      FrameFileWriter.open(Channels.newChannel(storageConnector.write(fileName)), null, ByteTracker.unboundedTracker()).close();
       return OutputChannel.nil(partitionNumber);
     }
     catch (IOException e) {
