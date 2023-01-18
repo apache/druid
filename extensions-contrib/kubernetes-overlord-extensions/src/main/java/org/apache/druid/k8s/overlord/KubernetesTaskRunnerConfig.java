@@ -25,10 +25,8 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.NotNull;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class KubernetesTaskRunnerConfig
 {
@@ -49,14 +47,6 @@ public class KubernetesTaskRunnerConfig
   // in fact place the istio-proxy container as the first container.  Thus you would specify this value to
   // the name of your primary container.  eg) druid-overlord
   public String primaryContainerName = null;
-
-  @JsonProperty
-  // sometimes you will have a service mesh like istio-proxy that will automatically inject sidecars for
-  // all resources in a particular namespace, because it is automatically injected by some controller, you
-  // do not wish to have this as part of the spec you create for the peon pods, as you could end up with 2
-  // istio containers, one you manually provide in the peon spec from the overlord and one injected by the
-  // overlord.  For any sidecar you wish not to carry over from the overlord, specify the container names here.
-  public Set<String> containersToExclude = new HashSet<>();
 
   @JsonProperty
   // for multi-container jobs, we need this image to shut down sidecars after the main container

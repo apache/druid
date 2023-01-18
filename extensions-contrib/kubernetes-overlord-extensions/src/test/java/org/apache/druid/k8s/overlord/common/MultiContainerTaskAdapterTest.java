@@ -116,7 +116,7 @@ class MultiContainerTaskAdapterTest
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(testClient, config, jsonMapper);
     NoopTask task = NoopTask.create("id", 1);
     PodSpec spec = pod.getSpec();
-    K8sTaskAdapter.massageSpec(config, spec);
+    K8sTaskAdapter.massageSpec(spec, "primary");
     Job actual = adapter.createJobFromPodSpec(
             spec,
             task,

@@ -48,10 +48,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -173,23 +171,19 @@ class K8sTaskAdapterTest
     PodSpec spec = new PodSpec();
     List<Container> containers = new ArrayList<>();
     containers.add(new ContainerBuilder()
-                       .withName("excludeSidecar").build());
+                       .withName("secondary").build());
     containers.add(new ContainerBuilder()
                        .withName("sidecar").build());
     containers.add(new ContainerBuilder()
                        .withName("primary").build());
     spec.setContainers(containers);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.primaryContainerName = "primary";
-    Set<String> containersToExclude = new HashSet<>();
-    containersToExclude.add("excludeSidecar");
-    config.containersToExclude = containersToExclude;
-    K8sTaskAdapter.massageSpec(config, spec);
+    K8sTaskAdapter.massageSpec(spec, "primary");
 
     List<Container> actual = spec.getContainers();
-    Assertions.assertEquals(2, containers.size());
+    Assertions.assertEquals(3, containers.size());
     Assertions.assertEquals("primary", actual.get(0).getName());
-    Assertions.assertEquals("sidecar", actual.get(1).getName());
+    Assertions.assertEquals("secondary", actual.get(1).getName());
+    Assertions.assertEquals("sidecar", actual.get(2).getName());
   }
 
   @Test
@@ -204,17 +198,11 @@ class K8sTaskAdapterTest
     containers.add(new ContainerBuilder()
                        .withName("sidecar").build());
     spec.setContainers(containers);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.primaryContainerName = "primary";
-    Set<String> containersToExclude = new HashSet<>();
-    containersToExclude.add("istio-proxy");
-    config.containersToExclude = containersToExclude;
-    K8sTaskAdapter.massageSpec(config, spec);
 
-    List<Container> actual = spec.getContainers();
-    Assertions.assertEquals(2, actual.size());
-    Assertions.assertEquals("main", actual.get(0).getName());
-    Assertions.assertEquals("sidecar", actual.get(1).getName());
+
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      K8sTaskAdapter.massageSpec(spec, "primary");
+    });
   }
 
 }
