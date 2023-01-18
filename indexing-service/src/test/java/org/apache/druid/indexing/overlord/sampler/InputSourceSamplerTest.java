@@ -176,7 +176,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   public void testNoDataSchema()
   {
     final InputSource inputSource = createInputSource(getTestRows(), null);
-    final SamplerResponse response = inputSourceSampler.sample(inputSource, createInputFormat(), null, null, null);
+    final SamplerResponse response = inputSourceSampler.sample(inputSource, createInputFormat(), null, null);
 
     Assert.assertEquals(6, response.getNumRowsRead());
     Assert.assertEquals(0, response.getNumRowsIndexed());
