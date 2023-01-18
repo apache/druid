@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -79,7 +80,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
@@ -201,7 +201,9 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
 
     final int threads = 10;
-    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threads));
+    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(threads, "NestedDataColumnSupplierTest-%d")
+    );
     Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
     final CountDownLatch threadsStartLatch = new CountDownLatch(1);
     for (int i = 0; i < threads; ++i) {

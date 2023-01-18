@@ -104,7 +104,7 @@ public interface Controller
   /**
    * Periodic update of {@link CounterSnapshots} from subtasks.
    */
-  void updateCounters(CounterSnapshotsTree snapshotsTree);
+  void updateCounters(String taskId, CounterSnapshotsTree snapshotsTree);
 
   /**
    * Reports that results are ready for a subtask.
