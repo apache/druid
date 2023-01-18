@@ -51,7 +51,7 @@ public class DimensionsSpec
 
   private final boolean useNestedColumnIndexerForSchemaDiscovery;
 
-  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, false);
+  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, null);
 
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
   {
