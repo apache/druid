@@ -244,7 +244,7 @@ another build task.
 Tests should run on the Middle Manager by default. Tests can optionally run on the
 Indexer. To run on Indexer:
 
-* In the environment, `export DRUID_INTEGRATION_TEST_INDEXER=indexer`. (Use `middleManager`
+* In the environment, `export USE_INDEXER=indexer`. (Use `middleManager`
   otherwise. If the variable is not set, `middleManager` is the default.)
 * The `cluster/<category>/docker-compose.yaml` file should be for the Middle manager. Create
   a separate file called `cluster/<category>/docker-compose-indexer.yaml` to define the
