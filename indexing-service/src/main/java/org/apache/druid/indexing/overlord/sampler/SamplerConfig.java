@@ -32,13 +32,9 @@ public class SamplerConfig
   private static final int MAX_NUM_ROWS = 5000;
   private static final int DEFAULT_TIMEOUT_MS = 10000;
 
-
-
   private final int numRows;
   private final int timeoutMs;
-
   private final long maxBytesInMemory;
-
   private final long maxClientResponseBytes;
 
   @JsonCreator
