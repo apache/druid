@@ -60,6 +60,12 @@ public class ReaderUtils
 
     // Find columns we need to read from the flattenSpec
     if (flattenSpec != null) {
+      if ((dimensionsSpec.getDimensionNames() == null || dimensionsSpec.getDimensionNames().isEmpty()) &&
+          flattenSpec.isUseFieldDiscovery()) {
+        // Schemaless ingestion needs to read all columns
+        return fullInputSchema;
+      }
+
       // Parse columns needed from flattenSpec
       for (JSONPathFieldSpec fields : flattenSpec.getFields()) {
         if (fields.getType() == JSONPathFieldType.ROOT) {
@@ -117,21 +123,27 @@ public class ReaderUtils
         fieldsRequired.retainAll(fullInputSchema);
         return fieldsRequired;
       }
+    } else {
+      // Without flattenSpec, useFieldDiscovery is default to true and thus needs to read all columns since this is
+      // schemaless
+      if ((dimensionsSpec.getDimensionNames() == null || dimensionsSpec.getDimensionNames().isEmpty())) {
+        return fullInputSchema;
+      }
     }
 
-    // Determine any fields we need to read from parquet file that is used in the transformSpec
+    // Determine any fields we need to read from input file that is used in the transformSpec
     List<Transform> transforms = transformSpec.getTransforms();
     for (Transform transform : transforms) {
       fieldsRequired.addAll(transform.getRequiredColumns());
     }
 
-    // Determine any fields we need to read from parquet file that is used in the dimensionsSpec
+    // Determine any fields we need to read from input file that is used in the dimensionsSpec
     List<DimensionSchema> dimensionSchema = dimensionsSpec.getDimensions();
     for (DimensionSchema dim : dimensionSchema) {
       fieldsRequired.add(dim.getName());
     }
 
-    // Determine any fields we need to read from parquet file that is used in the metricsSpec
+    // Determine any fields we need to read from input file that is used in the metricsSpec
     for (AggregatorFactory agg : aggregators) {
       fieldsRequired.addAll(agg.requiredFields());
     }
