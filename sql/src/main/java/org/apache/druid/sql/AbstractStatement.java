@@ -160,7 +160,12 @@ public abstract class AbstractStatement implements Closeable
 
     // Authentication is done by the planner using the function provided
     // here. The planner ensures that this step is done before planning.
-    authResult = planner.authorize(authorizer, contextResources);
+    try {
+      authResult = planner.authorize(authorizer, contextResources);
+    } catch (Exception e) {
+      log.error(e, "Planner threw an exception during authorization");
+      throw new RuntimeException("Could not authorize resources for query", e);
+    }
     if (!authResult.authorizationResult.isAllowed()) {
       throw new ForbiddenException(authResult.authorizationResult.toMessage());
     }
