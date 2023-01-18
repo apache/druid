@@ -60,6 +60,11 @@ jobs:
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.17.0
+
       - name: setup variables
         run: |
           export base_ref=${{ github.base_ref }}
