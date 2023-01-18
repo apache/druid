@@ -22,10 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
 
@@ -92,13 +89,13 @@ public class SamplerConfig
 
   /**
    * Maximum number of bytes in memory that the {@link org.apache.druid.segment.incremental.IncrementalIndex} used by
-   * {@link InputSourceSampler#sample(InputSource, InputFormat, DataSchema, SamplerConfig}) will be allowed to
-   * accumulate before aborting sampling. Particularly useful for limiting footprint of sample operations as well as
-   * overall response size from sample requests. However, it is not directly correlated to response size since it also
-   * contains the "raw" input data, so actual responses will likely be at least twice the size of this value, depending
-   * on factors such as number of transforms, aggregations in the case of rollup, whether all columns of the input are
-   * present in the dimension spec, and so on. If it is preferred to control client response size, use
-   * {@link SamplerConfig#getMaxClientResponseBytes()} instead.
+   * {@link InputSourceSampler#sample(org.apache.druid.data.input.InputSource, org.apache.druid.data.input.InputFormat, org.apache.druid.segment.indexing.DataSchema, SamplerConfig})
+   * will be allowed to accumulate before aborting sampling. Particularly useful for limiting footprint of sample
+   * operations as well as overall response size from sample requests. However, it is not directly correlated to
+   * response size since it also contains the "raw" input data, so actual responses will likely be at least twice the
+   * size of this value, depending on factors such as number of transforms, aggregations in the case of rollup, whether
+   * all columns of the input are present in the dimension spec, and so on. If it is preferred to control client
+   * response size, use {@link SamplerConfig#getMaxClientResponseBytes()} instead.
    */
   public long getMaxBytesInMemory()
   {
