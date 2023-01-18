@@ -49,7 +49,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -98,8 +97,7 @@ public class InputSourceSampler
       // inputFormat can be null only if inputSource.needsFormat() = false or parser is specified.
       @Nullable final InputFormat inputFormat,
       @Nullable final DataSchema dataSchema,
-      @Nullable final SamplerConfig samplerConfig,
-      @Nullable final TuningConfig tuningConfig
+      @Nullable final SamplerConfig samplerConfig
   )
   {
     Preconditions.checkNotNull(inputSource, "inputSource required");

@@ -33,7 +33,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfig;
 
 import javax.annotation.Nullable;
 
@@ -50,8 +49,6 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   @Nullable
   private final SamplerConfig samplerConfig;
   private final InputSourceSampler inputSourceSampler;
-
-  private final TuningConfig tuningConfig;
 
   @JsonCreator
   public IndexTaskSamplerSpec(
@@ -91,12 +88,11 @@ public class IndexTaskSamplerSpec implements SamplerSpec
 
     this.samplerConfig = samplerConfig;
     this.inputSourceSampler = inputSourceSampler;
-    this.tuningConfig = ingestionSpec.getTuningConfig();
   }
 
   @Override
   public SamplerResponse sample()
   {
-    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig, tuningConfig);
+    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
   }
 }
