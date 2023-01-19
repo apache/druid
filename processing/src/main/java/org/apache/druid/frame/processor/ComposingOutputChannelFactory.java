@@ -86,7 +86,7 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
         () -> new ComposingReadableFrameChannel(
             partitionNumber,
             readableFrameChannelSuppliersBuilder.build(),
-            partitionToChannelMap
+            partitionToChannelMap.get(partitionNumber)
         )
     )::get;
     return OutputChannel.pair(
@@ -148,7 +148,11 @@ public class ComposingOutputChannelFactory implements OutputChannelFactory
           );
         }
 
-        return new ComposingReadableFrameChannel(partitionNumber, suppliers.build(), partitionToChannelMap);
+        return new ComposingReadableFrameChannel(
+            partitionNumber,
+            suppliers.build(),
+            partitionToChannelMap.get(partitionNumber)
+        );
       }
 
       @Override

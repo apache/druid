@@ -33,6 +33,7 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -54,12 +55,12 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   public FileOutputChannelFactory(
       final File fileChannelsDirectory,
       final int frameSize,
-      final ByteTracker byteTracker
+      @Nullable final ByteTracker byteTracker
   )
   {
     this.fileChannelsDirectory = fileChannelsDirectory;
     this.frameSize = frameSize;
-    this.byteTracker = byteTracker == null ? new ByteTracker(Long.MAX_VALUE) : byteTracker;
+    this.byteTracker = byteTracker == null ? ByteTracker.unboundedTracker() : byteTracker;
   }
 
   @Override

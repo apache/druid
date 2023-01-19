@@ -25,17 +25,18 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.Frame;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
 /**
  * A composed readable channel to read frames. The channel can encapsulate multiple readable channels in it and
  * automatically switches to next channels once the currently read channel is finished.
  */
+@NotThreadSafe
 public class ComposingReadableFrameChannel implements ReadableFrameChannel
 {
   private final List<Supplier<ReadableFrameChannel>> channels;
@@ -45,16 +46,14 @@ public class ComposingReadableFrameChannel implements ReadableFrameChannel
   public ComposingReadableFrameChannel(
       int partition,
       List<Supplier<ReadableFrameChannel>> channels,
-      Map<Integer, HashSet<Integer>> partitionToChannelMap
+      HashSet<Integer> validChannels
   )
   {
     Preconditions.checkNotNull(channels, "channels is null");
-    Preconditions.checkNotNull(partitionToChannelMap, "partitionToChannelMap is null");
-    if (partitionToChannelMap.get(partition) == null) {
+    if (validChannels == null) {
       // no writes for the partition, send an empty readable channel
       this.channels = ImmutableList.of(() -> ReadableNilFrameChannel.INSTANCE);
     } else {
-      HashSet<Integer> validChannels = partitionToChannelMap.get(partition);
       Preconditions.checkState(validChannels.size() > 0, "No channels found for partition " + partition);
       ImmutableList.Builder<Supplier<ReadableFrameChannel>> validChannelsBuilder = ImmutableList.builder();
       ArrayList<Integer> sortedChannelIds = new ArrayList<>(validChannels);

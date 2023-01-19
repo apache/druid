@@ -44,7 +44,7 @@ public class ByteTracker
   {
     Preconditions.checkState(byteCount >= 0, "Can't reserve negative bytes");
 
-    if (currentBytes + byteCount > maxBytes) {
+    if (Math.addExact(currentBytes, byteCount) > maxBytes) {
       throw new ResourceLimitExceededException(
           StringUtils.format(
               "Can't allocate any more bytes. maxBytes = %d, currentBytes = %d, requestedBytes = %d",
@@ -54,7 +54,7 @@ public class ByteTracker
           )
       );
     }
-    currentBytes += byteCount;
+    currentBytes = Math.addExact(currentBytes, byteCount);
   }
 
   public synchronized void release(long byteCount)
@@ -68,7 +68,7 @@ public class ByteTracker
             byteCount
         )
     );
-    currentBytes -= byteCount;
+    currentBytes = Math.subtractExact(currentBytes, byteCount);
   }
 
   public static ByteTracker unboundedTracker()

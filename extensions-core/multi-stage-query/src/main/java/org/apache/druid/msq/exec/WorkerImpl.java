@@ -165,7 +165,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
-  private final ByteTracker intermediateSuperSorterStorageTracker;
+  private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
 
   /**
@@ -190,7 +190,7 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.intermediateSuperSorterStorageTracker = new ByteTracker(
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(
         MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(QueryContext.of(task.getContext()))
     );
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
@@ -689,7 +689,7 @@ public class WorkerImpl implements Worker
     final File fileChannelDirectory =
         new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
     final FileOutputChannelFactory fileOutputChannelFactory =
-        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterStorageTracker);
+        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
     if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))) {
       if (durableStageStorageEnabled) {

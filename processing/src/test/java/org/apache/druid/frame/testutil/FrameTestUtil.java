@@ -76,9 +76,12 @@ public class FrameTestUtil
 
   public static File writeFrameFile(final Sequence<Frame> frames, final File file) throws IOException
   {
-    try (final FrameFileWriter writer = FrameFileWriter.open(
-        Channels.newChannel(new FileOutputStream(file)), null, ByteTracker.unboundedTracker()
-    )) {
+    try (
+        final FileOutputStream fos = new FileOutputStream(file);
+        final FrameFileWriter writer = FrameFileWriter.open(
+            Channels.newChannel(fos), null, ByteTracker.unboundedTracker()
+        )
+    ) {
       frames.forEach(
           frame -> {
             try {

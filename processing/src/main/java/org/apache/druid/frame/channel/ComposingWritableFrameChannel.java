@@ -66,6 +66,10 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
                            .add(currentIndex);
     }
     catch (ResourceLimitExceededException rlee) {
+      // currently we're falling back to next available channel after we receive an RLEE. This is done so that the
+      // exception is automatically passed up to the user incase all the channels are exhausted. If in future, more
+      // cases come up to dictate control flow, then we can switch to returning a custom object from the channel's write
+      // operation.
       channels.get(currentIndex).get().close();
       currentIndex++;
       if (currentIndex >= channels.size()) {
