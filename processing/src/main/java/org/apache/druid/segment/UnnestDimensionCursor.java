@@ -83,7 +83,7 @@ public class UnnestDimensionCursor implements Cursor
   private final BitSet allowedBitSet;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
-  private IndexedInts indexedIntsForCurrentRow;
+  @Nullable private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
   private SingleIndexInts indexIntsForRow;
 
@@ -319,6 +319,7 @@ public class UnnestDimensionCursor implements Cursor
    * This would also create a bitset for dictonary encoded columns to
    * check for matching values specified in allowedList of UnnestDataSource.
    */
+  @Nullable
   private void initialize()
   {
     IdLookup idLookup = dimSelector.idLookup();
@@ -332,8 +333,6 @@ public class UnnestDimensionCursor implements Cursor
     }
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
-    } else {
-      this.indexedIntsForCurrentRow = null;
     }
     if (!allowedBitSet.isEmpty()) {
       if (!allowedBitSet.get(indexedIntsForCurrentRow.get(index))) {
