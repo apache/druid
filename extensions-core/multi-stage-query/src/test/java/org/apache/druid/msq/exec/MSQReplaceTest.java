@@ -144,7 +144,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("cnt", ColumnType.LONG).build();
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL SELECT "
@@ -205,7 +205,7 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("user", ColumnType.STRING).build();
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     testIngestQuery().setSql(

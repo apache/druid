@@ -637,7 +637,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return new IngestTester();
   }
 
-  private ObjectMapper setupObjectMapper(Injector injector)
+  public static ObjectMapper setupObjectMapper(Injector injector)
   {
     ObjectMapper mapper = injector.getInstance(ObjectMapper.class)
                                   .registerModules(new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
@@ -746,7 +746,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
+  public static Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
   {
     if (resultsReport == null) {
       return Optional.empty();
@@ -1241,5 +1241,4 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
   }
-
 }
