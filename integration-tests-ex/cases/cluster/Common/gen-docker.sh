@@ -316,7 +316,7 @@ function gen_middlemanager_env {
 function gen_indexer_volumes {
 	# Test data
 	gen_common_volumes \
-		"../../resources:/resources"
+		"\${MODULE_DIR}/resources:/resources"
 }
 
 function gen_indexer {

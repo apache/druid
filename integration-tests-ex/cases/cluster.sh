@@ -21,6 +21,9 @@
 # Maps category names to cluster names. The mapping here must match
 # that in the test category classes when @Cluster is used.
 
+# Fail if any command fails
+set -e
+
 # Enable for debugging
 #set -x
 
@@ -31,6 +34,8 @@ function usage {
 Usage: $0 cmd [category]
   -h, help
       Display this message
+  prepare category
+      Generate the docker-compose.yaml file for the category for debugging.
   up category
       Start the cluster
   down category
@@ -38,7 +43,7 @@ Usage: $0 cmd [category]
   status category
       Status of the cluster (for debugging within build scripts)
   compose-cmd category
-      Pass the command to Docker compose.
+      Pass the command to Docker compose. Cluster should already be up.
 EOF
 }
 
@@ -153,7 +158,7 @@ function docker_file {
 	fi
 }
 
-# Each test that uses static (non-generated) docker-compose files
+# Each test that uses static (non-generated) docker compose files
 # must have a default docker-compose.yaml file which corresponds to using
 # the MiddleManager (or no indexer). A test can optionally include a second file called
 # docker-compose-indexer.yaml which uses the Indexer in place of Middle Manager.
@@ -164,7 +169,7 @@ function choose_static_file {
 	    # if it is set at all.
 		if [ "$USE_INDEXER" != "indexer" ] && [ "$USE_INDEXER" != "middleManager" ]
 		then
-		  echo "USE_INDEXER must be 'indexer' or 'middleManager' (is '$USE_INDEXER')" 1>&2
+		  echo "USE_INDEXER must be 'indexer' or 'middleManager' (it is '$USE_INDEXER')" 1>&2
 		  exit 1
 		fi
 		if [ "$USE_INDEXER" == "indexer" ]; then
@@ -201,7 +206,12 @@ case $CMD in
 		;;
 	"help" )
 		usage
-		docker-compose help
+		docker compose help
+		;;
+	"prepare" )
+		category $*
+		build_shared_dir
+		docker_file
 		;;
 	"up" )
 		category $*
@@ -209,7 +219,7 @@ case $CMD in
 		build_shared_dir
 		docker_file
 	    cd $COMPOSE_DIR
-		docker-compose $DOCKER_ARGS up -d
+		docker compose $DOCKER_ARGS up -d
 		# Enable the following for debugging
 		#show_status
 		;;
@@ -225,12 +235,12 @@ case $CMD in
 		#show_status
 		verify_docker_file
 	    cd $COMPOSE_DIR
-		docker-compose $DOCKER_ARGS $CMD
+		docker compose $DOCKER_ARGS $CMD
 		;;
 	"*" )
 		category $*
-		docker_file
+		verify_docker_file
 	    cd $COMPOSE_DIR
-		docker-compose $DOCKER_ARGS $CMD
+		docker compose $DOCKER_ARGS $CMD
 		;;
 esac
