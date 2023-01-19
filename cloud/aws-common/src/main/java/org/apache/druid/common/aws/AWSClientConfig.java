@@ -36,6 +36,9 @@ public class AWSClientConfig
   @JsonProperty
   protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
 
+  @JsonProperty
+  protected Integer maxConnections;
+
   public String getProtocol()
   {
     return protocol;
@@ -56,6 +59,11 @@ public class AWSClientConfig
     return forceGlobalBucketAccessEnabled;
   }
 
+  public Integer getMaxConnections()
+  {
+    return maxConnections;
+  }
+
   @Override
   public String toString()
   {
@@ -64,6 +72,7 @@ public class AWSClientConfig
            ", disableChunkedEncoding=" + disableChunkedEncoding +
            ", enablePathStyleAccess=" + enablePathStyleAccess +
            ", forceGlobalBucketAccessEnabled=" + forceGlobalBucketAccessEnabled +
+           ", maxConnections=" + maxConnections +
            '}';
   }
 }

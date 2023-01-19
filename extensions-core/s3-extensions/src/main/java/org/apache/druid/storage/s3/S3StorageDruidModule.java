@@ -135,6 +135,9 @@ public class S3StorageDruidModule implements DruidModule
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
     final Protocol protocol = S3Utils.determineProtocol(clientConfig, endpointConfig);
+    if (clientConfig.getMaxConnections() != null) {
+      configuration.setMaxConnections(clientConfig.getMaxConnections());
+    }
     final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
         .builder()
         .withCredentials(provider)
