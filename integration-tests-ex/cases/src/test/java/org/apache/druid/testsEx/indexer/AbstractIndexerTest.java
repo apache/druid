@@ -34,6 +34,9 @@ import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
+import org.junit.Rule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -65,6 +68,28 @@ public abstract class AbstractIndexerTest
 
   @Inject
   protected IntegrationTestingConfig config;
+
+  @Rule
+  public TestWatcher watchman = new TestWatcher()
+  {
+    @Override
+    public void starting(Description d)
+    {
+      LOG.info("RUNNING %s", d.getDisplayName());
+    }
+
+    @Override
+    public void failed(Throwable e, Description d)
+    {
+      LOG.error("FAILED %s", d.getDisplayName());
+    }
+
+    @Override
+    public void finished(Description d)
+    {
+      LOG.info("FINISHED %s", d.getDisplayName());
+    }
+  };
 
   protected Closeable unloader(final String dataSource)
   {

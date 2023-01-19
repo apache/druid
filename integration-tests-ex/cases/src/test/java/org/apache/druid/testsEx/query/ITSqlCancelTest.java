@@ -31,21 +31,17 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
-import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 @RunWith(DruidTestRunner.class)
@@ -110,10 +106,10 @@ public class ITSqlCancelTest
         throw new ISE("Query is not canceled after cancel request");
       }
       QueryException queryException = jsonMapper.readValue(queryResponse.getContent(), QueryException.class);
-      if (!QueryInterruptedException.QUERY_CANCELED.equals(queryException.getErrorCode())) {
+      if (!QueryException.QUERY_CANCELED_ERROR_CODE.equals(queryException.getErrorCode())) {
         throw new ISE(
             "Expected error code [%s], actual [%s]",
-            QueryInterruptedException.QUERY_CANCELED,
+            QueryException.QUERY_CANCELED_ERROR_CODE,
             queryException.getErrorCode()
         );
       }

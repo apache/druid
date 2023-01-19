@@ -32,8 +32,8 @@ import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.testsEx.categories.QueryError;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
-import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,7 +52,7 @@ import org.junit.runner.RunWith;
  *   {@link org.apache.druid.sql.http.SqlResource} and {@link org.apache.druid.server.QueryResource}.
  */
 @RunWith(DruidTestRunner.class)
-@Category(Query.class)
+@Category(QueryError.class)
 public class ITQueryErrorTest
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";

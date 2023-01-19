@@ -46,9 +46,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,28 +106,6 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   @Inject
   private DataLoaderHelper dataLoaderHelper;
-
-  @Rule
-  public TestWatcher watchman = new TestWatcher()
-  {
-    @Override
-    public void starting(Description d)
-    {
-      LOG.info("RUNNING %s", d.getDisplayName());
-    }
-
-    @Override
-    public void failed(Throwable e, Description d)
-    {
-      LOG.error("FAILED %s", d.getDisplayName());
-    }
-
-    @Override
-    public void finished(Description d)
-    {
-      LOG.info("FINISHED %s", d.getDisplayName());
-    }
-  };
 
   /**
    * Reads file as utf-8 string and replace %%DATASOURCE%% with the provide datasource value.

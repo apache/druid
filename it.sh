@@ -111,23 +111,31 @@ function build_override {
 		cat "$OVERRIDE_ENV" >> "$OVERRIDE_FILE"
 	fi
 
+  # Providing AWS credentials for test groups using prepopulated-data
+  export PREPOPULATED_DATA_ENV_FILE=$DRUID_DEV/integration-tests-ex/cases/cluster/Common/prepopulated-data.env
+  case $CATEGORY in
+      Query|QueryError|QueryRetry)
+        cat "$PREPOPULATED_DATA_ENV_FILE" >> "$OVERRIDE_FILE"
+        ;;
+  esac
+
 	# User-local settings?
 	LOCAL_ENV="$HOME/druid-it/${CATEGORY}.env"
 	if [ -f "$LOCAL_ENV" ]; then
 		cat "$LOCAL_ENV" >> "$OVERRIDE_FILE"
 	fi
 
-    # Add all environment variables of the form druid_*
-    set +e # Grep gives exit status 1 if no lines match. Let's not fail.
-    env | grep "^druid_" >> "$OVERRIDE_FILE"
-    set -e
+  # Add all environment variables of the form druid_*
+  set +e # Grep gives exit status 1 if no lines match. Let's not fail.
+  env | grep "^druid_" >> "$OVERRIDE_FILE"
+  set -e
 
-    # TODO: Add individual env vars that we want to pass from the local
-    # environment into the container.
+  # TODO: Add individual env vars that we want to pass from the local
+  # environment into the container.
 
-    # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
-    target_dir=`pwd`
-    export OVERRIDE_ENV="$target_dir/$OVERRIDE_FILE"
+  # Reuse the OVERRIDE_ENV variable to pass the full list to Docker compose
+  target_dir=`pwd`
+  export OVERRIDE_ENV="$target_dir/$OVERRIDE_FILE"
 }
 
 function prepare_category {
