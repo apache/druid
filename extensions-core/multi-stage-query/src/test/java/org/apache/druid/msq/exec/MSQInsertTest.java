@@ -352,7 +352,6 @@ public class MSQInsertTest extends MSQTestBase
 
   }
 
-
   @Test
   public void testRollUpOnFoo1ComplexCol()
   {

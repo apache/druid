@@ -29,6 +29,8 @@ public class PlannerCaptureHook implements PlannerHook
 {
   private RelRoot relRoot;
   private SqlInsert insertNode;
+  private DruidRel<?> druidRel;
+  private Object execPlan;
 
   @Override
   public void captureSql(String sql)
@@ -45,7 +47,8 @@ public class PlannerCaptureHook implements PlannerHook
   @Override
   public void captureDruidRel(DruidRel<?> druidRel)
   {
-    // Not used at present. Add a field to capture this if you need it.
+    this.druidRel = druidRel;
+    this.execPlan = druidRel.dryRun();
   }
 
   @Override
@@ -74,5 +77,15 @@ public class PlannerCaptureHook implements PlannerHook
   public SqlInsert insertNode()
   {
     return insertNode;
+  }
+
+  public DruidRel<?> druidRel()
+  {
+    return druidRel;
+  }
+
+  public Object execPlan()
+  {
+    return execPlan;
   }
 }

@@ -101,8 +101,12 @@ public class QueryTestBuilder
   protected boolean verifyNativeQueries = true;
   protected AuthConfig authConfig = new AuthConfig();
   protected PlannerFixture plannerFixture;
+  @Nullable
   protected String expectedLogicalPlan;
+  @Nullable
   protected SqlSchema expectedSqlSchema;
+  @Nullable
+  protected String expectedExecPlan;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -280,6 +284,12 @@ public class QueryTestBuilder
     return this;
   }
 
+  public QueryTestBuilder expectedExecPlan(String expectedExecPlan)
+  {
+    this.expectedExecPlan = expectedExecPlan;
+    return this;
+  }
+
   public QueryTestBuilder expectedSqlSchema(SqlSchema querySchema)
   {
     this.expectedSqlSchema = querySchema;
@@ -320,5 +330,4 @@ public class QueryTestBuilder
   {
     return build().resultsOnly();
   }
-
 }

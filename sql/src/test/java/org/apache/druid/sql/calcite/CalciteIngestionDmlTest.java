@@ -215,6 +215,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private Query<?> expectedQuery;
     private Matcher<Throwable> validationErrorMatcher;
     private String expectedLogicalPlanResource;
+    private String expectedPhysicalPlanResource;
     private List<SqlParameter> parameters;
 
     private IngestionDmlTester()
@@ -305,6 +306,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       return this;
     }
 
+    public IngestionDmlTester expectPhysicalPlanFrom(String resource)
+    {
+      this.expectedPhysicalPlanResource = resource;
+      return this;
+    }
+
     public void verify()
     {
       if (didTest) {
@@ -390,6 +397,15 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       } else {
         expectedLogicalPlan = null;
       }
+      String expectedPhysicalPlan;
+      if (expectedPhysicalPlanResource != null) {
+        expectedPhysicalPlan = StringUtils.getResource(
+            this,
+            "/calcite/expected/ingest/" + expectedPhysicalPlanResource + "-physicalPlan.txt"
+        );
+      } else {
+        expectedPhysicalPlan = null;
+      }
       testBuilder()
           .sql(sql)
           .queryContext(queryContext)
@@ -399,6 +415,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           .expectedQuery(expectedQuery)
           .expectedResults(Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}))
           .expectedLogicalPlan(expectedLogicalPlan)
+          .expectedExecPlan(expectedPhysicalPlan)
           .run();
     }
 

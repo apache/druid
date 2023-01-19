@@ -64,10 +64,11 @@ import java.util.stream.Collectors;
  * complexity, test execution is done in two steps:
  * <ol>
  * <li>Execute the query and capture results.</li>
- * <li>Verify those results as requested in the builder.</li>
+ * <li>Verify results as requested in the builder.</li>
  * </ol>
- * Verification is sometimes tied to some context or other. The steps can be
- * defined specific to that context when needed.
+ * Verification is sometimes tied to some context or other, such as verifying
+ * something provided by some specific exception, but not the standard planner.
+ * The steps can be defined specific to that context when needed.
  */
 public class QueryTestRunner
 {
@@ -212,7 +213,8 @@ public class QueryTestRunner
     public BaseExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
+      doCapture = builder.expectedLogicalPlan != null
+               || builder.expectedExecPlan != null;
     }
 
     public List<QueryResults> results()
@@ -552,6 +554,49 @@ public class QueryTestRunner
     }
   }
 
+  public static class VerifyExecPlan implements QueryVerifyStep
+  {
+    private final ExecuteQuery execStep;
+
+    public VerifyExecPlan(ExecuteQuery execStep)
+    {
+      this.execStep = execStep;
+    }
+
+    @Override
+    public void verify()
+    {
+      for (QueryResults queryResults : execStep.results()) {
+        verifyExecPlan(queryResults);
+      }
+    }
+
+    private void verifyExecPlan(QueryResults queryResults)
+    {
+      String expectedPlan = execStep.builder().expectedExecPlan;
+      String actualPlan = visualizePlan(queryResults.capture);
+      System.out.println(actualPlan);
+      Assert.assertEquals(expectedPlan, actualPlan);
+    }
+
+    private String visualizePlan(PlannerCaptureHook hook)
+    {
+      // Whatever the plan is: convert it to pretty-printed JSON.
+      Object execPlan = hook.execPlan();
+      if (execPlan == null) {
+        return "null";
+      }
+      try {
+        return execStep.builder().config.jsonMapper()
+            .writerWithDefaultPrettyPrinter()
+            .writeValueAsString(execPlan);
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException("JSON conversion failed", e);
+      }
+    }
+  }
+
   /**
    * Verify the exception thrown by a query using a JUnit expected
    * exception. This is actually an awkward way to to the job, but it is
@@ -664,6 +709,11 @@ public class QueryTestRunner
       // that reversed the steps.
       if (builder.verifyNativeQueries && builder.expectedQueries != null) {
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
+      }
+
+      // Verify the physical plan, if requested.
+      if (builder.expectedExecPlan != null) {
+        verifySteps.add(new QueryTestRunner.VerifyExecPlan(execStep));
       }
       if (builder.expectedResultsVerifier != null) {
         verifySteps.add(new VerifyResults(finalExecStep));
