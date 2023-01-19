@@ -232,14 +232,14 @@ public class Expressions
   {
     // Translate field references.
     final RexFieldAccess ref = (RexFieldAccess) rexNode;
-    // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
-    // while the underlying datasource is the scan stub created from LogicalValuesRule
-    // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
-    // This exception is caught while returning false from isValidDruidQuery() method
 
     //use this index to return
     final int index = rowSignature.getColumnNames().indexOf(ref.getField().getName());
     if (ref.getField().getIndex() > rowSignature.size()) {
+      // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
+      // while the underlying datasource is the scan stub created from LogicalValuesRule
+      // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
+      // This exception is caught while returning false from isValidDruidQuery() method
       throw new CannotBuildQueryException(StringUtils.format(
           "Cannot build query as column name [%s] does not exist in row [%s]", ref.getField().getName(), rowSignature)
       );
