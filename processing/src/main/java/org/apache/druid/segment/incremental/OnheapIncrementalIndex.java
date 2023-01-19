@@ -126,11 +126,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // preserveExistingMetrics should only be set true for DruidInputSource since that is the only case where we can have existing metrics
       // This is currently only use by auto compaction and should not be use for anything else.
       boolean preserveExistingMetrics,
-      boolean useMaxMemoryEstimates,
-      boolean useNestedColumnIndexerSchemaDiscovery
+      boolean useMaxMemoryEstimates
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, concurrentEventAdd, preserveExistingMetrics, useMaxMemoryEstimates, useNestedColumnIndexerSchemaDiscovery);
+    super(
+        incrementalIndexSchema,
+        deserializeComplexMetrics,
+        concurrentEventAdd,
+        preserveExistingMetrics,
+        useMaxMemoryEstimates
+    );
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
@@ -657,8 +662,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           maxRowCount,
           maxBytesInMemory,
           preserveExistingMetrics,
-          useMaxMemoryEstimates,
-          useNestedColumnIndexerForSchemaDiscovery
+          useMaxMemoryEstimates
       );
     }
   }
@@ -666,7 +670,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   public static class Spec implements AppendableIndexSpec
   {
     private static final boolean DEFAULT_PRESERVE_EXISTING_METRICS = false;
-    private static final boolean DEFAULT_USE_NESTED_COLUMN_INDEXER_SCHEMA_DISCOVERY = false;
     public static final String TYPE = "onheap";
 
     // When set to true, for any row that already has metric (with the same name defined in metricSpec),
@@ -676,26 +679,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     // This is currently only use by auto compaction and should not be use for anything else.
     final boolean preserveExistingMetrics;
 
-    final boolean useNestedColumnIndexerForSchemaDiscovery;
-
     public Spec()
     {
       this.preserveExistingMetrics = DEFAULT_PRESERVE_EXISTING_METRICS;
-      this.useNestedColumnIndexerForSchemaDiscovery = DEFAULT_USE_NESTED_COLUMN_INDEXER_SCHEMA_DISCOVERY;
     }
 
     @JsonCreator
     public Spec(
-        final @JsonProperty("preserveExistingMetrics") @Nullable Boolean preserveExistingMetrics,
-        final @JsonProperty("useNestedColumnIndexerForSchemaDiscovery") @Nullable Boolean useNestedColumnIndexerForSchemaDiscovery
+        final @JsonProperty("preserveExistingMetrics") @Nullable Boolean preserveExistingMetrics
     )
     {
       this.preserveExistingMetrics = preserveExistingMetrics != null
                                      ? preserveExistingMetrics
                                      : DEFAULT_PRESERVE_EXISTING_METRICS;
-      this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery != null
-                                                      ? useNestedColumnIndexerForSchemaDiscovery
-                                                      : DEFAULT_USE_NESTED_COLUMN_INDEXER_SCHEMA_DISCOVERY;
     }
 
     @JsonProperty
@@ -707,8 +703,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public AppendableIndexBuilder builder()
     {
-      return new Builder().setPreserveExistingMetrics(preserveExistingMetrics)
-                          .setUseNestedColumnIndexerForSchemaDiscovery(useNestedColumnIndexerForSchemaDiscovery);
+      return new Builder().setPreserveExistingMetrics(preserveExistingMetrics);
     }
 
     @Override
@@ -718,13 +713,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // tracks active index and not the index being flushed to disk, to account for that
       // we halved default to 1/6(max jvm memory)
       return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
-    }
-
-    @JsonProperty
-    @Override
-    public boolean useNestedColumnIndexerForSchemaDiscovery()
-    {
-      return useNestedColumnIndexerForSchemaDiscovery;
     }
 
     @Override
@@ -737,14 +725,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         return false;
       }
       Spec spec = (Spec) o;
-      return preserveExistingMetrics == spec.preserveExistingMetrics &&
-             useNestedColumnIndexerForSchemaDiscovery == spec.useNestedColumnIndexerForSchemaDiscovery;
+      return preserveExistingMetrics == spec.preserveExistingMetrics;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(preserveExistingMetrics, useNestedColumnIndexerForSchemaDiscovery);
+      return Objects.hash(preserveExistingMetrics);
     }
   }
 }

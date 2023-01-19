@@ -30,12 +30,13 @@ import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.AbstractDatasourceDefn;
+import org.apache.druid.catalog.model.table.BaseExternTableTest;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
-import org.apache.druid.catalog.model.table.InlineTableDefn;
-import org.apache.druid.catalog.model.table.InputFormats;
+import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogTests;
+import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.AuthConfig;
@@ -47,6 +48,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -90,7 +92,7 @@ public class CatalogResourceTest
   {
     @SuppressWarnings("unchecked")
     Map<String, Object> result = (Map<String, Object>) resp.getEntity();
-    return (Long) result.get("version");
+    return CatalogUtils.getLong(result, "version");
   }
 
   @Test
@@ -145,9 +147,9 @@ public class CatalogResourceTest
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Inline input source
-    TableSpec inputSpec = TableBuilder.external(InlineTableDefn.TABLE_TYPE, "inline")
-        .format(InputFormats.CSV_FORMAT_TYPE)
-        .data("a,b,1", "c,d,2")
+    TableSpec inputSpec = TableBuilder.external("inline")
+        .inputSource(toMap(new InlineInputSource("a,b,1\nc,d,2\n")))
+        .inputFormat(BaseExternTableTest.CSV_FORMAT)
         .column("a", Columns.VARCHAR)
         .column("b", Columns.VARCHAR)
         .column("c", Columns.BIGINT)
@@ -158,6 +160,16 @@ public class CatalogResourceTest
     // Wrong spec type
     resp = resource.postTable(TableId.DRUID_SCHEMA, "invalid", inputSpec, 0, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+  }
+
+  private Map<String, Object> toMap(Object obj)
+  {
+    try {
+      return dbFixture.storage.jsonMapper().convertValue(obj, ExternalTableDefn.MAP_TYPE_REF);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "bad conversion");
+    }
   }
 
   @Test
@@ -611,7 +623,7 @@ public class CatalogResourceTest
 
     resp = resource.getTable(TableId.DRUID_SCHEMA, tableName, postBy(CatalogTests.READER_USER));
     TableMetadata read = (TableMetadata) resp.getEntity();
-    assertNull(read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY));
+    assertNull(read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY));
 
     // Hide
     cmd = new HideColumns(Arrays.asList("a", "b"));
@@ -625,7 +637,7 @@ public class CatalogResourceTest
     read = (TableMetadata) resp.getEntity();
     assertEquals(
         Arrays.asList("a", "b"),
-        read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
     assertTrue(read.updateTime() > version);
 
@@ -638,7 +650,7 @@ public class CatalogResourceTest
     read = (TableMetadata) resp.getEntity();
     assertEquals(
         Collections.singletonList("b"),
-        read.spec().properties().get(AbstractDatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
+        read.spec().properties().get(DatasourceDefn.HIDDEN_COLUMNS_PROPERTY)
     );
     assertTrue(read.updateTime() > version);
   }

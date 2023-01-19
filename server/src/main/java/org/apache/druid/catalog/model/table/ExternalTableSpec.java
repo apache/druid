@@ -28,13 +28,13 @@ import javax.annotation.Nullable;
 /**
  * Catalog form of an external table specification used to pass along the three
  * components needed for an external table in MSQ ingest. Just like
- * {@code ExternalTableSource}, except that the parameters are not required
- * to be non-null.
+ * {@code ExternalTableSource}, except that the class is visible in this
+ * module.
  */
 public class ExternalTableSpec
 {
-  @Nullable public final InputSource inputSource;
-  @Nullable public final InputFormat inputFormat;
+  public final InputSource inputSource;
+  public final InputFormat inputFormat;
   @Nullable public final RowSignature signature;
 
   public ExternalTableSpec(

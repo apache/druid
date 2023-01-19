@@ -22,7 +22,6 @@ package org.apache.druid.testsEx.indexer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.tests.indexer.AbstractLocalInputSourceParallelIndexTest;
 import org.apache.druid.testsEx.categories.InputFormat;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Test;

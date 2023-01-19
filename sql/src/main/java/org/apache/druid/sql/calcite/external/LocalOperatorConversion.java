@@ -21,7 +21,7 @@ package org.apache.druid.sql.calcite.external;
 
 import com.google.inject.Inject;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.catalog.model.table.LocalTableDefn;
+import org.apache.druid.catalog.model.table.LocalInputSourceDefn;
 
 public class LocalOperatorConversion extends CatalogExternalTableOperatorConversion
 {
@@ -34,6 +34,6 @@ public class LocalOperatorConversion extends CatalogExternalTableOperatorConvers
       final TableDefnRegistry registry
   )
   {
-    super(FUNCTION_NAME, registry, LocalTableDefn.TABLE_TYPE, registry.jsonMapper());
+    super(FUNCTION_NAME, registry, LocalInputSourceDefn.TYPE_KEY, registry.jsonMapper());
   }
 }

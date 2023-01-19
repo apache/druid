@@ -32,7 +32,4 @@ public interface AppendableIndexSpec
 
   // Returns the default max bytes in memory for this index.
   long getDefaultMaxBytesInMemory();
-
-  @SuppressWarnings("unused")
-  boolean useNestedColumnIndexerForSchemaDiscovery();
 }
