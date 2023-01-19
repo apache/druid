@@ -540,6 +540,14 @@ jobs:
       env: JVM_RUNTIME='-Djvm.runtime=8' USE_INDEXER='indexer'
       script: ./it.sh travis InputFormat
 
+    - &integration_tests_ex
+      name: "(Compile=openjdk8, Run=openjdk11) query integration test (new)"
+      stage: Tests - phase 2
+      jdk: openjdk8
+      services: *integration_test_services
+      env: JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
+      script: ./it.sh travis Query
+      
     # END - Integration tests for Compile with Java 8 and Run with Java 8
 
     # START - Integration tests for Compile with Java 8 and Run with Java 11
@@ -566,11 +574,6 @@ jobs:
       jdk: openjdk8
       stage: cron
       env: TESTNG_GROUPS='-Dgroups=perfect-rollup-parallel-batch-index' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager'
-
-    - <<: *integration_query
-      name: "(Compile=openjdk8, Run=openjdk11) query integration test"
-      jdk: openjdk8
-      env: TESTNG_GROUPS='-Dgroups=query' JVM_RUNTIME='-Djvm.runtime=11' USE_INDEXER='middleManager' OVERRIDE_CONFIG_PATH='./environment-configs/test-groups/prepopulated-data'
 
     - <<: *integration_query_retry
       name: "(Compile=openjdk8, Run=openjdk11) query retry integration test for missing segments"
