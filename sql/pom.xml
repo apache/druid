@@ -170,6 +170,11 @@
       <groupId>org.apache.calcite.avatica</groupId>
       <artifactId>avatica-metrics</artifactId>
     </dependency>
+	<dependency>
+	  <groupId>commons-lang</groupId>
+	  <artifactId>commons-lang</artifactId>
+	  <version>2.6</version>
+	</dependency>
     <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>

@@ -73,7 +73,6 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
-
   private static final String DESTINATION_DATASOURCE = "dataSource";
   private static final String DESTINATION_REPORT = "taskReport";
 
@@ -89,7 +88,6 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
-
 
   MSQTaskQueryMaker(
       @Nullable final String targetDataSource,
@@ -110,6 +108,22 @@ public class MSQTaskQueryMaker implements QueryMaker
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
+    Pair<String, MSQControllerTask> plan = preparePlan(druidQuery);
+    return execute(plan.left, plan.right);
+  }
+
+  @Override
+  public Object explain(DruidQuery druidQuery)
+  {
+    Pair<String, MSQControllerTask> plan = preparePlan(druidQuery);
+    return plan.right;
+  }
+
+  /**
+   * Prepare the plan returning a pair of (taskID, task spec).
+   */
+  private Pair<String, MSQControllerTask> preparePlan(final DruidQuery druidQuery)
+  {
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     QueryContext queryContext = plannerContext.queryContext();
@@ -262,6 +276,11 @@ public class MSQTaskQueryMaker implements QueryMaker
         null
     );
 
+    return Pair.of(taskId, controllerTask);
+  }
+
+  private QueryResponse<Object[]> execute(final String taskId, final MSQControllerTask controllerTask)
+  {
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);
     return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
@@ -282,5 +301,4 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     return retVal;
   }
-
 }

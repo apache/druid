@@ -85,6 +85,22 @@ public class TypeParser
     {
       return measureType;
     }
+
+    @Override
+    public String toString()
+    {
+      StringBuilder buf = new StringBuilder("ParsedType{type=")
+          .append(type)
+          .append(", kind=")
+          .append(kind.name());
+      if (timeGrain != null) {
+        buf.append(", time grain=").append(timeGrain);
+      }
+      if (measureType != null) {
+        buf.append(", measure type=").append(measureType.toString());
+      }
+      return buf.append("}").toString();
+    }
   }
 
   private static class Token
@@ -183,13 +199,13 @@ public class TypeParser
       throw new IAE("Invalid type name");
     }
     if (isTime) {
-      return analyzeTimestamp(baseName, args);
+      return analyzeTimestamp(args);
     } else {
       return analyzeAggregate(baseName, args);
     }
   }
 
-  private ParsedType analyzeTimestamp(String baseName, List<Token> args)
+  private ParsedType analyzeTimestamp(List<Token> args)
   {
     if (args.isEmpty()) {
       // Odd: TIMESTAMP(), but OK...

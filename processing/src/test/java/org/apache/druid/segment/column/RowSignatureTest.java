@@ -73,6 +73,8 @@ public class RowSignatureTest
                     .build();
 
     Assert.assertEquals(expectedSignature, signature);
+
+    Assert.assertEquals(3, signature.entries().size());
   }
 
   @Test

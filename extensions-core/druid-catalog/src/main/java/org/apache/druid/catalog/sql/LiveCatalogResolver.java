@@ -88,7 +88,7 @@ public class LiveCatalogResolver implements CatalogResolver
       return emptyDatasource(name, dsSpec);
     } else {
       // Datasource exists as both segments and a catalog entry.
-      return mergeDatasource(name, dsMetadata, dsSpec);
+      return mergeDatasource(dsMetadata, dsSpec);
     }
   }
 
@@ -147,7 +147,6 @@ public class LiveCatalogResolver implements CatalogResolver
   }
 
   private DruidTable mergeDatasource(
-      final String name,
       final PhysicalDatasourceMetadata dsMetadata,
       final DatasourceFacade dsSpec)
   {

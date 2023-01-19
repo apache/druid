@@ -310,7 +310,7 @@ public class TableEditor
     final TableDefn defn = resolveDefn(existingSpec.type());
     final List<ColumnSpec> revised = defn.mergeColumns(existingSpec.columns(), updates);
     try {
-      defn.validateColumns(revised, catalog.jsonMapper());
+      defn.validateColumns(revised);
     }
     catch (IAE e) {
       throw CatalogException.badRequest(e.getMessage());

@@ -53,7 +53,6 @@ import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.sql.validate.ValidatorShim;
 import org.apache.calcite.util.Pair;
 import org.apache.commons.lang.reflect.FieldUtils;
-import org.apache.curator.shaded.com.google.common.base.Objects;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
@@ -75,6 +74,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -188,7 +188,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // constraints beyond what was validated for the pushed-down ORDER BY.
     // Though we pushed down clustering above, only now can we validate it after
     // we've determined the SELECT row type.
-    validateClustering(select, selectScope, sourceType, timeColumnIndex, ingestNode, catalogClustering);
+    validateClustering(sourceType, timeColumnIndex, ingestNode, catalogClustering);
 
     // Determine the output (target) schema.
     RelDataType targetType = validateTargetType(insert, sourceType, tableMetadata);
@@ -465,8 +465,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * @param source
    */
   private void validateClustering(
-      final SqlSelect source,
-      final SqlValidatorScope selectScope,
       final RelRecordType sourceType,
       final int timeColumnIndex,
       final DruidSqlIngest ingestNode,
@@ -478,11 +476,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // Validate both the catalog and query definitions if present. This ensures
     // that things are sane if we later check that the two are identical.
     if (clusteredBy != null) {
-      validateClusteredBy(source, sourceType, timeColumnIndex, selectScope, clusteredBy);
+      validateClusteredBy(sourceType, timeColumnIndex, clusteredBy);
     }
     if (catalogClustering != null) {
       // Catalog defines the key columns. Verify that they are present in the query.
-      validateClusteredBy(source, sourceType, timeColumnIndex, selectScope, catalogClustering);
+      validateClusteredBy(sourceType, timeColumnIndex, catalogClustering);
     }
     if (clusteredBy != null && catalogClustering != null) {
       // Both the query and catalog have keys.
@@ -502,10 +500,8 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * to include the {@code CLUSTERED BY} as the {@code ORDER BY} clause.
    */
   private void validateClusteredBy(
-      final SqlSelect source,
       final RelRecordType sourceType,
       final int timeColumnIndex,
-      final SqlValidatorScope selectScope,
       final SqlNodeList clusteredBy
   )
   {
@@ -610,7 +606,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       // indexes are the same. Since the catalog index can't be null, we're
       // essentially checking that the indexes are the same: they name the same
       // column.
-      if (!Objects.equal(catalogPair, queryPair)) {
+      if (!Objects.equals(catalogPair, queryPair)) {
         throw clusterKeyMismatchException(catalogClustering, clusteredBy);
       }
     }

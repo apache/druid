@@ -72,12 +72,12 @@ public class ExternalOperatorConversion extends CatalogExternalTableOperatorConv
     public ExternFunction()
     {
       super(Arrays.asList(
-          new Parameter(INPUT_SOURCE_PARAM, ParameterType.VARCHAR, true),
-          new Parameter(INPUT_FORMAT_PARAM, ParameterType.VARCHAR, true),
+          new Parameter(INPUT_SOURCE_PARAM, ParameterType.VARCHAR, false),
+          new Parameter(INPUT_FORMAT_PARAM, ParameterType.VARCHAR, false),
 
-          // Not required: the user can either provide the signature OR
+          // Optional: the user can either provide the signature OR
           // an EXTEND clause. Checked in the implementation.
-          new Parameter(SIGNATURE_PARAM, ParameterType.VARCHAR, false)
+          new Parameter(SIGNATURE_PARAM, ParameterType.VARCHAR, true)
       ));
     }
 

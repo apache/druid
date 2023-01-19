@@ -86,7 +86,6 @@ public class LiveCatalogTest
 
   /**
    * Populate the catalog with a few items using the REST resource.
-   * @throws DuplicateKeyException
    */
   private void populateCatalog(boolean withTimeCol)
   {
