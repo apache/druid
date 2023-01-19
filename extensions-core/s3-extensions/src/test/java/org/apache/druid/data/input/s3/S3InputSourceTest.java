@@ -99,16 +99,16 @@ import static org.easymock.EasyMock.expectLastCall;
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
-  private static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
+  public static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
   private static final ClientConfiguration CLIENT_CONFIGURATION = EasyMock.createMock(ClientConfiguration.class);
-  private static final ServerSideEncryptingAmazonS3.Builder SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER =
+  public static final ServerSideEncryptingAmazonS3.Builder SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER =
       EasyMock.createMock(ServerSideEncryptingAmazonS3.Builder.class);
-  private static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
-  private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
+  public static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
+  public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       new NoopServerSideEncryption()
   );
-  private static final S3InputDataConfig INPUT_DATA_CONFIG;
+  public static final S3InputDataConfig INPUT_DATA_CONFIG;
   private static final int MAX_LISTING_LENGTH = 10;
 
   private static final List<CloudObjectLocation> EXPECTED_OBJECTS = Arrays.asList(
@@ -1090,7 +1090,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   }
 
 
-  // Setup mocks for invoquing the resettable condition for the S3Entity:
+  // Setup mocks for invoking the resetable condition for the S3Entity
   private static void expectSdkClientException(URI uri) throws IOException
   {
     final String s3Bucket = uri.getAuthority();

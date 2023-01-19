@@ -19,7 +19,18 @@
 
 package org.apache.druid.msq.kernel;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class StageDefinitionTest
@@ -31,5 +42,63 @@ public class StageDefinitionTest
                   .withIgnoredFields("frameReader")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testGeneratePartitionsForNullShuffle()
+  {
+    StageDefinition stageDefinition = new StageDefinition(
+        new StageId("query", 1),
+        ImmutableList.of(new StageInputSpec(0)),
+        ImmutableSet.of(),
+        new OffsetLimitFrameProcessorFactory(0, 1L),
+        RowSignature.empty(),
+        null,
+        0,
+        false
+    );
+
+    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
+  }
+
+  @Test
+  public void testGeneratePartitionsForNonNullShuffleWithNullCollector()
+  {
+    StageDefinition stageDefinition = new StageDefinition(
+        new StageId("query", 1),
+        ImmutableList.of(new StageInputSpec(0)),
+        ImmutableSet.of(),
+        new OffsetLimitFrameProcessorFactory(0, 1L),
+        RowSignature.empty(),
+        new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 1), 2, false),
+        1,
+        false
+    );
+
+    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
+  }
+
+
+  @Test
+  public void testGeneratePartitionsForNonNullShuffleWithNonNullCollector()
+  {
+    StageDefinition stageDefinition = new StageDefinition(
+        new StageId("query", 1),
+        ImmutableList.of(new StageInputSpec(0)),
+        ImmutableSet.of(),
+        new OffsetLimitFrameProcessorFactory(0, 1L),
+        RowSignature.empty(),
+        new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 0), 1, false),
+        1,
+        false
+    );
+
+    Assert.assertThrows(
+        ISE.class,
+        () -> stageDefinition.generatePartitionsForShuffle(ClusterByStatisticsCollectorImpl.create(new ClusterBy(
+            ImmutableList.of(new SortColumn("test", false)),
+            1
+        ), RowSignature.builder().add("test", ColumnType.STRING).build(), 1000, 100, false, false))
+    );
   }
 }

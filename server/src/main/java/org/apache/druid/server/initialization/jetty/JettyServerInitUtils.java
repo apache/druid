@@ -23,8 +23,12 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
+import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -32,6 +36,7 @@ import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -121,5 +126,26 @@ public class JettyServerInitUtils
         "/*",
         null
     );
+  }
+  
+  public static void maybeAddHSTSPatternRule(ServerConfig serverConfig, RewriteHandler rewriteHandler)
+  {
+    if (serverConfig.isEnableHSTS()) {
+      rewriteHandler.addRule(getHSTSHeaderPattern());
+    }
+  }
+
+  public static void maybeAddHSTSRewriteHandler(ServerConfig serverConfig, HandlerList handlerList)
+  {
+    if (serverConfig.isEnableHSTS()) {
+      RewriteHandler rewriteHandler = new RewriteHandler();
+      rewriteHandler.addRule(getHSTSHeaderPattern());
+      handlerList.addHandler(rewriteHandler);
+    }
+  }
+
+  private static HeaderPatternRule getHSTSHeaderPattern()
+  {
+    return new HeaderPatternRule("*", "Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   }
 }

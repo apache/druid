@@ -128,7 +128,7 @@ public class ITKeyStatisticsSketchMergeMode
       ));
     }
 
-    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
+    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
@@ -198,7 +198,7 @@ public class ITKeyStatisticsSketchMergeMode
       ));
     }
 
-    msqHelper.pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
+    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);

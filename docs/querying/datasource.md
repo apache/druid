@@ -370,3 +370,57 @@ always be correct.
 - Join algorithms other than broadcast hash-joins.
 - Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
+
+### `unnest`
+
+> The unnest datasource is currently only available as part of a native query.
+
+Use the `unnest` datasource to unnest a column with multiple values in an array. 
+For example, you have a source column that looks like this:
+
+| Nested | 
+| -- | 
+| [a, b] |
+| [c, d] |
+| [e, [f,g]] |
+
+When you use the `unnest` datasource, the unnested column looks like this:
+
+| Unnested | 
+| -- |
+| a |
+| b |
+| c |
+| d |
+| e |
+| [f, g] |
+
+When unnesting data, keep the following in mind:
+
+- The total number of rows will grow to accommodate the new rows that the unnested data occupy.
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+
+The `unnest` datasource uses the following syntax:
+
+```json
+  "dataSource": {
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data"
+    },
+    "column": "nested_source_column",
+    "outputName": "unnested_target_column",
+    "allowList": []
+  },
+```
+
+* `dataSource.type`: Set this to `unnest`.
+* `dataSource.base`: Defines the datasource you want to unnest.
+  * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
+  * `dataSource.base.name`: The name of the datasource you want to unnest.
+* `dataSource.column`: The name of the source column that contains the nested values.
+* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
+* `dataSource.allowList`: Optional. The subset of values you want to unnest.
+
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).

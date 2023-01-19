@@ -142,6 +142,7 @@ JVMs
 Joda
 JsonProperty
 Jupyter
+JupyterLab
 KMS
 Kerberized
 Kerberos
@@ -212,6 +213,7 @@ UI
 UIs
 URI
 URIs
+uris
 UTF-16
 UTF-8
 UTF8
@@ -739,6 +741,8 @@ appenders
 druid-hdfs-storage
 druid-s3-extensions
 druid.sql.planner.maxNumericInFilters
+Minio
+multi-server
  - ../docs/dependencies/metadata-storage.md
 BasicDataSource
  - ../docs/dependencies/zookeeper.md
@@ -1272,6 +1276,7 @@ kafka.timestamp
 keyColumnName
 keyFormat
 listDelimiter
+timestamp
 timestampColumnName
 timestampSpec
 urls

@@ -69,6 +69,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
+import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -82,6 +86,8 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -168,7 +174,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -176,6 +181,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -194,34 +200,58 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
  * Base test runner for running MSQ unit tests. It sets up multi stage query execution environment
  * and populates data for the datasources. The runner does not go via the HTTP layer for communication between the
  * various MSQ processes.
- *
+ * <p>
  * Controller -> Coordinator (Coordinator is mocked)
- *
+ * <p>
  * In the Ut's we go from:
  * {@link MSQTaskQueryMaker} -> {@link MSQTestOverlordServiceClient} -> {@link Controller}
- *
- *
+ * <p>
+ * <p>
  * Controller -> Worker communication happens in {@link MSQTestControllerContext}
- *
+ * <p>
  * Worker -> Controller communication happens in {@link MSQTestControllerClient}
- *
+ * <p>
  * Controller -> Overlord communication happens in {@link MSQTestTaskActionClient}
  */
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true)
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
                   .build();
 
+  public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true).build();
+
+
+  public static final Map<String, Object> FAULT_TOLERANCE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true).build();
+
+  public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+                      ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                  )
+                  .build();
+
   public static final Map<String, Object>
-      ROLLUP_CONTEXT = ImmutableMap.<String, Object>builder()
-                                   .putAll(DEFAULT_MSQ_CONTEXT)
-                                   .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
-                                   .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
-                                   .build();
+      ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
+                                          .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
+                                          .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
+                                          .build();
+
+  public static final String FAULT_TOLERANCE = "fault_tolerance";
+  public static final String DURABLE_STORAGE = "durable_storage";
+  public static final String DEFAULT = "default";
+  public static final String SEQUENTIAL_MERGE = "sequential_merge";
+
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
@@ -255,7 +285,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     super.configureGuice(builder);
 
-    builder.addModule(new DruidModule() {
+    builder.addModule(new DruidModule()
+    {
 
       // Small subset of MsqSqlModule
       @Override
@@ -476,11 +507,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
    * Returns query context expected for a scan query. Same as {@link #DEFAULT_MSQ_CONTEXT}, but
    * includes {@link DruidQuery#CTX_SCAN_SIGNATURE}.
    */
-  protected Map<String, Object> defaultScanQueryContext(final RowSignature signature)
+  protected Map<String, Object> defaultScanQueryContext(Map<String, Object> context, final RowSignature signature)
   {
     try {
       return ImmutableMap.<String, Object>builder()
-                         .putAll(DEFAULT_MSQ_CONTEXT)
+                         .putAll(context)
                          .put(
                              DruidQuery.CTX_SCAN_SIGNATURE,
                              queryFramework().queryJsonMapper().writeValueAsString(signature)
@@ -593,14 +624,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       };
       segmentManager.addSegment(segment);
     }
-    return new Supplier<Pair<Segment, Closeable>>()
-    {
-      @Override
-      public Pair<Segment, Closeable> get()
-      {
-        return new Pair<>(segmentManager.getSegment(segmentId), Closer.create());
-      }
-    };
+    return () -> new Pair<>(segmentManager.getSegment(segmentId), Closer.create());
   }
 
   public SelectTester testSelectQuery()
@@ -613,7 +637,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return new IngestTester();
   }
 
-  private ObjectMapper setupObjectMapper(Injector injector)
+  public static ObjectMapper setupObjectMapper(Injector injector)
   {
     ObjectMapper mapper = injector.getInstance(ObjectMapper.class)
                                   .registerModules(new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
@@ -722,7 +746,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
+  public static Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
   {
     if (resultsReport == null) {
       return Optional.empty();
@@ -745,7 +769,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-  public abstract class MSQTester<Builder extends MSQTester<?>>
+  public abstract class MSQTester<Builder extends MSQTester<Builder>>
   {
     protected String sql = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
@@ -758,78 +782,90 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected final Map<Integer, Map<Integer, Map<String, QueryCounterSnapshot>>>
+        expectedStageWorkerChannelToCounters = new HashMap<>();
 
     private boolean hasRun = false;
 
-    @SuppressWarnings("unchecked")
     public Builder setSql(String sql)
     {
       this.sql = sql;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedRowSignature(RowSignature expectedRowSignature)
     {
       Preconditions.checkArgument(!expectedRowSignature.equals(RowSignature.empty()), "Row signature cannot be empty");
       this.expectedRowSignature = expectedRowSignature;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
       this.expectedSegments = expectedSegments;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedResultRows(List<Object[]> expectedResultRows)
     {
       Preconditions.checkArgument(expectedResultRows.size() > 0, "Results rows cannot be empty");
       this.expectedResultRows = expectedResultRows;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
     {
       this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
     {
       this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
-      return (Builder) this;
+      return asBuilder();
     }
 
-    @SuppressWarnings("unchecked")
     public Builder setExpectedMSQFault(MSQFault MSQFault)
     {
       this.expectedMSQFault = MSQFault;
-      return (Builder) this;
+      return asBuilder();
     }
 
     public Builder setExpectedMSQFaultClass(Class<? extends MSQFault> expectedMSQFaultClass)
     {
       this.expectedMSQFaultClass = expectedMSQFaultClass;
+      return asBuilder();
+    }
+
+    public Builder setExpectedCountersForStageWorkerChannel(
+        QueryCounterSnapshot counterSnapshot,
+        int stage,
+        int worker,
+        String channel
+    )
+    {
+      this.expectedStageWorkerChannelToCounters.computeIfAbsent(stage, s -> new HashMap<>())
+                                               .computeIfAbsent(worker, w -> new HashMap<>())
+                                               .put(channel, counterSnapshot);
+      return asBuilder();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Builder asBuilder()
+    {
       return (Builder) this;
     }
 
@@ -845,6 +881,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       MatcherAssert.assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyCounters(CounterSnapshotsTree counterSnapshotsTree)
+    {
+      Assert.assertNotNull(counterSnapshotsTree);
+
+      final Map<Integer, Map<Integer, CounterSnapshots>> stageWorkerToSnapshots = counterSnapshotsTree.copyMap();
+      expectedStageWorkerChannelToCounters.forEach((stage, expectedWorkerChannelToCounters) -> {
+        final Map<Integer, CounterSnapshots> workerToCounters = stageWorkerToSnapshots.get(stage);
+        Assert.assertNotNull("No counters for stage " + stage, workerToCounters);
+
+        expectedWorkerChannelToCounters.forEach((worker, expectedChannelToCounters) -> {
+          CounterSnapshots counters = workerToCounters.get(worker);
+          Assert.assertNotNull(
+              StringUtils.format("No counters for stage [%d], worker [%d]", stage, worker),
+              counters
+          );
+
+          final Map<String, QueryCounterSnapshot> channelToCounters = counters.getMap();
+          expectedChannelToCounters.forEach(
+              (channel, counter) -> Assert.assertEquals(
+                  StringUtils.format(
+                      "Counter mismatch for stage [%d], worker [%d], channel [%s]",
+                      stage,
+                      worker,
+                      channel
+                  ),
+                  counter,
+                  channelToCounters.get(channel)
+              )
+          );
+        });
+      });
     }
 
     protected void readyToRun()
@@ -929,9 +998,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
+            String errorMessage = msqErrorReport.getFault() instanceof TooManyAttemptsForWorker
+                                  ? ((TooManyAttemptsForWorker) msqErrorReport.getFault()).getRootErrorMessage()
+                                  : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
-                expectedMSQFault.getCodeWithMessage(),
-                msqErrorReport.getFault().getCodeWithMessage()
+                MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
+                errorMessage
             );
           }
           if (expectedMSQFaultClass != null) {
@@ -943,7 +1015,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           return;
         }
-        getPayloadOrThrow(controllerId);
+        MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
+        verifyCounters(reportPayload.getCounters());
+
         MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
         log.info(
             "found generated segments: %s",
@@ -1097,9 +1171,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
+            String errorMessage = msqErrorReport.getFault() instanceof TooManyAttemptsForWorker
+                                  ? ((TooManyAttemptsForWorker) msqErrorReport.getFault()).getRootErrorMessage()
+                                  : MSQFaultUtils.generateMessageWithErrorCode(msqErrorReport.getFault());
             Assert.assertEquals(
-                expectedMSQFault.getCodeWithMessage(),
-                msqErrorReport.getFault().getCodeWithMessage()
+                MSQFaultUtils.generateMessageWithErrorCode(expectedMSQFault),
+                errorMessage
             );
           }
           if (expectedMSQFaultClass != null) {
@@ -1112,6 +1189,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         MSQTaskReportPayload payload = getPayloadOrThrow(controllerId);
+        verifyCounters(payload.getCounters());
 
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());

@@ -46,6 +46,15 @@ export function bootstrapReactTable() {
     NoDataComponent: NoData,
     FilterComponent: GenericFilterInput,
     PaginationComponent: ReactTablePagination,
+    PivotValueComponent: function PivotValue(opt: any) {
+      const { value, subRows } = opt;
+      let msg = String(value);
+      if (msg === 'undefined') msg = 'n/a';
+      if (subRows) {
+        msg += ` (${subRows.length})`;
+      }
+      return <span className="default-pivoted">{msg}</span>;
+    },
     AggregatedComponent: function Aggregated(opt: any) {
       const { subRows, column } = opt;
       const previewValues = subRows

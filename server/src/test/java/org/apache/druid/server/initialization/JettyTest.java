@@ -34,6 +34,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
@@ -285,7 +286,7 @@ public class JettyTest extends BaseJettyTest
   public void testTimeouts() throws Exception
   {
     // test for request timeouts properly not locking up all threads
-    final ExecutorService executor = Executors.newFixedThreadPool(100);
+    final ExecutorService executor = Execs.multiThreaded(100, "JettyTest-%d");
     final AtomicLong count = new AtomicLong(0);
     final CountDownLatch latch = new CountDownLatch(1000);
     for (int i = 0; i < 10000; i++) {

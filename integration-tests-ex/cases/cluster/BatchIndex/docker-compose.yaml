@@ -85,10 +85,10 @@ services:
     depends_on:
       - zookeeper
 
-  indexer:
+  middlemanager:
     extends:
       file: ../Common/druid.yaml
-      service: indexer
+      service: middlemanager
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     volumes:

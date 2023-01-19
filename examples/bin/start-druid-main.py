@@ -36,12 +36,6 @@ TASK_JAVA_OPTS_ARRAY = ["-server", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8
 TASK_JAVA_OPTS_PROPERTY = "druid.indexer.runner.javaOptsArray"
 TASK_WORKER_CAPACITY_PROPERTY = "druid.worker.capacity"
 TASK_COUNT = "task-count"
-TASK_MEM_TYPE_LOW = "low"
-TASK_MEM_TYPE_HIGH = "high"
-TASK_MEM_MAP = {
-    TASK_MEM_TYPE_LOW: ["-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=256m"],
-    TASK_MEM_TYPE_HIGH: ["-Xms1g", "-Xmx1g", "-XX:MaxDirectMemorySize=1g"]
-}
 
 BROKER = "broker"
 ROUTER = "router"
@@ -50,6 +44,7 @@ HISTORICAL = "historical"
 MIDDLE_MANAGER = "middleManager"
 TASKS = "tasks"
 INDEXER = "indexer"
+ZK = "zookeeper"
 
 DEFAULT_SERVICES = [
     BROKER,
@@ -65,7 +60,8 @@ SUPPORTED_SERVICES = [
     COORDINATOR,
     HISTORICAL,
     MIDDLE_MANAGER,
-    INDEXER
+    INDEXER,
+    ZK
 ]
 
 SERVICE_MEMORY_RATIO = {
@@ -80,7 +76,7 @@ SERVICE_MEMORY_RATIO = {
 
 MINIMUM_MEMORY_MB = {
     MIDDLE_MANAGER: 64,
-    ROUTER: 128,
+    ROUTER: 256,
     TASKS: 1024,
     BROKER: 900,
     COORDINATOR: 256,
@@ -115,6 +111,8 @@ def configure_parser():
 sample usage:
     start-druid
             Start up all the services (including zk).
+            services config is read from conf/druid/auto.
+            zk config is always read from conf/zk.
     start-druid -m=100g
             Start up all the services (including zk)
             using a total memory of 100GB.
@@ -133,11 +131,11 @@ sample usage:
             from the given root directory. Calculates memory requirements for
             each service, if required, using upto 80% of the total system memory.
     start-druid -m=100g \\
-    -s=broker,router \\
+    -s=broker,router,zookeeper \\
     -c=conf/druid/single-server/custom \\
-    --zk
             Starts broker, router and zookeeper.
-            zookeeper config is read from conf/zk.
+            Configs for broker and router are read from the specified root directory.
+            Config for zookeeper is read from conf/zk.
 """
     )
     parser.add_argument('--memory', '-m', type=str, required=False,
@@ -146,7 +144,7 @@ sample usage:
                              'in the given conf directory. e.g. 500m, 4g, 6g\n')
     parser.add_argument('--services', '-s', type=str, required=False,
                         help='List of services to be started, subset of \n'
-                             '{broker, router, middleManager, historical, coordinator-overlord, indexer}. \n'
+                             '{broker, router, middleManager, historical, coordinator-overlord, indexer, zookeeper}. \n'
                              'If the argument is not given, broker, router, middleManager, historical, coordinator-overlord  \n'
                              'and zookeeper is started. e.g. -s=broker,historical')
     parser.add_argument('--config', '-c', type=str, required=False,
@@ -155,16 +153,13 @@ sample usage:
                              'This directory must contain \'_common\' directory with \n'
                              '\'common.jvm.config\' & \'common.runtime.properties\' files. \n'
                              'If this argument is not given, config from \n'
-                             'conf/druid/auto directory is used.\n')
+                             'conf/druid/auto directory is used.\n'
+                             'Note. zookeeper config cannot be overriden.\n')
     parser.add_argument('--compute', action='store_true',
                         help='Does not start Druid, only displays the memory allocated \n'
                              'to each service if started with the given total memory.\n')
-    parser.add_argument('--zk', '-zk', action='store_true',
-                        help='Specification to run zookeeper, \n'
-                             'zk config is picked up from conf/zk.')
     parser.add_argument('--verbose', action='store_true', help='Log details')
 
-    parser.set_defaults(zk=False)
     parser.set_defaults(compute=False)
     parser.set_defaults(verbose=False)
 
@@ -208,8 +203,6 @@ def parse_arguments(args):
 
     if args.compute:
         compute = True
-    if args.zk:
-        zk = True
     if args.config is not None:
         config = resolve_path(os.path.join(os.getcwd(), args.config))
         if is_dir(config) is False:
@@ -221,15 +214,20 @@ def parse_arguments(args):
 
         for service in services:
             if service not in SUPPORTED_SERVICES:
-                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, DEFAULT_SERVICES))
+                raise ValueError('Invalid service name {0}, should be one of {1}'.format(service, SUPPORTED_SERVICES))
 
             if service in service_list:
                 raise ValueError('{0} is specified multiple times'.format(service))
+
+            if service == ZK:
+                zk = True
+                continue
 
             service_list.append(service)
 
         if INDEXER in services and MIDDLE_MANAGER in services:
             raise ValueError('one of indexer and middleManager can run')
+
 
     if len(service_list) == 0:
         # start all services
@@ -290,7 +288,7 @@ def verify_service_config(service, config):
 
         mm_task_java_opts_prop, mm_task_worker_capacity_prop = task_memory_params_present(config, MIDDLE_MANAGER)
 
-        if mm_task_java_opts_property is False:
+        if mm_task_java_opts_prop is False:
             raise ValueError('{0} property missing in {1}/runtime.properties'.format(TASK_JAVA_OPTS_PROPERTY, service))
 
 
@@ -427,45 +425,46 @@ def check_memory_constraint(total_memory, services):
     if total_memory < required_memory:
         raise ValueError('Minimum memory required for starting services is {0}m'.format(required_memory))
 
-    if total_memory >= 2 * lower_bound_memory:
-        return int(total_memory / 2)
-    else:
-        return lower_bound_memory
+    return int(total_memory * 0.8)
 
 
-def build_mm_task_java_opts_array(memory_type):
-    task_memory = '-D{0}=['.format(TASK_JAVA_OPTS_PROPERTY)
-
-    mem_array = TASK_MEM_MAP.get(memory_type)
+def build_mm_task_java_opts_array(task_memory):
+    memory = int(task_memory / 2)
+    mem_array = ["-Xms{0}m".format(memory), "-Xmx{0}m".format(memory), "-XX:MaxDirectMemorySize={0}m".format(memory)]
 
     java_opts_list = TASK_JAVA_OPTS_ARRAY + mem_array
 
-    for item in java_opts_list:
-        task_memory += '\"{0}\",'.format(item)
+    task_java_opts_value = ''
 
-    task_memory = task_memory[:-1]
-    task_memory += ']'
-    return task_memory
+    for item in java_opts_list:
+        task_java_opts_value += '\"{0}\",'.format(item)
+
+    task_java_opts_value = task_java_opts_value[:-1]
+    task_memory_config = '-D{0}=[{1}]'.format(TASK_JAVA_OPTS_PROPERTY, task_java_opts_value)
+
+    return task_memory_config
 
 
 def compute_tasks_memory(allocated_memory):
-    if allocated_memory >= 4096:
-        task_count = int(allocated_memory / 2048)
-        memory_type = TASK_MEM_TYPE_HIGH
-        task_memory_mb = 2048
+    cpu_count = multiprocessing.cpu_count()
+
+    if allocated_memory >= cpu_count * 1024:
+        task_count = cpu_count
+        task_memory_mb = min(2048, int(allocated_memory / cpu_count))
+    elif allocated_memory >= 2048:
+        task_count = int(allocated_memory / 1024)
+        task_memory_mb = 1024
     else:
         task_count = 2
-        memory_type = TASK_MEM_TYPE_LOW
-        task_memory_mb = 512
-    task_count = min(task_count, multiprocessing.cpu_count())
+        task_memory_mb = int(allocated_memory / task_count)
 
-    return memory_type, task_count, task_memory_mb
+    return task_count, task_memory_mb
 
 
 def build_memory_config(service, allocated_memory):
     if service == TASKS:
-        memory_type, task_count, task_memory = compute_tasks_memory(allocated_memory)
-        java_opts_array = build_mm_task_java_opts_array(memory_type)
+        task_count, task_memory = compute_tasks_memory(allocated_memory)
+        java_opts_array = build_mm_task_java_opts_array(task_memory)
         return ['-D{0}={1}'.format(TASK_WORKER_CAPACITY_PROPERTY, task_count),
                 java_opts_array], task_memory * task_count
     elif service == INDEXER:
@@ -479,6 +478,8 @@ def build_memory_config(service, allocated_memory):
     else:
         heap_memory = HEAP_TO_TOTAL_MEM_RATIO.get(service) * allocated_memory
         direct_memory = int(allocated_memory - heap_memory)
+        if service == ROUTER:
+            direct_memory = 128
         heap_memory = int(heap_memory)
 
         if direct_memory == 0:

@@ -28,6 +28,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * A replacement for Guice's Singleton scope.
+ *
+ * This scope exists because deep down in the bowels of Guice, there are times when it looks for bindings of Singleton
+ * scope and magically promotes them to be eagerly bound.  When Guice eagerly instantiates things, it does it in an
+ * order that is not based on the object dependency graph, which can do things like cause objects to be registered on
+ * the lifecycle out-of-dependency order.
+ *
+ * Generally speaking, LazySingleton should <em>always</em> be used and {@link com.google.inject.Singleton} should
+ * <em>never</em> be used.  That said, there might be times when interacting with external libraries that make it
+ * necessary to use Singleton.  In these cases, it is best to figure out if there is a way to use LazySingleton, if it
+ * is prohibitively difficult to use LazySingleton, then Singleton should be used with knowledge that the object will
+ * be instantiated in a non-deterministic ordering compared to other objects in the JVM.
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

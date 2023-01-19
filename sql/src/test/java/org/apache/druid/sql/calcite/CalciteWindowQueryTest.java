@@ -24,22 +24,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import junitparams.naming.TestCaseName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,16 +44,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
-@RunWith(JUnitParamsRunner.class)
+/**
+ * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
+ */
+@RunWith(Parameterized.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
 
-  public static final boolean DUMP_EXPECTED_RESULTS = Boolean.parseBoolean(
-      System.getProperty("druid.tests.sql.dumpExpectedResults")
+  public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
+      System.getProperty("druid.tests.sql.dumpActualResults")
   );
 
   static {
@@ -66,10 +63,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
-  private static final AtomicLong EXPECTED_TESTS = new AtomicLong();
-  private static final AtomicLong TEST_COUNTER = new AtomicLong();
-
-  public Object parametersForWindowQueryTest() throws Exception
+  @Parameterized.Parameters(name = "{0}")
+  public static Object parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
     File windowFolder = new File(windowFolderUrl.toURI());
@@ -77,31 +72,25 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     final File[] listedFiles = windowFolder.listFiles(
         pathname -> pathname.getName().toLowerCase(Locale.ROOT).endsWith(".sqltest")
     );
-    EXPECTED_TESTS.set(listedFiles.length);
-
-    Pattern matcher = Pattern.compile(".*");
 
     return Arrays
         .stream(Objects.requireNonNull(listedFiles))
         .map(File::getName)
-        .filter(matcher.asPredicate())
         .toArray();
   }
 
-  @AfterClass
-  public static void testRanAllTests()
+  private final String filename;
+
+  public CalciteWindowQueryTest(
+      String filename
+  )
   {
-    // This validation exists to catch issues with the filter Pattern accidentally getting checked in.  It validates
-    // that we ran all of the tests from the directory.  If this is failing, most likely, the filter Pattern in
-    // parametersForWindowQueryTest accidentally got checked in as something other than ".*"
-    Assert.assertEquals(EXPECTED_TESTS.get(), TEST_COUNTER.get());
+    this.filename = filename;
   }
 
   @Test
-  @Parameters(method = "parametersForWindowQueryTest")
   @SuppressWarnings("unchecked")
-  @TestCaseName("{0}")
-  public void windowQueryTest(String filename) throws IOException
+  public void windowQueryTest() throws IOException
   {
     final Function<String, String> stringManipulator;
     if (NullHandling.sqlCompatible()) {
@@ -110,7 +99,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       stringManipulator = Function.identity();
     }
 
-    TEST_COUNTER.incrementAndGet();
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
     final Object objectFromYaml = YAML_JACKSON.readValue(systemResource.openStream(), Object.class);
@@ -126,6 +114,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         throw new RE(e);
       }
     };
+
+    if ("failingTest".equals(input.type)) {
+      return;
+    }
 
     if ("operatorValidation".equals(input.type)) {
       testBuilder()
@@ -165,9 +157,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
               Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
             }
 
-            maybeDumpExpectedResults(jacksonToString, results.results);
+            maybeDumpActualResults(jacksonToString, results.results);
             for (Object[] result : input.expectedResults) {
-              for (int i = 0; i < types.length; i++) {
+              for (int i = 0; i < result.length; i++) {
                 // Jackson deserializes numbers as the minimum size required to store the value.  This means that
                 // Longs can become Integer objects and then they fail equality checks.  We read the expected
                 // results using Jackson, so, we coerce the expected results to the type expected.
@@ -198,11 +190,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  private void maybeDumpExpectedResults(
+  private void maybeDumpActualResults(
       Function<Object, String> toStrFn, List<Object[]> results
   )
   {
-    if (DUMP_EXPECTED_RESULTS) {
+    if (DUMP_ACTUAL_RESULTS) {
       for (Object[] result : results) {
         System.out.println("  - " + toStrFn.apply(result));
       }
@@ -216,9 +208,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     @JsonProperty
     public String sql;
-
-    @JsonProperty
-    public Query nativeQuery;
 
     @JsonProperty
     public List<OperatorFactory> expectedOperators;

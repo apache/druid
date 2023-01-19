@@ -92,14 +92,27 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
+  private final boolean discoverNestedFields;
+
   /**
-   * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
-   * @param binaryAsString boolean to encode the byte[] as a string.
+   * @param fromPigAvroStorage    boolean to specify the data file is stored using AvroStorage
+   * @param binaryAsString        if true, treat byte[] as utf8 encoded values and coerce to strings, else leave as byte[]
+   * @param extractUnionsByType   if true, unions will be extracted to separate nested fields for each type. See
+   *                              {@link GenericAvroJsonProvider#extractUnionTypes(Object)} for more details
+   * @param discoverNestedFields  if true, {@link #discoverRootFields(GenericRecord)} will return the full set of
+   *                              fields, else this list will be filtered to contain only simple literals and arrays
+   *                              of simple literals
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnionsByType)
+  public AvroFlattenerMaker(
+      final boolean fromPigAvroStorage,
+      final boolean binaryAsString,
+      final boolean extractUnionsByType,
+      final boolean discoverNestedFields
+  )
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
+    this.discoverNestedFields = discoverNestedFields;
 
     this.avroJsonProvider = new GenericAvroJsonProvider(extractUnionsByType);
     this.jsonPathConfiguration =
@@ -113,6 +126,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Set<String> discoverRootFields(final GenericRecord obj)
   {
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
+    if (discoverNestedFields) {
+      return obj.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());
+    }
     return obj.getSchema()
               .getFields()
               .stream()

@@ -38,6 +38,7 @@ import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -479,10 +480,10 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public int processLiteralField(String fieldName, Object fieldValue)
+        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return 0;
+          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
         }
       };
 
@@ -500,9 +501,9 @@ public class NestedDataExpressions
           // maybe in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
           StructuredDataProcessor.ProcessResults info = processor.processFields(unwrap(input));
           List<String> transformed = info.getLiteralFields()
-                                        .stream()
-                                        .map(p -> NestedPathFinder.toNormalizedJsonPath(NestedPathFinder.parseJqPath(p)))
-                                        .collect(Collectors.toList());
+                                         .stream()
+                                         .map(NestedPathFinder::toNormalizedJsonPath)
+                                         .collect(Collectors.toList());
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
               transformed

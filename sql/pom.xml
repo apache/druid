@@ -306,30 +306,6 @@
         </executions>
       </plugin>
 
-      <!-- Edit the parser. Add an additional clause to the table function
-           rule. This produces a new parser, DruidParser.jj.
-           -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <executions>
-          <execution>
-           <id>edit-parser</id>
-           <phase>generate-sources</phase>
-           <goals>
-             <goal>exec</goal>
-           </goals>
-           <configuration>
-             <executable>python3</executable>
-             <workingDirectory>${project.basedir}</workingDirectory>
-             <arguments>
-               <argument>edit-parser.py</argument>
-             </arguments>
-           </configuration>
-         </execution>
-        </executions>
-      </plugin>
-
       <!-- Copy the templates present in the codegen directory of druid-sql containing custom SQL rules to
         ${project.build.directory}/codegen -->
       <plugin>
@@ -397,6 +373,38 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- This plugin is used to replace the production rule for FROM clause in the calcite grammar.
+           It is done by a search and replace since calcite doesn't allow to override production rules generally
+           in its grammar (override is possible only if there's a hook for it in the grammar). And the FROM clause
+           doesn't contain any hook for extension. For the custom changes done in
+           extension, please check from.ftl file in sql module.
+      -->
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <basedir>${project.build.directory}/generated-sources/org/apache/druid/sql/calcite/parser</basedir>
+          <includes>
+            <include>**/DruidSqlParserImpl.java</include>
+          </includes>
+          <replacements>
+            <replacement>
+              <token>fromClause = FromClause</token>
+              <value>fromClause = DruidFromClause</value>
+            </replacement>
+          </replacements>
+        </configuration>
       </plugin>
 
       <!-- Adds the path of the generated parser to the classpath -->

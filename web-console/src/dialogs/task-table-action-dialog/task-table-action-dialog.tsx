@@ -28,7 +28,7 @@ interface TaskTableActionDialogProps {
   taskId: string;
   actions: BasicAction[];
   onClose: () => void;
-  status?: string;
+  status: string;
 }
 
 export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
@@ -95,7 +95,7 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
       )}
       {activeTab === 'log' && (
         <ShowLog
-          status={status}
+          tail={status === 'RUNNING'}
           endpoint={`${taskEndpointBase}/log`}
           downloadFilename={`task-log-${taskId}.log`}
           tailOffset={16000}

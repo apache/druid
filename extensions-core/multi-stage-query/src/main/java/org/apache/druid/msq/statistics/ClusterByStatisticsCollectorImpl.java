@@ -375,7 +375,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
    * number the same, if downsampling is not possible. (For example: downsampling is not possible if all buckets
    * have been downsampled all the way to one key each.)
    */
-  private void downSample()
+  void downSample()
   {
     long newTotalRetainedBytes = totalRetainedBytes;
     final long targetTotalRetainedBytes = totalRetainedBytes / 2;
@@ -405,7 +405,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       bucketHolder.keyCollector.downSample();
       newTotalRetainedBytes += bucketHolder.updateRetainedBytes();
 
-      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).retainedBytes > bucketHolder.retainedBytes) {
+      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).retainedBytes > bucketHolder.retainedBytes || bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) {
         i++;
       }
     }

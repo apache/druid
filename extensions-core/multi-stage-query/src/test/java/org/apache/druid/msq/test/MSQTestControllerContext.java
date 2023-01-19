@@ -111,7 +111,7 @@ public class MSQTestControllerContext implements ControllerContext
   WorkerManagerClient workerManagerClient = new WorkerManagerClient()
   {
     @Override
-    public String run(String controllerId, MSQWorkerTask task)
+    public String run(String taskId, MSQWorkerTask task)
     {
       if (controller == null) {
         throw new ISE("Controller needs to be set using the register method");
@@ -161,8 +161,8 @@ public class MSQTestControllerContext implements ControllerContext
                     taskStatus.getId(),
                     taskStatus.getStatusCode(),
                     taskStatus.getDuration(),
-                    null,
-                    null
+                    taskStatus.getErrorMsg(),
+                    taskStatus.getLocation()
                 )
             );
           }

@@ -21,17 +21,21 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.function.Function;
 
-public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase<ArrayListRowsAndColumns<Object[]>>
+public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-
-  @Override
-  public ArrayListRowsAndColumns<Object[]> makeRowsAndColumns(MapOfColumnsRowsAndColumns input)
+  public ArrayListRowsAndColumnsTest()
   {
+    super(ArrayListRowsAndColumns.class);
+  }
+
+  @Nonnull
+  public static Function<MapOfColumnsRowsAndColumns, ArrayListRowsAndColumns<Object[]>> MAKER = input -> {
     ArrayList<Object[]> rows = new ArrayList<>(input.numRows());
 
     ArrayList<String> cols = new ArrayList<>(input.getColumnNames());
@@ -62,5 +66,5 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase<ArrayLis
         },
         sigBob.build()
     );
-  }
+  };
 }

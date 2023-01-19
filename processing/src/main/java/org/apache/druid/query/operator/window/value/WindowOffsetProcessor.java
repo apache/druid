@@ -55,15 +55,15 @@ public class WindowOffsetProcessor extends WindowValueProcessorBase
         new ShiftedColumnAccessorBase(column.toAccessor())
         {
           @Override
-          protected int getActualCell(int cell)
+          protected int getActualValue(int rowNum)
           {
-            return cell + offset;
+            return rowNum + offset;
           }
 
           @Override
-          protected boolean outsideBounds(int actualCell)
+          protected boolean outsideBounds(int rowNum)
           {
-            return actualCell < 0 || actualCell >= numRows;
+            return rowNum < 0 || rowNum >= numRows;
           }
         }));
   }

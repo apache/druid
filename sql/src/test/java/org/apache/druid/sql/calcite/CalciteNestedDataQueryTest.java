@@ -28,9 +28,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -133,10 +131,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
           new TimestampSpec("t", "iso", null),
           DimensionsSpec.builder().setDimensions(
               ImmutableList.<DimensionSchema>builder()
-                           .add(new StringDimensionSchema("string"))
+                           .add(new NestedDataDimensionSchema("string"))
                            .add(new NestedDataDimensionSchema("nest"))
                            .add(new NestedDataDimensionSchema("nester"))
-                           .add(new LongDimensionSchema("long"))
+                           .add(new NestedDataDimensionSchema("long"))
                            .build()
           ).build()
       ));
@@ -368,6 +366,78 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeLong()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 2L},
+            new Object[]{3L, 1L},
+            new Object[]{4L, 1L},
+            new Object[]{5L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeString()
+  {
+    testQuery(
+        "SELECT "
+        + "string, "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"aaa", 2L},
+            new Object[]{"bbb", 1L},
+            new Object[]{"ccc", 1L},
+            new Object[]{"ddd", 2L},
+            new Object[]{"eee", 1L}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
@@ -2233,7 +2303,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"$\"]", 5L},
-            new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
+            new Object[]{"[\"$.array[1]\",\"$.array[0]\",\"$.n.x\"]", 2L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING_ARRAY)
