@@ -247,11 +247,8 @@ public class Expressions
 
     final String columnName = rowSignature.getColumnName(index);
     final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
-    if (columnName == null) {
-      throw new ISE("Expression referred to nonexistent index [%d] in row [%s]", index, rowSignature);
-    }
 
-    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
+    return DruidExpression.ofColumn(columnType.get(), columnName);
   }
 
   private static DruidExpression inputRefToDruidExpression(

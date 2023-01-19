@@ -171,4 +171,10 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
   {
     return uncollect.getRowType();
   }
+
+  @Override
+  protected DruidUnnestDatasourceRel clone() throws CloneNotSupportedException
+  {
+    return new DruidUnnestDatasourceRel(uncollect, druidQueryRel, unnestProject, getPlannerContext());
+  }
 }

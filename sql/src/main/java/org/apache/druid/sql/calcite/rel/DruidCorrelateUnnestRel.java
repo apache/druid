@@ -216,6 +216,12 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   }
 
   @Override
+  protected DruidCorrelateUnnestRel clone() throws CloneNotSupportedException
+  {
+    return DruidCorrelateUnnestRel.create(correlateRel, leftFilter, getPlannerContext());
+  }
+
+  @Override
   protected RelDataType deriveRowType()
   {
     return partialQuery.getRowType();

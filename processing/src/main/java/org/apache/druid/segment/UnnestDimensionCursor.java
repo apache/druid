@@ -181,7 +181,7 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (indexedIntsForCurrentRow== null || indexedIntsForCurrentRow.size() == 0) {
+            if (indexedIntsForCurrentRow == null || indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
             if (allowedBitSet.isEmpty()) {
@@ -332,8 +332,7 @@ public class UnnestDimensionCursor implements Cursor
     }
     if (dimSelector.getObject() != null) {
       this.indexedIntsForCurrentRow = dimSelector.getRow();
-    }
-    else {
+    } else {
       this.indexedIntsForCurrentRow = null;
     }
     if (!allowedBitSet.isEmpty()) {
