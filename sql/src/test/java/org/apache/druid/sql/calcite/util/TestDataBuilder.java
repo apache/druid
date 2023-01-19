@@ -213,7 +213,7 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
