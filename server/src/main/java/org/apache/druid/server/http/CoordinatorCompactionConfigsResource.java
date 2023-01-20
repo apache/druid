@@ -19,21 +19,30 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.common.utils.ServletResourceUtils;
+import org.apache.druid.guice.annotations.JsonNonNull;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
+import org.apache.druid.server.coordinator.DatasourceCompactionConfigAuditEntry;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -49,6 +58,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
@@ -67,17 +80,22 @@ public class CoordinatorCompactionConfigsResource
   private final JacksonConfigManager manager;
   private final MetadataStorageConnector connector;
   private final MetadataStorageTablesConfig connectorConfig;
-
+  private final AuditManager auditManager;
+  private final ObjectMapper jsonMapperOnlyNonNullValue;
   @Inject
   public CoordinatorCompactionConfigsResource(
       JacksonConfigManager manager,
       MetadataStorageConnector connector,
-      MetadataStorageTablesConfig connectorConfig
+      MetadataStorageTablesConfig connectorConfig,
+      AuditManager auditManager,
+      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValue
   )
   {
     this.manager = manager;
     this.connector = connector;
     this.connectorConfig = connectorConfig;
+    this.auditManager = auditManager;
+    this.jsonMapperOnlyNonNullValue = jsonMapperOnlyNonNullValue;
   }
 
   @GET
@@ -166,6 +184,50 @@ public class CoordinatorCompactionConfigsResource
     }
 
     return Response.ok().entity(config).build();
+  }
+
+  @GET
+  @Path("/{dataSource}/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCompactionConfigHistory(
+      @PathParam("dataSource") String dataSource,
+      @QueryParam("interval") String interval,
+      @QueryParam("count") Integer count
+  )
+  {
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
+    try {
+      List<AuditEntry> auditEntries;
+      if (theInterval == null && count != null) {
+        auditEntries = auditManager.fetchAuditHistory(
+            CoordinatorCompactionConfig.CONFIG_KEY,
+            CoordinatorCompactionConfig.CONFIG_KEY,
+            count
+        );
+      } else {
+        auditEntries = auditManager.fetchAuditHistory(
+            CoordinatorCompactionConfig.CONFIG_KEY,
+            CoordinatorCompactionConfig.CONFIG_KEY,
+            theInterval
+        );
+      }
+      DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
+      for (AuditEntry audit : auditEntries) {
+        CoordinatorCompactionConfig coordinatorCompactionConfig = CoordinatorCompactionConfig.convertByteToConfig(
+            manager, audit.getPayload().getBytes(StandardCharsets.UTF_8)
+        );
+        history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
+      }
+      if (auditEntries.isEmpty()) {
+        return Response.status(Response.Status.NOT_FOUND).build();
+      }
+      return Response.ok(history.getHistory()).build();
+    }
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(ServletResourceUtils.sanitizeException(e))
+          .build();
+    }
   }
 
   @DELETE

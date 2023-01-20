@@ -22,14 +22,20 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +49,9 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -66,6 +75,8 @@ public class CoordinatorCompactionConfigsResourceTest
 
   private static final CoordinatorCompactionConfig ORIGINAL_CONFIG = CoordinatorCompactionConfig.from(ImmutableList.of(OLD_CONFIG));
 
+  private static final String DATASOURCE_NOT_EXISTS = "notExists";
+
   @Mock
   private JacksonConfigManager mockJacksonConfigManager;
 
@@ -77,6 +88,9 @@ public class CoordinatorCompactionConfigsResourceTest
 
   @Mock
   private MetadataStorageTablesConfig mockConnectorConfig;
+
+  @Mock
+  private AuditManager mockAuditManager;
 
   private CoordinatorCompactionConfigsResource coordinatorCompactionConfigsResource;
 
@@ -95,10 +109,17 @@ public class CoordinatorCompactionConfigsResourceTest
         ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
     ).thenReturn(ORIGINAL_CONFIG);
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
+    Mockito.when(mockAuditManager.fetchAuditHistory(
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.any())
+    ).thenReturn(ImmutableList.of());
     coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
         mockJacksonConfigManager,
         mockConnector,
-        mockConnectorConfig
+        mockConnectorConfig,
+        mockAuditManager,
+        new DefaultObjectMapper()
     );
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
   }
@@ -363,11 +384,18 @@ public class CoordinatorCompactionConfigsResourceTest
     String author = "maytas";
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
-        "notExist",
+        DATASOURCE_NOT_EXISTS,
         author,
         comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), result.getStatus());
+  }
+
+  @Test
+  public void testGetCompactionConfigHistoryForUnknownDataSourceShouldReturnNotFound()
+  {
+    Response response = coordinatorCompactionConfigsResource.getCompactionConfigHistory(DATASOURCE_NOT_EXISTS, null, null);
+    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
   }
 }
