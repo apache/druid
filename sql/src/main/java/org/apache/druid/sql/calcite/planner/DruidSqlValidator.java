@@ -173,7 +173,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // Validate the source statement. Validates the ORDER BY pushed down in the above step.
     validateSelect(select, unknownType);
-    SqlValidatorScope selectScope = getSelectScope(select);
 
     SqlValidatorNamespace sourceNamespace = namespaces.get(select);
     RelRecordType sourceType = (RelRecordType) sourceNamespace.getRowType();

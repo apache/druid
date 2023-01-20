@@ -572,6 +572,7 @@ public class ControllerImpl implements Controller
         id(),
         makeQueryControllerToolKit(),
         task.getQuerySpec(),
+        task.getStorageTypes(),
         context.jsonMapper()
     );
 
@@ -704,7 +705,6 @@ public class ControllerImpl implements Controller
         }
     );
   }
-
 
   @Override
   public void workerError(MSQErrorReport errorReport)
@@ -1491,6 +1491,7 @@ public class ControllerImpl implements Controller
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
       final MSQSpec querySpec,
+      final Map<String, String> storageTypes,
       final ObjectMapper jsonMapper
   )
   {
@@ -1576,7 +1577,7 @@ public class ControllerImpl implements Controller
 
       // Then, add a segment-generation stage.
       final DataSchema dataSchema =
-          generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
+          generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, storageTypes, jsonMapper);
 
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
@@ -1604,6 +1605,7 @@ public class ControllerImpl implements Controller
       RowSignature querySignature,
       ClusterBy queryClusterBy,
       ColumnMappings columnMappings,
+      Map<String, String> storageTypes,
       ObjectMapper jsonMapper
   )
   {
@@ -1616,6 +1618,7 @@ public class ControllerImpl implements Controller
             queryClusterBy,
             destination.getSegmentSortOrder(),
             columnMappings,
+            storageTypes,
             isRollupQuery,
             querySpec.getQuery()
         );
@@ -1799,6 +1802,7 @@ public class ControllerImpl implements Controller
       final ClusterBy queryClusterBy,
       final List<String> segmentSortOrder,
       final ColumnMappings columnMappings,
+      final Map<String, String> storageTypes,
       final boolean isRollupQuery,
       final Query<?> query
   )
@@ -1847,52 +1851,91 @@ public class ControllerImpl implements Controller
 
     // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
-    // a dimension. For complex columns, certains hacks are in place.
+    // a dimension. For complex columns, certain hacks are in place.
     for (final String outputColumn : outputColumnsInOrder) {
-      final String queryColumn = columnMappings.getQueryColumnForOutputColumn(outputColumn);
-      final ColumnType type =
-          querySignature.getColumnType(queryColumn)
-                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumn));
+      final ColumnType type = computeStorageType(storageTypes, querySignature, columnMappings, outputColumn);
 
-      if (!outputColumn.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-
-        if (!type.is(ValueType.COMPLEX)) {
-          // non complex columns
-          populateDimensionsAndAggregators(
-              dimensions,
-              aggregators,
-              outputColumnAggregatorFactories,
-              outputColumn,
-              type
-          );
-        } else {
-          // complex columns only
-          if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-            dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumn, type));
-          } else if (!isRollupQuery) {
-            aggregators.add(new PassthroughAggregatorFactory(outputColumn, type.getComplexTypeName()));
-          } else {
-            populateDimensionsAndAggregators(
-                dimensions,
-                aggregators,
-                outputColumnAggregatorFactories,
-                outputColumn,
-                type
-            );
-          }
-        }
+      if (outputColumn.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+        // Skip
+      } else if (!type.is(ValueType.COMPLEX)) {
+        // non complex columns
+        populateDimensionsAndAggregators(
+            dimensions,
+            aggregators,
+            outputColumnAggregatorFactories,
+            outputColumn,
+            type
+        );
+     // complex columns only
+      } else if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
+        dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumn, type));
+      } else if (!isRollupQuery) {
+        aggregators.add(new PassthroughAggregatorFactory(outputColumn, type.getComplexTypeName()));
+      } else {
+        populateDimensionsAndAggregators(
+            dimensions,
+            aggregators,
+            outputColumnAggregatorFactories,
+            outputColumn,
+            type
+        );
       }
     }
 
     return Pair.of(dimensions, aggregators);
   }
 
+  // TODO: This is a starter set of basic types.
+  private static final Map<String, ColumnType> COLUMN_TYPES = ImmutableMap.<String, ColumnType>builder()
+        .put(ColumnType.STRING.asTypeString(), ColumnType.STRING)
+        .put(ColumnType.LONG.asTypeString(), ColumnType.LONG)
+        .put(ColumnType.FLOAT.asTypeString(), ColumnType.FLOAT)
+        .put(ColumnType.DOUBLE.asTypeString(), ColumnType.DOUBLE)
+        .build();
+
+  /**
+   * Compute the storage (segment column) type for the given output column. The
+   * storage type is either provided explicitly, or is inferred from the query.
+   * <p>
+   * When the storage type differs from the query output type, the two must be
+   * compatible. That is, the appenderator must be able to convert from the query
+   * type to the storage type. The Calcite validator will have done this check,
+   * so that, by the time we get here, we can assume any required conversions
+   * are supported.
+   */
+  private static ColumnType computeStorageType(
+      final Map<String, String> storageTypes,
+      final RowSignature querySignature,
+      final ColumnMappings columnMappings,
+      final String outputColumn
+  )
+  {
+    // If output types are provided, and if this column has a type, and that type is valid,
+    // then use that type as the output type. The output type comes from a table schema
+    // declaration, such as the Druid catalog.
+    if (storageTypes != null) {
+      String outputType = storageTypes.get(outputColumn);
+      if (outputType != null) {
+        ColumnType type = COLUMN_TYPES.get(StringUtils.toUpperCase(outputType));
+        if (type != null) {
+          return type;
+        }
+      }
+    }
+
+    // Else, infer the storage type from the query column type. This form is convenient,
+    // but it means that different query runs may produce different types for the same
+    // column name. Not a problem in Druid, usually, but can cause subtle problems.
+    final String queryColumn = columnMappings.getQueryColumnForOutputColumn(outputColumn);
+    return querySignature.getColumnType(queryColumn)
+                         .orElseThrow(() -> new ISE("No type for column [%s]", outputColumn));
+  }
 
   /**
    * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
    * else treat this column as a dimension.
    *
-   * @param dimensions                      list is poulated if the output col is deemed to be a dimension
+   * @param dimensions                      list is populated if the output col is deemed to be a dimension
    * @param aggregators                     list is populated with the aggregator if the output col is deemed to be a aggregation column.
    * @param outputColumnAggregatorFactories output col -> AggregatorFactory map
    * @param outputColumn                    column name

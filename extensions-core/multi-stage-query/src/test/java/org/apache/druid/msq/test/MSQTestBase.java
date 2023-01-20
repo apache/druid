@@ -81,6 +81,7 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
@@ -142,8 +143,10 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.PlannerHook;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
@@ -252,7 +255,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
   public static final String SEQUENTIAL_MERGE = "sequential_merge";
-
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
@@ -668,6 +670,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private String runMultiStageQuery(String query, Map<String, Object> context)
   {
+    return runMultiStageQuery(query, context, null);
+  }
+
+  private String runMultiStageQuery(String query, Map<String, Object> context, PlannerHook hook)
+  {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         new SqlQueryPlus(
             query,
@@ -676,6 +683,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             CalciteTests.REGULAR_USER_AUTH_RESULT
         )
     );
+    stmt.setHook(hook);
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
     return (String) Iterables.getOnlyElement(sequence)[0];
@@ -720,7 +728,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
 
     return payload.getStatus().getErrorReport();
-
   }
 
   private void assertMSQSpec(MSQSpec expectedMSQSpec, MSQSpec querySpecForTask)
@@ -944,6 +951,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<Interval> expectedDestinationIntervals = null;
 
+    private Map<String, String> expectedStorageTypes;
+
     private IngestTester()
     {
       // nothing to do
@@ -985,6 +994,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return this;
     }
 
+    public IngestTester setExpectedStorageTypes(Map<String, String> expectedStorageTypes)
+    {
+      this.expectedStorageTypes = expectedStorageTypes;
+      return this;
+    }
+
     public void verifyResults()
     {
       Preconditions.checkArgument(sql != null, "sql cannot be null");
@@ -998,7 +1013,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(expectedShardSpec != null, "shardSpecClass cannot be null");
       readyToRun();
       try {
-        String controllerId = runMultiStageQuery(sql, queryContext);
+        PlannerCaptureHook hook = null;
+        if (expectedStorageTypes != null) {
+          hook = new PlannerCaptureHook();
+        }
+        String controllerId = runMultiStageQuery(sql, queryContext, hook);
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
           if (expectedMSQFault != null) {
@@ -1018,6 +1037,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
 
           return;
+        }
+
+        if (expectedStorageTypes != null) {
+          MSQControllerTask task = (MSQControllerTask) hook.execPlan();
+          Assert.assertEquals(expectedStorageTypes, task.getStorageTypes());
         }
         MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
         verifyCounters(reportPayload.getCounters());

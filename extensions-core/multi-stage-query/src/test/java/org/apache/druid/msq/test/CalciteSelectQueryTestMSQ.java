@@ -39,7 +39,6 @@ import org.junit.Ignore;
  */
 public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
 {
-
   private MSQTestOverlordServiceClient indexingServiceClient;
   private TestGroupByBuffers groupByBuffers;
 
@@ -61,7 +60,6 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
     super.configureGuice(builder);
     builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
   }
-
 
   @Override
   public SqlEngine createEngine(
@@ -102,63 +100,53 @@ public class CalciteSelectQueryTestMSQ extends CalciteQueryTest
   @Override
   public void testCannotInsertWithNativeEngine()
   {
-
   }
 
   @Ignore
   @Override
   public void testCannotReplaceWithNativeEngine()
   {
-
   }
 
   @Ignore
   @Override
   public void testRequireTimeConditionSimpleQueryNegative()
   {
-
   }
 
   @Ignore
   @Override
   public void testRequireTimeConditionSubQueryNegative()
   {
-
   }
 
   @Ignore
   @Override
   public void testRequireTimeConditionSemiJoinNegative()
   {
-
   }
 
   @Ignore
   @Override
   public void testExactCountDistinctWithFilter()
   {
-
   }
 
   @Ignore
   @Override
   public void testUnplannableQueries()
   {
-
   }
 
   @Ignore
   @Override
   public void testMaxSubqueryRows()
   {
-
   }
 
   @Ignore
   @Override
   public void testQueryWithMoreThanMaxNumericInFilter()
   {
-
   }
-
 }

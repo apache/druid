@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
@@ -87,5 +89,21 @@ public class PlannerCaptureHook implements PlannerHook
   public Object execPlan()
   {
     return execPlan;
+  }
+
+  public String visualizePlan(ObjectMapper objectMapper)
+  {
+    // Whatever the plan is: convert it to pretty-printed JSON.
+    if (execPlan == null) {
+      return "null";
+    }
+    try {
+      return objectMapper
+          .writerWithDefaultPrettyPrinter()
+          .writeValueAsString(execPlan);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException("JSON conversion failed", e);
+    }
   }
 }

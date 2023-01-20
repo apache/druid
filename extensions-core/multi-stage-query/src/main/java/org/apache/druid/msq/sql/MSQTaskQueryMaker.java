@@ -88,13 +88,15 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
+  private final Map<String, String> storageTypes;
 
   MSQTaskQueryMaker(
       @Nullable final String targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping
+      final List<Pair<Integer, String>> fieldMapping,
+      final Map<String, String> storageTypes
   )
   {
     this.targetDataSource = targetDataSource;
@@ -102,6 +104,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
+    this.storageTypes = storageTypes;
   }
 
   @Override
@@ -273,7 +276,8 @@ public class MSQTaskQueryMaker implements QueryMaker
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         sqlTypeNames,
-        null
+        null,
+        storageTypes
     );
 
     return Pair.of(taskId, controllerTask);

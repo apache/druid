@@ -105,6 +105,13 @@ public class QueryTestBuilder
   protected String expectedLogicalPlan;
   @Nullable
   protected SqlSchema expectedSqlSchema;
+
+  /**
+   * The expected execution plan, converted to a JSON string. Primarily for MSQ.
+   * However, at present, the code path that includes MSQ ingestion does not use
+   * this builder. The exec plan functionality is thus replicated in a different
+   * framework for now.
+   */
   @Nullable
   protected String expectedExecPlan;
 

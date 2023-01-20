@@ -129,7 +129,8 @@ public class NativeSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForInsert(
       final String targetDataSource,
       final RelRoot relRoot,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final RelDataType targetType
   )
   {
     throw new UnsupportedOperationException();

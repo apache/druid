@@ -48,6 +48,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +72,10 @@ public class MSQControllerTask extends AbstractTask
   @Nullable
   private final List<String> sqlTypeNames;
 
+  // Provide the segment column schema. Optional. If omitted, uses the query output signature.
+  @Nullable
+  private final Map<String, String> storageTypes;
+
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   @JacksonInject
   private Injector injector;
@@ -84,7 +89,8 @@ public class MSQControllerTask extends AbstractTask
       @JsonProperty("sqlQuery") @Nullable String sqlQuery,
       @JsonProperty("sqlQueryContext") @Nullable Map<String, Object> sqlQueryContext,
       @JsonProperty("sqlTypeNames") @Nullable List<String> sqlTypeNames,
-      @JsonProperty("context") @Nullable Map<String, Object> context
+      @JsonProperty("context") @Nullable Map<String, Object> context,
+      @JsonProperty("storageTypes") @Nullable Map<String, String> storageTypes
   )
   {
     super(
@@ -99,6 +105,7 @@ public class MSQControllerTask extends AbstractTask
     this.sqlQuery = sqlQuery;
     this.sqlQueryContext = sqlQueryContext;
     this.sqlTypeNames = sqlTypeNames;
+    this.storageTypes = storageTypes;
 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
@@ -137,6 +144,14 @@ public class MSQControllerTask extends AbstractTask
   public List<String> getSqlTypeNames()
   {
     return sqlTypeNames;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, String> getStorageTypes()
+  {
+    return storageTypes;
   }
 
   @Override

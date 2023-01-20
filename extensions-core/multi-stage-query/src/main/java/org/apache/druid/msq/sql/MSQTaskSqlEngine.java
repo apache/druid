@@ -21,6 +21,7 @@ package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.rel.RelNode;
@@ -29,6 +30,8 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
@@ -40,6 +43,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -137,7 +141,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        null
     );
   }
 
@@ -150,7 +155,8 @@ public class MSQTaskSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForInsert(
       final String targetDataSource,
       final RelRoot relRoot,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final RelDataType targetType
   ) throws ValidationException
   {
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
@@ -160,8 +166,43 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        computeStorageTypes(targetType)
     );
+  }
+
+  // TODO: Starter set of basic types
+  private static final Map<String, String> DRUID_TYPES = ImmutableMap.<String, String>builder()
+      .put(SqlTypeName.TIMESTAMP.getName(), ColumnType.LONG.asTypeString())
+      .put(SqlTypeName.VARCHAR.getName(), ColumnType.STRING.asTypeString())
+      .put(SqlTypeName.BIGINT.getName(), ColumnType.LONG.asTypeString())
+      .put(SqlTypeName.FLOAT.getName(), ColumnType.FLOAT.asTypeString())
+      .put(SqlTypeName.DOUBLE.getName(), ColumnType.DOUBLE.asTypeString())
+      .build();
+
+  private Map<String, String> computeStorageTypes(RelDataType targetType)
+  {
+    if (targetType == null) {
+      return null;
+    }
+    if (!(targetType instanceof RelRecordType)) {
+      return null;
+    }
+    RelRecordType recordType = (RelRecordType) targetType;
+    ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+    for (RelDataTypeField field : recordType.getFieldList()) {
+      SqlTypeName sqlType = field.getType().getSqlTypeName();
+      if (sqlType == null) {
+        return null;
+      }
+      String sqlTypeName = sqlType.getName();
+      String druidType = DRUID_TYPES.get(sqlTypeName);
+      if (druidType == null) {
+        continue;
+      }
+      builder.put(field.getName(), druidType);
+    }
+    return builder.build();
   }
 
   private static void validateSelect(

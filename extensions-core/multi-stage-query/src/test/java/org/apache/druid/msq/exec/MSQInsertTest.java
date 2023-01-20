@@ -59,7 +59,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-
 @RunWith(Parameterized.class)
 public class MSQInsertTest extends MSQTestBase
 {
@@ -83,7 +82,6 @@ public class MSQInsertTest extends MSQTestBase
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
 
-
   @Test
   public void testInsertOnFoo1()
   {
@@ -100,7 +98,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .verifyResults();
-
   }
 
   @Test
@@ -141,26 +138,41 @@ public class MSQInsertTest extends MSQTestBase
                          0, 0, "input0"
                      )
                      .verifyResults();
-
   }
 
   @Test
   public void testInsertOnFoo1WithTimeFunction()
   {
+    // Signature of the rows produced by the SELECT query
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
+    // Schema of the columns produced in the output segment.
+    // In this test, the types are the same as the SELECT.
+    Map<String, String> expectedStorageTypes = ImmutableMap.of(
+        "__time", "LONG",
+        "dim1", "STRING",
+        "cnt", "LONG"
+        );
+
     testIngestQuery().setSql(
-                         "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "insert into foo1\n" +
+                         "select  floor(__time to day) as __time , dim1 , count(*) as cnt\n" +
+                         "from foon" +
+                         "where dim1 is not null\n" +
+                         "group by 1, 2\n" +
+                         "PARTITIONED by day\n" +
+                         "clustered by dim1"
+                      )
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedStorageTypes(expectedStorageTypes)
                      .verifyResults();
-
   }
 
   @Test
@@ -187,7 +199,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .verifyResults();
-
   }
 
   @Test
@@ -301,7 +312,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .verifyResults();
-
   }
 
   @Test
@@ -324,7 +334,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .verifyResults();
-
   }
 
   @Test
@@ -349,7 +358,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
                      .verifyResults();
-
   }
 
   @Test
@@ -372,7 +380,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRowsWithAggregatedComplexColumn())
                      .verifyResults();
-
   }
 
   @Test
@@ -455,7 +462,6 @@ public class MSQInsertTest extends MSQTestBase
                          new Object[]{1466985600000L, "Википедия", 1L}
                      ))
                      .verifyResults();
-
   }
 
   @Test

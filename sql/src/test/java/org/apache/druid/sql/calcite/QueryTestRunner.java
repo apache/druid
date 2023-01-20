@@ -556,9 +556,9 @@ public class QueryTestRunner
 
   public static class VerifyExecPlan implements QueryVerifyStep
   {
-    private final ExecuteQuery execStep;
+    private final BaseExecuteQuery execStep;
 
-    public VerifyExecPlan(ExecuteQuery execStep)
+    public VerifyExecPlan(BaseExecuteQuery execStep)
     {
       this.execStep = execStep;
     }
@@ -713,7 +713,7 @@ public class QueryTestRunner
 
       // Verify the physical plan, if requested.
       if (builder.expectedExecPlan != null) {
-        verifySteps.add(new QueryTestRunner.VerifyExecPlan(execStep));
+        verifySteps.add(new QueryTestRunner.VerifyExecPlan(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
         verifySteps.add(new VerifyResults(finalExecStep));

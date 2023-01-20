@@ -94,6 +94,7 @@ public interface SqlEngine
   QueryMaker buildQueryMakerForInsert(
       String targetDataSource,
       RelRoot relRoot,
-      PlannerContext plannerContext
+      PlannerContext plannerContext,
+      RelDataType targetType
   ) throws ValidationException;
 }
