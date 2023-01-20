@@ -26,10 +26,10 @@ jobs:
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
-    name: (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer=${{ matrix.indexer }}) ${{ matrix.it }} integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-revised-its.yml@update_uts_gha
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
       script: ./it.sh travis ${{ matrix.it }}
+      it: ${{ matrix.it }}

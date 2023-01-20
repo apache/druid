@@ -33,6 +33,10 @@ on:
         description: 'Which indexer to use'
         required: true
         type: string
+      it:
+        description: 'IT test Category'
+        required: true
+        type: string
 
 env:
   MVN: mvn -B
@@ -44,6 +48,7 @@ env:
 
 jobs:
   test:
+    name: (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}) ${{ inputs.it }} integration test
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
