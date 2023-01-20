@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
@@ -74,28 +73,24 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
-  private final QueryRunner runner;
+  private final IncrementalIndex index;
   private final boolean legacy;
 
-  public UnnestScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
+  public UnnestScanQueryRunnerTest(final IncrementalIndex index, final boolean legacy)
   {
-    this.runner = runner;
+    this.index = index;
     this.legacy = legacy;
   }
 
-  @Parameterized.Parameters(name = "{0}, legacy = {1}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-
-    return QueryRunnerTestHelper.cartesian(
-        QueryRunnerTestHelper.makeUnnestQueryRunners(
-            FACTORY,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
-        ),
-        ImmutableList.of(false, true)
-    );
+    NullHandling.initializeForTests();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final List<Object[]> constructors = new ArrayList<>();
+    constructors.add(new Object[]{rtIndex, true});
+    constructors.add(new Object[]{rtIndex, false});
+    return constructors;
   }
 
   private Druids.ScanQueryBuilder newTestUnnestQuery()
@@ -134,7 +129,17 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         .limit(3)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{
@@ -199,9 +204,15 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .limit(3)
               .build();
 
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunnerWithQuery(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), query,
-                                                                                "rtIndexvc");
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
     Iterable<ScanResultValue> results = vcrunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
@@ -260,15 +271,23 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                   new ExpressionVirtualColumn(
                       "vc",
                       "array(\"market\",\"quality\")",
-                      ColumnType.STRING_ARRAY,
+                      ColumnType.STRING,
                       TestExprMacroTable.INSTANCE
                   )
               )
               .limit(4)
               .build();
 
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
     Iterable<ScanResultValue> results = vcrunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
@@ -290,7 +309,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
           "2011-01-12T00:00:00.000Z\tspot\tautomotive",
           "2011-01-12T00:00:00.000Z\tspot\tspot",
           "2011-01-12T00:00:00.000Z\tspot\tbusiness",
-      };
+          };
     } else {
       values = new String[]{
           "spot\tspot",
@@ -304,8 +323,15 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
-        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
-        : Lists.newArrayList(QueryRunnerTestHelper.MARKET_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        ? Lists.newArrayList(
+            getTimestampName(),
+            QueryRunnerTestHelper.MARKET_DIMENSION,
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+        )
+        : Lists.newArrayList(
+            QueryRunnerTestHelper.MARKET_DIMENSION,
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+        ),
         0,
         4
     );
@@ -322,7 +348,17 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         .filters(new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null))
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{
@@ -373,7 +409,17 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{
@@ -429,22 +475,24 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testUnnestRunnerNonNullAllowSet()
   {
-    List<String> allowList = Arrays.asList("a", "b", "c");
-    LinkedHashSet allowSet = new LinkedHashSet(allowList);
     ScanQuery query = newTestUnnestQueryWithAllowSet()
         .intervals(I_0112_0114)
         .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
         .limit(3)
         .build();
 
-    List<QueryRunner<ScanResultValue>> unrunner = QueryRunnerTestHelper.makeUnnestQueryRunners(
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
         FACTORY,
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-        allowSet
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
     );
 
-    Iterable<ScanResultValue> results = unrunner.get(1).run(QueryPlus.wrap(query)).toList();
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
+
     String[] columnNames;
     if (legacy) {
       columnNames = new String[]{

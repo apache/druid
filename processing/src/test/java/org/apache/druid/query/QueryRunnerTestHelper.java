@@ -78,7 +78,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -480,100 +479,20 @@ public class QueryRunnerTestHelper
     };
   }
 
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeUnnestQueryRunners(
-      QueryRunnerFactory<T, QueryType> factory,
-      String dimensionToUnnest,
-      String outputColumn,
-      LinkedHashSet<String> allowSet
-  )
-  {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
-    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
-    final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
-    final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
-    final QueryableIndex frontCodedMappedTestIndex = TestIndex.getFrontCodedMMappedTestIndex();
-    return ImmutableList.of(
-        makeUnnestQueryRunner(
-            factory,
-            new IncrementalIndexSegment(rtIndex, SEGMENT_ID),
-            dimensionToUnnest,
-            outputColumn,
-            allowSet,
-            "rtIndex"
-        ),
-        makeUnnestQueryRunner(
-            factory,
-            new IncrementalIndexSegment(noRollupRtIndex, SEGMENT_ID),
-            dimensionToUnnest,
-            outputColumn,
-            allowSet,
-            "noRollupRtIndex"
-        ),
-        makeUnnestQueryRunner(
-            factory,
-            new QueryableIndexSegment(mMappedTestIndex, SEGMENT_ID),
-            dimensionToUnnest,
-            outputColumn,
-            allowSet,
-            "mMappedTestIndex"
-        ),
-        makeUnnestQueryRunner(
-            factory,
-            new QueryableIndexSegment(noRollupMMappedTestIndex, SEGMENT_ID),
-            dimensionToUnnest, outputColumn, allowSet,
-            "noRollupMMappedTestIndex"
-        ),
-        makeUnnestQueryRunner(
-            factory,
-            new QueryableIndexSegment(mergedRealtimeIndex, SEGMENT_ID),
-            dimensionToUnnest,
-            outputColumn,
-            allowSet,
-            "mergedRealtimeIndex"
-        ),
-        makeUnnestQueryRunner(
-            factory,
-            new QueryableIndexSegment(frontCodedMappedTestIndex, SEGMENT_ID),
-            dimensionToUnnest,
-            outputColumn,
-            allowSet,
-            "frontCodedMMappedTestIndex"
-        )
-    );
-  }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeUnnestQueryRunnerWithQuery(
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerWithSegmentMapFn(
       QueryRunnerFactory<T, QueryType> factory,
       Segment adapter,
       Query<T> query,
       final String runnerName
   )
   {
-    DataSource base = query.getDataSource();
+    final DataSource base = query.getDataSource();
 
-    SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
+    final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
                                                         .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
                                                             adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
-  }
-
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeUnnestQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
-      Segment adapter,
-      String columnToUnnest,
-      String outputName,
-      LinkedHashSet<String> allowSet,
-      final String runnerName
-  )
-  {
-    UnnestSegment unnestSegment = new UnnestSegment(
-        adapter,
-        columnToUnnest,
-        outputName,
-        allowSet
-    );
-    return makeQueryRunner(factory, unnestSegment, runnerName);
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(

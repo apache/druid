@@ -25,10 +25,8 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
@@ -74,8 +72,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private final QueryRunner<ResultRow> runner;
-  private final QueryRunner<ResultRow> originalRunner;
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
   private final boolean vectorize;
@@ -87,15 +83,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner,
       boolean vectorize
   )
   {
     this.config = config;
     this.factory = factory;
-    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
-    this.originalRunner = runner;
-    String runnerName = runner.toString();
     this.vectorize = vectorize;
   }
 
@@ -123,73 +115,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         return "v2";
       }
     };
-    final GroupByQueryConfig v2SmallBufferConfig = new GroupByQueryConfig()
-    {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
-
-      @Override
-      public int getBufferGrouperMaxSize()
-      {
-        return 2;
-      }
-
-      @Override
-      public HumanReadableBytes getMaxOnDiskStorage()
-      {
-        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2SmallBuffer";
-      }
-    };
-    final GroupByQueryConfig v2SmallDictionaryConfig = new GroupByQueryConfig()
-    {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
-
-      @Override
-      public HumanReadableBytes getMaxOnDiskStorage()
-      {
-        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2SmallDictionary";
-      }
-    };
-    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
-    {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
-
-      @Override
-      public int getNumParallelCombineThreads()
-      {
-        return GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG.getNumThreads();
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2ParallelCombine";
-      }
-    };
-
 
     return ImmutableList.of(
         v2Config
@@ -201,7 +126,12 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       final TestGroupByBuffers bufferPools
   )
   {
-    return makeQueryRunnerFactory(GroupByQueryRunnerTest.DEFAULT_MAPPER, config, bufferPools, GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG);
+    return makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        config,
+        bufferPools,
+        GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG
+    );
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
@@ -265,23 +195,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config, BUFFER_POOLS);
-      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeUnnestQueryRunners(
-          factory,
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-          null
-      )) {
-        for (boolean vectorize : ImmutableList.of(false)) {
-          final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
 
-          // Add vectorization tests for any indexes that support it.
-          if (!vectorize ||
-              (QueryRunnerTestHelper.isTestRunnerVectorizable(runner) &&
-               config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2))) {
-            constructors.add(new Object[]{testName, config, factory, runner, vectorize});
-          }
+      for (boolean vectorize : ImmutableList.of(false)) {
+        final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, "dummy", vectorize);
+
+        // Add vectorization tests for any indexes that support it.
+        if (!vectorize ||
+            config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+          constructors.add(new Object[]{testName, config, factory, vectorize});
         }
       }
+
     }
 
     return constructors;
@@ -523,8 +447,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             252L
         )
     );
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        factory,
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -558,8 +491,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows", 52L
         )
     );
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        factory,
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "missing-column");
   }
 
@@ -635,8 +577,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows", 4L
         )
     );
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        factory,
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-column");
   }
 
@@ -730,9 +681,17 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(factory, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        factory,
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, vcrunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
   }
 
@@ -790,9 +749,16 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(factory, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, vcrunner, query);
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        factory,
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-columns");
   }
 

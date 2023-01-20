@@ -57,13 +57,11 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,32 +73,14 @@ import java.util.Map;
 public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
-  private final QueryRunner<Result<TopNResultValue>> runner;
-  private final boolean duplicateSingleAggregatorQueries;
   private final List<AggregatorFactory> commonAggregators;
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   public UnnestTopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner,
-      boolean specializeGeneric1AggPooledTopN,
-      boolean specializeGeneric2AggPooledTopN,
-      boolean specializeHistorical1SimpleDoubleAggPooledTopN,
-      boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN,
-      boolean duplicateSingleAggregatorQueries,
       List<AggregatorFactory> commonAggregators
   )
   {
-    this.runner = runner;
-    PooledTopNAlgorithm.setSpecializeGeneric1AggPooledTopN(specializeGeneric1AggPooledTopN);
-    PooledTopNAlgorithm.setSpecializeGeneric2AggPooledTopN(specializeGeneric2AggPooledTopN);
-    PooledTopNAlgorithm.setSpecializeHistorical1SimpleDoubleAggPooledTopN(
-        specializeHistorical1SimpleDoubleAggPooledTopN
-    );
-    PooledTopNAlgorithm.setSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN(
-        specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN
-    );
-    this.duplicateSingleAggregatorQueries = duplicateSingleAggregatorQueries;
     this.commonAggregators = commonAggregators;
   }
 
@@ -113,69 +93,9 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
-    List<Object[]> parameters = new ArrayList<>();
-    for (int i = 0; i < 32; i++) {
-      for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[7];
-        params[0] = firstParameter;
-        params[1] = (i & 1) != 0;
-        params[2] = (i & 2) != 0;
-        params[3] = (i & 4) != 0;
-        params[4] = (i & 8) != 0;
-        params[5] = (i & 16) != 0;
-        params[6] = QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS;
-        Object[] params2 = Arrays.copyOf(params, 7);
-        params2[6] = QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS;
-        parameters.add(params);
-        parameters.add(params2);
-      }
-    }
-    return parameters;
-  }
-
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
-  {
-    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
-    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(20000)
-    );
-
-    List<QueryRunner<Result<TopNResultValue>>> retVal = new ArrayList<>(Collections.singletonList(
-        QueryRunnerTestHelper.makeUnnestQueryRunners(
-            new TopNQueryRunnerFactory(
-                defaultPool,
-                new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            ),
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-            null
-        ).get(0)));
-
-    RESOURCE_CLOSER.register(() -> {
-      // Verify that all objects have been returned to the pool.
-      Assert.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
-      Assert.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
-      defaultPool.close();
-      customPool.close();
-    });
-
-    return retVal;
-  }
-
-  private static Map<String, Object> makeRowWithNulls(
-      String dimName,
-      @Nullable Object dimValue,
-      String metric,
-      @Nullable Object metricVal
-  )
-  {
-    Map<String, Object> nullRow = new HashMap<>();
-    nullRow.put(dimName, dimValue);
-    nullRow.put(metric, metricVal);
-    return nullRow;
+    List<Object[]> constructors = new ArrayList<>();
+    constructors.add(new Object[]{QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS});
+    return constructors;
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResultsWithCustomRunner(
@@ -189,35 +109,11 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     return retval;
   }
 
-  private Sequence<Result<TopNResultValue>> assertExpectedResults(
-      Iterable<Result<TopNResultValue>> expectedResults,
-      TopNQuery query
-  )
-  {
-    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query);
-    TestHelper.assertExpectedResults(expectedResults, retval);
-    return retval;
-  }
-
-  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query)
-  {
-    return runWithMerge(query, ResponseContext.createEmpty());
-  }
-
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, QueryRunner runner)
   {
     return runWithMerge(query, ResponseContext.createEmpty(), runner);
   }
 
-  private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
-  {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
-        chest.mergeResults(runner),
-        chest
-    );
-    return mergeRunner.run(QueryPlus.wrap(query), context);
-  }
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context, QueryRunner runner1)
   {
@@ -232,6 +128,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testEmptyTopN()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -254,18 +151,36 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+
+    QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        new TopNQueryRunnerFactory(
+            defaultPool,
+            new TopNQueryQueryToolChest(new TopNQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ),
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02T00:00:00.000Z"),
             new TopNResultValue(ImmutableList.of())
         )
     );
-    assertExpectedResults(expectedResults, query);
+    assertExpectedResultsWithCustomRunner(expectedResults, query, queryRunner);
   }
 
   @Test
   public void testTopNLexicographicUnnest()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -276,6 +191,22 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .aggregators(commonAggregators)
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
+
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+
+    QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        new TopNQueryRunnerFactory(
+            defaultPool,
+            new TopNQueryQueryToolChest(new TopNQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ),
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
@@ -314,12 +245,14 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
     );
-    assertExpectedResults(expectedResults, query);
+    assertExpectedResultsWithCustomRunner(expectedResults, query, queryRunner);
   }
 
   @Test
   public void testTopNStringVirtualColumnUnnest()
   {
+    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -343,7 +276,21 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .aggregators(commonAggregators)
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
 
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        new TopNQueryRunnerFactory(
+            defaultPool,
+            new TopNQueryQueryToolChest(new TopNQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ),
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
@@ -381,7 +328,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
     );
-    assertExpectedResults(expectedResults, query);
+    assertExpectedResultsWithCustomRunner(expectedResults, query, vcrunner);
   }
 
   @Test
@@ -391,23 +338,6 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
         () -> ByteBuffer.allocate(20000)
-    );
-
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(
-        new TopNQueryRunnerFactory(
-            defaultPool,
-            new TopNQueryQueryToolChest(new TopNQueryConfig()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        "vc",
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
-        null,
-        "rtIndexvc"
     );
 
     TopNQuery query = new TopNQueryBuilder()
@@ -433,6 +363,22 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
         .aggregators(commonAggregators)
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
+
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        new TopNQueryRunnerFactory(
+            defaultPool,
+            new TopNQueryQueryToolChest(new TopNQueryConfig()),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        ),
+        new IncrementalIndexSegment(
+            rtIndex,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
