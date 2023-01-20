@@ -233,7 +233,7 @@ jobs:
       group: edge
       jdk: openjdk11
       env:
-        - MAVEN_PROJECTS='core,indexing-hadoop,indexing-service,processing'
+        - MAVEN_PROJECTS='processing,indexing-hadoop,indexing-service'
       script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
     - name: "Build and test on ARM64 CPU architecture (2)"
@@ -244,7 +244,7 @@ jobs:
       group: edge
       jdk: openjdk11
       env:
-        - MAVEN_PROJECTS='core,sql,server,services'
+        - MAVEN_PROJECTS='sql,server,services'
       script: ${MVN} test -B -pl ${MAVEN_PROJECTS} -Dweb.console.skip=true -DargLine=-Xmx3000m
 
 
