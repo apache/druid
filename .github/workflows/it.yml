@@ -24,7 +24,6 @@ jobs:
       matrix:
         jdk: [8, 11]
         testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction]
-    name:  (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer=middleManager) ${{ matrix.testing_group }} integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -39,7 +38,6 @@ jobs:
       matrix:
         jdk: [8, 11]
         testing_group: [input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format, append-ingestion, compaction]
-    name:  (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer=indexer) ${{ matrix.testing_group }} integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -54,7 +52,6 @@ jobs:
       matrix:
         jdk: [8, 11]
         testing_group: [query, query-retry, query-error, security, high-availability]
-    name:  (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer=middleManager) ${{ matrix.testing_group }} integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -68,7 +65,6 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [8, 11]
-    name:  (Compile=jdk8, Run=jdk${{ matrix.jdk }}, Indexer=middleManager) query integration test (mariaDB)
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -83,7 +79,6 @@ jobs:
       fail-fast: false
       matrix:
         indexer: [indexer, middleManager]
-    name:  (Compile=openjdk8, Run=openjdk8, Indexer=${{ matrix.indexer }}) perfect rollup parallel batch index integration test with deep storage as intermediate store
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -93,7 +88,6 @@ jobs:
       override_config_path: ./environment-configs/test-groups/shuffle-deep-store
 
   integration-custom-coordinator-duties-tests:
-    name: (Compile=jdk8, Run=jdk8, Indexer=middleManager) custom coordinator duties integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8
@@ -108,7 +102,6 @@ jobs:
       matrix:
         jdk: [8, 11]
         indexer: [middleManager, indexer]
-    name:  (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer=${{ matrix.indexer }}) other integration tests
     uses: tejaswini-imply/druid/.github/workflows/reusable-standard-its.yml@update_uts_gha
     with:
       build_jdk: 8

@@ -29,100 +29,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ '8', '11', '17' ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v3
-      - name: Cache Maven m2 repository
-        id: maven
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}
-      - name: Cache targets
-        id: target
-        uses: actions/cache@v3
-        with:
-          path: |
-            ./target
-            ./extendedset/target
-            ./hll/target
-            ./processing/target
-            ./server/target
-            ./indexing-hadoop/target
-            ./web-console/target
-            ./indexing-service/target
-            ./services/target
-            ./benchmarks/target
-            ./distribution/target
-            ./integration-tests/target
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
-      - name: Cache image
-        id: docker_container
-        uses: actions/cache@v3
-        with:
-          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ hashFiles('**/pom.xml') }}
-          path: |
-            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
-          restore-keys: |
-            druid-container-jdk${{ matrix.jdk }}.tar.gz-
-      - name: Load docker image
-        if: steps.docker_container.outputs.cache-hit == 'true'
-        run: |
-          docker load --input druid-container-jdk${{ matrix.jdk }}.tar.gz
-          docker images
-      - name: Setup java
-        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
-      - name: Maven build
-        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-        id: maven_build
-        run: |
-          ./it.sh ci
-      - name: Container build
-        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-        run: |
-          ./it.sh image
-          source ./integration-tests-ex/image/target/env.sh
-          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
-      - name: Set docker image name
-        id: docker_image_name
-        run: |
-          source ./integration-tests-ex/image/target/env.sh
-          echo "DRUID_IT_IMAGE_NAME=$(echo $DRUID_IT_IMAGE_NAME | sed 's/\./_/g; s/\//_/g; s/\:/-/g')" >> $GITHUB_OUTPUT
-      #- name: Upload image
-      #  if: steps.docker_env.outputs.cache-hit != 'true'
-      #  uses: ishworkh/docker-image-artifact-upload@v1
-      #  with:
-      #    image: "${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}"
-      #    retention_days: "2"
-      - name: Save docker container to archive
-        run: |
-          source ./integration-tests-ex/image/target/env.sh
-          echo $DRUID_IT_IMAGE_NAME
-          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
-      #- name: Upload image
-      #  if: steps.docker_env.outputs.cache-hit != 'true'
-      #  uses: actions/upload-artifact@v3
-      #  with:
-      #    name: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
-      #    path: ./${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
-      #    retention-days: "1"
-    outputs:
-      DRUID_IT_IMAGE_NAME: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}
+#  build:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        jdk: [ '8', '11', '17' ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout branch
+#        uses: actions/checkout@v3
+#      - name: Cache Maven m2 repository
+#        id: maven
+#        uses: actions/cache@v3
+#        with:
+#          path: ~/.m2/repository
+#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            maven-${{ runner.os }}-${{ matrix.jdk }}
+#      - name: Cache targets
+#        id: target
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            ./target
+#            ./extendedset/target
+#            ./hll/target
+#            ./processing/target
+#            ./server/target
+#            ./indexing-hadoop/target
+#            ./web-console/target
+#            ./indexing-service/target
+#            ./services/target
+#            ./benchmarks/target
+#            ./distribution/target
+#            ./integration-tests/target
+#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
+#      - name: Cache image
+#        id: docker_container
+#        uses: actions/cache@v3
+#        with:
+#          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ hashFiles('**/pom.xml') }}
+#          path: |
+#            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
+#            ./integration-tests-ex/image/target/env.sh
+#          restore-keys: |
+#            druid-container-jdk${{ matrix.jdk }}.tar.gz-
+#      - name: Load docker image
+#        if: steps.docker_container.outputs.cache-hit == 'true'
+#        run: |
+#          docker load --input druid-container-jdk${{ matrix.jdk }}.tar.gz
+#          docker images
+#      - name: Setup java
+#        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+#        uses: actions/setup-java@v3
+#        with:
+#          distribution: 'zulu'
+#          java-version: ${{ matrix.jdk }}
+#      - name: Maven build
+#        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+#        id: maven_build
+#        run: |
+#          ./it.sh ci
+#      - name: Container build
+#        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+#        run: |
+#          ./it.sh image
+#          source ./integration-tests-ex/image/target/env.sh
+#          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+#      - name: Set docker image name
+#        id: docker_image_name
+#        run: |
+#          source ./integration-tests-ex/image/target/env.sh
+#          echo "DRUID_IT_IMAGE_NAME=$(echo $DRUID_IT_IMAGE_NAME | sed 's/\./_/g; s/\//_/g; s/\:/-/g')" >> $GITHUB_OUTPUT
+#      #- name: Upload image
+#      #  if: steps.docker_env.outputs.cache-hit != 'true'
+#      #  uses: ishworkh/docker-image-artifact-upload@v1
+#      #  with:
+#      #    image: "${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}"
+#      #    retention_days: "2"
+#      - name: Save docker container to archive
+#        run: |
+#          source ./integration-tests-ex/image/target/env.sh
+#          echo $DRUID_IT_IMAGE_NAME
+#          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
+#      #- name: Upload image
+#      #  if: steps.docker_env.outputs.cache-hit != 'true'
+#      #  uses: actions/upload-artifact@v3
+#      #  with:
+#      #    name: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
+#      #    path: ./${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}.tar.gz
+#      #    retention-days: "1"
+#    outputs:
+#      DRUID_IT_IMAGE_NAME: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}
 
 #  unit-tests:
 #    strategy:
@@ -154,7 +154,4 @@ jobs:
 #    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
 
   revised-its:
-    needs: build
     uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha
-    with:
-      druid_it_image_name: "${{ needs.build.outputs.DRUID_IT_IMAGE_NAME }}"

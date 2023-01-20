@@ -14,11 +14,8 @@
 # limitations under the License.
 
 on:
-  workflow_call:
-    inputs:
-      druid_it_image_name:
-        required: true
-        type: string
+  workflow_call
+
 jobs:
   it:
     strategy:
@@ -29,10 +26,10 @@ jobs:
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
+    name: (Compile=jdk${{ matrix.jdk }}, Run=jdk${{ matrix.jdk }}, Indexer={{ matrix.indexer }}) ${{ matrix.it }} integration test
     uses: tejaswini-imply/druid/.github/workflows/reusable-revised-its.yml@update_uts_gha
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
-      druid_it_image_name: ${{ inputs.druid_it_image_name }}
       script: ./it.sh travis ${{ matrix.it }}
