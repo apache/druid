@@ -53,11 +53,11 @@ jobs:
       ##  with:
       ##    distribution: 'zulu'
       ##    java-version: ${{ inputs.build_jdk }}
-#      - name: Restore Maven repository
-#        uses: actions/cache/restore@v3
-#        with:
-#          path: ~/.m2/repository
-#          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
+      - name: Restore Maven repository
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
       ##- name: Restore targets
       ##  uses: actions/cache/restore@v3
       ##  with:
@@ -101,6 +101,4 @@ jobs:
 #          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 #          docker images
       - name: Run IT
-        run: |
-          ./it.sh build
-          ${{ inputs.script }}
+        run: ${{ inputs.script }}

@@ -29,43 +29,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-#  build:
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        jdk: [ '8', '11', '17' ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout branch
-#        uses: actions/checkout@v3
-#      - name: Cache Maven m2 repository
-#        id: maven
-#        uses: actions/cache@v3
-#        with:
-#          path: ~/.m2/repository
-#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
-#          restore-keys: |
-#            maven-${{ runner.os }}-${{ matrix.jdk }}
-#      - name: Cache targets
-#        id: target
-#        uses: actions/cache@v3
-#        with:
-#          path: |
-#            ./target
-#            ./extendedset/target
-#            ./hll/target
-#            ./processing/target
-#            ./server/target
-#            ./indexing-hadoop/target
-#            ./web-console/target
-#            ./indexing-service/target
-#            ./services/target
-#            ./benchmarks/target
-#            ./distribution/target
-#            ./integration-tests/target
-#          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
-#          restore-keys: |
-#            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ '8', '11', '17' ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+      - name: Cache Maven m2 repository
+        id: maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-${{ matrix.jdk }}
+      - name: Cache targets
+        id: target
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./target
+            ./extendedset/target
+            ./hll/target
+            ./processing/target
+            ./server/target
+            ./indexing-hadoop/target
+            ./web-console/target
+            ./indexing-service/target
+            ./services/target
+            ./benchmarks/target
+            ./distribution/target
+            ./integration-tests/target
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-${{ matrix.jdk }}-targets
 #      - name: Cache image
 #        id: docker_container
 #        uses: actions/cache@v3
@@ -81,17 +81,17 @@ jobs:
 #        run: |
 #          docker load --input druid-container-jdk${{ matrix.jdk }}.tar.gz
 #          docker images
-#      - name: Setup java
-#        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-#        uses: actions/setup-java@v3
-#        with:
-#          distribution: 'zulu'
-#          java-version: ${{ matrix.jdk }}
-#      - name: Maven build
-#        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-#        id: maven_build
-#        run: |
-#          ./it.sh ci
+      - name: Setup java
+        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
+      - name: Maven build
+        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
+        id: maven_build
+        run: |
+          ./it.sh ci
 #      - name: Container build
 #        if: (steps.docker_container.outputs.cache-hit != 'true' || steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
 #        run: |
