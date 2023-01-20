@@ -22,62 +22,12 @@ package org.apache.druid.collections.fastutil;
 import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntCollection;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntList;
-
-import java.util.Collection;
-import java.util.Iterator;
 
 public class DruidIntList extends IntArrayList
 {
-  public DruidIntList(int[] a, boolean wrapped)
-  {
-    super(a, wrapped);
-  }
-
   public DruidIntList(int capacity)
   {
     super(capacity);
-  }
-
-  public DruidIntList()
-  {
-  }
-
-  public DruidIntList(Collection<? extends Integer> c)
-  {
-    super(c);
-  }
-
-  public DruidIntList(IntCollection c)
-  {
-    super(c);
-  }
-
-  public DruidIntList(IntList l)
-  {
-    super(l);
-  }
-
-  public DruidIntList(int[] a)
-  {
-    super(a);
-  }
-
-  public DruidIntList(int[] a, int offset, int length)
-  {
-    super(a, offset, length);
-  }
-
-  public DruidIntList(Iterator<? extends Integer> i)
-  {
-    super(i);
-  }
-
-  public DruidIntList(IntIterator i)
-  {
-    super(i);
   }
 
   public void addArray(int[] vals)
