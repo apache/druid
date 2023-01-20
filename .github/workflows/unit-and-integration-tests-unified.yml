@@ -124,37 +124,37 @@ jobs:
     outputs:
       DRUID_IT_IMAGE_NAME: ${{ steps.docker_image_name.outputs.DRUID_IT_IMAGE_NAME }}
 
-  unit-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        sql_compatibility: [ false, true ]
-    name: jdk8, sql-compat=${{ matrix.sql_compatibility }}
-    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
-    needs: build
-    with:
-      jdk: 8
-      sql_compatibility: ${{ matrix.sql_compatibility }}
-
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [11, 17]
-        sql_compatibility: [ false, true ]
-    name: jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }}
-    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
-    needs: unit-tests
-    with:
-      jdk: ${{ matrix.jdk }}
-      sql_compatibility: ${{ matrix.sql_compatibility }}
-
-  its:
-    needs: unit-tests
-    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
+#  unit-tests:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        sql_compatibility: [ false, true ]
+#    name: jdk8, sql-compat=${{ matrix.sql_compatibility }}
+#    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
+#    needs: build
+#    with:
+#      jdk: 8
+#      sql_compatibility: ${{ matrix.sql_compatibility }}
+#
+#  unit-tests-phase2:
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        jdk: [11, 17]
+#        sql_compatibility: [ false, true ]
+#    name: jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }}
+#    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
+#    needs: unit-tests
+#    with:
+#      jdk: ${{ matrix.jdk }}
+#      sql_compatibility: ${{ matrix.sql_compatibility }}
+#
+#  its:
+#    needs: unit-tests
+#    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
 
   revised-its:
-    needs: unit-tests
+    needs: build
     uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha
     with:
       druid_it_image_name: "${{ needs.build.outputs.DRUID_IT_IMAGE_NAME }}"

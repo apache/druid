@@ -35,4 +35,4 @@ jobs:
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
       druid_it_image_name: ${{ inputs.druid_it_image_name }}
-      script: ./it.sh github ${{ matrix.it }}
+      script: ./it.sh travis ${{ matrix.it }}

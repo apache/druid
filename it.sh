@@ -237,14 +237,6 @@ case $CMD in
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;
-  "github" )
-     if [ -z "$1" ]; then
-       usage
-       exit 1
-     fi
-       $0 test $1
-       $0 tail $1
-       ;;
   "prune" )
     # Caution: this removes all volumes, which is generally what you
     # want when testing.
