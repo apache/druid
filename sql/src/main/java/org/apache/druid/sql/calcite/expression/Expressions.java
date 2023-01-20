@@ -232,9 +232,6 @@ public class Expressions
   {
     // Translate field references.
     final RexFieldAccess ref = (RexFieldAccess) rexNode;
-
-    //use this index to return
-    final int index = rowSignature.getColumnNames().indexOf(ref.getField().getName());
     if (ref.getField().getIndex() > rowSignature.size()) {
       // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
       // while the underlying datasource is the scan stub created from LogicalValuesRule
@@ -245,7 +242,8 @@ public class Expressions
       );
     }
 
-    final String columnName = rowSignature.getColumnName(index);
+    final String columnName = ref.getField().getName();
+    final int index = rowSignature.indexOf(columnName);
     final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
 
     return DruidExpression.ofColumn(columnType.get(), columnName);
