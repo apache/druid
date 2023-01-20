@@ -154,4 +154,5 @@ jobs:
 #    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
 
   revised-its:
+    needs: build
     uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha
