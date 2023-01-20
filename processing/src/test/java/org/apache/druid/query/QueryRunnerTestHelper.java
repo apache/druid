@@ -63,6 +63,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
@@ -80,6 +81,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -539,6 +541,21 @@ public class QueryRunnerTestHelper
             "frontCodedMMappedTestIndex"
         )
     );
+  }
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeUnnestQueryRunnerWithQuery(
+      QueryRunnerFactory<T, QueryType> factory,
+      Segment adapter,
+      Query<T> query,
+      final String runnerName
+  )
+  {
+    DataSource base = query.getDataSource();
+
+    SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
+                                                        .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
+                                                            adapter));
+    return makeQueryRunner(factory, segmentReference, runnerName);
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeUnnestQueryRunner(

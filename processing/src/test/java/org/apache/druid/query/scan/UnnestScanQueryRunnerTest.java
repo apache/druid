@@ -200,7 +200,8 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
               .build();
 
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunner(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), "vc", QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, null, "rtIndexvc");
+    QueryRunner vcrunner = QueryRunnerTestHelper.makeUnnestQueryRunnerWithQuery(FACTORY, new IncrementalIndexSegment(rtIndex, QueryRunnerTestHelper.SEGMENT_ID), query,
+                                                                                "rtIndexvc");
     Iterable<ScanResultValue> results = vcrunner.run(QueryPlus.wrap(query)).toList();
     String[] columnNames;
     if (legacy) {
