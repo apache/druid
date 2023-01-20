@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
@@ -69,10 +70,12 @@ import org.apache.druid.msq.indexing.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
+import org.apache.druid.msq.indexing.error.MSQCompositeWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFilteredEmitterWarningPublisher;
+import org.apache.druid.msq.indexing.error.MSQWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
-import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlice;
@@ -295,7 +298,7 @@ public class WorkerImpl implements Worker
       criticalWarningCodes = ImmutableSet.of();
     }
 
-    final MSQWarningReportPublisher msqWarningReportPublisher = new MSQWarningReportLimiterPublisher(
+    final MSQWarningPublisher msqWarningReportLimiterPublisher = new MSQWarningReportLimiterPublisher(
         new MSQWarningReportSimplePublisher(
             id(),
             controllerClient,
@@ -307,11 +310,26 @@ public class WorkerImpl implements Worker
         criticalWarningCodes,
         controllerClient,
         id(),
-        MSQTasks.getHostFromSelfNode(selfDruidNode),
-        context.emitter()
+        MSQTasks.getHostFromSelfNode(selfDruidNode)
     );
 
-    closer.register(msqWarningReportPublisher);
+    final MSQWarningPublisher filteredEmitterWarningPublisher = new MSQFilteredEmitterWarningPublisher(
+        id(),
+        task.getControllerTaskId(),
+        id(),
+        MSQTasks.getHostFromSelfNode(selfDruidNode),
+        context.emitter(),
+        // todo make this be configurable.
+        ImmutableSet.of(CannotParseExternalDataFault.CODE)
+    );
+
+    // only question I have with this approach is how do we set limits to avoid over publishing?
+    // should I instead make msqWarningReportLimiterPublisher be the top level warningPublisher, and pass in
+    // compositeWarningPublisher, that has the filtered emitting and the simple warningReportPublisher?
+    final MSQWarningPublisher compositeWarningPublisher = new MSQCompositeWarningPublisher(
+        ImmutableList.of(filteredEmitterWarningPublisher, msqWarningReportLimiterPublisher));
+
+    closer.register(compositeWarningPublisher);
 
     final Map<StageId, SettableFuture<ClusterByPartitions>> partitionBoundariesFutureMap = new HashMap<>();
 
@@ -353,7 +371,7 @@ public class WorkerImpl implements Worker
                   cancellationId,
                   context.threadCount(),
                   stageFrameContexts.get(stageDefinition.getId()),
-                  msqWarningReportPublisher
+                  compositeWarningPublisher
               );
 
           if (partitionBoundariesFuture != null) {
@@ -784,7 +802,7 @@ public class WorkerImpl implements Worker
       final String cancellationId,
       final int parallelism,
       final FrameContext frameContext,
-      final MSQWarningReportPublisher MSQWarningReportPublisher
+      final MSQWarningPublisher MSQWarningReportPublisher
   ) throws IOException
   {
     final WorkOrder workOrder = kernel.getWorkOrder();
@@ -1004,7 +1022,7 @@ public class WorkerImpl implements Worker
       final int parallelism,
       final Bouncer processorBouncer,
       final CounterTracker counters,
-      final MSQWarningReportPublisher warningPublisher
+      final MSQWarningPublisher warningPublisher
   ) throws IOException
   {
     final ProcessorsAndChannels<WorkerClass, T> processors =

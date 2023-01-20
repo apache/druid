@@ -26,7 +26,7 @@ import java.io.IOException;
  * Provides an interface for a worker to publish warnings to an external source.
  * For example, the worker uses this interface to send warnings to the controller.
  */
-public interface MSQWarningReportPublisher extends Closeable
+public interface MSQWarningPublisher extends Closeable
 {
   void publishException(int stageNumber, Throwable e);
 

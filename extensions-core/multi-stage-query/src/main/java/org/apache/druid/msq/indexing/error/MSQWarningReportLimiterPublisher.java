@@ -20,10 +20,6 @@
 package org.apache.druid.msq.indexing.error;
 
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.service.AlertBuilder;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.exec.ControllerClient;
 
 import javax.annotation.Nullable;
@@ -35,20 +31,19 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Limits the number of exceptions that get published to the underlying delegate publisher. This helps
  * in preventing the spam of exceptions from the worker task to the published source. As such, any implementation
- * of {@link MSQWarningReportPublisher} that is wrapped in this class cannot be sure that the warning handed off
+ * of {@link MSQWarningPublisher} that is wrapped in this class cannot be sure that the warning handed off
  * is trully published
  */
-public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublisher
+public class MSQWarningReportLimiterPublisher implements MSQWarningPublisher
 {
 
-  private final MSQWarningReportPublisher delegate;
+  private final MSQWarningPublisher delegate;
   private final long totalLimit;
   private final Map<String, Long> errorCodeToLimit;
   private final Set<String> criticalWarningCodes;
   private final ConcurrentHashMap<String, Long> errorCodeToCurrentCount = new ConcurrentHashMap<>();
   private final ControllerClient controllerClient;
   private final String workerId;
-  private final Emitter emitter;
 
   @Nullable
   private final String host;
@@ -73,14 +68,13 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
    * @param host worker' host, used to construct the error report
    */
   public MSQWarningReportLimiterPublisher(
-      MSQWarningReportPublisher delegate,
+      MSQWarningPublisher delegate,
       long totalLimit,
       Map<String, Long> errorCodeToLimit,
       Set<String> criticalWarningCodes,
       ControllerClient controllerClient,
       String workerId,
-      @Nullable String host,
-      Emitter emitter
+      @Nullable String host
   )
   {
     this.delegate = delegate;
@@ -90,7 +84,6 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
     this.controllerClient = controllerClient;
     this.workerId = workerId;
     this.host = host;
-    this.emitter = emitter;
   }
 
   @Override
@@ -115,13 +108,6 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
         return;
       }
     }
-    if (CannotParseExternalDataFault.CODE.equals(errorCode)) {
-      MSQErrorReport msqFault = MSQErrorReport.fromException(workerId, host, stageNumber, e);
-      msqFault.getFault().getErrorMessage();
-      AlertBuilder alertBuilder = new AlertBuilder.createEmittable(emitter, msqFault.getTaskId() + msqFault.getFault().getErrorMessage() + msqFault.getStageNumber());
-      emitter.emit(ServiceEventBuilder);
-    }
-
     long limitForFault = errorCodeToLimit.getOrDefault(errorCode, -1L);
     synchronized (lock) {
       if (limitForFault != -1 && errorCodeToCurrentCount.getOrDefault(errorCode, 0L) > limitForFault) {

@@ -28,7 +28,7 @@ import java.io.IOException;
 /**
  * Publishes the warning report to the {@link ControllerClient#postWorkerWarning} as is without any buffering/batching.
  */
-public class MSQWarningReportSimplePublisher implements MSQWarningReportPublisher
+public class MSQWarningReportSimplePublisher implements MSQWarningPublisher
 {
 
   final String workerId;
