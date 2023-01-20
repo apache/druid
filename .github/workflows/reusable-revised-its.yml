@@ -96,9 +96,9 @@ jobs:
 #          path: |
 #            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 #            ./integration-tests-ex/image/target/env.sh
-      - name: Load docker image
-        run: |
-          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-          docker images
+#      - name: Load docker image
+#        run: |
+#          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+#          docker images
       - name: Run IT
         run: ${{ inputs.script }}
