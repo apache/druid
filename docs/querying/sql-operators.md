@@ -37,7 +37,7 @@ sidebar_label: "Operators"
 
 Operators in [Druid SQL](./sql.md) typically operate on one or two values and return a result based on the values. Types of operators in Druid SQL include arithmetic, comparison, logical, and more, as described here. 
 
-When performing math operations, Druid uses 64-bit integer (long) data type unless there are double or float values. If an operation uses float or double values, then the result is a double. The precision of float and double values are defined by [Java](https://docs.oracle.com/javase/specs/jls/se16/html/jls-5.html#jls-5.1) and [the IEEE standard](https://en.wikipedia.org/wiki/IEEE_754).
+When performing math operations, Druid uses 64-bit integer (long) data type unless there are double or float values. If an operation uses float or double values, then the result is a double, which is a 64-bit float. The precision of float and double values are defined by [Java](https://docs.oracle.com/javase/specs/jls/se16/html/jls-5.html#jls-5.1) and [the IEEE standard](https://en.wikipedia.org/wiki/IEEE_754).
 
 Keep the following guidelines in mind to help you manage precision issues:
 
