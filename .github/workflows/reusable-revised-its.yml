@@ -101,4 +101,6 @@ jobs:
 #          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 #          docker images
       - name: Run IT
-        run: ${{ inputs.script }}
+        run: |
+        ./it.sh build
+        ${{ inputs.script }}
