@@ -246,7 +246,13 @@ public class FrameFile implements Closeable
             log.warn("Could not delete frame file [%s]", file);
           }
           if (byteTracker != null) {
-            // only release the bytes taken by frames, we don't track the header and footer as of now
+            // Only release the bytes taken by frames, we don't track the header and footer as of now.
+            // The reason for not tracking them currently is that they are written in the close method of a channel
+            // incase of empty frame files. To track them, we'd either need to augment close method to pass error objects
+            // if the storage can't write the header/footer data or create a new method in the channel interface to allow
+            // for pre-reserving bytes for them before the close method is called.
+            // For now, they are left untracked also on the assumption that their size would be much smaller than the
+            // actual frame data. But in future, it would be better to track their sizes as well.
             byteTracker.release(fileLength - footerLength - FrameFileWriter.MAGIC.length);
           }
         });

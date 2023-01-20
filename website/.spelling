@@ -722,6 +722,9 @@ rowsInMemory
 segmentSortOrder
 rowsPerSegment
 durableShuffleStorage
+composedIntermediateSuperSorterStorageEnabled
+intermediateSuperSorterStorageMaxLocalBytes
+ResourceLimitExceededException
 # Aggregations
 groupByEnableMultiValueUnnesting
 APPROX_COUNT_DISTINCT_DS_HLL
