@@ -42,8 +42,6 @@ public abstract class AppendableIndexBuilder
   protected boolean preserveExistingMetrics = false;
   protected boolean useMaxMemoryEstimates = true;
 
-  protected boolean useNestedColumnIndexerForSchemaDiscovery = false;
-
   protected final Logger log = new Logger(this.getClass());
 
   public AppendableIndexBuilder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
@@ -129,14 +127,6 @@ public abstract class AppendableIndexBuilder
   public AppendableIndexBuilder setUseMaxMemoryEstimates(final boolean useMaxMemoryEstimates)
   {
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    return this;
-  }
-
-  public AppendableIndexBuilder setUseNestedColumnIndexerForSchemaDiscovery(
-      boolean useNestedColumnIndexerForSchemaDiscovery
-  )
-  {
-    this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
     return this;
   }
 

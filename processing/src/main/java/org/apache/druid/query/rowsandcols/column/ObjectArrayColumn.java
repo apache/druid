@@ -21,6 +21,8 @@ package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Comparator;
 
 public class ObjectArrayColumn implements Column
@@ -41,6 +43,19 @@ public class ObjectArrayColumn implements Column
     this.comparator = comparator;
   }
 
+  /**
+   * Gets the underlying object array.  This method is exposed on the concrete class explicitly to allow for
+   * mutation.  This class does absolutely nothing to ensure that said mutation of the array is valid.  It is up
+   * to the caller that is choosing to do this mutation to make sure that it is safe.
+   *
+   * @return the object array backing this column
+   */
+  public Object[] getObjects()
+  {
+    return objects;
+  }
+
+  @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
@@ -72,9 +87,21 @@ public class ObjectArrayColumn implements Column
     };
   }
 
+  @Nullable
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
+    if (VectorCopier.class.equals(clazz)) {
+      return (T) (VectorCopier) (into, intoStart) -> System.arraycopy(objects, 0, into, intoStart, objects.length);
+    }
+    if (ColumnValueSwapper.class.equals(clazz)) {
+      return (T) (ColumnValueSwapper) (lhs, rhs) -> {
+        Object tmp = objects[lhs];
+        objects[lhs] = objects[rhs];
+        objects[rhs] = tmp;
+      };
+    }
     return null;
   }
 

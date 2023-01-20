@@ -19,7 +19,11 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class IntArrayColumn implements Column
 {
@@ -32,6 +36,7 @@ public class IntArrayColumn implements Column
     this.vals = vals;
   }
 
+  @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
@@ -93,9 +98,32 @@ public class IntArrayColumn implements Column
     };
   }
 
+  @Nullable
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
+    if (VectorCopier.class.equals(clazz)) {
+      return (T) (VectorCopier) (into, intoStart) -> {
+        if (Integer.MAX_VALUE - vals.length < intoStart) {
+          throw new ISE(
+              "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
+              intoStart,
+              vals.length
+          );
+        }
+        for (int i = 0; i < vals.length; ++i) {
+          into[intoStart + i] = vals[i];
+        }
+      };
+    }
+    if (ColumnValueSwapper.class.equals(clazz)) {
+      return (T) (ColumnValueSwapper) (lhs, rhs) -> {
+        int tmp = vals[lhs];
+        vals[lhs] = vals[rhs];
+        vals[rhs] = tmp;
+      };
+    }
     return null;
   }
 }

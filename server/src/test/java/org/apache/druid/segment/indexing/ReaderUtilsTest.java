@@ -328,4 +328,40 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
     Assert.assertEquals(ImmutableSet.of("B", "C"), actual);
   }
+
+  @Test
+  public void testGetColumnsRequiredForSchemalessIngestionWithoutFlattenSpec()
+  {
+    TimestampSpec timestampSpec = new TimestampSpec("A", "iso", null);
+    DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
+
+    Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, null);
+    Assert.assertEquals(fullInputSchema, actual);
+  }
+
+  @Test
+  public void testGetColumnsRequiredForSchemalessIngestionWithFlattenSpecAndUseFieldDiscovery()
+  {
+    TimestampSpec timestampSpec = new TimestampSpec("A", "iso", null);
+    DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "CFlat", "$.C.time")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
+    Assert.assertEquals(fullInputSchema, actual);
+  }
+
+  @Test
+  public void testGetColumnsRequiredForSchemalessIngestionWithFlattenSpecAndNotUseFieldDiscovery()
+  {
+    TimestampSpec timestampSpec = new TimestampSpec("A", "iso", null);
+    DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
+    List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
+        new JSONPathFieldSpec(JSONPathFieldType.PATH, "CFlat", "$.C.time")
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
+    Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
+    Assert.assertEquals(ImmutableSet.of("A", "C"), actual);
+  }
 }

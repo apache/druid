@@ -26,6 +26,11 @@ import java.util.Objects;
 
 public class WindowFrame
 {
+  public static WindowFrame unbounded()
+  {
+    return new WindowFrame(PeerType.ROWS, true, 0, true, 0);
+  }
+
   @SuppressWarnings("unused")
   public enum PeerType
   {

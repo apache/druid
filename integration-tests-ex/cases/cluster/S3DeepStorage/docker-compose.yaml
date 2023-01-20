@@ -12,6 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# -------------------------------------------------------------------------
+
+# Cluster for the S3 deep storage test.
+#
+# Required env vars:
+#
+# AWS_REGION
+# AWS_ACCESS_KEY_ID
+# AWS_SECRET_ACCESS_KEY
 
 networks:
   druid-it-net:

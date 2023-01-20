@@ -32,6 +32,15 @@ import java.util.List;
  */
 public interface ClusteredGroupPartitioner
 {
+  static ClusteredGroupPartitioner fromRAC(RowsAndColumns rac)
+  {
+    ClusteredGroupPartitioner retVal = rac.as(ClusteredGroupPartitioner.class);
+    if (retVal == null) {
+      retVal = new DefaultClusteredGroupPartitioner(rac);
+    }
+    return retVal;
+  }
+
   /**
    * Computes and returns a list of contiguous boundaries for independent groups.  All rows in a specific grouping
    * should have the same values for the identified columns.  Additionally, as this is assuming it is dealing with

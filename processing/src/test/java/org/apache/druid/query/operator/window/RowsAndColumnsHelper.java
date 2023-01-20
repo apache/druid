@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator.window;
 
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -100,15 +101,23 @@ public class RowsAndColumnsHelper
 
   public RowsAndColumnsHelper expectColumn(String col, ColumnType type, Object... expectedVals)
   {
-    final ColumnHelper helper = columnHelper(col, expectedVals.length, type);
-    helper.setExpectation(expectedVals);
-    return this;
+    return expectColumn(col, expectedVals, type);
   }
 
   public RowsAndColumnsHelper expectColumn(String col, Object[] expectedVals, ColumnType type)
   {
+    IntArrayList nullPositions = new IntArrayList();
+    for (int i = 0; i < expectedVals.length; i++) {
+      if (expectedVals[i] == null) {
+        nullPositions.add(i);
+      }
+    }
+
     final ColumnHelper helper = columnHelper(col, expectedVals.length, type);
     helper.setExpectation(expectedVals);
+    if (!nullPositions.isEmpty()) {
+      helper.setNulls(nullPositions.toIntArray());
+    }
     return this;
   }
 
@@ -159,7 +168,9 @@ public class RowsAndColumnsHelper
     }
 
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
-      entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), rac.findColumn(entry.getKey()));
+      final Column racColumn = rac.findColumn(entry.getKey());
+      Assert.assertNotNull(racColumn);
+      entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), racColumn);
     }
   }
 

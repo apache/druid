@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
-import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 
@@ -100,10 +99,8 @@ import java.util.Set;
  * </pre></code>
  * Since we seldom use unparse, we can perhaps live with this limitation for now.
  */
-public abstract class UserDefinedTableMacroFunction extends SqlUserDefinedTableMacro implements AuthorizableOperator
+public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTableMacro implements AuthorizableOperator
 {
-  protected final ExtendedTableMacro macro;
-
   public UserDefinedTableMacroFunction(
       SqlIdentifier opName,
       SqlReturnTypeInference returnTypeInference,
@@ -114,9 +111,6 @@ public abstract class UserDefinedTableMacroFunction extends SqlUserDefinedTableM
   )
   {
     super(opName, returnTypeInference, operandTypeInference, operandTypeChecker, paramTypes, tableMacro);
-
-    // Because Calcite's copy of the macro is private
-    this.macro = tableMacro;
   }
 
   /**
@@ -128,7 +122,7 @@ public abstract class UserDefinedTableMacroFunction extends SqlUserDefinedTableM
     return new ExtendedCall(oldCall, new ShimTableMacroFunction(this, schema));
   }
 
-  private static class ShimTableMacroFunction extends SqlUserDefinedTableMacro implements AuthorizableOperator
+  private static class ShimTableMacroFunction extends BaseUserDefinedTableMacro implements AuthorizableOperator
   {
     protected final UserDefinedTableMacroFunction base;
     protected final SqlNodeList schema;
@@ -141,7 +135,7 @@ public abstract class UserDefinedTableMacroFunction extends SqlUserDefinedTableM
           null,
           base.getOperandTypeChecker(),
           base.getParamTypes(),
-          new ShimTableMacro(base.macro, schema)
+          new ShimTableMacro((ExtendedTableMacro) base.macro, schema)
       );
       this.base = base;
       this.schema = schema;

@@ -259,7 +259,7 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   {
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         40000,
-        new OnheapIncrementalIndex.Spec(true, false),
+        new OnheapIncrementalIndex.Spec(true),
         2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),

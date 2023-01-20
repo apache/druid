@@ -17,30 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.column;
+package org.apache.druid.segment.incremental;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class NullColumnAccessorTest
+public class OnheapIncrementalIndexTest
 {
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSanity()
+  public void testSerde() throws JsonProcessingException
   {
-    NullColumnAccessor accessor = new NullColumnAccessor(10);
-    Assert.assertEquals(10, accessor.numRows());
-
-    for (int i = 0; i < 10; ++i) {
-      Assert.assertTrue(accessor.isNull(i));
-      Assert.assertNull(accessor.getObject(i));
-      Assert.assertEquals(0, accessor.getInt(i));
-      Assert.assertEquals(0, accessor.getLong(i));
-      Assert.assertEquals(0.0, accessor.getFloat(i), 0);
-      Assert.assertEquals(0.0, accessor.getDouble(i), 0);
-      for (int j = 0; j < i; ++j) {
-        Assert.assertEquals(0, accessor.compareRows(j, i));
-      }
-    }
+    OnheapIncrementalIndex.Spec spec = new OnheapIncrementalIndex.Spec(true);
+    Assert.assertEquals(spec, MAPPER.readValue(MAPPER.writeValueAsString(spec), OnheapIncrementalIndex.Spec.class));
+  }
+  @Test
+  public void testSpecEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(OnheapIncrementalIndex.Spec.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

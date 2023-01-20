@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.rowsandcols;
 
-import org.apache.druid.query.operator.LimitedRowsAndColumns;
-
 import java.util.ArrayList;
 import java.util.function.Function;
 

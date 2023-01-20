@@ -17,41 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.facade;
+package org.apache.druid.query.rowsandcols.column;
 
-import org.apache.druid.catalog.model.ColumnDefn.ResolvedColumn;
-import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.segment.column.ColumnType;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class ColumnFacade
+public class NullColumnTest
 {
-  public static class DatasourceColumnFacade extends ColumnFacade
-  {
-    public DatasourceColumnFacade(ResolvedColumn column)
-    {
-      super(column);
-    }
 
-    @Override
-    public ColumnType druidType()
-    {
-      if (Columns.isTimeColumn(column.spec().name())) {
-        return ColumnType.LONG;
+  @Test
+  public void testSanity()
+  {
+    NullColumn col = new NullColumn(ColumnType.UNKNOWN_COMPLEX, 10);
+    ColumnAccessor accessor = col.toAccessor();
+    Assert.assertEquals(10, accessor.numRows());
+
+    for (int i = 0; i < 10; ++i) {
+      Assert.assertTrue(accessor.isNull(i));
+      Assert.assertNull(accessor.getObject(i));
+      Assert.assertEquals(0, accessor.getInt(i));
+      Assert.assertEquals(0, accessor.getLong(i));
+      Assert.assertEquals(0.0, accessor.getFloat(i), 0);
+      Assert.assertEquals(0.0, accessor.getDouble(i), 0);
+      for (int j = 0; j < i; ++j) {
+        Assert.assertEquals(0, accessor.compareRows(j, i));
       }
-      return super.druidType();
     }
-  }
-
-  protected final ResolvedColumn column;
-
-  public ColumnFacade(ResolvedColumn column)
-  {
-    this.column = column;
-  }
-
-  public ColumnType druidType()
-  {
-    String sqlType = column.spec().sqlType();
-    return sqlType == null ? null : Columns.druidType(sqlType);
   }
 }
