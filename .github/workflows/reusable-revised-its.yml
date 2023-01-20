@@ -102,5 +102,5 @@ jobs:
 #          docker images
       - name: Run IT
         run: |
-        ./it.sh build
-        ${{ inputs.script }}
+          ./it.sh build
+          ${{ inputs.script }}
