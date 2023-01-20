@@ -33,9 +33,6 @@ on:
         description: 'Which indexer to use'
         required: true
         type: string
-      druid_it_image_name:
-        required: true
-        type: string
 
 env:
   MVN: mvn -B
