@@ -989,7 +989,7 @@ These configuration options control the lookup management done by the coordinato
 |`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10S|
 |`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60S|
 |`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
-|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|120_000|
+|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|120000 (2 mins)|
 
 ##### Automatic compaction dynamic configuration
 
