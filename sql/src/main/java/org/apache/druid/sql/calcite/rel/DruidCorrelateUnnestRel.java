@@ -216,7 +216,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   }
 
   @Override
-  protected DruidCorrelateUnnestRel clone() throws CloneNotSupportedException
+  protected DruidCorrelateUnnestRel clone()
   {
     return DruidCorrelateUnnestRel.create(correlateRel, leftFilter, getPlannerContext());
   }

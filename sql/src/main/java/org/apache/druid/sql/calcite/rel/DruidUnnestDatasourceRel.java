@@ -173,7 +173,7 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
   }
 
   @Override
-  protected DruidUnnestDatasourceRel clone() throws CloneNotSupportedException
+  protected DruidUnnestDatasourceRel clone()
   {
     return new DruidUnnestDatasourceRel(uncollect, druidQueryRel, unnestProject, getPlannerContext());
   }
