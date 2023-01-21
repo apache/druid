@@ -56,12 +56,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.druid</groupId>
-			<artifactId>druid-processing</artifactId>
-			<version>${project.parent.version}</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.druid</groupId>
 			<artifactId>druid-server</artifactId>
 			<version>${project.parent.version}</version>
 			<scope>provided</scope>
