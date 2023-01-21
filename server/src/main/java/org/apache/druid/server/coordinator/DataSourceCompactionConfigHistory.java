@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import org.apache.druid.audit.AuditInfo;
 import org.joda.time.DateTime;
+
+import java.util.List;
+import java.util.Stack;
 
 /**
  * A utility class to build the config history for a datasource from audit entries for
@@ -31,22 +31,28 @@ import org.joda.time.DateTime;
  * cluster, so this class creates adds audit entires to the history only when a setting for this datasource or a global
  * setting has changed.
  */
-public class DataSourceCompactionConfigHistory {
-  private final List<DatasourceCompactionConfigAuditEntry> auditEntries = new LinkedList<>();
+public class DataSourceCompactionConfigHistory
+{
+  private final Stack<DatasourceCompactionConfigAuditEntry> auditEntries = new Stack<>();
   private final String dataSource;
-  private DatasourceCompactionConfigAuditEntry current;
 
-  public DataSourceCompactionConfigHistory(String dataSource) {
+  public DataSourceCompactionConfigHistory(String dataSource)
+  {
     this.dataSource = dataSource;
   }
 
-  public void add(CoordinatorCompactionConfig coordinatorCompactionConfig, AuditInfo auditInfo, DateTime auditTime) {
+  public void add(CoordinatorCompactionConfig coordinatorCompactionConfig, AuditInfo auditInfo, DateTime auditTime)
+  {
+    DatasourceCompactionConfigAuditEntry current = auditEntries.isEmpty() ? null : auditEntries.peek();
+    DatasourceCompactionConfigAuditEntry newEntry = null;
+    boolean hasDataSourceCompactionConfig = false;
     for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
       if (dataSource.equals(dataSourceCompactionConfig.getDataSource())) {
+        hasDataSourceCompactionConfig = true;
         if (
             current == null ||
             (
-                !current.getCompactionConfig().equals(dataSourceCompactionConfig) ||
+                !dataSourceCompactionConfig.equals(current.getCompactionConfig()) ||
                 !current.getGlobalConfig().hasSameConfig(coordinatorCompactionConfig)
             )
         ) {
@@ -60,13 +66,30 @@ public class DataSourceCompactionConfigHistory {
               auditInfo,
               auditTime
           );
-          auditEntries.add(current);
+          newEntry = current;
         }
         break;
       }
     }
+    if (newEntry != null || (current != null && !hasDataSourceCompactionConfig)) {
+      if (newEntry == null) {
+        newEntry = new DatasourceCompactionConfigAuditEntry(
+            new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+                coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
+                coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
+                coordinatorCompactionConfig.isUseAutoScaleSlots()
+            ),
+            null,
+            auditInfo,
+            auditTime
+        );
+      }
+      auditEntries.push(newEntry);
+    }
   }
-  public List<DatasourceCompactionConfigAuditEntry> getHistory() {
+
+  public List<DatasourceCompactionConfigAuditEntry> getHistory()
+  {
     return auditEntries;
   }
 }

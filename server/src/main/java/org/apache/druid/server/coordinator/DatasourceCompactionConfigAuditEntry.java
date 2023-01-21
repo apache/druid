@@ -34,6 +34,7 @@ public class DatasourceCompactionConfigAuditEntry
   private final DataSourceCompactionConfig compactionConfig;
   private final AuditInfo auditInfo;
   private final DateTime auditTime;
+
   @JsonCreator
   public DatasourceCompactionConfigAuditEntry(
       @JsonProperty("globalConfig") GlobalCompactionConfig globalConfig,
@@ -47,6 +48,7 @@ public class DatasourceCompactionConfigAuditEntry
     this.auditInfo = auditInfo;
     this.auditTime = auditTime;
   }
+
   @JsonProperty
   public GlobalCompactionConfig getGlobalConfig()
   {
@@ -79,6 +81,7 @@ public class DatasourceCompactionConfigAuditEntry
     private final double compactionTaskSlotRatio;
     private final int maxCompactionTaskSlots;
     private final boolean useAutoScaleSlots;
+
     @JsonCreator
     public GlobalCompactionConfig(
         @JsonProperty("compactionTaskSlotRatio")

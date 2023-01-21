@@ -82,6 +82,7 @@ public class CoordinatorCompactionConfigsResource
   private final MetadataStorageTablesConfig connectorConfig;
   private final AuditManager auditManager;
   private final ObjectMapper jsonMapperOnlyNonNullValue;
+
   @Inject
   public CoordinatorCompactionConfigsResource(
       JacksonConfigManager manager,
@@ -119,7 +120,10 @@ public class CoordinatorCompactionConfigsResource
   {
     Callable<SetResult> callable = () -> {
       final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
+          manager,
+          currentBytes
+      );
       final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
           current,
           compactionTaskSlotRatio,
@@ -148,7 +152,10 @@ public class CoordinatorCompactionConfigsResource
   {
     Callable<SetResult> callable = () -> {
       final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
+          manager,
+          currentBytes
+      );
       final CoordinatorCompactionConfig newCompactionConfig;
       final Map<String, DataSourceCompactionConfig> newConfigs = current
           .getCompactionConfigs()
@@ -218,15 +225,15 @@ public class CoordinatorCompactionConfigsResource
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
-      if (auditEntries.isEmpty()) {
+      if (history.getHistory().isEmpty()) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
       return Response.ok(history.getHistory()).build();
     }
     catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(ServletResourceUtils.sanitizeException(e))
-          .build();
+                     .entity(ServletResourceUtils.sanitizeException(e))
+                     .build();
     }
   }
 
@@ -242,7 +249,10 @@ public class CoordinatorCompactionConfigsResource
   {
     Callable<SetResult> callable = () -> {
       final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(manager, currentBytes);
+      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
+          manager,
+          currentBytes
+      );
       final Map<String, DataSourceCompactionConfig> configs = current
           .getCompactionConfigs()
           .stream()
