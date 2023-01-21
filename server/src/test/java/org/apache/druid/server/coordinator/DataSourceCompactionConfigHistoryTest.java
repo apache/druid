@@ -43,9 +43,8 @@ public class DataSourceCompactionConfigHistoryTest
   private static final boolean USE_AUTO_SCALE_SLOTS = false;
   private static final DateTime AUDIT_TIME = DateTimes.of(2023, 1, 13, 9, 0);
   private static final DateTime AUDIT_TIME_2 = DateTimes.of(2023, 1, 13, 9, 30);
-  ;
   private static final DateTime AUDIT_TIME_3 = DateTimes.of(2023, 1, 13, 10, 0);
-  ;
+
   @Mock
   private CoordinatorCompactionConfig compactionConfig;
   @Mock(answer = Answers.RETURNS_MOCKS)

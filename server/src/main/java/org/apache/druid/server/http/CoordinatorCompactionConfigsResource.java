@@ -218,7 +218,8 @@ public class CoordinatorCompactionConfigsResource
       DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
       for (AuditEntry audit : auditEntries) {
         CoordinatorCompactionConfig coordinatorCompactionConfig = CoordinatorCompactionConfig.convertByteToConfig(
-            manager, audit.getPayload().getBytes(StandardCharsets.UTF_8)
+            manager,
+            audit.getPayload().getBytes(StandardCharsets.UTF_8)
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
