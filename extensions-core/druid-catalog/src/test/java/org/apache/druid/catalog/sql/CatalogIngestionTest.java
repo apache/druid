@@ -221,46 +221,6 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
-  @Test
-  public void testInsertIntoCatalogTableTypeConflict1()
-  {
-    testIngestionQuery()
-        .sql("INSERT INTO foo\n" +
-             "SELECT TIME_PARSE(a) AS __time, b AS dim1, 1 AS cnt,\n" +
-            "        c AS m1, CAST(d AS INTEGER) AS extra2, e AS extra3\n" +
-             "FROM TABLE(inline(\n" +
-             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
-             "  format => 'csv'))\n" +
-             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME")
-        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Type BIGINT of column m1 does not match the defined type of DOUBLE: add a CAST"
-         )
-        .verify();
-  }
-
-  @Test
-  public void testInsertIntoCatalogTableTypeConflict2()
-  {
-    testIngestionQuery()
-        .sql("INSERT INTO foo\n" +
-             "SELECT TIME_PARSE(a) AS __time, b AS dim1, 1 AS cnt,\n" +
-            "        CAST(c AS DOUBLE) AS m1, CAST(d AS INTEGER) AS extra2, e AS extra3\n" +
-             "FROM TABLE(inline(\n" +
-             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
-             "  format => 'csv'))\n" +
-             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
-             "PARTITIONED BY ALL TIME")
-        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Type INTEGER of column extra2 does not match the defined type of BIGINT: add a CAST"
-         )
-        .verify();
-  }
-
   /**
    * Insert from a table with a schema defined in the catalog.
    *

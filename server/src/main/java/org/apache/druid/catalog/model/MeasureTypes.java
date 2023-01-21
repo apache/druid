@@ -48,7 +48,7 @@ public class MeasureTypes
 
     public final ColumnType nativeType;
 
-    private BaseType(ColumnType nativeType)
+    BaseType(ColumnType nativeType)
     {
       this.nativeType = nativeType;
     }
@@ -175,7 +175,7 @@ public class MeasureTypes
       ));
     }
     String fnName = m.group(1);
-    String args[];
+    String[] args;
     String argGroup = m.group(2);
     argGroup = argGroup == null ? null : argGroup.trim();
     if (Strings.isNullOrEmpty(argGroup)) {
@@ -212,10 +212,8 @@ public class MeasureTypes
     throw new IAE(StringUtils.format(
           "[%s] is not a valid metric type. Valid forms are %s",
           typeStr,
-          String.join(
-              ", ",
-              candidates.stream().map(t -> t.toString()).collect(Collectors.toList())
-          ))
+          candidates.stream().map(t -> t.toString()).collect(Collectors.joining(", "))
+          )
     );
   }
 }

@@ -125,7 +125,7 @@ public abstract class IngestHandler extends QueryHandler
         HandlerContext handlerContext,
         DruidSqlInsert insertNode,
         SqlExplain explain
-    ) throws ValidationException
+    )
     {
       super(handlerContext, explain);
       this.sqlNode = insertNode;
@@ -163,7 +163,7 @@ public abstract class IngestHandler extends QueryHandler
         SqlStatementHandler.HandlerContext handlerContext,
         DruidSqlReplace replaceNode,
         SqlExplain explain
-    ) throws ValidationException
+    )
     {
       super(handlerContext, explain);
       this.sqlNode = replaceNode;

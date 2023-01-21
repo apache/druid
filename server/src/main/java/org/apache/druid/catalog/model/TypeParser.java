@@ -97,7 +97,7 @@ public class TypeParser
         buf.append(", time grain=").append(timeGrain);
       }
       if (measureType != null) {
-        buf.append(", measure type=").append(measureType.toString());
+        buf.append(", measure type=").append(measureType);
       }
       return buf.append("}").toString();
     }

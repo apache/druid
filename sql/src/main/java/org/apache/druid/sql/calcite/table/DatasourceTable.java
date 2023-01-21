@@ -214,8 +214,8 @@ public class DatasourceTable extends DruidTable
     public String toString()
     {
       return getClass().getSimpleName() + "{" +
-          "empty=" + Boolean.toString(isEmpty) +
-          ", columns=" + columns.toString() +
+          "empty=" + isEmpty +
+          ", columns=" + columns +
           "}";
     }
   }
@@ -303,7 +303,7 @@ public class DatasourceTable extends DruidTable
     // effectiveMetadata.
     return "DruidTable{physicalMetadata=" +
            (physicalMetadata == null ? "null" : physicalMetadata.toString()) +
-           ", effectiveMetadata=" + effectiveMetadata.toString() +
+           ", effectiveMetadata=" + effectiveMetadata +
            '}';
   }
 }

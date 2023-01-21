@@ -256,7 +256,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Cannot have ORDER BY on a REPLACE statement, use CLUSTERED BY instead.")
+        .expectValidationError(SqlPlanningException.class, "Cannot use ORDER BY with a REPLACE statement, use CLUSTERED BY instead.")
         .verify();
   }
 
@@ -364,7 +364,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                                          .add("dim1", ColumnType.STRING)
                                          .add("dim3", ColumnType.STRING)
                                          .build()
-        )
+         )
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
@@ -373,7 +373,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .columns("dim1", "dim3")
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
-        )
+         )
         .verify();
   }
 
@@ -400,7 +400,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo")
-        .expectValidationError(SqlPlanningException.class, "REPLACE statements must specify PARTITIONED BY clause explicitly")
+        .expectValidationError(SqlPlanningException.class, "REPLACE statements must specify a PARTITIONED BY clause explicitly")
         .verify();
   }
 
@@ -409,7 +409,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTERED BY dim1")
-        .expectValidationError(SqlPlanningException.class, "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause")
+        .expectValidationError(SqlPlanningException.class, "REPLACE statements must specify a PARTITIONED BY clause explicitly")
         .verify();
   }
 
@@ -588,7 +588,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     }
     catch (SqlPlanningException e) {
       assertEquals(
-          "Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
+          "Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, ISO 8601 period, FLOOR function or TIME_FLOOR function",
           e.getMessage()
       );
     }
@@ -770,7 +770,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit cannot be provided with REPLACE.")
+        .expectValidationError(SqlPlanningException.class, "sqlOuterLimit context parameter cannot be provided with REPLACE.")
         .verify();
   }
 }

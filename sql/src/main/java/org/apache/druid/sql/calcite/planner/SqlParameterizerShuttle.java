@@ -117,8 +117,9 @@ public class SqlParameterizerShuttle extends SqlShuttle
     List<?> list;
     if (value instanceof List) {
       list = (List<?>) value;
+    } else {
+      list = Arrays.asList((Object[]) value);
     }
-    list = Arrays.asList((Object[]) value);
     List<SqlNode> args = new ArrayList<>(list.size());
     for (Object element : list) {
       if (element == null) {

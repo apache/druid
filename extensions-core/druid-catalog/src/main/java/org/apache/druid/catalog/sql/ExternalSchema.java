@@ -164,8 +164,8 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
   }
 
   /**
-   * Table macro "shim", created dynamically, to wrap an {@link InputTableMacro}
-   * with an {@link InputTableSpec} so we can merge catalog and function parameters.
+   * Table macro "shim", created dynamically, to wrap a {@link ResolvedTable}
+   * so we can merge catalog and function parameters.
    * <p>
    * This form is a Calcite {@code Function}, but not an operator (a
    * {@code SqlFunction}. That is, there is no outer {@code SqlFunction} for this

@@ -477,7 +477,6 @@ public class QueryTestRunner
     }
   }
 
-
   /**
    * Verify resources for a prepared query against the expected list.
    */
@@ -653,7 +652,6 @@ public class QueryTestRunner
       }
     }
   }
-
 
   private final List<QueryTestRunner.QueryRunStep> runSteps = new ArrayList<>();
   private final List<QueryTestRunner.QueryVerifyStep> verifySteps = new ArrayList<>();

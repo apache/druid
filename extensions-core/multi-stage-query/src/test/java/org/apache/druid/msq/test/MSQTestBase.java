@@ -141,6 +141,9 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
@@ -290,7 +293,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     builder.addModule(new DruidModule()
     {
-
       // Small subset of MsqSqlModule
       @Override
       public void configure(Binder binder)
@@ -298,6 +300,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // We want this module to bring InputSourceModule along for the ride.
         binder.install(new InputSourceModule());
         SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
       }
 
       @Override
@@ -475,6 +480,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         testTaskActionClient,
         workerMemoryParameters
     );
+    CatalogResolver catalogResolver = createMockCatalogResolver();
     final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
     DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
         CalciteTests.INJECTOR,
@@ -484,7 +490,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         viewManager,
         new NoopDruidSchemaManager(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CatalogResolver.NULL_RESOLVER,
+        catalogResolver,
         null
     );
 
@@ -503,10 +509,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        catalogResolver
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
+  }
+
+  protected CatalogResolver createMockCatalogResolver()
+  {
+    return CatalogResolver.NULL_RESOLVER;
   }
 
   /**

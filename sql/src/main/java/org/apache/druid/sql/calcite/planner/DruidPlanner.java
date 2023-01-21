@@ -142,7 +142,7 @@ public class DruidPlanner implements Closeable
       plannerContext.setResourceActions(handler.resourceActions());
     }
     catch (RuntimeException e) {
-      throw new ValidationException(e);
+      throw new ValidationException(e.getMessage(), e);
     }
 
     state = State.VALIDATED;

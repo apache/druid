@@ -144,6 +144,10 @@ public class DruidSqlParserUtils
         throw new IAE(PARTITION_ERROR_MESSAGE, value == null ? "NULL" : "'" + value + "'");
       }
       switch (StringUtils.toUpperCase(value)) {
+        case "SECOND":
+          return Granularities.SECOND;
+        case "MINUTE":
+          return Granularities.MINUTE;
         case HOUR_GRAIN:
           return Granularities.HOUR;
         case DAY_GRAIN:
@@ -219,7 +223,7 @@ public class DruidSqlParserUtils
         period = new Period(granularityString);
       }
       catch (IllegalArgumentException e) {
-        throw new IAE("'%s' is an invalid period string", granularitySqlNode.toString());
+        throw new IAE("%s is an invalid period string", granularitySqlNode.toString());
       }
       return new PeriodGranularity(period, null, null);
 
@@ -238,7 +242,7 @@ public class DruidSqlParserUtils
       Preconditions.checkNotNull(
           period,
           StringUtils.format(
-              "'%s' is not a valid granularity for ingestion",
+              "%s is not a valid granularity for ingestion",
               granularityIntervalQualifier.timeUnitRange.toString()
           )
       );

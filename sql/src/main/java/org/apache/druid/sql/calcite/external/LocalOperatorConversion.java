@@ -30,9 +30,7 @@ public class LocalOperatorConversion extends CatalogExternalTableOperatorConvers
   public static final String FUNCTION_NAME = "localfiles";
 
   @Inject
-  public LocalOperatorConversion(
-      final TableDefnRegistry registry
-  )
+  public LocalOperatorConversion(final TableDefnRegistry registry)
   {
     super(FUNCTION_NAME, registry, LocalInputSourceDefn.TYPE_KEY, registry.jsonMapper());
   }

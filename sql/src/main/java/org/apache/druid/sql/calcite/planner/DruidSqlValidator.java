@@ -31,13 +31,13 @@ import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
@@ -165,16 +165,30 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     validateSegmentGranularity(operationName, ingestNode, tableMetadata);
 
     // The source must be a SELECT
-    SqlSelect select = validateInsertSelect(insert, operationName);
+    SqlNode source = insert.getSource();
+    validateInsertSelect(source, operationName);
 
     // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
     SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-    rewriteClusteringToOrderBy(select, ingestNode, catalogClustering);
+    rewriteClusteringToOrderBy(source, ingestNode, catalogClustering);
 
     // Validate the source statement. Validates the ORDER BY pushed down in the above step.
-    validateSelect(select, unknownType);
+    // Because of the odd Druid semantics, we can't define the target type: we don't know
+    // the target columns yet, and we can't infer types when they must come from the SELECT.
+    // Normally, the target type is known, and is pushed into the SELECT. In Druid, the SELECT
+    // usually defines the target types, unless the catalog says otherwise. Since catalog entries
+    // are optional, we don't know the target type until we validate the SELECT. (Also, we won't
+    // know names and we match by name.) Thus, we'd have to validate (to know names and types)
+    // to get the target types, but we need the target types to validate. Catch-22. So, we punt.
+    if (source instanceof SqlSelect) {
+      final SqlSelect sqlSelect = (SqlSelect) source;
+      validateSelect(sqlSelect, unknownType);
+    } else {
+      final SqlValidatorScope scope = scopes.get(source);
+      validateQuery(source, scope, unknownType);
+    }
 
-    SqlValidatorNamespace sourceNamespace = namespaces.get(select);
+    SqlValidatorNamespace sourceNamespace = namespaces.get(source);
     RelRecordType sourceType = (RelRecordType) sourceNamespace.getRowType();
 
     // Validate the __time column
@@ -334,13 +348,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     return ((PeriodGranularity) gran).getPeriod().toString();
   }
 
-  private SqlSelect validateInsertSelect(
-      final SqlInsert insert,
+  private void validateInsertSelect(
+      SqlNode source,
       final String operationName
   )
   {
-    SqlNode source = insert.getSource();
-
     // The source SELECT cannot include an ORDER BY clause. Ordering is given
     // by the CLUSTERED BY clause, if any.
     // Check that an ORDER BY clause is not provided by the underlying query
@@ -353,28 +365,22 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
-    // Validate the query: but we only know how to do SELECT.
-    // As we do, get the scope for the query.
-    if (!source.isA(SqlKind.QUERY)) {
+    if (source instanceof SqlWith) {
+      source = ((SqlWith) source).getOperandList().get(1);
+    }
+    if (source instanceof SqlSelect) {
+      SqlSelect select = (SqlSelect) source;
+      orderByList = select.getOrderList();
+      if (orderByList != null && orderByList.size() != 0) {
+        throw new IAE(
+            "Cannot use ORDER BY with %s %s statement, use CLUSTERED BY instead.",
+            "INSERT".equals(operationName) ? "an" : "a",
+            operationName
+        );
+      }
+    } else {
       throw new IAE("Cannot execute %s.", source.getKind());
     }
-    if (!(source instanceof SqlSelect)) {
-      throw new IAE(
-          "%s %s must include a SELECT statement",
-          "INSERT".equals(operationName) ? "An" : "A",
-          operationName
-      );
-    }
-    SqlSelect select = (SqlSelect) source;
-    orderByList = select.getOrderList();
-    if (orderByList != null && orderByList.size() != 0) {
-      throw new IAE(
-          "Cannot have ORDER BY on %s %s statement, use CLUSTERED BY instead.",
-          "INSERT".equals(operationName) ? "an" : "a",
-          operationName
-      );
-    }
-    return select;
   }
 
   private SqlNodeList convertCatalogClustering(final DatasourceFacade tableMetadata)
@@ -413,7 +419,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * not possible to add the ORDER by later: doing so requires access to the order by namespace
    * which is not visible to subclasses.
    */
-  private void rewriteClusteringToOrderBy(SqlSelect select, DruidSqlIngest ingestNode, SqlNodeList catalogClustering)
+  private void rewriteClusteringToOrderBy(SqlNode source, DruidSqlIngest ingestNode, SqlNodeList catalogClustering)
   {
     SqlNodeList clusteredBy = ingestNode.getClusteredBy();
     if (clusteredBy == null || clusteredBy.getList().isEmpty()) {
@@ -422,6 +428,10 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       }
       clusteredBy = catalogClustering;
     }
+    while (source instanceof SqlWith) {
+      source = ((SqlWith) source).getOperandList().get(1);
+    }
+    SqlSelect select = (SqlSelect) source;
 
     // This part is a bit sad. By the time we get here, the validator will have created
     // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
@@ -461,7 +471,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * Verify clustering which can come from the query, the catalog or both. If both,
    * the two must match. In either case, the cluster keys must be present in the SELECT
    * clause. The {@code __time} column cannot be included.
-   * @param source
    */
   private void validateClustering(
       final RelRecordType sourceType,
@@ -631,9 +640,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    * As a result, we first propagate column names and types using Druid rules: the
    * output is exactly what SELECT says it is. We then apply restrictions from the
    * catalog. If the table is strict, only column names from the catalog can be
-   * used. If a type is provided, then the <i>user</i> (not the planner) is responsible
-   * for adding a CAST as needed so that the SELECT column type exactly matches the
-   * catalog column type, if given.
+   * used.
    */
   private RelDataType validateTargetType(SqlInsert insert, RelRecordType sourceType, DatasourceFacade tableMetadata)
   {
@@ -688,19 +695,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       }
       SqlTypeName sqlType = SqlTypeName.get(sqlTypeName);
       RelDataType targetType = typeFactory.createSqlType(sqlType);
-
-      // Druid-specific check: the user, not Druid, is responsible for casting
-      // the column to the correct type. Druid ignores nullability and precision.
-      // Focus only on type type name. This also handle the fact that strings and
-      // string arrays are the same, and the complex types are all treated the same
-      // independent of underlying type.
-      if (!sourceField.getType().getSqlTypeName().equals(targetType.getSqlTypeName())) {
-        throw new IAE("Type %s of column %s does not match the defined type of %s: add a CAST",
-            sourceField.getType().getSqlTypeName(),
-            colName,
-            targetType.getSqlTypeName()
-        );
-      }
       fields.add(Pair.of(colName, targetType));
     }
 

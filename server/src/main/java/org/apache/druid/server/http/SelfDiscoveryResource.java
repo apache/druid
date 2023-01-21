@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 /**
- * This class is annotated {@link Singleton} rather than {@link org.apache.druid.guice.LazySingleton} because it adds
+ * This class is annotated {@link Singleton} rather than {@link LazySingleton} because it adds
  * a lifecycle handler in the constructor. That should happen before the lifecycle is started, i. e. eagerly during the
  * DI configuration phase.
  */

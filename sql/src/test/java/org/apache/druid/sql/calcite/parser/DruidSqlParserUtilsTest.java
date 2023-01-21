@@ -117,27 +117,22 @@ public class DruidSqlParserUtilsTest
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(floorCall);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
+
+    /**
+     * Tests clause like "PARTITIONED BY 'day'"
+     * @throws ParseException
+     */
+    @Test
+    public void testConvertSqlNodeToGranularityAsLiteral() throws ParseException
+    {
+      SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
   }
 
   public static class FloorToGranularityConversionTestErrors
   {
-    /**
-     * Tests clause like "PARTITIONED BY 'day'"
-     */
-    @Test
-    public void testConvertSqlNodeToGranularityWithIncorrectNode()
-    {
-      SqlNode sqlNode = SqlLiteral.createCharString("day", SqlParserPos.ZERO);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals(
-          "Encountered 'day' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
-          e.getMessage()
-      );
-    }
-
     /**
      * Tests clause like "PARTITIONED BY CEIL(__time TO DAY)"
      */

@@ -143,13 +143,14 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnFoo1WithTimeFunction()
   {
-    // Signature of the rows produced by the SELECT query
+    // Signature of actual segment rows
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
 
-    // Schema of the columns produced in the output segment.
+    // Desired schema of the columns produced in the output segment.
     // In this test, the types are the same as the SELECT.
     Map<String, String> expectedStorageTypes = ImmutableMap.of(
         "__time", "LONG",
@@ -159,8 +160,8 @@ public class MSQInsertTest extends MSQTestBase
 
     testIngestQuery().setSql(
                          "insert into foo1\n" +
-                         "select  floor(__time to day) as __time , dim1 , count(*) as cnt\n" +
-                         "from foon" +
+                         "select  floor(__time to day) as __time, dim1 , count(*) as cnt\n" +
+                         "from foo\n" +
                          "where dim1 is not null\n" +
                          "group by 1, 2\n" +
                          "PARTITIONED by day\n" +
@@ -181,7 +182,8 @@ public class MSQInsertTest extends MSQTestBase
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
                                               .put(
