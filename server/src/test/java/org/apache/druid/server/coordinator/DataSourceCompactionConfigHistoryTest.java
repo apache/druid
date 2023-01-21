@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,9 +41,9 @@ public class DataSourceCompactionConfigHistoryTest
   private static final double COMPACTION_TASK_SLOT_RATIO = 0.1;
   private static final int MAX_COMPACTION_TASK_SLOTS = 9;
   private static final boolean USE_AUTO_SCALE_SLOTS = false;
-  private static final DateTime AUDIT_TIME = DateTime.parse("2023-01-13");
-  private static final DateTime AUDIT_TIME_2 = DateTime.parse("2023-01-14");
-  private static final DateTime AUDIT_TIME_3 = DateTime.parse("2023-01-15");
+  private static final DateTime AUDIT_TIME = DateTimes.of(2023,1,13,9,0);
+  private static final DateTime AUDIT_TIME_2 = DateTimes.of(2023,1,13,9,30);;
+  private static final DateTime AUDIT_TIME_3 = DateTimes.of(2023,1,13,10,0);;
   @Mock
   private CoordinatorCompactionConfig compactionConfig;
   @Mock(answer = Answers.RETURNS_MOCKS)
