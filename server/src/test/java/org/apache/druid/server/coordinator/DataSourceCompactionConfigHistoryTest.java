@@ -174,6 +174,7 @@ public class DataSourceCompactionConfigHistoryTest
     Assert.assertEquals(AUDIT_TIME_2, auditEntry.getAuditTime());
     Assert.assertEquals(newMaxTaskSlots, auditEntry.getGlobalConfig().getMaxCompactionTaskSlots());
   }
+
   @Test
   public void testAddCompactionConfigDoesNotHaveDataSourceWithNoHistoryShouldNotAdd()
   {

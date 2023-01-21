@@ -74,17 +74,17 @@ public class DataSourceCompactionConfigHistory
     if (newEntry != null) {
       auditEntries.push(newEntry);
     } else if (current != null && !hasDataSourceCompactionConfig) {
-        newEntry = new DataSourceCompactionConfigAuditEntry(
-            new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-                coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
-                coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
-                coordinatorCompactionConfig.isUseAutoScaleSlots()
-            ),
-            null,
-            auditInfo,
-            auditTime
-        );
-        auditEntries.push(newEntry);
+      newEntry = new DataSourceCompactionConfigAuditEntry(
+          new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+              coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
+              coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
+              coordinatorCompactionConfig.isUseAutoScaleSlots()
+          ),
+          null,
+          auditInfo,
+          auditTime
+      );
+      auditEntries.push(newEntry);
     }
   }
 
