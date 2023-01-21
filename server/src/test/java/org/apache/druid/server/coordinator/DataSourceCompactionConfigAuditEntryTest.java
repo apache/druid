@@ -28,23 +28,28 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
-public class DataSourceCompactionConfigAuditEntryTest {
+public class DataSourceCompactionConfigAuditEntryTest
+{
   private static final double COMPACTION_TASK_SLOT_RATIO = 0.1;
   private static final int MAX_COMPACTION_SLOTS = 9;
   private static final boolean USE_AUTO_SCALE_SLOTS = true;
 
   @Mock
   private CoordinatorCompactionConfig coordinatorCompactionConfig;
+
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     Mockito.when(coordinatorCompactionConfig.getCompactionTaskSlotRatio()).thenReturn(COMPACTION_TASK_SLOT_RATIO);
     Mockito.when(coordinatorCompactionConfig.getMaxCompactionTaskSlots()).thenReturn(MAX_COMPACTION_SLOTS);
     Mockito.when(coordinatorCompactionConfig.isUseAutoScaleSlots()).thenReturn(USE_AUTO_SCALE_SLOTS);
   }
+
   @Test
-  public void testhasSameConfigWithSameBaseConfigShouldReturnTrue() {
-    DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+  public void testhasSameConfigWithSameBaseConfigShouldReturnTrue()
+  {
+    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
+        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
             COMPACTION_TASK_SLOT_RATIO,
             MAX_COMPACTION_SLOTS,
             USE_AUTO_SCALE_SLOTS
@@ -54,9 +59,10 @@ public class DataSourceCompactionConfigAuditEntryTest {
   }
 
   @Test
-  public void testhasSameConfigWithDifferentUseAutoScaleSlotsShouldReturnFalse() {
-    DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+  public void testhasSameConfigWithDifferentUseAutoScaleSlotsShouldReturnFalse()
+  {
+    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
+        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
             COMPACTION_TASK_SLOT_RATIO,
             MAX_COMPACTION_SLOTS,
             !USE_AUTO_SCALE_SLOTS
@@ -64,10 +70,12 @@ public class DataSourceCompactionConfigAuditEntryTest {
 
     Assert.assertFalse(config.hasSameConfig(coordinatorCompactionConfig));
   }
+
   @Test
-  public void testhasSameConfigWithDifferentMaxCompactionSlotsShouldReturnFalse() {
-    DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+  public void testhasSameConfigWithDifferentMaxCompactionSlotsShouldReturnFalse()
+  {
+    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
+        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
             COMPACTION_TASK_SLOT_RATIO,
             MAX_COMPACTION_SLOTS + 1,
             USE_AUTO_SCALE_SLOTS
@@ -77,9 +85,10 @@ public class DataSourceCompactionConfigAuditEntryTest {
   }
 
   @Test
-  public void testhasSameConfigWithDifferentCompactionSlotRatioShouldReturnFalse() {
-    DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+  public void testhasSameConfigWithDifferentCompactionSlotRatioShouldReturnFalse()
+  {
+    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
+        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
             COMPACTION_TASK_SLOT_RATIO - 0.03,
             MAX_COMPACTION_SLOTS,
             USE_AUTO_SCALE_SLOTS

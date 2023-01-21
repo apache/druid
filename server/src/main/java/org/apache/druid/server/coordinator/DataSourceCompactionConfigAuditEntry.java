@@ -28,7 +28,7 @@ import org.joda.time.DateTime;
 /**
  * A DTO containing audit information for compaction config for a datasource.
  */
-public class DatasourceCompactionConfigAuditEntry
+public class DataSourceCompactionConfigAuditEntry
 {
   private final GlobalCompactionConfig globalConfig;
   private final DataSourceCompactionConfig compactionConfig;
@@ -36,7 +36,7 @@ public class DatasourceCompactionConfigAuditEntry
   private final DateTime auditTime;
 
   @JsonCreator
-  public DatasourceCompactionConfigAuditEntry(
+  public DataSourceCompactionConfigAuditEntry(
       @JsonProperty("globalConfig") GlobalCompactionConfig globalConfig,
       @JsonProperty("compactionConfig") DataSourceCompactionConfig compactionConfig,
       @JsonProperty("auditInfo") AuditInfo auditInfo,

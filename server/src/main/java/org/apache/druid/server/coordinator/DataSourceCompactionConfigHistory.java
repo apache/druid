@@ -33,7 +33,7 @@ import java.util.Stack;
  */
 public class DataSourceCompactionConfigHistory
 {
-  private final Stack<DatasourceCompactionConfigAuditEntry> auditEntries = new Stack<>();
+  private final Stack<DataSourceCompactionConfigAuditEntry> auditEntries = new Stack<>();
   private final String dataSource;
 
   public DataSourceCompactionConfigHistory(String dataSource)
@@ -43,8 +43,8 @@ public class DataSourceCompactionConfigHistory
 
   public void add(CoordinatorCompactionConfig coordinatorCompactionConfig, AuditInfo auditInfo, DateTime auditTime)
   {
-    DatasourceCompactionConfigAuditEntry current = auditEntries.isEmpty() ? null : auditEntries.peek();
-    DatasourceCompactionConfigAuditEntry newEntry = null;
+    DataSourceCompactionConfigAuditEntry current = auditEntries.isEmpty() ? null : auditEntries.peek();
+    DataSourceCompactionConfigAuditEntry newEntry = null;
     boolean hasDataSourceCompactionConfig = false;
     for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
       if (dataSource.equals(dataSourceCompactionConfig.getDataSource())) {
@@ -56,8 +56,8 @@ public class DataSourceCompactionConfigHistory
                 !current.getGlobalConfig().hasSameConfig(coordinatorCompactionConfig)
             )
         ) {
-          current = new DatasourceCompactionConfigAuditEntry(
-              new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+          current = new DataSourceCompactionConfigAuditEntry(
+              new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
                   coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
                   coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
                   coordinatorCompactionConfig.isUseAutoScaleSlots()
@@ -71,10 +71,11 @@ public class DataSourceCompactionConfigHistory
         break;
       }
     }
-    if (newEntry != null || (current != null && !hasDataSourceCompactionConfig)) {
-      if (newEntry == null) {
-        newEntry = new DatasourceCompactionConfigAuditEntry(
-            new DatasourceCompactionConfigAuditEntry.GlobalCompactionConfig(
+    if (newEntry != null) {
+      auditEntries.push(newEntry);
+    } else if (current != null && !hasDataSourceCompactionConfig) {
+        newEntry = new DataSourceCompactionConfigAuditEntry(
+            new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
                 coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
                 coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
                 coordinatorCompactionConfig.isUseAutoScaleSlots()
@@ -83,12 +84,11 @@ public class DataSourceCompactionConfigHistory
             auditInfo,
             auditTime
         );
-      }
-      auditEntries.push(newEntry);
+        auditEntries.push(newEntry);
     }
   }
 
-  public List<DatasourceCompactionConfigAuditEntry> getHistory()
+  public List<DataSourceCompactionConfigAuditEntry> getHistory()
   {
     return auditEntries;
   }

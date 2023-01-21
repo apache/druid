@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -40,7 +39,6 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
-import org.apache.druid.server.coordinator.DatasourceCompactionConfigAuditEntry;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.joda.time.Interval;
 
@@ -60,7 +58,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
