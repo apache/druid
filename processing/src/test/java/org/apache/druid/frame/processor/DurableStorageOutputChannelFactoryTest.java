@@ -19,19 +19,31 @@
 
 package org.apache.druid.frame.processor;
 
-import org.junit.Test;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.junit.ClassRule;
+import org.junit.rules.TemporaryFolder;
 
-public class BlockingQueueOutputChannelFactoryTest extends OutputChannelFactoryTest
+import java.io.IOException;
+
+public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  public BlockingQueueOutputChannelFactoryTest()
-  {
-    super(new BlockingQueueOutputChannelFactory(100), 100);
-  }
+  @ClassRule
+  public static TemporaryFolder folder = new TemporaryFolder();
 
-  @Override
-  @Test
-  public void test_openPartitionedChannel()
+  public DurableStorageOutputChannelFactoryTest()
+      throws IOException
   {
-    // Do nothing since partitioned channels aren't implemented for BlockingQueueOutputChannelFactory yet.
+    super(
+        new DurableStorageOutputChannelFactory(
+            "0",
+            0,
+            0,
+            "0",
+            100,
+            new LocalFileStorageConnector(folder.newFolder()),
+            folder.newFolder()
+        ),
+        100
+    );
   }
 }
