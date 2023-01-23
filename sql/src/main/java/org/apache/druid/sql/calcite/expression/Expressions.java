@@ -244,6 +244,19 @@ public class Expressions
 
     final String columnName = ref.getField().getName();
     final int index = rowSignature.indexOf(columnName);
+
+    // This case arises when the rexNode has a name which is not in the underlying stub created using DruidUnnestDataSourceRule
+    // The column name has name ZERO with rowtype as LONG
+    // causes the index to be -1. In such a case we cannot build the query
+    // and throw an exception while returning false from isValidDruidQuery() method
+    if (index < 0) {
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Expression referred to nonexistent index[%d] in row[%s]",
+          index,
+          rowSignature
+      ));
+    }
+    
     final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
 
     return DruidExpression.ofColumn(columnType.get(), columnName);
