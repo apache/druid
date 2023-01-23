@@ -19,9 +19,6 @@
 
 package org.apache.druid.testsEx.query;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.io.IOException;
@@ -37,6 +34,7 @@ import org.apache.druid.testsEx.categories.QueryError;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -91,10 +89,10 @@ public class ITQueryErrorTest extends BaseJUnitRule
   public void testSqlParseException()
   {
     // test a sql without SELECT
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildSqlPlanFailureQuery("FROM t WHERE col = 'a'")
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*400.*");
   }
 
@@ -102,111 +100,111 @@ public class ITQueryErrorTest extends BaseJUnitRule
   public void testSqlValidationException()
   {
     // test a sql that selects unknown column
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildSqlPlanFailureQuery(StringUtils.format("SELECT unknown_col FROM %s LIMIT 1",
                                                     WIKIPEDIA_DATA_SOURCE))
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
   public void testSqlTimeout()
   {
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*504.*");
   }
 
   @Test
   public void testSqlCapacityExceeded()
   {
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*429.*");
   }
 
   @Test
   public void testSqlUnsupported()
   {
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*501.*");
   }
 
   @Test
   public void testSqlResourceLimitExceeded()
   {
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
   public void testSqlFailure()
   {
-    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*500.*");
   }
 
   @Test
   public void testQueryTimeout()
   {
-    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*504.*");
   }
 
   @Test
   public void testQueryCapacityExceeded()
   {
-    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*429.*");
   }
 
   @Test
   public void testQueryUnsupported()
   {
-    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*501.*");
   }
 
   @Test
   public void testResourceLimitExceeded()
   {
-    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
   public void testQueryFailure()
   {
-    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
+    Throwable thrown = Assertions.catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY)
     ));
-    assertThat(thrown).isInstanceOf(RuntimeException.class)
+    Assertions.assertThat(thrown).isInstanceOf(RuntimeException.class)
                       .hasMessageMatching("(?s).*500.*");
   }
 

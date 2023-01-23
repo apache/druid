@@ -19,9 +19,6 @@
 
 package org.apache.druid.testsEx.query;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import java.sql.Connection;
@@ -45,6 +42,7 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -221,8 +219,8 @@ public class ITJdbcQueryTest extends BaseJUnitRule
     for (String url : connections) {
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
-      Throwable thrown = catchThrowable(() -> statement.executeQuery());
-      assertThat(thrown).isInstanceOf(AvaticaSqlException.class)
+      Throwable thrown = Assertions.catchThrowable(() -> statement.executeQuery());
+      Assertions.assertThat(thrown).isInstanceOf(AvaticaSqlException.class)
                         .hasMessageMatching(".* Parameter at position \\[0] is not bound");
     }
   }
