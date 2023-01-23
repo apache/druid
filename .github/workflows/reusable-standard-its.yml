@@ -50,7 +50,7 @@ env:
 
 jobs:
   test:
-    name: (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer={{ inputs.use_indexer }}) ${{ inputs.testing_groups }} integration test (Mysql={{ inputs.mysql_driver }})
+    name: (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}) ${{ inputs.testing_groups }} integration test (Mysql=${{ inputs.mysql_driver }})
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
