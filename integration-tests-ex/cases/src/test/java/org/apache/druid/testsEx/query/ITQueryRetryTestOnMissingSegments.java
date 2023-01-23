@@ -34,19 +34,20 @@ import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.QueryResultVerifier;
 import org.apache.druid.testing.utils.QueryWithResults;
 import org.apache.druid.testing.utils.TestQueryHelper;
-import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
+import org.apache.druid.testsEx.categories.QueryRetry;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
+import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
 
 /**
  * This class tests the query retry on missing segments. A segment can be missing in a historical during a query if
@@ -55,10 +56,10 @@ import org.testng.annotations.Test;
  * all of them always. Instead, it can report missing segments for some
  * segments. See {@link ServerManagerForQueryErrorTest} for more details.
  * <p>
- * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
+ * To run this test properly, the test group must be specified as {@link QueryRetry}.
  */
-@Test(groups = TestNGGroup.QUERY_RETRY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
+@RunWith(DruidTestRunner.class)
+@Category(QueryRetry.class)
 public class ITQueryRetryTestOnMissingSegments extends BaseJUnitRule
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
@@ -94,7 +95,7 @@ public class ITQueryRetryTestOnMissingSegments extends BaseJUnitRule
   @Inject
   private ObjectMapper jsonMapper;
 
-  @BeforeMethod
+  @Before
   public void before()
   {
     // ensure that wikipedia segment is loaded completely
@@ -182,7 +183,7 @@ public class ITQueryRetryTestOnMissingSegments extends BaseJUnitRule
                  expectation == Expectation.QUERY_FAILURE) {
         final Map<String, Object> response = jsonMapper.readValue(responseHolder.getContent(), Map.class);
         final String errorMessage = (String) response.get("errorMessage");
-        Assert.assertNotNull(errorMessage, "errorMessage");
+        Assert.assertNotNull("errorMessage", errorMessage);
         Assert.assertTrue(errorMessage.contains("No results found for segments"));
         queryFailure++;
       } else {
