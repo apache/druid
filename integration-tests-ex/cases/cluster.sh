@@ -88,15 +88,6 @@ function category {
 		"Catalog")
 			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
 			;;
-		"Query")
-			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
-			;;
-		"QueryError")
-			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
-			;;
-		"QueryRetry")
-			export DRUID_INTEGRATION_TEST_GROUP=BatchIndex
-			;;
 		*)
 			export DRUID_INTEGRATION_TEST_GROUP=$CATEGORY
 			;;

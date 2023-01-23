@@ -40,10 +40,10 @@ import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
@@ -70,7 +70,7 @@ public class ITSqlCancelTest extends BaseJUnitRule
   @Inject
   private ObjectMapper jsonMapper;
 
-  @BeforeMethod
+  @Before
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
