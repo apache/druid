@@ -25,6 +25,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -37,7 +38,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -132,7 +132,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -146,7 +146,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new DiskNormalizedCostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);

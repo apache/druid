@@ -239,7 +239,7 @@ public class RowSignature implements ColumnInspector
       if (columnType.isNumeric()) {
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(columnType);
       } else if (columnType.is(ValueType.COMPLEX)) {
-        return new ColumnCapabilitiesImpl().setType(columnType).setHasMultipleValues(false);
+        return ColumnCapabilitiesImpl.createDefault().setType(columnType).setHasNulls(true);
       } else {
         return new ColumnCapabilitiesImpl().setType(columnType);
       }

@@ -125,7 +125,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
             colSelector.inspectRuntimeShape(inspector);
           }
         };
-
       }
 
       @Override

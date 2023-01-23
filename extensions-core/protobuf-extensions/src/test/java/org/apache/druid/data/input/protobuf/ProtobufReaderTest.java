@@ -101,7 +101,7 @@ public class ProtobufReaderTest
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatData(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatData(row, dateTime, false);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class ProtobufReaderTest
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
   }
 
   @Test
@@ -138,6 +138,6 @@ public class ProtobufReaderTest
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
   }
 }

@@ -20,13 +20,16 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.Segment;
+
+import java.io.IOException;
 
 public class SegmentToRowsAndColumnsOperator implements Operator
 {
   private final Segment segment;
-  private boolean hasNext = true;
 
   public SegmentToRowsAndColumnsOperator(
       Segment segment
@@ -36,33 +39,22 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   }
 
   @Override
-  public void open()
+  public void go(Receiver receiver)
   {
+    try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
+      if (shifty == null) {
+        throw new ISE("Segment[%s] cannot shapeshift", segment.getClass());
+      }
 
-  }
-
-  @Override
-  public RowsAndColumns next()
-  {
-    hasNext = false;
-
-    RowsAndColumns rac = segment.as(RowsAndColumns.class);
-    if (rac != null) {
-      return rac;
+      RowsAndColumns rac = shifty.as(RowsAndColumns.class);
+      if (rac == null) {
+        throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
+      }
+      receiver.push(rac);
+      receiver.completed();
     }
-
-    throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
-  }
-
-  @Override
-  public boolean hasNext()
-  {
-    return hasNext;
-  }
-
-  @Override
-  public void close(boolean cascade)
-  {
-
+    catch (IOException e) {
+      throw new RE(e, "Problem closing resources for segment[%s]", segment.getId());
+    }
   }
 }

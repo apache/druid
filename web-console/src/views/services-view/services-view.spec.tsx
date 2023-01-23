@@ -19,7 +19,8 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities, QueryState } from '../../utils';
+import { Capabilities } from '../../helpers';
+import { QueryState } from '../../utils';
 
 import { ServicesView } from './services-view';
 

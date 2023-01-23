@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegmentReference;
 import org.apache.druid.utils.JvmUtils;
@@ -188,6 +189,13 @@ public class UnnestDataSource implements DataSource
   }
 
   @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    final DataSource current = this.getBase();
+    return current.getAnalysis();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -207,6 +215,18 @@ public class UnnestDataSource implements DataSource
   {
     return Objects.hash(base, column, outputName);
   }
+
+  @Override
+  public String toString()
+  {
+    return "UnnestDataSource{" +
+           "base=" + base +
+           ", column='" + column + '\'' +
+           ", outputName='" + outputName + '\'' +
+           ", allowList=" + allowList +
+           '}';
+  }
+
 }
 
 

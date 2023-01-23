@@ -28,6 +28,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -122,6 +123,9 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
 
         encodedDimensionValues = pos == retVal.length ? retVal : Arrays.copyOf(retVal, pos);
       }
+    } else if (dimValues instanceof byte[]) {
+      encodedDimensionValues =
+          new int[]{dimLookup.add(emptyToNullIfNeeded(StringUtils.encodeBase64String((byte[]) dimValues)))};
     } else {
       encodedDimensionValues = new int[]{dimLookup.add(emptyToNullIfNeeded(dimValues))};
     }

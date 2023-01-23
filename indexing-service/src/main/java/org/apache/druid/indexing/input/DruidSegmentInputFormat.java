@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -56,19 +57,25 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
+    final InputEntity baseInputEntity;
+    if (source instanceof BytesCountingInputEntity) {
+      baseInputEntity = ((BytesCountingInputEntity) source).getBaseInputEntity();
+    } else {
+      baseInputEntity = source;
+    }
+
     // this method handles the case when the entity comes from a tombstone or from a regular segment
     Preconditions.checkArgument(
-        source instanceof DruidSegmentInputEntity,
+        baseInputEntity instanceof DruidSegmentInputEntity,
         DruidSegmentInputEntity.class.getName() + " required, but "
-        + source.getClass().getName() + " provided."
+        + baseInputEntity.getClass().getName() + " provided."
     );
 
-    final InputEntityReader retVal;
-    // Cast is safe here because of the precondition above passed
-    if (((DruidSegmentInputEntity) source).isFromTombstone()) {
-      retVal = new DruidTombstoneSegmentReader(source);
+    final DruidSegmentInputEntity druidSegmentEntity = (DruidSegmentInputEntity) baseInputEntity;
+    if (druidSegmentEntity.isFromTombstone()) {
+      return new DruidTombstoneSegmentReader(druidSegmentEntity);
     } else {
-      retVal = new DruidSegmentReader(
+      return new DruidSegmentReader(
           source,
           indexIO,
           inputRowSchema.getTimestampSpec(),
@@ -78,6 +85,5 @@ public class DruidSegmentInputFormat implements InputFormat
           temporaryDirectory
       );
     }
-    return retVal;
   }
 }

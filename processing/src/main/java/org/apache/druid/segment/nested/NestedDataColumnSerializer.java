@@ -56,6 +56,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.SortedMap;
 
@@ -69,6 +70,8 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   public static final String RAW_FILE_NAME = "__raw";
   public static final String NULL_BITMAP_FILE_NAME = "__nullIndex";
 
+  public static final String NESTED_FIELD_PREFIX = "__field_";
+
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final IndexSpec indexSpec;
@@ -78,21 +81,23 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private final StructuredDataProcessor fieldProcessor = new StructuredDataProcessor()
   {
     @Override
-    public int processLiteralField(String fieldName, Object fieldValue)
+    public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
     {
-      final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(fieldName);
+      final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
+          NestedPathFinder.toNormalizedJsonPath(fieldPath)
+      );
       if (writer != null) {
         try {
           ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
           writer.addValue(rowCount, eval.value());
           // serializer doesn't use size estimate
-          return 0;
+          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
         }
         catch (IOException e) {
           throw new RuntimeException(":(");
         }
       }
-      return 0;
+      return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
     }
   };
 
@@ -180,8 +185,10 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   {
     this.fields = fields;
     this.fieldWriters = Maps.newHashMapWithExpectedSize(fields.size());
+    int ctr = 0;
     for (Map.Entry<String, NestedLiteralTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       final String fieldName = field.getKey();
+      final String fieldFileName = NESTED_FIELD_PREFIX + ctr++;
       fieldsWriter.write(fieldName);
       fieldsInfoWriter.write(field.getValue());
       final GlobalDictionaryEncodedFieldColumnWriter<?> writer;
@@ -190,7 +197,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
         if (Types.is(type, ValueType.STRING)) {
           writer = new StringFieldColumnWriter(
               name,
-              fieldName,
+              fieldFileName,
               segmentWriteOutMedium,
               indexSpec,
               globalDictionaryIdLookup
@@ -198,7 +205,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
         } else if (Types.is(type, ValueType.LONG)) {
           writer = new LongFieldColumnWriter(
               name,
-              fieldName,
+              fieldFileName,
               segmentWriteOutMedium,
               indexSpec,
               globalDictionaryIdLookup
@@ -206,7 +213,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
         } else {
           writer = new DoubleFieldColumnWriter(
               name,
-              fieldName,
+              fieldFileName,
               segmentWriteOutMedium,
               indexSpec,
               globalDictionaryIdLookup
@@ -215,7 +222,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       } else {
         writer = new VariantLiteralFieldColumnWriter(
             name,
-            fieldName,
+            fieldFileName,
             segmentWriteOutMedium,
             indexSpec,
             globalDictionaryIdLookup
@@ -265,7 +272,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
-    StructuredData data = selector.getObject();
+    StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
@@ -317,8 +324,8 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
-    // version 3
-    channel.write(ByteBuffer.wrap(new byte[]{0x03}));
+    // version 4
+    channel.write(ByteBuffer.wrap(new byte[]{0x04}));
     channel.write(ByteBuffer.wrap(metadataBytes));
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
@@ -341,6 +348,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     if (channel instanceof SmooshedWriter) {
       channel.close();
     }
+
     for (Map.Entry<String, NestedLiteralTypeInfo.MutableTypeSet> field : fields.entrySet()) {
       // remove writer so that it can be collected when we are done with it
       GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.remove(field.getKey());
@@ -355,11 +363,6 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
       serializer.writeTo(smooshChannel, smoosher);
     }
-  }
-
-  public static String getFieldFileName(String fileNameBase, String field)
-  {
-    return StringUtils.format("%s_%s", fileNameBase, field);
   }
 
   public static String getInternalFileName(String fileNameBase, String field)

@@ -19,21 +19,27 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Arrays;
 
 public class ConstantObjectColumn implements Column
 {
   private final Object obj;
-  private final int numCells;
+  private final int numRows;
   private final ColumnType type;
 
-  public ConstantObjectColumn(Object obj, int numCells, ColumnType type)
+  public ConstantObjectColumn(Object obj, int numRows, ColumnType type)
   {
     this.obj = obj;
-    this.numCells = numCells;
+    this.numRows = numRows;
     this.type = type;
   }
 
+  @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
@@ -48,7 +54,7 @@ public class ConstantObjectColumn implements Column
       @Override
       public int numRows()
       {
-        return numCells;
+        return numRows;
       }
 
       @Override
@@ -88,16 +94,31 @@ public class ConstantObjectColumn implements Column
       }
 
       @Override
-      public int compareCells(int lhsRowNum, int rhsRowNum)
+      public int compareRows(int lhsRowNum, int rhsRowNum)
       {
         return 0;
       }
     };
   }
 
+  @Nullable
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<? extends T> clazz)
   {
+    if (VectorCopier.class.equals(clazz)) {
+      return (T) (VectorCopier) (into, intoStart) -> {
+        if (Integer.MAX_VALUE - numRows < intoStart) {
+          throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
+        }
+        Arrays.fill(into, intoStart, intoStart + numRows, obj);
+      };
+    }
+    if (ColumnValueSwapper.class.equals(clazz)) {
+      return (T) (ColumnValueSwapper) (lhs, rhs) -> {
+      };
+    }
+
     return null;
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
@@ -40,9 +41,9 @@ import java.util.Map;
 public class AvroFlattenerMakerTest
 {
   private static final AvroFlattenerMaker FLATTENER_WITHOUT_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, false);
+      new AvroFlattenerMaker(false, false, false, false);
   private static final AvroFlattenerMaker FLATTENER_WITH_EXTRACT_UNION_BY_TYPE =
-      new AvroFlattenerMaker(false, false, true);
+      new AvroFlattenerMaker(false, false, true, false);
 
   private static final SomeAvroDatum RECORD = AvroStreamInputRowParserTest.buildSomeAvroDatum();
 
@@ -77,7 +78,7 @@ public class AvroFlattenerMakerTest
   @Test
   public void jsonPathExtractorExtractUnionsByType()
   {
-    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true);
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
 
     // Unmamed types are accessed by type
 
@@ -153,6 +154,59 @@ public class AvroFlattenerMakerTest
     Assert.assertEquals(
         RECORD.getTimestamp(),
         FLATTENER_WITH_EXTRACT_UNION_BY_TYPE.makeJsonQueryExtractor("$.timestamp").apply(RECORD)
+    );
+  }
+
+  @Test
+  public void testDiscovery()
+  {
+    final AvroFlattenerMaker flattener = new AvroFlattenerMaker(false, false, true, false);
+    final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
+
+    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someOtherId",
+            "someStringArray",
+            "someIntArray",
+            "someFloat",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattener.discoverRootFields(input))
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someStringValueMap",
+            "someOtherId",
+            "someStringArray",
+            "someIntArray",
+            "someFloat",
+            "isValid",
+            "someIntValueMap",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someRecord",
+            "someMultiMemberUnion",
+            "someNull",
+            "someRecordArray",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
     );
   }
 

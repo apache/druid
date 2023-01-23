@@ -22,12 +22,21 @@ package org.apache.druid.query.operator;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.util.function.Supplier;
 
+/**
+ * Provides a sequence on top of Operators.  The mis-match in pull (Sequence) and push (Operator) means that, if we
+ * choose to support the Yielder interface, we have to use threading.  Managing extra threads in order to do that
+ * is unfortunate, so, we choose to take a bit of a cop-out approach.
+ *
+ * Specifically, the accumulate method doesn't actually have the same problem and the query pipeline after the merge
+ * functions is composed of Sequences that all use accumulate instead of yielder.  Thus, if we are certain that
+ * we only use the OperatorSequence in places where toYielder is not called (i.e. it's only used as the return
+ * value of the merge() calls), then we can get away with only implementing the accumulate path.
+ */
 public class OperatorSequence implements Sequence<RowsAndColumns>
 {
   private final Supplier<Operator> opSupplier;
@@ -41,24 +50,13 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
 
   @Override
   public <OutType> OutType accumulate(
-      OutType initValue,
+      final OutType initValue,
       Accumulator<OutType, RowsAndColumns> accumulator
   )
   {
-    Operator op = null;
-    try {
-      op = opSupplier.get();
-      op.open();
-      while (op.hasNext()) {
-        initValue = accumulator.accumulate(initValue, op.next());
-      }
-      return initValue;
-    }
-    finally {
-      if (op != null) {
-        op.close(true);
-      }
-    }
+    final MyReceiver<OutType> receiver = new MyReceiver<>(initValue, accumulator);
+    opSupplier.get().go(receiver);
+    return receiver.getRetVal();
   }
 
   @Override
@@ -67,59 +65,38 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
       YieldingAccumulator<OutType, RowsAndColumns> accumulator
   )
   {
-    final Operator op = opSupplier.get();
-    try {
-      op.open();
+    // As mentioned in the class-level javadoc, we skip this implementation and leave it up to the developer to
+    // only use this class in "safe" locations.
+    throw new UnsupportedOperationException("Cannot convert an Operator to a Yielder");
+  }
 
-      while (!accumulator.yielded() && op.hasNext()) {
-        initValue = accumulator.accumulate(initValue, op.next());
-      }
-      if (accumulator.yielded()) {
-        OutType finalInitValue = initValue;
-        return new Yielder<OutType>()
-        {
-          private OutType retVal = finalInitValue;
-          private boolean done = false;
+  private static class MyReceiver<OutType> implements Operator.Receiver
+  {
+    private final Accumulator<OutType, RowsAndColumns> accumulator;
+    private OutType retVal;
 
-          @Override
-          public OutType get()
-          {
-            return retVal;
-          }
-
-          @Override
-          public Yielder<OutType> next(OutType initValue)
-          {
-            accumulator.reset();
-            retVal = initValue;
-            while (!accumulator.yielded() && op.hasNext()) {
-              retVal = accumulator.accumulate(retVal, op.next());
-            }
-            if (!accumulator.yielded()) {
-              done = true;
-            }
-            return this;
-          }
-
-          @Override
-          public boolean isDone()
-          {
-            return done;
-          }
-
-          @Override
-          public void close()
-          {
-            op.close(true);
-          }
-        };
-      } else {
-        return Yielders.done(initValue, () -> op.close(true));
-      }
+    public MyReceiver(OutType initValue, Accumulator<OutType, RowsAndColumns> accumulator)
+    {
+      this.accumulator = accumulator;
+      retVal = initValue;
     }
-    catch (RuntimeException e) {
-      op.close(true);
-      throw e;
+
+    public OutType getRetVal()
+    {
+      return retVal;
+    }
+
+    @Override
+    public boolean push(RowsAndColumns rac)
+    {
+      retVal = accumulator.accumulate(retVal, rac);
+      return true;
+    }
+
+    @Override
+    public void completed()
+    {
+
     }
   }
 }
