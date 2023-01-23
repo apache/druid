@@ -547,7 +547,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                   Map<String, Object> event = new HashMap<>();
                   String[] values1 = input.split("\\t");
                   for (int i = 0; i < dimSpecs.length; i++) {
-                    if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                    if (dimSpecs[i] == null) {
                       continue;
                     }
 

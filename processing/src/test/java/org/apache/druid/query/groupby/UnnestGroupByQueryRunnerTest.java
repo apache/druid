@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
@@ -80,7 +79,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   public ExpectedException expectedException = ExpectedException.none();
 
   public UnnestGroupByQueryRunnerTest(
-      String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
       boolean vectorize
@@ -197,12 +195,10 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config, BUFFER_POOLS);
 
       for (boolean vectorize : ImmutableList.of(false)) {
-        final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, "dummy", vectorize);
-
         // Add vectorization tests for any indexes that support it.
         if (!vectorize ||
             config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-          constructors.add(new Object[]{testName, config, factory, vectorize});
+          constructors.add(new Object[]{config, factory, vectorize});
         }
       }
 
@@ -531,6 +527,12 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
             "alias0", "b",
             "rows", 2L
         ),
@@ -563,12 +565,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "2011-04-01",
             "alias0", "p",
             "rows", 6L
-        ),
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias0", "preferred",
-            "rows", 26L
         ),
         makeRow(
             query,
