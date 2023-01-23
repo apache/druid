@@ -215,6 +215,7 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/grpc-shaded</module>
         <module>extensions-contrib/grpc-query</module>
         <!-- distribution packaging -->
         <module>distribution</module>

@@ -24,9 +24,9 @@ import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.druid.grpc.proto.QueryGrpc;
-import org.druid.grpc.proto.QueryOuterClass.QueryRequest;
-import org.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.grpc.proto.QueryGrpc;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 
 import javax.inject.Inject;
 

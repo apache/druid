@@ -24,11 +24,11 @@ import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
-import org.druid.grpc.proto.QueryGrpc;
-import org.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
-import org.druid.grpc.proto.QueryOuterClass.QueryRequest;
-import org.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.druid.grpc.proto.QueryOuterClass.QueryStatus;
+import org.apache.druid.grpc.proto.QueryGrpc;
+import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -55,7 +55,7 @@ public class GrpcQueryTest
 
     public TestClient()
     {
-   // Access a service running on the local machine on port 50051
+      // Access a service running on the local machine on port 50051
       String target = "localhost:50051";
       // Create a communication channel to the server, known as a Channel. Channels are thread-safe
       // and reusable. It is common to create channels at the beginning of your application and reuse
@@ -114,12 +114,6 @@ public class GrpcQueryTest
 
   /**
    * Do a very basic query.
-   * <p>
-   * Note: at present this will fail with a cryptic internal error because the version
-   * of Guava which Druid uses is not compatible with the version that gRPC requires.
-   * We'll need to do some shading.
-   * <p>
-   * java.lang.NoSuchMethodError: 'void com.google.common.base.Preconditions.checkArgument(boolean, java.lang.String, char, java.lang.Object)'
    */
   @Test
   public void testBasics()

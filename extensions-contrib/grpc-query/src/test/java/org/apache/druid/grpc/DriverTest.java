@@ -21,12 +21,12 @@ package org.apache.druid.grpc;
 
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.druid.grpc.proto.QueryOuterClass.ColumnSchema;
-import org.druid.grpc.proto.QueryOuterClass.DruidType;
-import org.druid.grpc.proto.QueryOuterClass.QueryRequest;
-import org.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
-import org.druid.grpc.proto.QueryOuterClass.QueryStatus;
+import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
+import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
