@@ -123,7 +123,6 @@ public class SegmentGeneratorFrameProcessorFactory
   )
   {
     final RowIngestionMeters meters = frameContext.rowIngestionMeters();
-
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         meters,
         TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS,

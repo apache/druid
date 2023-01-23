@@ -298,21 +298,6 @@ public class WorkerImpl implements Worker
       criticalWarningCodes = ImmutableSet.of();
     }
 
-    final MSQWarningPublisher msqWarningReportLimiterPublisher = new MSQWarningReportLimiterPublisher(
-        new MSQWarningReportSimplePublisher(
-            id(),
-            controllerClient,
-            id(),
-            MSQTasks.getHostFromSelfNode(selfDruidNode)
-        ),
-        Limits.MAX_VERBOSE_WARNINGS,
-        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
-        criticalWarningCodes,
-        controllerClient,
-        id(),
-        MSQTasks.getHostFromSelfNode(selfDruidNode)
-    );
-
     final MSQWarningPublisher filteredEmitterWarningPublisher = new MSQFilteredEmitterWarningPublisher(
         id(),
         task.getControllerTaskId(),
@@ -323,13 +308,25 @@ public class WorkerImpl implements Worker
         ImmutableSet.of(CannotParseExternalDataFault.CODE)
     );
 
-    // only question I have with this approach is how do we set limits to avoid over publishing?
-    // should I instead make msqWarningReportLimiterPublisher be the top level warningPublisher, and pass in
-    // compositeWarningPublisher, that has the filtered emitting and the simple warningReportPublisher?
     final MSQWarningPublisher compositeWarningPublisher = new MSQCompositeWarningPublisher(
-        ImmutableList.of(filteredEmitterWarningPublisher, msqWarningReportLimiterPublisher));
+        ImmutableList.of(filteredEmitterWarningPublisher, new MSQWarningReportSimplePublisher(
+            id(),
+            controllerClient,
+            id(),
+            MSQTasks.getHostFromSelfNode(selfDruidNode)
+        )));
 
-    closer.register(compositeWarningPublisher);
+    final MSQWarningPublisher msqWarningPublisher = new MSQWarningReportLimiterPublisher(
+        compositeWarningPublisher,
+        Limits.MAX_VERBOSE_WARNINGS,
+        ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),
+        criticalWarningCodes,
+        controllerClient,
+        id(),
+        MSQTasks.getHostFromSelfNode(selfDruidNode)
+    );
+
+    closer.register(msqWarningPublisher);
 
     final Map<StageId, SettableFuture<ClusterByPartitions>> partitionBoundariesFutureMap = new HashMap<>();
 
@@ -371,7 +368,7 @@ public class WorkerImpl implements Worker
                   cancellationId,
                   context.threadCount(),
                   stageFrameContexts.get(stageDefinition.getId()),
-                  compositeWarningPublisher
+                  msqWarningPublisher
               );
 
           if (partitionBoundariesFuture != null) {
