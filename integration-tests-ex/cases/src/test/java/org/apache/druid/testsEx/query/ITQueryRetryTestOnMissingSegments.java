@@ -41,6 +41,7 @@ import org.apache.druid.testing.utils.QueryWithResults;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -58,7 +59,7 @@ import org.testng.annotations.Test;
  */
 @Test(groups = TestNGGroup.QUERY_RETRY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITQueryRetryTestOnMissingSegments
+public class ITQueryRetryTestOnMissingSegments extends BaseJUnitRule
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries_query_retry_test.json";

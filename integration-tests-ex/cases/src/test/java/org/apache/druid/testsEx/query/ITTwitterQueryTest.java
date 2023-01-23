@@ -21,21 +21,19 @@ package org.apache.druid.testsEx.query;
 
 import com.google.inject.Inject;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
-import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITTwitterQueryTest
+public class ITTwitterQueryTest extends BaseJUnitRule
 {
   private static final String TWITTER_DATA_SOURCE = "twitterstream";
   private static final String TWITTER_QUERIES_RESOURCE = "/queries/twitterstream_queries.json";
@@ -44,7 +42,7 @@ public class ITTwitterQueryTest
   @Inject
   private TestQueryHelper queryHelper;
 
-  @BeforeMethod
+  @Before
   public void before()
   {
     // ensure that the twitter segments are loaded completely

@@ -35,6 +35,7 @@ import org.apache.druid.testing.clients.QueryResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Before;
@@ -50,7 +51,7 @@ import java.util.concurrent.Future;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITWikipediaQueryTest
+public class ITWikipediaQueryTest extends BaseJUnitRule
 {
   private static final Logger LOG = new Logger(ITWikipediaQueryTest.class);
 
@@ -107,9 +108,8 @@ public class ITWikipediaQueryTest
       throws Exception
   {
     // run tests on a new query helper
-    TestQueryHelper queryHelper = this.queryHelper.withEncoding(contentType, accept);
-
-    queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
+    TestQueryHelper queryHelperLocal = this.queryHelper.withEncoding(contentType, accept);
+    queryHelperLocal.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE);
   }
 
   @Test

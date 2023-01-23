@@ -37,6 +37,7 @@ import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.experimental.categories.Category;
@@ -46,7 +47,7 @@ import org.testng.annotations.Test;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITSqlCancelTest
+public class ITSqlCancelTest extends BaseJUnitRule
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
 

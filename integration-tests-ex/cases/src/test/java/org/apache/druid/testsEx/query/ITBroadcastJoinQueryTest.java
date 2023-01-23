@@ -27,12 +27,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
-import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
@@ -59,17 +57,11 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   CoordinatorResourceTestClient coordinatorClient;
 
   @Inject
-  SqlTestQueryHelper queryHelper;
-
-  @Inject
   DataLoaderHelper dataLoaderHelper;
 
   @Inject
   @TestClient
   HttpClient httpClient;
-
-  @Inject
-  IntegrationTestingConfig config;
 
   @Test
   public void testBroadcastJoin() throws Exception

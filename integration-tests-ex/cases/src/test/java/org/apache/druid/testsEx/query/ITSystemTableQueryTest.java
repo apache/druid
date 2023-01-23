@@ -26,6 +26,7 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -35,7 +36,7 @@ import org.testng.annotations.Test;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITSystemTableQueryTest
+public class ITSystemTableQueryTest extends BaseJUnitRule
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String TWITTER_DATA_SOURCE = "twitterstream";

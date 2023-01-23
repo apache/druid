@@ -19,7 +19,8 @@
 
 package org.apache.druid.testsEx.query;
 
-import static org.apache.druid.testsEx.utils.RegexMatchUtil.matchesRegex;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -42,18 +43,17 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)
-public class ITJdbcQueryTest
+public class ITJdbcQueryTest extends BaseJUnitRule
 {
   private static final Logger LOG = new Logger(ITJdbcQueryTest.class);
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
@@ -215,18 +215,15 @@ public class ITJdbcQueryTest
     }
   }
 
-  @Rule
-  public ExpectedException expectedEx = ExpectedException.none();
-
   @Test
   public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
   {
-    expectedEx.expect(AvaticaSqlException.class);
-    expectedEx.expectMessage(matchesRegex(".* Parameter at position \\[0] is not bound"));
     for (String url : connections) {
       Connection connection = DriverManager.getConnection(url, connectionProperties);
       PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
-      statement.executeQuery();
+      Throwable thrown = catchThrowable(() -> statement.executeQuery());
+      assertThat(thrown).isInstanceOf(AvaticaSqlException.class)
+                        .hasMessageMatching(".* Parameter at position \\[0] is not bound");
     }
   }
 }

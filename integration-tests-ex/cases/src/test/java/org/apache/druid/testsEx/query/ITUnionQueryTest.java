@@ -34,7 +34,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -76,9 +75,6 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   @Inject
   @TestClient
   HttpClient httpClient;
-
-  @Inject
-  IntegrationTestingConfig config;
 
   private String fullDatasourceName;
 

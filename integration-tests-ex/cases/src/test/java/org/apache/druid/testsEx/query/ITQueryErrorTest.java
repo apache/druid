@@ -19,7 +19,8 @@
 
 package org.apache.druid.testsEx.query;
 
-import static org.apache.druid.testsEx.utils.RegexMatchUtil.matchesRegex;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -33,13 +34,12 @@ import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.QueryError;
+import org.apache.druid.testsEx.config.BaseJUnitRule;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 /**
@@ -53,7 +53,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DruidTestRunner.class)
 @Category(QueryError.class)
-public class ITQueryErrorTest
+public class ITQueryErrorTest extends BaseJUnitRule
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   /**
@@ -87,127 +87,127 @@ public class ITQueryErrorTest
     dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
   }
 
-  @Rule
-  public ExpectedException expectedEx = ExpectedException.none();
-
   @Test
-  public void testSqlParseException() throws Exception
+  public void testSqlParseException()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*400.*"));
     // test a sql without SELECT
-    sqlHelper.testQueriesFromString(buildSqlPlanFailureQuery("FROM t WHERE col = 'a'"));
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+        buildSqlPlanFailureQuery("FROM t WHERE col = 'a'")
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
-  public void testSqlValidationException() throws Exception
+  public void testSqlValidationException()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*400.*"));
     // test a sql that selects unknown column
-    sqlHelper.testQueriesFromString(
-        buildSqlPlanFailureQuery(StringUtils.format("SELECT unknown_col FROM %s LIMIT 1", WIKIPEDIA_DATA_SOURCE))
-    );
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
+        buildSqlPlanFailureQuery(StringUtils.format("SELECT unknown_col FROM %s LIMIT 1",
+                                                    WIKIPEDIA_DATA_SOURCE))
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
-  public void testSqlTimeout() throws Exception
+  public void testSqlTimeout()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*504.*"));
-    sqlHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*504.*");
   }
 
   @Test
-  public void testSqlCapacityExceeded() throws Exception
+  public void testSqlCapacityExceeded()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*429.*"));
-    sqlHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*429.*");
   }
 
   @Test
-  public void testSqlUnsupported() throws Exception
+  public void testSqlUnsupported()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*501.*"));
-    sqlHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*501.*");
   }
 
   @Test
-  public void testSqlResourceLimitExceeded() throws Exception
+  public void testSqlResourceLimitExceeded()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*400.*"));
-    sqlHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
-  public void testSqlFailure() throws Exception
+  public void testSqlFailure()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*500.*"));
-    sqlHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> sqlHelper.testQueriesFromString(
         buildHistoricalErrorSqlQuery(ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*500.*");
   }
 
   @Test
-  public void testQueryTimeout() throws Exception
+  public void testQueryTimeout()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*504.*"));
-    queryHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*504.*");
   }
 
   @Test
-  public void testQueryCapacityExceeded() throws Exception
+  public void testQueryCapacityExceeded()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*429.*"));
-    queryHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*429.*");
   }
 
   @Test
-  public void testQueryUnsupported() throws Exception
+  public void testQueryUnsupported()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*501.*"));
-    queryHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*501.*");
   }
 
   @Test
-  public void testResourceLimitExceeded() throws Exception
+  public void testResourceLimitExceeded()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*400.*"));
-    queryHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*400.*");
   }
 
   @Test
-  public void testQueryFailure() throws Exception
+  public void testQueryFailure()
   {
-    expectedEx.expect(RuntimeException.class);
-    expectedEx.expectMessage(matchesRegex("(?s).*500.*"));
-    queryHelper.testQueriesFromString(
+    Throwable thrown = catchThrowable(() -> queryHelper.testQueriesFromString(
         buildHistoricalErrorTestQuery(ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY)
-    );
+    ));
+    assertThat(thrown).isInstanceOf(RuntimeException.class)
+                      .hasMessageMatching("(?s).*500.*");
   }
 
   private String buildSqlPlanFailureQuery(String sql) throws IOException
