@@ -17,21 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.frame.processor;
+package org.apache.druid.frame.channel;
 
-import org.junit.Test;
+import java.io.Closeable;
+import java.io.IOException;
 
-public class BlockingQueueOutputChannelFactoryTest extends OutputChannelFactoryTest
+/**
+ * Provides an interface to read a partitioned frame channel. The channel might have frames with multiple partitions
+ * in it.
+ */
+public interface PartitionedReadableFrameChannel extends Closeable
 {
-  public BlockingQueueOutputChannelFactoryTest()
-  {
-    super(new BlockingQueueOutputChannelFactory(100), 100);
-  }
+  /**
+   * Allows reading a particular partition in the channel
+   * @param partitionNumber the partition to read
+   * @return a ReadableFrameChannel for the partition queried
+   */
+  ReadableFrameChannel getReadableFrameChannel(int partitionNumber);
 
+  /**
+   * Releases any resources associated with this readable channel. After calling this, you should not call any other
+   * methods on the channel.
+   */
   @Override
-  @Test
-  public void test_openPartitionedChannel()
-  {
-    // Do nothing since partitioned channels aren't implemented for BlockingQueueOutputChannelFactory yet.
-  }
+  void close() throws IOException;
 }
