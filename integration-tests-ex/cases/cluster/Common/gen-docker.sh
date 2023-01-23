@@ -26,14 +26,46 @@
 # as crazy as it sounds. If needes get more complex, we can switch to
 # the Freemarker template engine used to generate the Calcite parser.
 #
-# To customize, find the function that generates the bit to be changed.
-# Copy that function to your per-test template. This master template
-# includes the per-test template after defining all functions, so that
-# any in your template replace (not override) those defined here.
+# Create a test-specific file by creating a docker-compose.sh script in
+# cluster/YourTest. It should look like this to start:
 #
-# Any function with "custom" in the name is intended to help with
-# customization. The others are "boilerplate" and generally should not
-# need to be replaced.
+# set -e
+#
+# TEMPLATE=$0
+# export MODULE_DIR=$(cd $(dirname $0) && pwd)
+# CATEGORY=$(basename $MODULE_DIR)
+#
+# . $MODULE_DIR/../Common/gen-docker.sh
+#
+# gen_compose_file $CATEGORY
+#
+# This will get you a "generic" Druid cluster with one of each service,
+# using the standard configs. The generated file will use a Middle Manager
+# or Indexer based on the setting of USE_INDEXER.
+#
+# Next, determine how you want to customize your cluster. You do this by
+# adding functions at the end of the above file (after the gen_compose_file
+# line. Basically, you override (actually, replace) functions in the base
+# file with functions unique to your setup.
+#
+# The functions cover each area of the docker-compose file: env files,
+# env, volumes, etc. If you want to change just one service, create a
+# gen_<service>_<item> function. If you want to change something for all
+# service, create a gen_common_<item> function.
+#
+# This is easier to understand by looking at examples of existing files.
+# Note that the per-service functions call the common functions. Note also
+# that the specifics of items differ. (Lists use function arguments since
+# Docker does not allow empty list sections: we generate the section name
+# only if we have one or more items in that list.)
+#
+# If your needs are complex, you can create your own per-test functions
+# called from the "overriden" ones. To help future readers tell the two
+# apart, add the following comment to overrides:
+#
+# # Override
+#
+#--------------------------------------------------------------------
 
 # Replace this to create a test-specific header comment.
 function gen_header_comment {

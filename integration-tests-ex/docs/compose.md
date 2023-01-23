@@ -261,9 +261,9 @@ CATEGORY=$(basename $MODULE_DIR)
 
 . $MODULE_DIR/../Common/gen-docker.sh
 
-# Custom functions go here
-
 gen_compose_file $CATEGORY
+
+# Custom functions go here
 ```
 
 The above will generate a "generic" cluster: one of each kind of service, with
@@ -289,3 +289,6 @@ The generated file is found in `target/cluster/<category>/docker-compose.yaml`.
 As with all generated files: resist the temptation to change the generated file:
 change the template instead.
 
+The generated `docker-compose.yaml` file goes into a temporary folder:
+`target/cluster/<category>`. The script copies over the `Common` directory
+as well.
