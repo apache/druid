@@ -165,7 +165,7 @@ public class AbstractTaskTest
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
     {
       @Override
-      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) 
       {
         return TaskStatus.failure("myId", "failed");
       }
