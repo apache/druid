@@ -53,6 +53,7 @@ import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.FrameProcessors;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -153,7 +154,6 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -293,6 +293,9 @@ public class ControllerImpl implements Controller
   {
     this.task = task;
     this.context = context;
+    this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
+        task.getQuerySpec().getQuery().context()
+    );
   }
 
   @Override
@@ -588,6 +591,25 @@ public class ControllerImpl implements Controller
                                    .orElse(MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED);
     }
 
+    ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
+    taskContextOverridesBuilder
+        .put(
+            MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE,
+            isDurableStorageEnabled
+        ).put(
+            MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
+            MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(
+                task.getQuerySpec().getQuery().context()
+            )
+        ).put(
+            MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
+            MultiStageQueryContext.getIntermediateSuperSorterStorageMaxLocalBytes(
+                task.getQuerySpec().getQuery().context()
+            )
+        ).put(
+            MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+            maxParseExceptions
+    );
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
@@ -601,8 +623,7 @@ public class ControllerImpl implements Controller
             }
           });
         },
-        isDurableStorageEnabled,
-        maxParseExceptions,
+        taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );

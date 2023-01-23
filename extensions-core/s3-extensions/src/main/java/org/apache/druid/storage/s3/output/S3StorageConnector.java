@@ -27,6 +27,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -63,8 +64,27 @@ public class S3StorageConnector implements StorageConnector
   @Override
   public InputStream read(String path) throws IOException
   {
+    return buildInputStream(new GetObjectRequest(config.getBucket(), objectPath(path)));
+  }
+
+  @Override
+  public InputStream readRange(String path, long from, long size) throws IOException
+  {
+    if (from < 0 || size < 0) {
+      throw new IAE(
+          "Invalid arguments for reading %s. from = %d, readSize = %d",
+          objectPath(path),
+          from,
+          size
+      );
+    }
+    return buildInputStream(new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(from, from + size - 1));
+  }
+
+  private RetryingInputStream buildInputStream(GetObjectRequest getObjectRequest) throws IOException
+  {
     return new RetryingInputStream<>(
-        new GetObjectRequest(config.getBucket(), objectPath(path)),
+        getObjectRequest,
         new ObjectOpenFunction<GetObjectRequest>()
         {
           @Override
