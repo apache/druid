@@ -188,6 +188,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1256,6 +1257,7 @@ public class ControllerImpl implements Controller
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     final Set<DataSegment> segmentsToDrop;
+    List<DataSegment> segmentsWithTombstones = new ArrayList<>(segments);
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1277,18 +1279,39 @@ public class ControllerImpl implements Controller
                 )
             );
 
-        // Validate that there are no segments that partially overlap the intervals-to-drop. Otherwise, the replace
-        // may be incomplete.
-        for (final DataSegment segmentToDrop : segmentsToDrop) {
-          if (destination.getReplaceTimeChunks()
-                         .stream()
-                         .noneMatch(interval -> interval.contains(segmentToDrop.getInterval()))) {
-            throw new MSQException(new InsertCannotReplaceExistingSegmentFault(segmentToDrop.getId()));
+        Map<String, Object> tombstoneLoadSpec = new HashMap<>();
+
+        tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
+        tombstoneLoadSpec.put("path", null);
+
+        for (Interval intervalToDrop : intervalsToDrop) {
+          final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
+          String version = null;
+          for (final TaskLock lock : locks) {
+            if (lock.getInterval().contains(intervalToDrop)) {
+              version = lock.getVersion();
+            }
           }
+
+          if (version == null) {
+            // Lock was revoked, probably, because we should have originally acquired it in isReady.
+            throw new MSQException(InsertLockPreemptedFault.INSTANCE);
+          }
+
+          DataSegment tombstone = DataSegment.builder()
+                                             .dataSource(task.getDataSource())
+                                             .interval(intervalToDrop)
+                                             .version(version)
+                                             .shardSpec(new TombstoneShardSpec())
+                                             .loadSpec(tombstoneLoadSpec)
+                                             .size(1)
+                                             .build();
+          segmentsWithTombstones.add(tombstone);
         }
+
       }
 
-      if (segments.isEmpty()) {
+      if (segmentsWithTombstones.isEmpty()) {
         // Nothing to publish, only drop. We already validated that the intervalsToDrop do not have any
         // partially-overlapping segments, so it's safe to drop them as intervals instead of as specific segments.
         for (final Interval interval : intervalsToDrop) {
