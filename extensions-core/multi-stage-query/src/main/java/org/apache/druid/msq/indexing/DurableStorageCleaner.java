@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -31,7 +32,6 @@ import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.shuffle.DurableStorageUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.joda.time.Duration;
 
