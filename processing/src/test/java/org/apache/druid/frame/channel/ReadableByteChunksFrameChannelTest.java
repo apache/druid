@@ -69,7 +69,7 @@ public class ReadableByteChunksFrameChannelTest
     @Test
     public void testZeroBytes()
     {
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       channel.doneWriting();
 
       Assert.assertTrue(channel.canRead());
@@ -85,7 +85,7 @@ public class ReadableByteChunksFrameChannelTest
     @Test
     public void testZeroBytesWithSpecialError()
     {
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       channel.setError(new IllegalArgumentException("test error"));
       channel.doneWriting();
 
@@ -105,7 +105,7 @@ public class ReadableByteChunksFrameChannelTest
       // File with no frames (but still well-formed).
       final File file = FrameTestUtil.writeFrameFile(Sequences.empty(), temporaryFolder.newFile());
 
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       channel.addChunk(Files.toByteArray(file));
       channel.doneWriting();
       Assert.assertEquals(file.length(), channel.getBytesAdded());
@@ -143,7 +143,7 @@ public class ReadableByteChunksFrameChannelTest
         ByteStreams.readFully(in, truncatedFile);
       }
 
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       channel.addChunk(truncatedFile);
       channel.doneWriting();
       Assert.assertEquals(truncatedFile.length, channel.getBytesAdded());
@@ -184,7 +184,7 @@ public class ReadableByteChunksFrameChannelTest
           temporaryFolder.newFile()
       );
 
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       final byte[] fileBytes = Files.toByteArray(file);
       final byte[] chunk1 = new byte[errorAtBytePosition];
       System.arraycopy(fileBytes, 0, chunk1, 0, chunk1.length);
@@ -252,7 +252,7 @@ public class ReadableByteChunksFrameChannelTest
           temporaryFolder.newFile()
       );
 
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       ListenableFuture<?> firstBackpressureFuture = null;
 
       long totalSize = 0;
@@ -307,7 +307,7 @@ public class ReadableByteChunksFrameChannelTest
           temporaryFolder.newFile()
       );
 
-      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test");
+      final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false);
       final BlockingQueueFrameChannel outChannel = new BlockingQueueFrameChannel(10_000); // Enough to hold all frames
       ListenableFuture<?> backpressureFuture = null;
 

@@ -22,20 +22,16 @@ package org.apache.druid.query.operator;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.function.Supplier;
 
 /**
- * Provides a sequence on top of Operators.  The mis-match in pull (Sequence) and push (Operator) means that, if we
- * choose to support the Yielder interface, we have to use threading.  Managing extra threads in order to do that
- * is unfortunate, so, we choose to take a bit of a cop-out approach.
- *
- * Specifically, the accumulate method doesn't actually have the same problem and the query pipeline after the merge
- * functions is composed of Sequences that all use accumulate instead of yielder.  Thus, if we are certain that
- * we only use the OperatorSequence in places where toYielder is not called (i.e. it's only used as the return
- * value of the merge() calls), then we can get away with only implementing the accumulate path.
+ * Provides a sequence on top of Operators.
  */
 public class OperatorSequence implements Sequence<RowsAndColumns>
 {
@@ -54,8 +50,18 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
       Accumulator<OutType, RowsAndColumns> accumulator
   )
   {
-    final MyReceiver<OutType> receiver = new MyReceiver<>(initValue, accumulator);
-    opSupplier.get().go(receiver);
+    final MyReceiver<OutType> receiver = new MyReceiver<>(
+        initValue,
+        new YieldingAccumulator<OutType, RowsAndColumns>()
+        {
+          @Override
+          public OutType accumulate(OutType accumulated, RowsAndColumns in)
+          {
+            return accumulator.accumulate(accumulated, in);
+          }
+        }
+    );
+    Operator.go(opSupplier.get(), receiver);
     return receiver.getRetVal();
   }
 
@@ -65,20 +71,67 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
       YieldingAccumulator<OutType, RowsAndColumns> accumulator
   )
   {
-    // As mentioned in the class-level javadoc, we skip this implementation and leave it up to the developer to
-    // only use this class in "safe" locations.
-    throw new UnsupportedOperationException("Cannot convert an Operator to a Yielder");
+    final Operator op = opSupplier.get();
+    final MyReceiver<OutType> receiver = new MyReceiver<>(initValue, accumulator);
+    final Closeable finalContinuation = op.goOrContinue(null, receiver);
+    if (finalContinuation == null && !accumulator.yielded()) {
+      // We finished processing, and the accumulator did not yield, so we return a done yielder with our value
+      return Yielders.done(receiver.getRetVal(), null);
+    } else {
+      return new Yielder<OutType>()
+      {
+        private Closeable continuation = finalContinuation;
+
+        @Override
+        public OutType get()
+        {
+          return receiver.getRetVal();
+        }
+
+        @Override
+        public Yielder<OutType> next(OutType initValue)
+        {
+          if (continuation == null) {
+            // This means that we completed processing on the previous run.  In this case, we are all done
+            return Yielders.done(null, null);
+          }
+          receiver.setRetVal(initValue);
+
+          continuation = op.goOrContinue(continuation, receiver);
+          return this;
+        }
+
+        @Override
+        public boolean isDone()
+        {
+          return false;
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          if (continuation != null) {
+            continuation.close();
+          }
+        }
+      };
+    }
   }
 
   private static class MyReceiver<OutType> implements Operator.Receiver
   {
-    private final Accumulator<OutType, RowsAndColumns> accumulator;
+    private final YieldingAccumulator<OutType, RowsAndColumns> accumulator;
     private OutType retVal;
 
-    public MyReceiver(OutType initValue, Accumulator<OutType, RowsAndColumns> accumulator)
+    public MyReceiver(OutType initValue, YieldingAccumulator<OutType, RowsAndColumns> accumulator)
     {
       this.accumulator = accumulator;
       retVal = initValue;
+    }
+
+    public void setRetVal(OutType retVal)
+    {
+      this.retVal = retVal;
     }
 
     public OutType getRetVal()
@@ -87,10 +140,10 @@ public class OperatorSequence implements Sequence<RowsAndColumns>
     }
 
     @Override
-    public boolean push(RowsAndColumns rac)
+    public Operator.Signal push(RowsAndColumns rac)
     {
       retVal = accumulator.accumulate(retVal, rac);
-      return true;
+      return accumulator.yielded() ? Operator.Signal.PAUSE : Operator.Signal.GO;
     }
 
     @Override
