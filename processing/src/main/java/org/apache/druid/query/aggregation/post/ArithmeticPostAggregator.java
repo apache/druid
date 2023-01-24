@@ -253,7 +253,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       @Override
       public double compute(double lhs, double rhs)
       {
-        return Math.pow(lhs,rhs);
+        return Math.pow(lhs, rhs);
       }
     };
 
@@ -359,6 +359,4 @@ public class ArithmeticPostAggregator implements PostAggregator
     result = 31 * result + (ordering != null ? ordering.hashCode() : 0);
     return result;
   }
-
-
 }
