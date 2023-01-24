@@ -99,19 +99,19 @@ This returns a summary of the sketch that can be used for debugging. This is the
 
 ### Constant Theta Sketch 
 
-This post aggregator allows the user to add a constant theta sketch which can be used in other post-aggregators e.g. `thetaSketchSetOp` 
+You can use the constant theta sketch post aggregator to add a Base64-encoded constant theta sketch value for use in other post-aggregators. For example,  `thetaSketchSetOp` 
 
 ```json
 {
   "type"  : "thetaSketchConstant",
-  "name": <output name>,
-  "value"  : <base64-encoded value of sketch>
+  "name": DESTINATION_COLUMN_NAME,
+  "value"  : CONSTANT_SKETCH_VALUE
 }
 ```
 
 ### Example of Constant Theta Sketch 
 
-Assume we have a datasource of a variety of users. Using `filters` and `aggregation`, we generate a theta sketch of all `football fans`.  
+Assume you have a datasource with a variety of a variety of users. Using `filters` and `aggregation`, you generate a theta sketch of all `football fans`.  
 
 We have a third-party provider who has provided us a constant theta sketch of all `cricket fans`. We would like to `INTERSECT` both in a `post-aggregation` stage to identify users who are interested in both `cricket` and `football` and then use `thetaSketchEstimate` to calculate the number of unique users.
 
