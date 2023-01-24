@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 
 public class ObjectArrayColumn implements Column
@@ -59,32 +61,7 @@ public class ObjectArrayColumn implements Column
   @Override
   public ColumnAccessor toAccessor()
   {
-    return new ObjectColumnAccessorBase()
-    {
-      @Override
-      protected Object getVal(int rowNum)
-      {
-        return objects[rowNum];
-      }
-
-      @Override
-      protected Comparator<Object> getComparator()
-      {
-        return comparator;
-      }
-
-      @Override
-      public ColumnType getType()
-      {
-        return resultType;
-      }
-
-      @Override
-      public int numRows()
-      {
-        return objects.length;
-      }
-    };
+    return new MyColumnAccessor();
   }
 
   @Nullable
@@ -105,4 +82,91 @@ public class ObjectArrayColumn implements Column
     return null;
   }
 
+  private class MyColumnAccessor extends ObjectColumnAccessorBase implements BinarySearchableAccessor
+  {
+    @Override
+    protected Object getVal(int rowNum)
+    {
+      return objects[rowNum];
+    }
+
+    @Override
+    protected Comparator<Object> getComparator()
+    {
+      return comparator;
+    }
+
+    @Override
+    public ColumnType getType()
+    {
+      return resultType;
+    }
+
+    @Override
+    public int numRows()
+    {
+      return objects.length;
+    }
+
+    @Override
+    public FindResult findNull(int startIndex, int endIndex)
+    {
+      return findComplex(startIndex, endIndex, null);
+    }
+
+    @Override
+    public FindResult findDouble(int startIndex, int endIndex, double val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findFloat(int startIndex, int endIndex, float val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findLong(int startIndex, int endIndex, long val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findString(int startIndex, int endIndex, String val)
+    {
+      return findComplex(startIndex, endIndex, val);
+    }
+
+    @Override
+    public FindResult findComplex(int startIndex, int endIndex, Object val)
+    {
+      if (comparator.compare(objects[startIndex], val) == 0) {
+        int end = startIndex + 1;
+
+        while (end < endIndex && comparator.compare(objects[end], val) == 0) {
+          ++end;
+        }
+        return FindResult.found(startIndex, end);
+      }
+
+      int i = Arrays.binarySearch(objects, startIndex, endIndex, val, comparator);
+      if (i > 0) {
+        int foundStart = i;
+        int foundEnd = i + 1;
+
+        while (foundStart - 1 >= startIndex && comparator.compare(objects[foundStart - 1], val) == 0) {
+          --foundStart;
+        }
+
+        while (foundEnd < endIndex && comparator.compare(objects[foundEnd], val) == 0) {
+          ++foundEnd;
+        }
+
+        return FindResult.found(foundStart, foundEnd);
+      } else {
+        return FindResult.notFound(-(i + 1));
+      }
+    }
+  }
 }

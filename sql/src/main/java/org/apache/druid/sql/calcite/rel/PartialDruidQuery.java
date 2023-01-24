@@ -54,6 +54,7 @@ public class PartialDruidQuery
   private final RelNode scan;
   private final Filter whereFilter;
   private final Project selectProject;
+  private final Project unnestProject;
   private final Aggregate aggregate;
   private final Filter havingFilter;
   private final Project aggregateProject;
@@ -80,7 +81,9 @@ public class PartialDruidQuery
     SORT_PROJECT,
 
     // WINDOW may be present only together with SCAN.
-    WINDOW
+    WINDOW,
+
+    UNNEST_PROJECT
   }
 
   private PartialDruidQuery(
@@ -93,7 +96,8 @@ public class PartialDruidQuery
       final Filter havingFilter,
       final Sort sort,
       final Project sortProject,
-      final Window window
+      final Window window,
+      final Project unnestProject
   )
   {
     this.builderSupplier = Preconditions.checkNotNull(builderSupplier, "builderSupplier");
@@ -106,6 +110,7 @@ public class PartialDruidQuery
     this.sort = sort;
     this.sortProject = sortProject;
     this.window = window;
+    this.unnestProject = unnestProject;
   }
 
   public static PartialDruidQuery create(final RelNode scanRel)
@@ -114,7 +119,7 @@ public class PartialDruidQuery
         scanRel.getCluster(),
         scanRel.getTable() != null ? scanRel.getTable().getRelOptSchema() : null
     );
-    return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null, null);
+    return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null, null, null);
   }
 
   public RelNode getScan()
@@ -130,6 +135,11 @@ public class PartialDruidQuery
   public Project getSelectProject()
   {
     return selectProject;
+  }
+
+  public Project getUnnestProject()
+  {
+    return unnestProject;
   }
 
   public Aggregate getAggregate()
@@ -175,7 +185,8 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -218,7 +229,8 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -235,7 +247,8 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -252,7 +265,8 @@ public class PartialDruidQuery
         newHavingFilter,
         sort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -269,7 +283,8 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -286,7 +301,8 @@ public class PartialDruidQuery
         havingFilter,
         newSort,
         sortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -303,7 +319,8 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         newSortProject,
-        window
+        window,
+        unnestProject
     );
   }
 
@@ -320,7 +337,25 @@ public class PartialDruidQuery
         havingFilter,
         sort,
         sortProject,
-        newWindow
+        newWindow,
+        unnestProject
+    );
+  }
+
+  public PartialDruidQuery withUnnest(final Project newUnnestProject)
+  {
+    return new PartialDruidQuery(
+        builderSupplier,
+        scan,
+        whereFilter,
+        selectProject,
+        aggregate,
+        aggregateProject,
+        havingFilter,
+        sort,
+        sortProject,
+        window,
+        newUnnestProject
     );
   }
 
@@ -575,6 +610,7 @@ public class PartialDruidQuery
            ", aggregateProject=" + aggregateProject +
            ", sort=" + sort +
            ", sortProject=" + sortProject +
+           ", unnestProject=" + unnestProject +
            '}';
   }
 }

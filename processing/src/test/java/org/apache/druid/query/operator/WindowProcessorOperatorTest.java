@@ -61,7 +61,7 @@ public class WindowProcessorOperatorTest
         .withPushFn(
             rowsAndColumns -> {
               Assert.assertSame(rac, rowsAndColumns);
-              return true;
+              return Operator.Signal.GO;
             }
         )
         .runToCompletion(op);

@@ -97,7 +97,9 @@ public class DruidRules
             new DruidUnionRule(plannerContext),
             new DruidUnionDataSourceRule(plannerContext),
             DruidSortUnionRule.instance(),
-            DruidJoinRule.instance(plannerContext)
+            DruidJoinRule.instance(plannerContext),
+            new DruidUnnestDatasourceRule(plannerContext),
+            new DruidCorrelateUnnestRule(plannerContext)
         )
     );
 
