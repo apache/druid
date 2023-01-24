@@ -19,13 +19,9 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -38,7 +34,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -52,7 +47,6 @@ import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -62,8 +56,6 @@ import java.util.Map;
 public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
 {
   public static final QuerySegmentSpec I_0112_0114 = ScanQueryRunnerTest.I_0112_0114;
-  private static final VirtualColumn EXPR_COLUMN =
-      new ExpressionVirtualColumn("expr", "index * 2", ColumnType.LONG, TestExprMacroTable.INSTANCE);
   private static final ScanQueryQueryToolChest TOOL_CHEST = new ScanQueryQueryToolChest(
       new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
@@ -166,7 +158,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       };
     }
 
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
@@ -240,7 +232,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       };
     }
 
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
@@ -319,7 +311,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       };
     }
 
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
@@ -385,7 +377,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       };
     }
 
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
@@ -439,7 +431,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         "2011-01-12T00:00:00.000Z\tb"
     };
 
-    final List<List<Map<String, Object>>> ascendingEvents = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> ascendingEvents = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     if (legacy) {
       for (List<Map<String, Object>> batch : ascendingEvents) {
         for (Map<String, Object> event : batch) {
@@ -519,7 +511,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
       };
     }
 
-    final List<List<Map<String, Object>>> events = toEvents(columnNames, values);
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
     List<ScanResultValue> expectedResults = toExpected(
         events,
         legacy
@@ -531,102 +523,6 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
-
-  private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
-  {
-    List<String> values = new ArrayList<>();
-    for (String[] vSet : valueSet) {
-      values.addAll(Arrays.asList(vSet));
-    }
-    List<List<Map<String, Object>>> events = new ArrayList<>();
-    events.add(
-        Lists.newArrayList(
-            Iterables.transform(
-                values,
-                input -> {
-                  Map<String, Object> event = new HashMap<>();
-                  String[] values1 = input.split("\\t");
-                  for (int i = 0; i < dimSpecs.length; i++) {
-                    if (dimSpecs[i] == null) {
-                      continue;
-                    }
-
-                    // For testing metrics and virtual columns we have some special handling here, since
-                    // they don't appear in the source data.
-                    if (dimSpecs[i].equals(EXPR_COLUMN.getOutputName())) {
-                      event.put(
-                          EXPR_COLUMN.getOutputName(),
-                          (double) event.get(QueryRunnerTestHelper.INDEX_METRIC) * 2
-                      );
-                      continue;
-                    } else if (dimSpecs[i].equals("indexMin")) {
-                      event.put("indexMin", (double) event.get(QueryRunnerTestHelper.INDEX_METRIC));
-                      continue;
-                    } else if (dimSpecs[i].equals("indexFloat")) {
-                      event.put("indexFloat", (float) (double) event.get(QueryRunnerTestHelper.INDEX_METRIC));
-                      continue;
-                    } else if (dimSpecs[i].equals("indexMaxPlusTen")) {
-                      event.put("indexMaxPlusTen", (double) event.get(QueryRunnerTestHelper.INDEX_METRIC) + 10);
-                      continue;
-                    } else if (dimSpecs[i].equals("indexMinFloat")) {
-                      event.put("indexMinFloat", (float) (double) event.get(QueryRunnerTestHelper.INDEX_METRIC));
-                      continue;
-                    } else if (dimSpecs[i].equals("indexMaxFloat")) {
-                      event.put("indexMaxFloat", (float) (double) event.get(QueryRunnerTestHelper.INDEX_METRIC));
-                      continue;
-                    } else if (dimSpecs[i].equals("quality_uniques")) {
-                      final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-                      collector.add(
-                          Hashing.murmur3_128()
-                                 .hashBytes(StringUtils.toUtf8((String) event.get("quality")))
-                                 .asBytes()
-                      );
-                      event.put("quality_uniques", collector);
-                    }
-
-                    if (i >= values1.length) {
-                      continue;
-                    }
-
-                    String[] specs = dimSpecs[i].split(":");
-
-                    Object eventVal;
-                    if (specs.length == 1 || specs[1].equals("STRING")) {
-                      eventVal = values1[i];
-                    } else if (specs[1].equals("TIME")) {
-                      eventVal = toTimestamp(values1[i]);
-                    } else if (specs[1].equals("FLOAT")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
-                    } else if (specs[1].equals("DOUBLE")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultDoubleValue() : Double.valueOf(values1[i]);
-                    } else if (specs[1].equals("LONG")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
-                    } else if (specs[1].equals(("NULL"))) {
-                      eventVal = null;
-                    } else if (specs[1].equals("STRINGS")) {
-                      eventVal = Arrays.asList(values1[i].split("\u0001"));
-                    } else {
-                      eventVal = values1[i];
-                    }
-
-                    event.put(specs[0], eventVal);
-                  }
-                  return event;
-                }
-            )
-        )
-    );
-    return events;
-  }
-
-  private Object toTimestamp(final String value)
-  {
-    if (legacy) {
-      return DateTimes.of(value);
-    } else {
-      return DateTimes.of(value).getMillis();
-    }
-  }
 
   private String getTimestampName()
   {

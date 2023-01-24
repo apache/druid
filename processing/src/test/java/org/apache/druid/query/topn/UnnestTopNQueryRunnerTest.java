@@ -51,9 +51,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -74,8 +72,7 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private final List<AggregatorFactory> commonAggregators;
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+
 
   public UnnestTopNQueryRunnerTest(
       List<AggregatorFactory> commonAggregators
