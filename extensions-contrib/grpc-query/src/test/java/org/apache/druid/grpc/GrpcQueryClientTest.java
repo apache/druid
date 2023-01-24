@@ -26,27 +26,18 @@ import org.apache.druid.grpc.proto.QueryGrpc;
 import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.server.QueryDriver;
-import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class GrpcQueryTest
+public class GrpcQueryClientTest
 {
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private static QueryFrameworkFixture frameworkFixture;
-  static QueryServer server;
   static TestClient client;
 
   public static class TestClient
@@ -81,23 +72,6 @@ public class GrpcQueryTest
   @BeforeClass
   public static void setup() throws IOException
   {
-    frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
-    QueryDriver driver = new QueryDriver(
-        frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory()
-    );
-    server = new QueryServer(driver);
-    try {
-      server.start();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-      throw e;
-    }
-    catch (RuntimeException e) {
-      e.printStackTrace();
-      throw e;
-    }
     client = new TestClient();
   }
 
@@ -107,10 +81,6 @@ public class GrpcQueryTest
     if (client != null) {
       client.close();
     }
-    if (server != null) {
-      server.stop();
-      server.blockUntilShutdown();
-    }
   }
 
   /**
@@ -119,10 +89,7 @@ public class GrpcQueryTest
   @Test
   public void testBasics()
   {
-    QueryRequest request = QueryRequest.newBuilder()
-        .setQuery("SELECT * FROM foo")
-        .setResultFormat(QueryResultFormat.CSV)
-        .build();
+    QueryRequest request = QueryRequest.newBuilder().setQuery("SELECT * FROM foo").build();
     QueryResponse response = client.client.submitQuery(request);
     assertEquals(QueryStatus.OK, response.getStatus());
   }

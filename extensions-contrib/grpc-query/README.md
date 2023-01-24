@@ -91,6 +91,28 @@ This project contains several components:
 * Netty-based gRPC server.
 * A "driver" that performs the actual query and generates the results.
 
+## Debugging
+
+Debugging of the gRPC stack is difficult since the shaded jar loses source attachments.
+
+Logging helps. gRPC logging is not enabled via Druid's logging system. Intead, [create
+the following `logging.properties` file](https://stackoverflow.com/questions/50243717/grpc-logger-level):
+
+```text
+handlers=java.util.logging.ConsoleHandler
+io.grpc.level=FINE
+java.util.logging.ConsoleHandler.level=FINE
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+```
+
+Then, pass the following on the command line:
+
+```text
+-Djava.util.logging.config.file=logging.properties
+```
+
+Adjust the path to the file depending on where you put the file.
+
 ## Acknowledgements
 
 This is not the first project to have created a gRPC API for Druid. Others include:

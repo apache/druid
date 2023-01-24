@@ -23,6 +23,8 @@ service Query {
   rpc SubmitQuery (QueryRequest) returns (QueryResponse) {}
 }
 
+// Defines the format of the query results. Must be one of the
+// non-unknown formats.
 enum QueryResultFormat {
   UNKNOWN_FORMAT = 0;  // Default value. An old server will see this value
                        // (and fail the request) if a new client passes a new format.
@@ -31,10 +33,16 @@ enum QueryResultFormat {
   JSON_ARRAY = 3;
   JSON_OBJECT_LINES = 4;
   JSON_ARRAY_LINES = 5;
+
+  // The protobuf formats also require that the protobufMessageName be set in
+  // the query request.
   PROTOBUF_INLINE = 6;
   PROTOBUF_RESPONSE = 7;
 }
 
+// Value for a query parameter. The value is essentially a variant of the
+// supported parameter types. The type chosen here must match (or be converable
+// to) the type of the corresponding expression in the SQL statement.
 message QueryParameter {
   oneof value {
     bool nullValue = 1;
@@ -45,6 +53,9 @@ message QueryParameter {
   }
 }
 
+// Query pararameter value for string array properties. At present, string
+// arrays are primarily used by the MSQ engine, which is not yet available
+// via the gRPC API.
 message StringArray {
   repeated string value = 1;
 }
@@ -53,8 +64,13 @@ message QueryRequest {
   string query = 1;
   QueryResultFormat resultFormat = 2;
   map<string, string> context = 3;
+  // Query parameters. If your query is SELECT * FROM foo WHERE x = ? AND y > ?
+  // Then you would include two parameters in the order in which the question
+  // marks lexically appear in the query.
   repeated QueryParameter parameters = 4;
-  optional string responseMessage = 5;
+  // The name of the Protobuf message to encode the response if the
+  // resultFormat is one of the PROTOBUF formats.
+  optional string protobufMessageName = 5;
 }
 
 enum QueryStatus {
@@ -91,7 +107,19 @@ message ColumnSchema {
 message QueryResponse {
   string queryId = 1;
   QueryStatus status = 2;
+
+  // Error message if the query fails. Not set if the query succeeds.
   optional string errorMessage = 3;
+
+  // The schema of the returned results. This schema is redundant for the
+  // JSON and Protobuf formats. It can be used to generate column heads,
+  // and understand types, for the CSV result format.
   repeated ColumnSchema columns = 4;
+
+  // The query response, encoded using the requested response format.
+  // Note that the entire response is placed into a single messages. As
+  // a result, this RPC is intended ONLY for queries that return small
+  // result sets. It will perform poorly (and consume excess memory) if
+  // used for large result sets.
   optional bytes data = 5;
 }

@@ -26,6 +26,13 @@ import com.google.inject.Inject;
 import com.google.protobuf.ByteString;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
+import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,13 +52,6 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
-import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
-import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -100,11 +100,21 @@ public class QueryDriver
    */
   public QueryResponse submitQuery(QueryRequest request, AuthenticationResult authResult)
   {
-    final SqlQueryPlus queryPlus = translateQuery(request, authResult);
+    final SqlQueryPlus queryPlus;
+    try {
+      queryPlus = translateQuery(request, authResult);
+    }
+    catch (RuntimeException e) {
+      return QueryResponse.newBuilder()
+          .setQueryId("")
+          .setStatus(QueryStatus.REQUEST_ERROR)
+          .setErrorMessage(e.getMessage())
+          .build();
+    }
     final DirectStatement stmt = sqlStatementFactory.directStatement(queryPlus);
     final String currThreadName = Thread.currentThread().getName();
     try {
-      Thread.currentThread().setName(StringUtils.format("sql[%s]", stmt.sqlQueryId()));
+      Thread.currentThread().setName(StringUtils.format("grpc-sql[%s]", stmt.sqlQueryId()));
       final ResultSet thePlan = stmt.plan();
       final SqlRowTransformer rowTransformer = thePlan.createRowTransformer();
       final ByteString results = encodeResults(request.getResultFormat(), thePlan, rowTransformer);
@@ -133,7 +143,7 @@ public class QueryDriver
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.REQUEST_ERROR)
-          .setErrorMessage(Access.DEFAULT_ERROR_MESSAGE)
+          .setErrorMessage(e.getMessage())
           .build();
     }
     catch (SqlPlanningException e) {
@@ -268,7 +278,7 @@ public class QueryDriver
   private DruidType convertDruidType(Optional<ColumnType> colType)
   {
     if (!colType.isPresent()) {
-      return DruidType.UNRECOGNIZED;
+      return DruidType.UNKNOWN_TYPE;
     }
     ColumnType druidType = colType.get();
     if (druidType == ColumnType.STRING) {
@@ -298,7 +308,7 @@ public class QueryDriver
     if (druidType == ColumnType.UNKNOWN_COMPLEX) {
       return DruidType.COMPLEX;
     }
-    return DruidType.UNRECOGNIZED;
+    return DruidType.UNKNOWN_TYPE;
   }
 
   /**

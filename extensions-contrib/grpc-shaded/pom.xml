@@ -60,7 +60,12 @@
       <groupId>io.grpc</groupId>
         <artifactId>grpc-stub</artifactId>
         <version>${grpc.version}</version>
-      </dependency>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+        <artifactId>grpc-context</artifactId>
+        <version>${grpc.version}</version>
+    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
@@ -133,7 +138,6 @@
                     <exclude>com.google.android:annotations</exclude>
                     <exclude>org.codehaus.mojo:animal-sniffer-annotations</exclude>
                     <exclude>com.google.errorprone:error_prone_annotations</exclude>
-                    <exclude>io.perfmark:perfmark-api</exclude>
                     <exclude>io.netty:*</exclude>
                     <exclude>com.google.code.findbugs</exclude>
                   </excludes>
