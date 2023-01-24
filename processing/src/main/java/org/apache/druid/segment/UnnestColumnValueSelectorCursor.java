@@ -100,7 +100,31 @@ public class UnnestColumnValueSelectorCursor implements Cursor
         if (!outputName.equals(dimensionSpec.getDimension())) {
           return baseColumnSelectorFactory.makeDimensionSelector(dimensionSpec);
         }
-        throw new UOE("Unsupported dimension selector while using column value selector for column [%s]", outputName);
+        // this is done to support virtual columns
+        // In future a developer should move towards making sure that
+        // for all dictionary encoded cases we only get the dimension selector
+        return new BaseSingleValueDimensionSelector()
+        {
+          final ColumnValueSelector colSelector = makeColumnValueSelector(dimensionSpec.getDimension());
+
+          @Nullable
+          @Override
+          protected String getValue()
+          {
+            final Object returnedObj = colSelector.getObject();
+            if (returnedObj == null) {
+              return null;
+            } else {
+              return String.valueOf(returnedObj);
+            }
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            colSelector.inspectRuntimeShape(inspector);
+          }
+        };
       }
 
       @Override

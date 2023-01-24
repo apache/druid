@@ -31,8 +31,10 @@ import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
@@ -45,17 +47,21 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 
@@ -172,7 +178,10 @@ public class TaskToolboxTest
   @Test
   public void testGetQueryRunnerFactoryConglomerate()
   {
-    Assert.assertEquals(mockQueryRunnerFactoryConglomerate, taskToolbox.build(task).getQueryRunnerFactoryConglomerate());
+    Assert.assertEquals(
+        mockQueryRunnerFactoryConglomerate,
+        taskToolbox.build(task).getQueryRunnerFactoryConglomerate()
+    );
   }
 
   @Test
@@ -221,5 +230,73 @@ public class TaskToolboxTest
   public void testGetCacheConfig()
   {
     Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
+  }
+
+  @Test
+  public void testCreateAdjustedRuntimeInfoForMiddleManager()
+  {
+    final AppenderatorsManager appenderatorsManager = Mockito.mock(AppenderatorsManager.class);
+
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
+        new DruidProcessingConfigTest.MockRuntimeInfo(12, 1_000_000, 2_000_000);
+    final RuntimeInfo adjustedRuntimeInfo = TaskToolbox.createAdjustedRuntimeInfo(runtimeInfo, appenderatorsManager);
+
+    Assert.assertEquals(
+        runtimeInfo.getAvailableProcessors(),
+        adjustedRuntimeInfo.getAvailableProcessors()
+    );
+
+    Assert.assertEquals(
+        runtimeInfo.getMaxHeapSizeBytes(),
+        adjustedRuntimeInfo.getMaxHeapSizeBytes()
+    );
+
+    Assert.assertEquals(
+        runtimeInfo.getDirectMemorySizeBytes(),
+        adjustedRuntimeInfo.getDirectMemorySizeBytes()
+    );
+
+    Mockito.verifyNoMoreInteractions(appenderatorsManager);
+  }
+
+  @Test
+  public void testCreateAdjustedRuntimeInfoForIndexer()
+  {
+    // UnifiedIndexerAppenderatorsManager class is used on Indexers.
+    final UnifiedIndexerAppenderatorsManager appenderatorsManager =
+        Mockito.mock(UnifiedIndexerAppenderatorsManager.class);
+
+    final int numWorkers = 3;
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
+        new DruidProcessingConfigTest.MockRuntimeInfo(12, 1_000_000, 2_000_000);
+
+    Mockito.when(appenderatorsManager.getWorkerConfig()).thenReturn(new WorkerConfig()
+    {
+      @Override
+      public int getCapacity()
+      {
+        return 3;
+      }
+    });
+
+    final RuntimeInfo adjustedRuntimeInfo = TaskToolbox.createAdjustedRuntimeInfo(runtimeInfo, appenderatorsManager);
+
+    Assert.assertEquals(
+        runtimeInfo.getAvailableProcessors() / numWorkers,
+        adjustedRuntimeInfo.getAvailableProcessors()
+    );
+
+    Assert.assertEquals(
+        runtimeInfo.getMaxHeapSizeBytes() / numWorkers,
+        adjustedRuntimeInfo.getMaxHeapSizeBytes()
+    );
+
+    Assert.assertEquals(
+        runtimeInfo.getDirectMemorySizeBytes() / numWorkers,
+        adjustedRuntimeInfo.getDirectMemorySizeBytes()
+    );
+
+    Mockito.verify(appenderatorsManager).getWorkerConfig();
+    Mockito.verifyNoMoreInteractions(appenderatorsManager);
   }
 }

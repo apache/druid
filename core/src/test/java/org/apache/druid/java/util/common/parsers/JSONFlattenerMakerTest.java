@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,7 +38,8 @@ public class JSONFlattenerMakerTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  private static final JSONFlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true);
+  private static final JSONFlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true, false);
+  private static final JSONFlattenerMaker FLATTENER_MAKER_NESTED = new JSONFlattenerMaker(true, true);
 
   @Test
   public void testStrings() throws JsonProcessingException
@@ -168,5 +170,33 @@ public class JSONFlattenerMakerTest
     Assert.assertTrue(node.isArray());
     result = FLATTENER_MAKER.finalizeConversionForMap(node);
     Assert.assertEquals(expectedList, result);
+  }
+
+  @Test
+  public void testDiscovery() throws JsonProcessingException
+  {
+    Map<String, Object> theMap =
+        ImmutableMap.<String, Object>builder()
+                    .put("bool", true)
+                    .put("int", 1)
+                    .put("long", 1L)
+                    .put("float", 0.11f)
+                    .put("double", 0.33)
+                    .put("binary", new byte[]{0x01, 0x02, 0x03})
+                    .put("list", ImmutableList.of("foo", "bar", "baz"))
+                    .put("anotherList", ImmutableList.of(1, 2, 3))
+                    .put("nested", ImmutableMap.of("x", 1L, "y", 2L, "z", 3L))
+                    .build();
+
+    JsonNode node = OBJECT_MAPPER.readTree(OBJECT_MAPPER.writeValueAsString(theMap));
+    Assert.assertTrue(node.isObject());
+    Assert.assertEquals(
+        ImmutableSet.of("bool", "int", "long", "float", "double", "binary", "list", "anotherList"),
+        ImmutableSet.copyOf(FLATTENER_MAKER.discoverRootFields(node))
+    );
+    Assert.assertEquals(
+        ImmutableSet.of("bool", "int", "long", "float", "double", "binary", "list", "anotherList", "nested"),
+        ImmutableSet.copyOf(FLATTENER_MAKER_NESTED.discoverRootFields(node))
+    );
   }
 }

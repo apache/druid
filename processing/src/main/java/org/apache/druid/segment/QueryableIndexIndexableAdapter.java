@@ -21,14 +21,12 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
@@ -340,31 +338,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public String getMetricType(String metric)
-  {
-    final ColumnHolder columnHolder = input.getColumnHolder(metric);
-
-    switch (columnHolder.getCapabilities().getType()) {
-      case FLOAT:
-        return "float";
-      case LONG:
-        return "long";
-      case DOUBLE:
-        return "double";
-      case COMPLEX: {
-        try (ComplexColumn complexColumn = (ComplexColumn) columnHolder.getColumn()) {
-          return complexColumn.getTypeName();
-        }
-      }
-      default:
-        throw new ISE("Unknown type[%s]", columnHolder.getCapabilities().asTypeString());
-    }
-  }
-
-  @Override
   public ColumnCapabilities getCapabilities(String column)
   {
-    return input.getColumnHolder(column).getCapabilities();
+    return input.getColumnHolder(column).getHandlerCapabilities();
   }
 
   @Override

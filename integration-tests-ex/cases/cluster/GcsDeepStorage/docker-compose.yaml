@@ -12,6 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# -------------------------------------------------------------------------
+
+# Cluster for the Google Cluster Storage (GCS) deep storage test.
+#
+# Required env vars:
+#
+# GOOGLE_BUCKET
+# GOOGLE_PREFIX
+# GOOGLE_APPLICATION_CREDENTIALS - must point to a file that holds the Google
+#   credentials. Mounted into each Druid container.
 
 networks:
   druid-it-net:
@@ -49,7 +59,7 @@ services:
       - druid_manager_segments_pollDuration=PT5S
       - druid_coordinator_period=PT10S
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
@@ -68,7 +78,7 @@ services:
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
@@ -86,7 +96,7 @@ services:
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
@@ -103,7 +113,7 @@ services:
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
@@ -120,7 +130,7 @@ services:
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
     depends_on:
       - zookeeper
@@ -137,7 +147,7 @@ services:
       - druid_google_prefix=${GOOGLE_PREFIX}
       - GOOGLE_APPLICATION_CREDENTIALS=/resources/credentials.json
     volumes:
-      # Copy credentials file
+      # Mount credentials file
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/resources/credentials.json
       # Test data
       - ../data:/resources

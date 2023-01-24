@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
+import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.msq.counters.ChannelCounters;
 
 import java.io.IOException;
@@ -50,7 +51,22 @@ public class CountingOutputChannelFactory implements OutputChannelFactory
             new CountingWritableFrameChannel(
                 baseChannel.getWritableChannel(),
                 channelCounters,
-                baseChannel.getPartitionNumber()
+                partitionNumber
+            )
+    );
+  }
+
+  @Override
+  public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
+  {
+    final PartitionedOutputChannel baseChannel = baseFactory.openPartitionedChannel(name, deleteAfterRead);
+
+    return baseChannel.mapWritableChannel(
+        baseWritableChannel ->
+            new CountingWritableFrameChannel(
+                baseChannel.getWritableChannel(),
+                channelCounters,
+                null
             )
     );
   }
