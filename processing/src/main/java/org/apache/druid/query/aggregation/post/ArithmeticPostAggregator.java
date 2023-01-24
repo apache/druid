@@ -359,6 +359,4 @@ public class ArithmeticPostAggregator implements PostAggregator
     result = 31 * result + (ordering != null ? ordering.hashCode() : 0);
     return result;
   }
-
-
 }
