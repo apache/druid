@@ -21,18 +21,6 @@ package org.apache.druid.testsEx.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -48,6 +36,19 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 @RunWith(DruidTestRunner.class)
 @Category(Query.class)

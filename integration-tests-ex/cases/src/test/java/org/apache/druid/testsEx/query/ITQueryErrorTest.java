@@ -21,9 +21,6 @@ package org.apache.druid.testsEx.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordination.ServerManagerForQueryErrorTest;
@@ -32,13 +29,17 @@ import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.testsEx.categories.QueryError;
 import org.apache.druid.testsEx.config.BaseJUnitRule;
-import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class tests various query failures.
