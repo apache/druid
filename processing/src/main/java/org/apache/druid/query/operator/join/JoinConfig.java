@@ -17,21 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator;
+package org.apache.druid.query.operator.join;
 
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
-
-public class ExceptionalReceiver implements Operator.Receiver
+public class JoinConfig
 {
-  @Override
-  public Operator.Signal push(RowsAndColumns rac)
+  private final int releaseSize;
+
+  public JoinConfig(
+      int releaseSize
+  )
   {
-    throw new UnsupportedOperationException();
+    this.releaseSize = releaseSize;
   }
 
-  @Override
-  public void completed()
+  public int getReleaseSize()
   {
-    throw new UnsupportedOperationException();
+    return releaseSize;
+  }
+
+  public int getBufferSize()
+  {
+    return Math.min(releaseSize, releaseSize + (releaseSize >>> 4)); // + 1/16th
   }
 }
