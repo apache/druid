@@ -85,6 +85,7 @@ public class StageDefinition
   private final FrameProcessorFactory processorFactory;
   private final RowSignature signature;
   private final int maxWorkerCount;
+  private final long maxInputBytesPerWorker;
   private final boolean shuffleCheckHasMultipleValues;
 
   @Nullable
@@ -102,7 +103,8 @@ public class StageDefinition
       @JsonProperty("signature") final RowSignature signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
-      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues
+      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues,
+      @JsonProperty("maxInputBytesPerWorker") final long maxInputBytesPerWorker
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -122,6 +124,7 @@ public class StageDefinition
     this.maxWorkerCount = maxWorkerCount;
     this.shuffleCheckHasMultipleValues = shuffleCheckHasMultipleValues;
     this.frameReader = Suppliers.memoize(() -> FrameReader.create(signature))::get;
+    this.maxInputBytesPerWorker = maxInputBytesPerWorker;
 
     if (shuffleSpec != null && shuffleSpec.needsStatistics() && shuffleSpec.getClusterBy().getColumns().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
@@ -239,6 +242,12 @@ public class StageDefinition
   public int getMaxWorkerCount()
   {
     return maxWorkerCount;
+  }
+
+  @JsonProperty
+  public long getMaxInputBytesPerWorker()
+  {
+    return maxInputBytesPerWorker;
   }
 
   @JsonProperty("shuffleCheckHasMultipleValues")

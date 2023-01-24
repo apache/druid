@@ -577,6 +577,14 @@ public class QueryContext
     return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
+  public long getMaxInputBytesPerWorker(long defaultValue)
+  {
+    return getLong(
+        QueryContexts.MAX_INPUT_BYTES_PER_WORKER,
+        defaultValue
+    );
+  }
+
   @Override
   public boolean equals(Object o)
   {
