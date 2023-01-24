@@ -35,7 +35,6 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -1088,11 +1087,28 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     } else if (specs[1].equals("TIME")) {
                       eventVal = toTimestamp(values1[i], legacy);
                     } else if (specs[1].equals("FLOAT")) {
-                      eventVal = Numbers.tryParseFloat(values1[i], NullHandling.defaultFloatValue());
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Float!");
+                      }
                     } else if (specs[1].equals("DOUBLE")) {
-                      eventVal = Numbers.tryParseDouble(values1[i], NullHandling.defaultDoubleValue());
+                      try {
+                        eventVal = values1[i].isEmpty()
+                                   ? NullHandling.defaultDoubleValue()
+                                   : Double.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Double!");
+                      }
                     } else if (specs[1].equals("LONG")) {
-                      eventVal = Numbers.tryParseLong(values1[i], NullHandling.defaultLongValue());
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Long!");
+                      }
                     } else if (specs[1].equals(("NULL"))) {
                       eventVal = null;
                     } else if (specs[1].equals("STRINGS")) {
