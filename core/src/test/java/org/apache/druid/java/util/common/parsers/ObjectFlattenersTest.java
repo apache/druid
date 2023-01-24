@@ -34,7 +34,7 @@ public class ObjectFlattenersTest
 {
   private static final String SOME_JSON = "{\"foo\": null, \"bar\": 1}";
 
-  private static final ObjectFlatteners.FlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true);
+  private static final ObjectFlatteners.FlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true, false);
   private static final ObjectFlattener FLATTENER = ObjectFlatteners.create(
       new JSONPathSpec(
           true,

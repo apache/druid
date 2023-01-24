@@ -39,7 +39,6 @@ import org.apache.druid.java.util.common.ISE;
  */
 public class ExtendOperator extends SqlInternalOperator
 {
-  //  private static final TableMacro macro = new ExtendsMacroWrapper();
   public static final ExtendOperator EXTEND = new ExtendOperator();
 
   ExtendOperator()

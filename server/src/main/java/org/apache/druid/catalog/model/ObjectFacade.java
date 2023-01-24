@@ -41,22 +41,29 @@ public abstract class ObjectFacade
 
   public boolean booleanProperty(String key)
   {
-    return (Boolean) property(key);
+    Boolean value = CatalogUtils.safeCast(property(key), Boolean.class, key);
+    return value == null ? false : value;
   }
 
   public String stringProperty(String key)
   {
-    return (String) property(key);
+    return CatalogUtils.safeCast(property(key), String.class, key);
   }
 
   public Integer intProperty(String key)
   {
-    return (Integer) property(key);
+    return CatalogUtils.safeCast(property(key), Integer.class, key);
   }
 
   @SuppressWarnings("unchecked")
   public List<String> stringListProperty(String key)
   {
-    return (List<String>) property(key);
+    return (List<String>) CatalogUtils.safeCast(property(key), List.class, key);
+  }
+
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> mapProperty(String key)
+  {
+    return (Map<String, Object>) CatalogUtils.safeCast(property(key), Map.class, key);
   }
 }

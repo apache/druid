@@ -38,14 +38,15 @@ public class SequenceOperatorTest
         MapOfColumnsRowsAndColumns.of("hi", new IntArrayColumn(new int[]{1}))
     )));
 
+    final RowsAndColumnsHelper helper = new RowsAndColumnsHelper()
+        .expectColumn("hi", new int[]{1})
+        .allColumnsRegistered();
+
     new OperatorTestHelper()
         .withPushFn(
             rac -> {
-              new RowsAndColumnsHelper()
-                  .expectColumn("hi", new int[]{1})
-                  .allColumnsRegistered()
-                  .validate(rac);
-              return true;
+              helper.validate(rac);
+              return Operator.Signal.GO;
             }
         )
         .withFinalValidation(testReceiver -> Assert.assertEquals(2, testReceiver.getNumPushed()))

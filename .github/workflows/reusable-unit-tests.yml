@@ -54,6 +54,11 @@ jobs:
         with:
           node-version: 16.17.0
 
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.17.0
+
       - name: setup variables
         run: |
           export base_ref=${{ github.base_ref }}

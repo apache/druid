@@ -224,13 +224,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true).build();
+                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
+                  .put(MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE, true)
+                  .put(MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES, 100) // added so that practically everything still goes to durable storage channel
+                  .build();
 
 
   public static final Map<String, Object> FAULT_TOLERANCE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true).build();
+                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
+                  .put(MultiStageQueryContext.CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE, true)
+                  .put(MultiStageQueryContext.CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES, 100) // added so that practically everything still goes to durable storage channel
+                  .build();
 
   public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
@@ -637,7 +643,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return new IngestTester();
   }
 
-  private ObjectMapper setupObjectMapper(Injector injector)
+  public static ObjectMapper setupObjectMapper(Injector injector)
   {
     ObjectMapper mapper = injector.getInstance(ObjectMapper.class)
                                   .registerModules(new SimpleModule(IndexingServiceTuningConfigModule.class.getSimpleName())
@@ -746,7 +752,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
+  public static Optional<Pair<RowSignature, List<Object[]>>> getSignatureWithRows(MSQResultsReport resultsReport)
   {
     if (resultsReport == null) {
       return Optional.empty();
@@ -1241,5 +1247,4 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     }
   }
-
 }

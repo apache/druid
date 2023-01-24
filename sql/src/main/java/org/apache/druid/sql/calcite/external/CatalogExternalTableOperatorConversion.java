@@ -31,9 +31,9 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.catalog.model.table.InputSourceDefn;
+import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Base class for input-source-specfic table functions with arguments derived from
+ * Base class for input-source-specific table functions with arguments derived from
  * a catalog external table definition. Such functions work in conjunction with the
  * EXTERN key word to provide a schema. Example of the HTTP form:
  * <code><pre>
@@ -57,7 +57,7 @@ import java.util.Set;
  * FROM TABLE(http(
  *     userName => 'bob',
  *     password => 'secret',
- *     uris => 'http:foo.com/bar.csv',
+ *     uris => ARRAY['http:foo.com/bar.csv'],
  *     format => 'csv'))
  *   EXTEND (x VARCHAR, y VARCHAR, z BIGINT)
  * PARTITIONED BY ...
@@ -74,13 +74,21 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
       final ObjectMapper jsonMapper
   )
   {
-    ExternalTableDefn tableDefn = (ExternalTableDefn) registry.defnFor(tableType);
+    this(
+        name,
+        ((InputSourceDefn) registry.inputSourceDefnFor(tableType)).adHocTableFn(),
+        jsonMapper
+    );
+  }
+
+  public CatalogExternalTableOperatorConversion(
+      final String name,
+      final TableFunction fn,
+      final ObjectMapper jsonMapper
+  )
+  {
     this.operator = new CatalogExternalTableOperator(
-        new CatalogTableMacro(
-            name,
-            tableDefn,
-            jsonMapper
-        )
+        new CatalogTableMacro(name, fn, jsonMapper)
     );
   }
 
@@ -116,7 +124,7 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
     @Override
     public Set<ResourceAction> computeResources(final SqlCall call)
     {
-      return Collections.singleton(ExternalOperatorConversion.EXTERNAL_RESOURCE_ACTION);
+      return Collections.singleton(Externals.EXTERNAL_RESOURCE_ACTION);
     }
   }
 
@@ -124,38 +132,38 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
   {
     private final String name;
     private final List<FunctionParameter> parameters;
-    private final ExternalTableDefn tableDefn;
+    private final TableFunction fn;
     private final ObjectMapper jsonMapper;
 
     public CatalogTableMacro(
         final String name,
-        final ExternalTableDefn tableDefn,
+        final TableFunction fn,
         final ObjectMapper jsonMapper
     )
     {
       this.name = name;
-      this.tableDefn = tableDefn;
       this.jsonMapper = jsonMapper;
-      this.parameters = Externals.convertParameters(tableDefn);
+      this.fn = fn;
+      this.parameters = Externals.convertParameters(fn);
     }
 
+    /**
+     * Called when the function is used without an {@code EXTEND} clause.
+     * {@code EXTERN} allows this, most others do not.
+     */
     @Override
     public TranslatableTable apply(final List<Object> arguments)
     {
-      throw new IAE(
-          "The %s table function requires an EXTEND clause with a schema.",
-          name
-      );
+      return apply(arguments, null);
     }
 
     @Override
     public TranslatableTable apply(List<Object> arguments, SqlNodeList schema)
     {
-      final ExternalTableSpec externSpec = Externals.convertArguments(
-          tableDefn,
-          parameters,
-          arguments,
-          schema,
+      final ExternalTableSpec externSpec = fn.apply(
+          name,
+          Externals.convertArguments(fn, arguments),
+          schema == null ? null : Externals.convertColumns(schema),
           jsonMapper
       );
       return Externals.buildExternalTable(externSpec, jsonMapper);

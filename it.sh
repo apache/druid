@@ -58,7 +58,7 @@ Usage: $0 cmd [category]
 
 Environment:
   OVERRIDE_ENV: optional, name of env file to pass to Docker
-  DRUID_INTEGRATION_TEST_INDEXER: Set to middleManager (default if not set)
+  USE_INDEXER: Set to middleManager (default if not set)
       or "indexer". If "indexer", requires docker-compose-indexer.yaml exist.
   druid_*: passed to the container.
   Other, test-specific variables.
