@@ -38,7 +38,7 @@ public class ByteBufferMinMaxOffsetHeapTest
   public void testSimple()
   {
     int limit = 15;
-    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBuffer myBuffer = ByteBuffer.allocate(1000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     //CHECKSTYLE.OFF: Regexp
@@ -92,7 +92,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     }
     ArrayList<Integer> deletedValues = new ArrayList<>();
 
-    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBuffer myBuffer = ByteBuffer.allocate(1000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
@@ -148,7 +148,7 @@ public class ByteBufferMinMaxOffsetHeapTest
     }
     ArrayList<Integer> deletedValues = new ArrayList<>();
 
-    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBuffer myBuffer = ByteBuffer.allocate(30000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (int i = 0; i < values.size(); i++) {
@@ -201,7 +201,7 @@ public class ByteBufferMinMaxOffsetHeapTest
         1, 20, 1000, 2, 3, 30, 40, 10, 11, 12, 13, 300, 400, 500, 600
     });
 
-    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBuffer myBuffer = ByteBuffer.allocate(1000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {
@@ -235,7 +235,7 @@ public class ByteBufferMinMaxOffsetHeapTest
         6, 7, 8, 9, 4, 5, 200, 250
     });
 
-    ByteBuffer myBuffer = ByteBuffer.allocate(1000000);
+    ByteBuffer myBuffer = ByteBuffer.allocate(1000);
     ByteBufferMinMaxOffsetHeap heap = new ByteBufferMinMaxOffsetHeap(myBuffer, limit, Ordering.natural(), null);
 
     for (Integer value : values) {

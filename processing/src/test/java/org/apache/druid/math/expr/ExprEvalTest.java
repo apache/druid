@@ -46,7 +46,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  ByteBuffer buffer = ByteBuffer.allocate(1 << 16);
+  ByteBuffer buffer = ByteBuffer.allocate(1 << 14);
 
   @BeforeClass
   public static void setup()

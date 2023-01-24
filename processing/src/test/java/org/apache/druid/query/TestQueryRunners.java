@@ -43,11 +43,13 @@ public class TestQueryRunners
 {
   private static final TopNQueryConfig TOPN_CONFIG = new TopNQueryConfig();
 
+  public static final int DEFAULT_TOPN_BUFFER_SIZE = 1024 * 5;
+
   public static CloseableStupidPool<ByteBuffer> createDefaultNonBlockingPool()
   {
     return new CloseableStupidPool<>(
         "TestQueryRunners-bufferPool",
-        () -> ByteBuffer.allocate(1024 * 1024 * 10)
+        () -> ByteBuffer.allocate(DEFAULT_TOPN_BUFFER_SIZE)
     );
   }
 
