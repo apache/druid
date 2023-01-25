@@ -602,7 +602,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false.  | `false` |
 | `composedIntermediateSuperSorterStorageEnabled` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable automatic fallback to durable storage from local storage for sorting's intermediate data. Requires to setup `intermediateSuperSorterStorageMaxLocalBytes` limit for local storage and durable shuffle storage feature as well.| `false` |
 | `intermediateSuperSorterStorageMaxLocalBytes` | SELECT, INSERT, REPLACE<br /><br /> Whether to enable a byte limit on local storage for sorting's intermediate data. If that limit is crossed, the task fails with `ResourceLimitExceededException`.| `9223372036854775807` |
-|`maxInputBytesPerWorker`| Maximum number of input bytes per worker, used when assigning input slices to tasks. Used only in case number of tasks is determined automatically. |`10 GB`|
+| `maxInputBytesPerWorker` | Maximum number of input bytes per worker, used when assigning input slices to tasks. Used only in case number of tasks is determined automatically. | `10 GB` |
 
 ## Sketch Merging Mode
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.
