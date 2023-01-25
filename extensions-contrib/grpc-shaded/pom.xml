@@ -40,31 +40,39 @@
     <guava.version>20.0</guava.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-bom</artifactId>
+        <version>${grpc.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>io.grpc</groupId>
-      <artifactId>grpc-core</artifactId>
-      <version>${grpc.version}</version>
-     </dependency>
-     <dependency>
-      <groupId>io.grpc</groupId>
-      <artifactId>grpc-netty</artifactId>
-      <version>${grpc.version}</version>
+      <artifactId>grpc-api</artifactId>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
       <artifactId>grpc-protobuf</artifactId>
-      <version>${grpc.version}</version>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
-        <artifactId>grpc-stub</artifactId>
-        <version>${grpc.version}</version>
+      <artifactId>grpc-stub</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
     </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
-        <artifactId>grpc-context</artifactId>
-        <version>${grpc.version}</version>
+      <artifactId>grpc-netty</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -130,7 +138,7 @@
 
                 <!-- We want to include only gRPC and Guava. Exclude Netty as we want Guava to
                      use the same classes as Druid. rGPC does some matching based on class
-                     identity, so we need the same class objects, just just the same class
+                     identity, so we need the same class objects, not just equal class
                      byte codes. -->
                 <artifactSet>
                   <excludes>

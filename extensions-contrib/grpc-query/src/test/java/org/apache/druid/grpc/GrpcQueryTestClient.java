@@ -24,22 +24,23 @@ import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
 import org.apache.druid.grpc.proto.QueryGrpc;
 import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
+import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-
-public class GrpcQueryClientTest
+/**
+ * Super-simple client which makes a single query request and prints
+ * the response. Useful because Druid provides no other rRPC client
+ * to use to test the rRPC endpoint.
+ */
+public class GrpcQueryTestClient
 {
-  static TestClient client;
-
   public static class TestClient
   {
     ManagedChannel channel;
@@ -69,28 +70,33 @@ public class GrpcQueryClientTest
     }
   }
 
-  @BeforeClass
-  public static void setup() throws IOException
+  public static void main(String[] args)
   {
-    client = new TestClient();
-  }
-
-  @AfterClass
-  public static void tearDown() throws InterruptedException
-  {
-    if (client != null) {
-      client.close();
+    if (args.length != 1) {
+      System.err.println("Usage: sql-query");
+      System.exit(1);
     }
-  }
-
-  /**
-   * Do a very basic query.
-   */
-  @Test
-  public void testBasics()
-  {
-    QueryRequest request = QueryRequest.newBuilder().setQuery("SELECT * FROM foo").build();
+    TestClient client = new TestClient();
+    QueryRequest request = QueryRequest.newBuilder()
+        .setQuery(args[0])
+        .setResultFormat(QueryResultFormat.CSV)
+        .build();
     QueryResponse response = client.client.submitQuery(request);
-    assertEquals(QueryStatus.OK, response.getStatus());
+    if (response.getStatus() != QueryStatus.OK) {
+      System.err.println("Failed: " + response.getStatus().name());
+      System.err.println(response.getErrorMessage());
+      System.exit(1);
+    }
+    System.out.println("Columns:");
+    for (ColumnSchema col : response.getColumnsList()) {
+      System.out.println(StringUtils.format("%s %s (%s)", col.getName(), col.getSqlType(), col.getDruidType().name()));
+    }
+    System.out.println("Data:");
+    System.out.println(response.getData().toString(StandardCharsets.UTF_8));
+    try {
+      client.close();
+    } catch (InterruptedException e) {
+      // Ignore;
+    }
   }
 }

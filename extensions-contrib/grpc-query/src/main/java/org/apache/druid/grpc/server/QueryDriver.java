@@ -22,7 +22,6 @@ package org.apache.druid.grpc.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import com.google.protobuf.ByteString;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
@@ -33,8 +32,6 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -82,10 +79,9 @@ public class QueryDriver
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
 
-  @Inject
   public QueryDriver(
-      final @Json ObjectMapper jsonMapper,
-      final @NativeQuery SqlStatementFactory sqlStatementFactory
+      final ObjectMapper jsonMapper,
+      final SqlStatementFactory sqlStatementFactory
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");

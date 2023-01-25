@@ -17,24 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.grpc.guice;
+package org.apache.druid.grpc.server;
 
-import com.google.inject.Binder;
-import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.grpc.server.GrpcEndpointInitializer;
-import org.apache.druid.grpc.server.GrpcQueryConfig;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.annotations.LoadScope;
-import org.apache.druid.initialization.DruidModule;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@LoadScope(roles = NodeRole.BROKER_JSON_NAME)
-public class GrpcQueryModule implements DruidModule
+import javax.validation.constraints.Max;
+
+public class GrpcQueryConfig
 {
-  @Override
-  public void configure(Binder binder)
+  public static final String CONFIG_BASE = "druid.grpcQuery";
+
+  @JsonProperty
+  @Max(0xffff)
+  private int port = 50051;
+
+  public GrpcQueryConfig()
   {
-    JsonConfigProvider.bind(binder, GrpcQueryConfig.CONFIG_BASE, GrpcQueryConfig.class);
-    LifecycleModule.register(binder, GrpcEndpointInitializer.class);
+  }
+
+  public GrpcQueryConfig(int port)
+  {
+    this.port = port;
+  }
+
+  /**
+   * @return the port to accept gRPC client connections on
+   */
+  public int getPort()
+  {
+    return port;
   }
 }

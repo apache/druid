@@ -86,7 +86,7 @@ public class GrpcQueryTest
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory()
     );
-    server = new QueryServer(driver);
+    server = new QueryServer(50051, driver);
     try {
       server.start();
     }
