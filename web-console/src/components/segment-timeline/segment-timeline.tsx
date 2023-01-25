@@ -278,7 +278,7 @@ ORDER BY "start" DESC`;
             intervals = await queryDruidSql({
               query: SegmentTimeline.getSqlQuery(startDate, endDate),
             });
-            datasources = uniq(intervals.map(r => r.datasource));
+            datasources = uniq(intervals.map(r => r.datasource).sort());
           } else if (capabilities.hasCoordinatorAccess()) {
             const startIso = startDate.toISOString();
 

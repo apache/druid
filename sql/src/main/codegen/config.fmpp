@@ -58,6 +58,8 @@ data: {
       "org.apache.druid.java.util.common.granularity.Granularities"
       "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
       "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"
+      "org.apache.druid.sql.calcite.external.ExtendOperator"
+      "org.apache.druid.sql.calcite.external.ParameterizeOperator"
     ]
 
     # List of new keywords. Example: "DATABASES", "TABLES". If the keyword is not a reserved
@@ -441,6 +443,7 @@ data: {
       "insert.ftl"
       "explain.ftl"
       "replace.ftl"
+      "from.ftl"
     ]
 
     includePosixOperators: false

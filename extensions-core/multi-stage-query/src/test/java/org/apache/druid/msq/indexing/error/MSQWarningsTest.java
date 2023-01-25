@@ -55,7 +55,6 @@ import java.util.Map;
  */
 public class MSQWarningsTest extends MSQTestBase
 {
-
   private File toRead;
   private RowSignature rowSignature;
   private String toReadFileNameAsJson;

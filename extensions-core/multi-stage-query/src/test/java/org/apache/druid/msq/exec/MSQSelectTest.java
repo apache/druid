@@ -33,6 +33,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.shuffle.DurableStorageUtils;
+import org.apache.druid.msq.test.CounterSnapshotBuilder;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
@@ -794,7 +795,14 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
-                .build())
+                .build()
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
         .verifyResults();
   }
 
@@ -1258,7 +1266,7 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testMultiValueStringWithIncorrectType() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/unparseable-mv-string-array.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/unparseable-mv-string-array.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
