@@ -32,7 +32,7 @@ In this quickstart, you'll:
 Druid supports a variety of ingestion options. Once you're done with this tutorial, refer to the
 [Ingestion](../ingestion/index.md) page to determine which ingestion method is right for you.
 
-## Requirements
+## Prerequisites
 
 You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
 
