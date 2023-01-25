@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
@@ -52,7 +53,7 @@ public class NullColumn implements Column
     return null;
   }
 
-  public static class Accessor implements ColumnAccessor
+  public static class Accessor implements BinarySearchableAccessor
   {
     private final ColumnType type;
     private final int size;
@@ -116,6 +117,42 @@ public class NullColumn implements Column
     public int compareRows(int lhsRowNum, int rhsRowNum)
     {
       return 0;
+    }
+
+    @Override
+    public FindResult findNull(int startIndex, int endIndex)
+    {
+      return FindResult.found(startIndex, endIndex);
+    }
+
+    @Override
+    public FindResult findDouble(int startIndex, int endIndex, double val)
+    {
+      return FindResult.notFound(endIndex);
+    }
+
+    @Override
+    public FindResult findFloat(int startIndex, int endIndex, float val)
+    {
+      return FindResult.notFound(endIndex);
+    }
+
+    @Override
+    public FindResult findLong(int startIndex, int endIndex, long val)
+    {
+      return FindResult.notFound(endIndex);
+    }
+
+    @Override
+    public FindResult findString(int startIndex, int endIndex, String val)
+    {
+      return FindResult.notFound(endIndex);
+    }
+
+    @Override
+    public FindResult findComplex(int startIndex, int endIndex, Object val)
+    {
+      return FindResult.notFound(endIndex);
     }
   }
 }
