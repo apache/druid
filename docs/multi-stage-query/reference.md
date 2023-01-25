@@ -600,6 +600,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `clusterStatisticsMergeMode` | Whether to use parallel or sequential mode for merging of the worker sketches. Can be `PARALLEL`, `SEQUENTIAL` or `AUTO`. See [Sketch Merging Mode](#sketch-merging-mode) for more information. | `PARALLEL` |
 | `durableShuffleStorage` | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br /> | `false` |
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false.  | `false` |
+|`maxInputBytesPerWorker`| Maximum number of input bytes per worker, used when assigning input slices to tasks. Used only in case number of tasks is determined automatically. |`10 GB`|
 
 ## Sketch Merging Mode
 This section details the advantages and performance of various Cluster By Statistics Merge Modes.
