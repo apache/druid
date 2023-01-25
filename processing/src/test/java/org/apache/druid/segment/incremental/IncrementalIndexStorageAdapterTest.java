@@ -136,7 +136,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(5000)
+            () -> ByteBuffer.allocate(50000)
         )
     ) {
       final GroupByQueryEngine engine = new GroupByQueryEngine(
@@ -203,7 +203,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(5000)
+            () -> ByteBuffer.allocate(50000)
         )
     ) {
       final GroupByQueryEngine engine = new GroupByQueryEngine(
@@ -337,7 +337,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "TopNQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(5000)
+            () -> ByteBuffer.allocate(50000)
         )
     ) {
       TopNQueryEngine engine = new TopNQueryEngine(pool);
@@ -385,7 +385,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(5000)
+            () -> ByteBuffer.allocate(50000)
         )
     ) {
       final GroupByQueryEngine engine = new GroupByQueryEngine(

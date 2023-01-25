@@ -53,7 +53,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -245,7 +244,7 @@ public class AggregationTestHelper implements Closeable
           @Override
           public ByteBuffer get()
           {
-            return ByteBuffer.allocate(TestQueryRunners.DEFAULT_TOPN_BUFFER_SIZE);
+            return ByteBuffer.allocate(10 * 1024 * 1024);
           }
         }
     );

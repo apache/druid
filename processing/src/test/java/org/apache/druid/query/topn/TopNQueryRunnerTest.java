@@ -156,7 +156,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
     final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(5000)
+        () -> ByteBuffer.allocate(20000)
     );
 
     List<QueryRunner<Result<TopNResultValue>>> retVal = new ArrayList<>();
