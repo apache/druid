@@ -191,7 +191,6 @@ public class QueryContextsTest
     Map<String, Object> queryContext = new HashMap<>();
     queryContext.put(QueryContexts.MAX_INPUT_BYTES_PER_WORKER, 1024);
 
-    exception.expect(BadQueryContextException.class);
     Assert.assertEquals(1024, QueryContext.of(queryContext).getMaxInputBytesPerWorker(10));
   }
 
