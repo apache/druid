@@ -23,10 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Scope;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.container.grizzly2.GrizzlyServerFactory;
 import com.sun.jersey.api.core.ClassNamesResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
+import com.sun.jersey.core.spi.component.ComponentScope;
 import com.sun.jersey.core.spi.component.ioc.IoCComponentProviderFactory;
 import com.sun.jersey.guice.spi.container.GuiceComponentProviderFactory;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
@@ -35,6 +37,7 @@ import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.server.initialization.jetty.DruidGuiceContainer;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -51,6 +54,7 @@ import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -90,9 +94,15 @@ public class WebserverTestUtils
         + ';'
         + MockHttpServletRequest.class.getName()
     );
-    IoCComponentProviderFactory ioc = new GuiceComponentProviderFactory(resourceConfig, injector);
-    HttpServer server = GrizzlyServerFactory.createHttpServer(baseUri, resourceConfig, ioc);
-    return server;
+    IoCComponentProviderFactory ioc = new GuiceComponentProviderFactory(resourceConfig, injector)
+    {
+      @Override
+      public Map<Scope, ComponentScope> createScopeMap()
+      {
+        return DruidGuiceContainer.populateScopeMap(super.createScopeMap());
+      }
+    };
+    return GrizzlyServerFactory.createHttpServer(baseUri, resourceConfig, ioc);
   }
 
   @Provider

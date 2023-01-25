@@ -21,73 +21,146 @@ package org.apache.druid.query.operator;
 
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+
 /**
- * An Operator interface that intends to align closely with the Operators that other databases would also tend
- * to be implemented using.
+ * An Operator interface that intends to have implementations that align relatively closely with the Operators that
+ * other databases would also tend to be implemented using.  While a lot of Operator interfaces tend to use a
+ * pull-based orientation, we use a push-based interface.  This is to give us good stacktraces.  Because of the
+ * organization of the go() method, the stack traces thrown out of an Operator will be
+ * 1. All of the go() calls from the top-level Operator down to the leaf Operator, this part of the stacktrace gives
+ * visibility into what all of the actions that we expect to happen from the operator chain are
+ * 2. All of the push() calls up until the exception happens, this part of the stack trace gives us a view of all
+ * of the things that have happened to the data up until the exception was thrown.
  * <p>
- * The lifecycle of an operator is that, after creation, it should be opened, and then iterated using hasNext() and
- * next().  Finally, when the Operator is no longer useful, it should be closed.
+ * This "hour glass" structure of the stacktrace is by design.  It is very important that implementations of this
+ * interface never resort to a fluent style, inheritance or other code structuring that removes the name of the active
+ * Operator from the stacktrace.  It should always be possible to find ways to avoid code duplication and still keep
+ * the Operator's name on the stacktrace.
  * <p>
- * Operator's methods mimic the methods of an {@code Iterator}, but it does not implement {@code Iterator}
- * intentionally.  An operator should never be wrapped in an {@code Iterator}.  Any code that does that should be
- * considered a bug and fixed.  This is for two reasons:
- * <p>
- * 1. An Operator should never be passed around as an {@code Iterator}.  An Operator must be closed, if an operator
- * gets returned as an {@code Iterator}, the code that sees the {@code Iterator} loses the knowledge that it's
- * dealing with an Operator and might not close it.  Even something like a {@code CloseableIterator} is an
- * anti-pattern as it's possible to use it in a functional manner with code that loses track of the fact that it
- * must be closed.
- * 2. To avoid "fluent" style composition of functions on Operators.  It is important that there never be a set of
- * functional primitives for things like map/filter/reduce to "simplify" the implementation of Operators.  This is
- * because such fluency produces really hard to decipher stack traces as the stacktrace ends up being just a bunch
- * of calls from the scaffolding (map/filter/reduce) and not from the actual Operator itself.  By not implementing
- * {@code Iterator} we are actively increasing the burden of trying to add such functional operations to the point
- * that hopefully, though code review, we can ensure that we never develop them.  It is infinitely better to preserve
- * the stacktrace and "duplicate" the map/filter/reduce scaffolding code.
+ * The other benefit of the go() method is that it fully encapsulates the lifecycle of the underlying resources.
+ * This means that it should be possible to use try/finally blocks around calls to go() in order to ensure that
+ * resources are properly closed.
  */
 public interface Operator
 {
   /**
-   * Called to initiate the lifecycle of the Operator.  If an operator needs to checkout resources or anything to do
-   * its work, this is probably the place to do it.
+   * Convenience method to run an Operator until completion.  Data will be pushed into the Receiver.  This is the
+   * primary entry point that users of Operators will call to do their work.
    *
-   * Work should *never* be done in this method, this method only exists to acquire resources that are known to be
-   * needed before doing any work.  As a litmus test, if there is ever a call to `op.next()` inside of this method,
-   * then something has been done wrong as that call to `.next()` is actually doing work.  Such code should be moved
-   * into being lazily evaluated as part of a call to `.next()`.
+   * @param op       the operator to run to completion
+   * @param receiver a receiver that will receive data
    */
-  void open();
+  static void go(Operator op, Receiver receiver)
+  {
+    Closeable continuation = null;
+    do {
+      continuation = op.goOrContinue(continuation, receiver);
+    } while (continuation != null);
+  }
 
   /**
-   * Returns the next RowsAndColumns object that the Operator can produce.  Behavior is undefined if
-   * {@link #hasNext} returns false.
-   *
-   * @return the next RowsAndColumns object that the operator can produce
-   */
-  RowsAndColumns next();
-
-  /**
-   * Used to identify if it is safe to call {@link #next}
-   *
-   * @return true if it is safe to call {@link #next}
-   */
-  boolean hasNext();
-
-  /**
-   * Closes this Operator.  The cascade flag can be used to identify that the intent is to close this operator
-   * and only this operator without actually closing child operators.  Other databases us this sort of functionality
-   * with a planner that is watching over all of the objects and force-closes even if they were closed during normal
-   * operations.  In Druid, in the data pipeline where this was introduced, we are guaranteed to always have close
-   * called regardless of errors or exceptions during processing, as such, at time of introduction, there is no
-   * call that passes false for cascade.
+   * This is the primary workhorse method of an Operator.  That said, users of Operators are not expected to use this
+   * method and instead are expected to call the static method {@link Operator#go(Operator, Receiver)}.
    * <p>
-   * That said, given that this is a common thing for these interfaces for other databases, we want to preserve the
-   * optionality of being able to leverage what they do.  As such, we define the method this way with the belief
-   * that it might be used in the future.  Semantically, this means that all implementations of Operators must
-   * expect to be closed multiple times.  I.e. after being closed, it is an error for open, next or hasNext to be
-   * called, but close can be called any number of times.
+   * Data will be pushed into the Receiver.  The Receiver has the option of returning any of the {@link Signal} signals
+   * to indicate its degree of readiness for more data to be received.
+   * <p>
+   * If a Receiver returns a {@link Signal#PAUSE} signal, then if there is processing left to do, then it is expected
+   * that a non-null "continuation" object nwill be returned.  This allows for flow control to be returned to the
+   * caller to, e.g., process another Operator or just exert backpressure.  In this case, when the controller wants to
+   * resume, it must call this method again and include the continuation object that it received.
+   * <p>
+   * The continuation object is Closeable because it is possible that while processing is paused on one Operator, the
+   * processing of another Operator could obviate the need for further processing.  In this case, instead of resuming
+   * the paused Operation and returning {@link Signal#STOP} on the next push into the Receiver, the code must
+   * call {@link Closeable#close()} on the continuation object to cancel all further processing and clean up all
+   * related resources.  If, instead, the continuation object is passed back into a call to goOrContinue, then
+   * close() must <em>NOT</em> be called on the continuation object.  Said again, the controller must either
+   * 1) pass the continuation object back into a call to goOrContinue, OR
+   * 2) call close() on the continuation object
+   * and <em>NEVER</em> do both.
+   * <p>
+   * Once a reference to a continuation object has been passed back to a goOrContinue method, it should never be
+   * reused by the controller.  This is to give Operator implementations the ability to decide whether it makes sense
+   * to reuse the objects on subsequent calls or create new ones.
+   * <p>
+   * A null return value from this method indicates that processing is complete.  The Receiver should have had its
+   * {@link Receiver#completed()} method called and any resources associated with processing have already been cleaned
+   * up.  Additionally, if an exception escapes a call to this method, any resources associated with processing should have
+   * been cleaned up.
+   * <p>
+   * For implementators of the interface, if an Operator does not have any resources of its own to clean up, then it is
+   * safe to just pass through the continuation object to the caller.  However, if there are resources associated with
+   * the processing that must be cleaned up, the Operator implementation must wrap the received Closeable in a new
+   * Closeable that will close those resources.  In this case, when the object comes back to the Operator on a call to
+   * goOrContinue, the Operator must unwrap the internal Closeable and pass that back down.  In a similar fashion,
+   * if there is any state that an Operator requires to be able to resume its processing, then it is expected that the
+   * Operator will cast the object back to an instance of the type that it had originally returned.
    *
-   * @param cascade whether to call close on child operators.
+   * @param receiver a receiver that will receiver data
+   * @return null if processing is complete, non-null if the Receiver returned a {@link Signal#PAUSE} signal
    */
-  void close(boolean cascade);
+  @Nullable
+  Closeable goOrContinue(Closeable continuationObject, Receiver receiver);
+
+  /**
+   * This is the return object from a receiver.  It is used to communicate to whatever is pushing the data into the
+   * receiver the state of processing.  This exists because Operators can sometimes decide that no more results will
+   * be needed (e.g. if the result set is being limited), in which case, they need some way to communicate this
+   * to downstream processing to effectively "cancel" further computation.
+   * <p>
+   * It's named weird because... well, the author had a hard time coming up with a meaningful name.  Suggestions
+   * for alternate names are welcome.
+   */
+  enum Signal
+  {
+    /**
+     * Indicates that the downstream processing need not do anything else.  Operators that return this should avoid
+     * pre-emptively calling {@link Receiver#completed()} before returning STOP.  They should instead return STOP
+     * and trust that the downstream code will call {@link Receiver#completed()}.  This is because downstream code
+     * *might* be pipelining computations to prepare the next set of data and if the Operator first calls
+     * {@link Receiver#completed()} before communicating that no further results are needed, it delays the canceling
+     * of the pipelined operations and effectively wastes CPU cycles.
+     */
+    STOP,
+    /**
+     * Inidcates that the downstream processing should pause its pushing of results and instead return a
+     * continuation object that encapsulates whatever state is required to resume processing.  When this signal is
+     * received, Operators that are generating data might choose to exert backpressure or otherwise pause their
+     * processing efforts until called again with the returned continuation object.
+     * <p>
+     * If an Operator has completed its processing already when this signal is received, instead of returning a
+     * continuation object, it should call {@link Receiver#completed()} and return null.
+     */
+    PAUSE,
+    /**
+     * Indicates that more data is welcome.
+     */
+    GO
+  }
+
+  interface Receiver
+  {
+    /**
+     * Used to push data.  Return value indicates if more data will be accepted.  If false, push should not
+     * be called anymore.  If push is called after it returned false, undefined things will happen.
+     *
+     * @param rac {@link RowsAndColumns} of data
+     * @return a boolean value indicating if more data will be accepted.  If false, push should never be called
+     * anymore
+     */
+    Signal push(RowsAndColumns rac);
+
+    /**
+     * Used to indicate that no more data will ever come.  This is only used during the happy path and is not
+     * equivalent to a {@link Closeable#close()} method.  Namely, there is no guarantee that this method
+     * will be called if execution halts due to an exception from push.
+     * <p>
+     * It is acceptable for an implementation to eagerly close resources from this method, but it is not acceptable
+     * for this method to be the sole method of managing the lifecycle of resources held by the Operator.
+     */
+    void completed();
+  }
 }

@@ -48,8 +48,9 @@ public class WorkerStageKernel
 
   private WorkerStagePhase phase = WorkerStagePhase.NEW;
 
+  // We read this variable in the main thread and the netty threads
   @Nullable
-  private ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot;
+  private volatile ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot;
 
   @Nullable
   private ClusterByPartitions resultPartitionBoundaries;

@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSource;
@@ -51,10 +52,37 @@ public class LocalInputSourceTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testSerde() throws IOException
+  public void testSerdeAbsoluteBaseDir() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
     final LocalInputSource source = new LocalInputSource(new File("myFile").getAbsoluteFile(), "myFilter");
+    final byte[] json = mapper.writeValueAsBytes(source);
+    final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
+    Assert.assertEquals(source, fromJson);
+  }
+
+  @Test
+  public void testSerdeRelativeBaseDir() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final LocalInputSource source = new LocalInputSource(new File("myFile"), "myFilter");
+    final byte[] json = mapper.writeValueAsBytes(source);
+    final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
+    Assert.assertEquals(source, fromJson);
+  }
+
+  @Test
+  public void testSerdeMixedAbsoluteAndRelativeFiles() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final LocalInputSource source = new LocalInputSource(
+        null,
+        null,
+        ImmutableList.of(
+            new File("myFile1"),
+            new File("myFile2").getAbsoluteFile()
+        )
+    );
     final byte[] json = mapper.writeValueAsBytes(source);
     final LocalInputSource fromJson = (LocalInputSource) mapper.readValue(json, InputSource.class);
     Assert.assertEquals(source, fromJson);

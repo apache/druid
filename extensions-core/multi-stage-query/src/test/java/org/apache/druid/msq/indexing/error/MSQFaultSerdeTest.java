@@ -75,6 +75,8 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
     assertFaultSerde(new TooManyWorkersFault(10, 5));
+    assertFaultSerde(new TooManyAttemptsForWorker(2, "taskId", 1, "rootError"));
+    assertFaultSerde(new TooManyAttemptsForJob(2, 2, "taskId", "rootError"));
     assertFaultSerde(UnknownFault.forMessage(null));
     assertFaultSerde(UnknownFault.forMessage("the message"));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));

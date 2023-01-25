@@ -36,6 +36,9 @@ public class ColumnBuilder
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
+  private ColumnCapabilities handlerCapabilities = null;
+
+  @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
   private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
@@ -56,6 +59,12 @@ public class ColumnBuilder
   public SmooshedFileMapper getFileMapper()
   {
     return this.fileMapper;
+  }
+
+  public ColumnBuilder setType(ColumnType type)
+  {
+    this.capabilitiesBuilder.setType(type);
+    return this;
   }
 
   public ColumnBuilder setType(ValueType type)
@@ -138,11 +147,17 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setHandlerCapabilities(ColumnCapabilities handlerCapabilities)
+  {
+    this.handlerCapabilities = handlerCapabilities;
+    return this;
+  }
+
   public ColumnHolder build()
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, indexSupplier);
+    return new SimpleColumnHolder(capabilitiesBuilder, handlerCapabilities, columnSupplier, indexSupplier);
   }
 
   private void checkColumnSupplierNotSet()

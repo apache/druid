@@ -192,7 +192,7 @@ public class MSQFaultsTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .build();
 
-    File file = MSQTestFileUtils.generateTemporaryNdJsonFile(30000, 1);
+    File file = MSQTestFileUtils.generateTemporaryNdJsonFile(temporaryFolder, 30000, 1);
     String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
@@ -325,7 +325,7 @@ public class MSQFaultsTest extends MSQTestBase
 
     final int numFiles = 20000;
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(this, "/wikipedia-sampled.json");
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));

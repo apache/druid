@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -58,6 +59,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
 
   public IncrementalIndexIngestionTest(String indexType) throws JsonProcessingException
   {
+    NestedDataModule.registerHandlersAndSerde();
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setIndexSchema((IncrementalIndexSchema) args[0])
         .setMaxRowCount(MAX_ROWS)

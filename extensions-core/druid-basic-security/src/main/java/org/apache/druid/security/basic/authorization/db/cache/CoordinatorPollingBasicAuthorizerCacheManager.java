@@ -420,12 +420,18 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
         new BytesFullResponseHandler()
     );
 
+    final HttpResponseStatus status = responseHolder.getStatus();
+
     // cachedSerializedGroupMappingMap is a new endpoint introduced in Druid 0.17.0. For backwards compatibility, if we
     // get a 404 from the coordinator we stop retrying. This can happen during a rolling upgrade when a process
     // running 0.17.0+ tries to access this endpoint on an older coordinator.
-    if (responseHolder.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+    if (HttpResponseStatus.NOT_FOUND.equals(status)) {
       LOG.warn("cachedSerializedGroupMappingMap is not available from the coordinator, skipping fetch of group mappings for now.");
       return null;
+    }
+
+    if (!HttpResponseStatus.OK.equals(status)) {
+      LOG.warn("Got an unexpected response status[%s] when loading group mappings.", status);
     }
 
     byte[] groupRoleMapBytes = responseHolder.getContent();

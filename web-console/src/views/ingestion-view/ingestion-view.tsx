@@ -41,6 +41,7 @@ import {
   TaskTableActionDialog,
 } from '../../dialogs';
 import { QueryWithContext } from '../../druid-models';
+import { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
@@ -48,7 +49,6 @@ import {
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
-  Capabilities,
   deepGet,
   formatDuration,
   getDruidErrorMessage,

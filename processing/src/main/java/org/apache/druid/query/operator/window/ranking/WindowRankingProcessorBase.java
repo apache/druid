@@ -21,11 +21,11 @@ package org.apache.druid.query.operator.window.ranking;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.operator.window.Processor;
-import org.apache.druid.query.rowsandcols.AppendableRowsAndColumns;
-import org.apache.druid.query.rowsandcols.DefaultSortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.SortedGroupPartitioner;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
+import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.util.List;
 import java.util.function.Function;
@@ -67,9 +67,9 @@ public abstract class WindowRankingProcessorBase implements Processor
   {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(incomingPartition);
 
-    SortedGroupPartitioner groupPartitioner = incomingPartition.as(SortedGroupPartitioner.class);
+    ClusteredGroupPartitioner groupPartitioner = incomingPartition.as(ClusteredGroupPartitioner.class);
     if (groupPartitioner == null) {
-      groupPartitioner = new DefaultSortedGroupPartitioner(incomingPartition);
+      groupPartitioner = new DefaultClusteredGroupPartitioner(incomingPartition);
     }
 
     retVal.addColumn(outputColumn, fn.apply(groupPartitioner.computeBoundaries(groupingCols)));

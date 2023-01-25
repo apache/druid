@@ -110,12 +110,12 @@ public abstract class ObjectColumnAccessorBase implements ColumnAccessor
   }
 
   @Override
-  public int compareCells(int lhsRowNum, int rhsRowNum)
+  public int compareRows(int lhsRowNum, int rhsRowNum)
   {
     return getComparator().compare(getVal(lhsRowNum), getVal(rhsRowNum));
   }
 
-  protected abstract Object getVal(int cell);
+  protected abstract Object getVal(int rowNum);
 
   protected abstract Comparator<Object> getComparator();
 }

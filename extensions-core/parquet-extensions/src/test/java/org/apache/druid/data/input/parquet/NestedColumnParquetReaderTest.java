@@ -162,4 +162,77 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     Assert.assertEquals(1L, rows.get(0).getRaw("t_a2_1_b1"));
     Assert.assertEquals(1L, rows.get(0).getRaw("tt_a2_0_b1"));
   }
+
+  @Test
+  public void testNestedColumnSchemalessNestedTestFileNoNested() throws IOException
+  {
+    final String file = "example/flattening/test_nested_1.parquet";
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", null),
+        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(false).build(),
+        ColumnsFilter.all(),
+        null
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, ImmutableList.of());
+    InputEntityReader reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+
+    List<InputRow> rows = readAllRows(reader);
+    Assert.assertEquals(ImmutableList.of("dim1", "metric1", "timestamp"), rows.get(0).getDimensions());
+    Assert.assertEquals(FlattenSpecParquetInputTest.TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
+    Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
+    Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
+    Assert.assertEquals(1, rows.get(0).getRaw("metric1"));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1"));
+    // can still read even if it doesn't get reported as a dimension
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "listDim", ImmutableList.of("listDim1v1", "listDim1v2"),
+            "dim3", 1,
+            "dim2", "d2v1",
+            "metric2", 2
+        ),
+        rows.get(0).getRaw("nestedData")
+    );
+  }
+
+  @Test
+  public void testNestedColumnSchemalessNestedTestFile() throws IOException
+  {
+    final String file = "example/flattening/test_nested_1.parquet";
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", null),
+        DimensionsSpec.builder().setUseNestedColumnIndexerForSchemaDiscovery(true).build(),
+        ColumnsFilter.all(),
+        null
+    );
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, ImmutableList.of());
+    InputEntityReader reader = createReader(
+        file,
+        schema,
+        flattenSpec
+    );
+
+    List<InputRow> rows = readAllRows(reader);
+    Assert.assertEquals(ImmutableList.of("nestedData", "dim1", "metric1", "timestamp"), rows.get(0).getDimensions());
+    Assert.assertEquals(FlattenSpecParquetInputTest.TS1, rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
+    Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
+    Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
+    Assert.assertEquals(1, rows.get(0).getRaw("metric1"));
+    Assert.assertEquals(1, rows.get(0).getMetric("metric1"));
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "listDim", ImmutableList.of("listDim1v1", "listDim1v2"),
+            "dim3", 1,
+            "dim2", "d2v1",
+            "metric2", 2
+        ),
+        rows.get(0).getRaw("nestedData")
+    );
+  }
 }

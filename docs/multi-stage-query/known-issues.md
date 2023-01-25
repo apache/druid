@@ -29,45 +29,45 @@ sidebar_label: Known issues
 
 ## Multi-stage query task runtime
 
-- Fault tolerance is not implemented. If any task fails, the entire query fails.
+- Fault tolerance is partially implemented. Workers get relaunched when they are killed unexpectedly. The controller does not get relaunched if it is killed unexpectedly.
 
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with
 an [UnknownError](./reference.md#error_UnknownError) with a message including "No space left on device".
 
-## SELECT
+## `SELECT` Statement
 
-- SELECT from a Druid datasource does not include unpublished real-time data.
+- `SELECT` from a Druid datasource does not include unpublished real-time data.
 
-- GROUPING SETS and UNION ALL are not implemented. Queries using these features return a
+- `GROUPING SETS` and `UNION ALL` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
-- For some COUNT DISTINCT queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
+- For some `COUNT DISTINCT` queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
   that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use
-  GROUPING SETs, which are not implemented.
+  `GROUPING SET`s, which are not implemented.
 
-- The numeric varieties of the EARLIEST and LATEST aggregators do not work properly. Attempting to use the numeric
+- The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like
   `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.
   The string varieties, however, do work properly.
 
-## INSERT and REPLACE
+## `INSERT` and `REPLACE` Statements
 
-- INSERT and REPLACE with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
+- The `INSERT` and `REPLACE` statements with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
 
-- `INSERT ... SELECT` and `REPLACE ... SELECT` insert columns from the SELECT statement based on column name. This
+- `INSERT ... SELECT` and `REPLACE ... SELECT` insert columns from the `SELECT` statement based on column name. This
 differs from SQL standard behavior, where columns are inserted based on position.
 
-- INSERT and REPLACE do not support all options available in [ingestion specs](../ingestion/ingestion-spec.md),
+- `INSERT` and `REPLACE` do not support all options available in [ingestion specs](../ingestion/ingestion-spec.md),
 including the `createBitmapIndex` and `multiValueHandling` [dimension](../ingestion/ingestion-spec.md#dimension-objects)
 properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#tuningconfig) property.
 
-## EXTERN
+## `EXTERN` Function
 
 - The [schemaless dimensions](../ingestion/ingestion-spec.md#inclusions-and-exclusions)
   feature is not available. All columns and their types must be specified explicitly using the `signature` parameter
-  of the [EXTERN function](reference.md#extern).
+  of the [`EXTERN` function](reference.md#extern-function).
 
-- EXTERN with input sources that match large numbers of files may exhaust available memory on the controller task.
+- `EXTERN` with input sources that match large numbers of files may exhaust available memory on the controller task.
 
-- EXTERN does not accept `druid` input sources. Use FROM instead.
+- `EXTERN` refers to external files. Use `FROM` to access `druid` input sources.

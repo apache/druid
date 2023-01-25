@@ -22,14 +22,15 @@ package org.apache.druid.query.operator.window.ranking;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
-import org.apache.druid.query.rowsandcols.frame.MapOfColumnsRowsAndColumns;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class WindowRankProcessorTest
@@ -42,9 +43,10 @@ public class WindowRankProcessorTest
 
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
+    final List<String> orderingCols = Collections.singletonList("vals");
     Processor processor = new ComposingProcessor(
-        new WindowRankProcessor(Collections.singletonList("vals"), "rank", false),
-        new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
+        new WindowRankProcessor(orderingCols, "rank", false),
+        new WindowRankProcessor(orderingCols, "rankAsPercent", true)
     );
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
@@ -68,9 +70,10 @@ public class WindowRankProcessorTest
 
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
+    final List<String> orderingCols = Collections.singletonList("vals");
     Processor processor = new ComposingProcessor(
-        new WindowRankProcessor(Collections.singletonList("vals"), "rank", false),
-        new WindowRankProcessor(Collections.singletonList("vals"), "rankAsPercent", true)
+        new WindowRankProcessor(orderingCols, "rank", false),
+        new WindowRankProcessor(orderingCols, "rankAsPercent", true)
     );
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()

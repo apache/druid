@@ -56,6 +56,7 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -63,6 +64,8 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -464,6 +467,40 @@ public class TaskToolbox
   public String getAttemptId()
   {
     return attemptId;
+  }
+
+  /**
+   * Get {@link RuntimeInfo} adjusted for this particular task. When running in a task JVM launched by a MiddleManager,
+   * this is the same as the baseline {@link RuntimeInfo}. When running in an Indexer, it is adjusted based on
+   * {@code druid.worker.capacity}.
+   */
+  public RuntimeInfo getAdjustedRuntimeInfo()
+  {
+    return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
+  }
+
+  /**
+   * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
+   * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
+   * When running in an Indexer, other tasks share the same JVM, so this must be accounted for.
+   */
+  public static RuntimeInfo createAdjustedRuntimeInfo(
+      final RuntimeInfo runtimeInfo,
+      final AppenderatorsManager appenderatorsManager
+  )
+  {
+    if (appenderatorsManager instanceof UnifiedIndexerAppenderatorsManager) {
+      // CliIndexer. Each JVM runs multiple tasks; adjust.
+      return new AdjustedRuntimeInfo(
+          runtimeInfo,
+          ((UnifiedIndexerAppenderatorsManager) appenderatorsManager).getWorkerConfig().getCapacity()
+      );
+    } else {
+      // CliPeon (assumed to be launched by CliMiddleManager).
+      // Each JVM runs a single task. ForkingTaskRunner sets XX:ActiveProcessorCount so each task already sees
+      // an adjusted number of processors from the baseline RuntimeInfo. So, we return it directly.
+      return runtimeInfo;
+    }
   }
 
   public static class Builder

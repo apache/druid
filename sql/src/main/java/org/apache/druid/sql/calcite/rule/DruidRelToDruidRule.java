@@ -50,7 +50,8 @@ public class DruidRelToDruidRule extends ConverterRule
   public RelNode convert(RelNode rel)
   {
     try {
-      return ((DruidRel<?>) rel).asDruidConvention();
+      final RelNode newRel = ((DruidRel<?>) rel).asDruidConvention();
+      return newRel;
     }
     catch (Exception e) {
       log.error(e, "Conversion failed");

@@ -25,7 +25,6 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
 
 import javax.inject.Inject;
-
 import java.util.Map;
 import java.util.Properties;
 

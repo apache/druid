@@ -142,6 +142,7 @@ JVMs
 Joda
 JsonProperty
 Jupyter
+JupyterLab
 KMS
 Kerberized
 Kerberos
@@ -212,6 +213,7 @@ UI
 UIs
 URI
 URIs
+uris
 UTF-16
 UTF-8
 UTF8
@@ -721,6 +723,9 @@ rowsInMemory
 segmentSortOrder
 rowsPerSegment
 durableShuffleStorage
+composedIntermediateSuperSorterStorageEnabled
+intermediateSuperSorterStorageMaxLocalBytes
+ResourceLimitExceededException
 # Aggregations
 groupByEnableMultiValueUnnesting
 APPROX_COUNT_DISTINCT_DS_HLL
@@ -1274,6 +1279,7 @@ kafka.timestamp
 keyColumnName
 keyFormat
 listDelimiter
+timestamp
 timestampColumnName
 timestampSpec
 urls
