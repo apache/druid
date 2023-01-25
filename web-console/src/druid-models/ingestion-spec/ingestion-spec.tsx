@@ -2137,7 +2137,7 @@ export function issueWithSampleData(
   sampleData: string[],
   spec: Partial<IngestionSpec>,
 ): JSX.Element | undefined {
-  if (getSpecType(spec) === 'kafka') return;
+  if (isStreamingSpec(spec)) return;
 
   if (sampleData.length) {
     const firstData = sampleData[0];
@@ -2174,7 +2174,7 @@ export function fillInputFormatIfNeeded(
   return deepSet(
     spec,
     'spec.ioConfig.inputFormat',
-    guessInputFormat(sampleData, getSpecType(spec) === 'kafka'),
+    guessInputFormat(sampleData, isStreamingSpec(spec)),
   );
 }
 
