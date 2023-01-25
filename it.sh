@@ -237,6 +237,11 @@ case $CMD in
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;
+  "github" )
+    prepare_category $1
+    $0 test $CATEGORY
+    $0 tail $CATEGORY
+    ;;
   "prune" )
     # Caution: this removes all volumes, which is generally what you
     # want when testing.

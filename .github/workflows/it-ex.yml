@@ -31,5 +31,5 @@ jobs:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       use_indexer: ${{ matrix.indexer }}
-      script: ./it.sh travis ${{ matrix.it }}
+      script: ./it.sh github ${{ matrix.it }}
       it: ${{ matrix.it }}

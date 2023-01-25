@@ -28,6 +28,10 @@ on:
       override_config_path:
         required: false
         type: string
+      group:
+        required: true
+        type: string
+        description: 'Name of group of tests running (to display)'
       testing_groups:
         required: true
         type: string
@@ -36,7 +40,7 @@ on:
         required: true
         type: string
       mysql_driver:
-        description: MySQL driver to use
+        description: 'MySQL driver to use'
         required: false
         type: string
         default: com.mysql.jdbc.Driver
@@ -51,7 +55,7 @@ env:
 
 jobs:
   test:
-    name: ${{ inputs.testing_groups }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
+    name: ${{ inputs.group }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch

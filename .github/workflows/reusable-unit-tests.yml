@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+name: Revised Unit Tests shared workflow
 on:
   workflow_call:
     inputs:
@@ -25,16 +26,18 @@ on:
         type: boolean
         default: true
         description: 'For SQL compatibility'
-
-env:
-  MVN: mvn -B
-  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-  MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
-  FORCE_COLOR: 2
+      module:
+        required: true
+        type: string
+        description: 'Name of group of tests that are running'
+      maven_projects:
+        required: true
+        type: string
+        description: 'Name of group of tests running (to display)'
 
 jobs:
   unit-tests:
+    name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
@@ -76,22 +79,7 @@ jobs:
       - name: Setup diff-test-coverage
         run: npm install @connectis/diff-test-coverage@1.5.3
 
-      - name: indexing modules test
+      - name: test & coverage
         env:
-          MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "processing module test"
-        env:
-          MAVEN_PROJECTS: processing
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "server module test"
-        env:
-          MAVEN_PROJECTS: server
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "other modules test"
-        env:
-          MAVEN_PROJECTS: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
+          MAVEN_PROJECTS: ${{ inputs.maven_project }}
         run: ./.github/scripts/unit_tests_script.sh
