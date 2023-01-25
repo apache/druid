@@ -20,7 +20,6 @@ jobs:
   integration-index-tests-middleManager:
     strategy:
       fail-fast: false
-      max-parallel: 3
       matrix:
         jdk: [8, 11]
         testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction]
@@ -34,7 +33,6 @@ jobs:
   integration-index-tests-indexer:
     strategy:
       fail-fast: false
-      max-parallel: 3
       matrix:
         jdk: [8, 11]
         testing_group: [input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format, append-ingestion, compaction]
@@ -48,7 +46,6 @@ jobs:
   integration-query-tests-middleManager:
     strategy:
       fail-fast: false
-      max-parallel: 3
       matrix:
         jdk: [8, 11]
         testing_group: [query, query-retry, query-error, security, high-availability]

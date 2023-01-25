@@ -47,10 +47,11 @@ env:
   MAVEN_SKIP_TESTS: -P skip-tests
   DOCKER_IP: 127.0.0.1  # for integration tests
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
   test:
-    name: (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}) ${{ inputs.testing_groups }} integration test (Mysql=${{ inputs.mysql_driver }})
+    name: ${{ inputs.testing_groups }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
@@ -65,23 +66,6 @@ jobs:
         with:
          path: ~/.m2/repository
          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
-      - name: Restore targets
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            ./target
-            ./extendedset/target
-            ./hll/target
-            ./processing/target
-            ./server/target
-            ./indexing-hadoop/target
-            ./web-console/target
-            ./indexing-service/target
-            ./services/target
-            ./benchmarks/target
-            ./distribution/target
-            ./integration-tests/target
-          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ hashFiles('**/pom.xml') }}
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}

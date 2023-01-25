@@ -45,6 +45,7 @@ env:
   MAVEN_OPTS: -Xmx3000m
   JVM_RUNTIME: -Djvm.runtime=${{ inputs.runtime_jdk }}
   USE_INDEXER: ${{ inputs.use_indexer }}
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
   test:
@@ -53,57 +54,15 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
-      ##- name: Setup java
-      ##  uses: actions/setup-java@v3
-      ##  with:
-      ##    distribution: 'zulu'
-      ##    java-version: ${{ inputs.build_jdk }}
+      - name: Setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ inputs.build_jdk }}
       - name: Restore Maven repository
         uses: actions/cache/restore@v3
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
-      ##- name: Restore targets
-      ##  uses: actions/cache/restore@v3
-      ##  with:
-      ##    path: |
-      ##      ./target
-      ##      ./extendedset/target
-      ##      ./hll/target
-      ##      ./processing/target
-      ##      ./server/target
-      ##      ./indexing-hadoop/target
-      ##      ./web-console/target
-      ##      ./indexing-service/target
-      ##      ./services/target
-      ##      ./benchmarks/target
-      ##      ./distribution/target
-      ##      ./integration-tests/target
-      ##    key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ hashFiles('**/pom.xml') }}
-      #- name: Restore docker env
-      #  id: docker
-      #  uses: actions/cache/restore@v3
-      #  with:
-      #    path: ./integration-tests-ex/image/target/env.sh
-      #    key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-docker-env-${{ hashFiles('**/pom.xml') }}
-      #- name: Download image
-      #  uses: ishworkh/docker-image-artifact-download@v1
-      #  with:
-      #    image: "${{ inputs.druid_it_image_name }}-jdk${{ inputs.build_jdk }}"
-      #- name: Download docker image
-      #  uses: actions/download-artifact@v3
-      #  with:
-      #    name: ${{ inputs.druid_it_image_name }}-jdk${{ inputs.build_jdk }}.tar.gz
-#      - name: Retrieve cached docker image
-#        uses: actions/cache/restore@v3
-#        with:
-#          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-#          path: |
-#            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-#            ./integration-tests-ex/image/target/env.sh
-#      - name: Load docker image
-#        run: |
-#          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-#          docker images
       - name: Run IT
         run: ${{ inputs.script }}
