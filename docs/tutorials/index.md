@@ -38,16 +38,16 @@ You can follow these steps on a relatively modest machine, such as a workstation
 
 Druid comes equipped with launch scripts that can be used to start all processes on a single server. Here, we will use [`auto`](../operations/single-server.md#druid-auto-start), which automatically sets various runtime properties based on available processors and memory.
 
-In addition, Druid includes several [bundled static profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4GiB RAM) to x-large (64 CPU, 512GiB RAM).
+In addition, Druid includes several [bundled static profiles](../operations/single-server.md) for a range of machine sizes. These range from nano (1 CPU, 4 GiB RAM) to x-large (64 CPU, 512 GiB RAM).
 See [Single server deployment](../operations/single-server.md) for more information. To learn how to deploy Druid services across clustered machines, see [Clustered deployment](./cluster.md).
 
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
 * [Java 8u92+ or Java 11](../operations/java.md)
-* Python2 or Python3
+* Python 2 or Python 3
 
-You must set either the `JAVA_HOME` or `DRUID_JAVA_HOME` of the following the environment variables for Druid to find Java on the machine. If there is more than one version of Java installed, set
+You must set either the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variable for Druid to find Java on the machine. If there is more than one version of Java installed, set
 `DRUID_JAVA_HOME`. You can run `bin/verify-java` to verify Java requirements for your environment.
 
 Before installing a production Druid instance, be sure to review the [security
@@ -73,7 +73,7 @@ Start up Druid services using the `auto` single-machine configuration.
 This configuration includes default settings that are appropriate for this tutorial.
 For example, it loads `druid-multi-stage-query` extension so that you can use the MSQ task engine to ingest data using SQL.
 
-You can view the `auto` setting and others in the configuration files in `conf/druid/`. 
+You can view the default settings in the configuration files located in `conf/druid/auto`.
 
 From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
@@ -99,9 +99,9 @@ $ ./bin/start-druid
 ```
 
 It may use up to 80% of the total available system memory.
-To explicitly set the total memory available to Druid, pass a value for the memory parameter, e.g. `./bin/start-druid -m 16g` or `./bin/start-druid --memory 16g`. 
+To explicitly set the total memory available to Druid, pass a value for the memory parameter. For example, `./bin/start-druid -m 16g`. 
 
-Druid stores all persistent state data, such as the cluster metadata store and data segments to `apache-druid-{{DRUIDVERSION}}-var`.
+Druid stores all persistent state data, such as the cluster metadata store and data segments, in `apache-druid-{{DRUIDVERSION}}/var`.
 Each service writes to a log file under `var/sv`.
 
 At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
