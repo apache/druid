@@ -119,16 +119,11 @@ public class SegmentGeneratorFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      ParseExceptionHandler parseExceptionHandler
   )
   {
     final RowIngestionMeters meters = frameContext.rowIngestionMeters();
-    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
-        meters,
-        TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS,
-        TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS,
-        TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-    );
 
     // Expect a single input slice.
     final InputSlice slice = Iterables.getOnlyElement(inputSlices);

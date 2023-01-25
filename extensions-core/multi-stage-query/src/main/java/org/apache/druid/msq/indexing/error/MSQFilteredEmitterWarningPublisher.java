@@ -19,9 +19,10 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEvent;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -35,7 +36,7 @@ public class MSQFilteredEmitterWarningPublisher implements MSQWarningPublisher
   private final String taskId;
   @Nullable
   private final String host;
-  private final Emitter emitter;
+  private final ServiceEmitter emitter;
   private final Set<String> acceptableErrorCode;
 
   public MSQFilteredEmitterWarningPublisher(
@@ -43,7 +44,7 @@ public class MSQFilteredEmitterWarningPublisher implements MSQWarningPublisher
       final String controllerTaskId,
       final String taskId,
       @Nullable final String host,
-      Emitter emitter,
+      ServiceEmitter emitter,
       Set<String> acceptableErrorCode
   )
   {
@@ -62,22 +63,18 @@ public class MSQFilteredEmitterWarningPublisher implements MSQWarningPublisher
     if (acceptableErrorCode.contains(errorCode)) {
       MSQErrorReport errorReport = MSQErrorReport.fromException(workerId, host, stageNumber, e);
       String errorMessage = errorReport.getFault().getErrorMessage();
-      // todo use an actual event type that has the correct feed.
-      // todo see if i can find group ID as well, maybe thats controller task id???
-      emitter.emit(new Event()
-      {
-        @Override
-        public EventMap toMap()
-        {
-          return null;
-        }
-
-        @Override
-        public String getFeed()
-        {
-          return null;
-        }
-      });
+      ServiceEvent.Builder serviceEventBuilder =  ServiceEvent.builder();
+      serviceEventBuilder.setFeed("serviceEvent");
+      serviceEventBuilder.setDimension("taskId", taskId);
+      serviceEventBuilder.setDimension("groupId", controllerTaskId);
+      if (host != null) {
+        serviceEventBuilder.setDimension("host", host);
+      }
+      serviceEventBuilder.setDimension("workerId", workerId);
+      serviceEventBuilder.setDimension("message", errorMessage);
+      serviceEventBuilder.setDimension("msqErrorCode", errorCode);
+      // todo get actual error datetime from event?
+      emitter.emit(serviceEventBuilder.build(DateTime.now(DateTimeZone.UTC)));
     }
   }
 

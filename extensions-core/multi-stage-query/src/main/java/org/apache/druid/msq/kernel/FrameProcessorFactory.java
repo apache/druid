@@ -26,6 +26,7 @@ import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -75,7 +76,8 @@ public interface FrameProcessorFactory<ExtraInfoType, ProcessorType extends Fram
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      ParseExceptionHandler parseExceptionHandler
   ) throws IOException;
 
   TypeReference<R> getAccumulatedResultTypeReference();

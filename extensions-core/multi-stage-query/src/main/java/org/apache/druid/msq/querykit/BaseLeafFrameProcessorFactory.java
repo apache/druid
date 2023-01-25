@@ -49,6 +49,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -74,7 +75,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      @Nullable ParseExceptionHandler parseExceptionHandler
   ) throws IOException
   {
     // BaseLeafFrameProcessorFactory is used for native Druid queries, where the following input cases can happen:

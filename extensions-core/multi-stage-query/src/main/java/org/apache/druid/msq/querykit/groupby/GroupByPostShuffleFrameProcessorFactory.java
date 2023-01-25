@@ -44,6 +44,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -80,7 +81,8 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      @Nullable ParseExceptionHandler parseExceptionHandler
   )
   {
     // Expecting a single input slice from some prior stage.

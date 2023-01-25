@@ -43,6 +43,7 @@ import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.msq.util.SupplierIterator;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -96,7 +97,8 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      @Nullable ParseExceptionHandler parseExceptionHandler
   ) throws IOException
   {
     if (workerNumber > 0) {

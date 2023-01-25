@@ -116,6 +116,8 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
@@ -855,7 +857,8 @@ public class WorkerImpl implements Worker
             parallelism,
             processorBouncer,
             counters,
-            MSQWarningReportPublisher
+            MSQWarningReportPublisher,
+            new ParseExceptionHandler(frameContext.rowIngestionMeters(), TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS, TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS, TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS)
         );
 
     final ListenableFuture<ClusterByPartitions> stagePartitionBoundariesFuture;
@@ -1019,8 +1022,9 @@ public class WorkerImpl implements Worker
       final int parallelism,
       final Bouncer processorBouncer,
       final CounterTracker counters,
-      final MSQWarningPublisher warningPublisher
-  ) throws IOException
+      final MSQWarningPublisher warningPublisher,
+      final ParseExceptionHandler parseExceptionHandler
+      ) throws IOException
   {
     final ProcessorsAndChannels<WorkerClass, T> processors =
         processorFactory.makeProcessors(
@@ -1033,7 +1037,8 @@ public class WorkerImpl implements Worker
             frameContext,
             parallelism,
             counters,
-            e -> warningPublisher.publishException(stageDefinition.getStageNumber(), e)
+            e -> warningPublisher.publishException(stageDefinition.getStageNumber(), e),
+            parseExceptionHandler
         );
 
     final Sequence<WorkerClass> processorSequence = processors.processors();
