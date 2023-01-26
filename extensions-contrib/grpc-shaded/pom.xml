@@ -53,6 +53,13 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- Required. The dependency checker will tell you that
+         this isn't required (in this module). But, it is required
+         by the Druid server or test client. -->
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-core</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.grpc</groupId>
       <artifactId>grpc-api</artifactId>

@@ -28,7 +28,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.server.QueryDriver;
+import org.apache.druid.grpc.server.QueryDriverImpl;
 import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -82,7 +82,7 @@ public class GrpcQueryTest
   public static void setup() throws IOException
   {
     frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
-    QueryDriver driver = new QueryDriver(
+    QueryDriverImpl driver = new QueryDriverImpl(
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory()
     );

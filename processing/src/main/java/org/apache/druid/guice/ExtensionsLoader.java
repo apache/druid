@@ -24,7 +24,6 @@ import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
@@ -54,6 +53,12 @@ import java.util.stream.Collectors;
  * extensions during initialization. The design, however, should support
  * any kind of extension that may be needed in the future.
  * The extensions are cached so that they can be reported by various REST APIs.
+ * <p>
+ * Extensions reside in a directory. The name of the directory is the extension
+ * name. No two extensions can have the same name. This is not actually a restriction
+ * as extensions reside in {@code $DRUID_HOME/extensions}, so each extension must
+ * be in its own extension. The extension name is the same as that used in the
+ * Druid extension load list.
  */
 @LazySingleton
 public class ExtensionsLoader
@@ -61,7 +66,7 @@ public class ExtensionsLoader
   private static final Logger log = new Logger(ExtensionsLoader.class);
 
   private final ExtensionsConfig extensionsConfig;
-  private final ConcurrentHashMap<Pair<File, Boolean>, URLClassLoader> loaders = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, URLClassLoader> loaders = new ConcurrentHashMap<>();
 
   /**
    * Map of loaded extensions, keyed by class (or interface).
@@ -109,7 +114,7 @@ public class ExtensionsLoader
   }
 
   @VisibleForTesting
-  public Map<Pair<File, Boolean>, URLClassLoader> getLoadersMap()
+  public Map<String, URLClassLoader> getLoadersMap()
   {
     return loaders;
   }
@@ -195,15 +200,20 @@ public class ExtensionsLoader
    *
    * @return a URLClassLoader that loads all the jars on which the extension is dependent
    */
+  public URLClassLoader getClassLoaderForExtension(File extension)
+  {
+    return getClassLoaderForExtension(extension, extensionsConfig.isUseExtensionClassloaderFirst());
+  }
+
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return loaders.computeIfAbsent(
-        Pair.of(extension, useExtensionClassloaderFirst),
-        k -> makeClassLoaderForExtension(k.lhs, k.rhs)
+        extension.getName(),
+        k -> makeClassLoaderForExtension(extension, useExtensionClassloaderFirst)
     );
   }
 
-  private static URLClassLoader makeClassLoaderForExtension(
+  private URLClassLoader makeClassLoaderForExtension(
       final File extension,
       final boolean useExtensionClassloaderFirst
   )
@@ -226,8 +236,29 @@ public class ExtensionsLoader
     if (useExtensionClassloaderFirst) {
       return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader());
     } else {
-      return new URLClassLoader(urls, ExtensionsLoader.class.getClassLoader());
+      return new URLClassLoader(
+          // extension.getName() - after moving off of Java 8
+          urls,
+          ExtensionsLoader.class.getClassLoader()
+      );
     }
+  }
+
+  /**
+   * Obtains the class loader for the given extension name. Assumes the extension
+   * has been loaded. This method primarily solves the use case of resolving a class
+   * within jars in an extension, when run from an IDE. When run in production, the
+   * class loader of the extensions {@code DruidModule} will give the extension class
+   * loader. But, when run in an IDE, the extension may be on the class path, so that
+   * the {@code AppClassLoader} finds the class before the extension class loader does.
+   * In this case, classes from the extension report the {@code AppClassLoader}, not
+   * the extensions {@link URLClassLoader} as their class loader. When this happens,
+   * an attempt to find a class using the class loader will fail. This method is a workaround:
+   * even in an IDE, we use the actual extension class loader.
+   */
+  public URLClassLoader getClassLoaderForExtension(String extensionName)
+  {
+    return loaders.get(extensionName);
   }
 
   public static List<URL> getURLsForClasspath(String cp)
@@ -293,10 +324,7 @@ public class ExtensionsLoader
       for (File extension : getExtensionFilesToLoad()) {
         log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
-          final URLClassLoader loader = getClassLoaderForExtension(
-              extension,
-              extensionsConfig.isUseExtensionClassloaderFirst()
-          );
+          final URLClassLoader loader = getClassLoaderForExtension(extension);
 
           log.info(
               "Loading extension [%s], jars: %s",

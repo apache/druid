@@ -25,13 +25,14 @@ import io.grpc.Server;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
+
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 
 /**
  * Basic gRPC server adapted from the gRPC examples. Delegates to the
- * {@link QueryDriver} class to do the actual work of running the query.
+ * {@link QueryDriverImpl} class to do the actual work of running the query.
  * <p>
  * This class is preliminary. It is good enough for unit tests, but a bit more work
  * is needed to integrate this class into the Druid server.
@@ -47,7 +48,10 @@ public class QueryServer
   private Server server;
 
   @Inject
-  public QueryServer(int port, QueryDriver driver)
+  public QueryServer(
+      Integer port,
+      QueryDriver driver
+  )
   {
     this.port = port;
     this.driver = driver;
