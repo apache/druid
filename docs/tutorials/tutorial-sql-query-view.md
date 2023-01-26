@@ -1,7 +1,7 @@
 ---
 id: tutorial-sql-query-view
-title: "Tutorial: Use Query view"
-sidebar_label: "Use Query view"
+title: "Tutorial: Get to know Query view"
+sidebar_label: "Get to know Query view"
 ---
 
 <!--
@@ -80,7 +80,7 @@ In this section you run some queries using aggregate functions and perform some 
 
 3. Click **SELECT COUNT(*) AS "Count" FROM kttm_simple** and run the query.
 
-4. After you run a query that contains an aggregate function, additional options become available in the Query view. 
+4. After you run a query that contains an aggregate function, additional Query view options become available. 
 
    Click the arrow to the left of the **kttm_simple** datasource to display the columns, then click the **country** column. Several options appear to apply country-based filters and aggregate functions to the query:
 
@@ -108,7 +108,7 @@ In this section you run some queries using aggregate functions and perform some 
 
    Uncheck **Use approximate COUNT(DISTINCT)** and rerun the query. The country count in the results decreases because the computation has become more exact. See [SQL aggregation functions](../querying/sql-aggregations.md) for more information.
 
-9.  The Query view can provide information about a function, in case you aren't sure exactly what it does.
+9.  Query view can provide information about a function, in case you aren't sure exactly what it does.
 
     Delete the contents of the query line `COUNT(DISTINCT country) AS dist_country` and type `COUNT(DISTINCT)` to replace it. A help dialog for the function displays:
     
