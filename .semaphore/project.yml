@@ -1,3 +1,8 @@
+# This file is managed by ServiceBot plugin - Semaphore. The content in this file is created using a common
+# template and configurations in service.yml.
+# Modifications in this file will be overwritten by generated content in the nightly run.
+# For more information, please refer to the page:
+# https://confluentinc.atlassian.net/wiki/spaces/Foundations/pages/2871296194/Add+SemaphoreCI
 apiVersion: v1alpha
 kind: Project
 metadata:
