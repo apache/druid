@@ -179,12 +179,13 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       return ((BinaryNode) val).binaryValue();
     }
 
+
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
-        if (!entry.isNull()) {
-          newList.add(convertJsonNode(entry, enc));
-        }
+        // process nulls as is
+        // convertJsonNode will return null if the entry is null
+        newList.add(convertJsonNode(entry, enc));
       }
       return newList;
     }
