@@ -342,8 +342,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                       .add("dim1", ColumnType.STRING)
                       .add("dim2", ColumnType.STRING)
                       .add("met1", ColumnType.STRING)
-                      .build()
-        ,
+                      .build(),
         response.getSegmentSchema()
     );
 
