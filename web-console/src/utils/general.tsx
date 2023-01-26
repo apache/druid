@@ -36,7 +36,11 @@ export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
-export function nonEmptyArray(a: any): a is unknown[] {
+export function nonEmptyString(s: unknown): s is string {
+  return typeof s === 'string' && s !== '';
+}
+
+export function nonEmptyArray(a: unknown): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
 }
 

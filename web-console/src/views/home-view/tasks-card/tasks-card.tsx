@@ -76,7 +76,7 @@ export interface TasksCardProps {
 export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   const [cardState] = useQueryManager<Capabilities, TaskCountsAndCapacity>({
     processQuery: async capabilities => {
-      const taskCounts = getTaskCounts(capabilities);
+      const taskCounts = await getTaskCounts(capabilities);
       if (!capabilities.hasOverlordAccess()) return taskCounts;
 
       const capacity = await getClusterCapacity();
