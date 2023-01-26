@@ -40,7 +40,7 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 Druid includes demo queries that each demonstrate a different Druid feature&mdash;for example transforming data during ingestion and sorting ingested data. Each query has detailed comments to help you learn more.
 
-In this section you load the demo queries and run a SQL task to ingest sample data into a [table-type datasource](../querying/datasource.md#table).
+In this section you load the demo queries and run a SQL task to ingest sample data into a [table datasource](../querying/datasource.md#table).
 
 1. Navigate to the Druid console at [http://localhost:8888](http://localhost:8888) and click **Query**.
 
