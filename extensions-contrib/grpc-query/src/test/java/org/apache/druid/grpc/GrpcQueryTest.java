@@ -19,16 +19,11 @@
 
 package org.apache.druid.grpc;
 
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannel;
-import org.apache.druid.grpc.proto.QueryGrpc;
-import org.apache.druid.grpc.proto.QueryGrpc.QueryBlockingStub;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.server.QueryDriverImpl;
+import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,52 +32,27 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Simple test that runs the gRPC server, on top of a test SQL stack.
+ * Uses a simple client to send a query to the server. This is a basic
+ * sanity check of the gRPC stack.
+ */
 public class GrpcQueryTest
 {
   @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private static TemporaryFolder temporaryFolder = new TemporaryFolder();
   private static QueryFrameworkFixture frameworkFixture;
-  static QueryServer server;
-  static TestClient client;
-
-  public static class TestClient
-  {
-    ManagedChannel channel;
-    QueryBlockingStub client;
-
-    public TestClient()
-    {
-      // Access a service running on the local machine on port 50051
-      String target = "localhost:50051";
-      // Create a communication channel to the server, known as a Channel. Channels are thread-safe
-      // and reusable. It is common to create channels at the beginning of your application and reuse
-      // them until the application shuts down.
-      //
-      // For the example we use plaintext insecure credentials to avoid needing TLS certificates. To
-      // use TLS, use TlsChannelCredentials instead.
-      channel = Grpc.newChannelBuilder(target, InsecureChannelCredentials.create())
-          .build();
-      client = QueryGrpc.newBlockingStub(channel);
-    }
-
-    public void close() throws InterruptedException
-    {
-      // ManagedChannels use resources like threads and TCP connections. To prevent leaking these
-      // resources the channel should be shut down when it will no longer be used. If it may be used
-      // again leave it running.
-      channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
-    }
-  }
+  private static QueryServer server;
+  private static TestClient client;
 
   @BeforeClass
   public static void setup() throws IOException
   {
     frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
-    QueryDriverImpl driver = new QueryDriverImpl(
+    QueryDriver driver = new QueryDriver(
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory()
     );

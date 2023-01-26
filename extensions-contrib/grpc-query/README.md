@@ -139,12 +139,59 @@ This project contains several components:
 
 ## Debugging
 
-Debugging of the gRPC extension requires extra care.
+Debugging of the gRPC extension requires extra care due to the nuances of loading
+classes from an extension.
 
-### Debugging in an IDE
+### Running in a Server
 
-To debug the gRPC extension in a production-like environment, you'll want to debug the
-extension in a running Broker. The easiest way to do this is:
+Druid extensions are designed to run in the Druid server. The gRPC extension is
+loaded only in the Druid broker using the contiguration described above. If something
+fails during startup, the Broker will crash. Consult the Broker logs to determine
+what went wrong. Startup failures are typically due to required jars not being installed
+as part of the extension. Check the `pom.xml` file to track down what's missing.
+
+Failures can also occur when running a query. Such failures will result in a failure
+response and should result in a log entry in the Broker log file. Use the log entry
+to sort out what went wrong.
+
+You can also attach a debugger to the running process. You'll have to enable the debugger
+in the server by adding the required parameters to the Broker's `jvm.config` file.
+
+### Debugging using Unit Tests
+
+To debug the functionality of the extension, your best bet is to debug in the context
+of a unit test. Druid provides a special test-only SQL stack with a few pre-defined
+datasources. See the various `CalciteQueryTest` classes to see what these are. You can
+also query Druid's various system tables. See `GrpcQueryTest` for a simple "starter"
+unit test that configures the server and uses an in-process client to send requests.
+
+Most unit testing can be done without the gRPC server, by calling the `QueryDriver`
+class directly. That is, if the goal is work with the code that takes a request, runs
+a query, and produces a response, then the driver is the key and the server is just a
+bit of extra copmlexity. See the `DriverTest` class for an example unit test.
+
+### Debugging in a Server in an IDE
+
+We would like to be able to debug the gRPC extension, within the Broker, in an IDE.
+As it turns out, doing so breaks Druid's class loader mechanisms in ways that are both
+hard to understand and hard to work around. When run in a server, Java creates an instance
+of `GrpcQueryModule` using the extension's class loader. Java then uses that same class
+loader to load other classes in the extension, including those here and those in the
+shaded gRPC jar file.
+
+However, when run in an IDE, if this project is on the class path, then the `GrpcQueryModule`
+class will be loaded from the "App" class loader. This works fine: it causes the other
+classes of this module to also be loaded from the class path. However, once execution
+calls into gRPC, Java will use the App class loader, not the extension class loader, and
+will fail to find some of the classes, resulting in Java exceptions. Worse, in some cases,
+Java may load the same class from both class loaders. To Java, these are not the same
+classes, and you will get mysterious errors as a result.
+
+For now, the lesson is: don't try to debug the extension in the Broker in the IDE. Use
+one of the above options instead.
+
+For reference (and in case we figure out a solution to the class loader conflict),
+the way to debug the Broker in an IDE is the following:
 
 * Build your branch. Use the `-P bundle-contrib-exts` flag in place of `-P dist`, as described
   above.
@@ -156,7 +203,7 @@ extension in a running Broker. The easiest way to do this is:
 * In your IDE, define a launch configuration for the Broker.
   * The launch command is `server broker`
   * Add the following JVM arguments:
-  
+
 ```text
 --add-exports java.base/jdk.internal.perf=ALL-UNNAMED
 --add-exports jdk.management/com.sun.management.internal=ALL-UNNAMED
@@ -201,3 +248,6 @@ This is not the first project to have created a gRPC API for Druid. Others inclu
 * [Druid gRPC-json server extension](https://github.com/apache/druid/pull/6798)
 
 Full credit goes to those who have gone this way before.
+
+Note that the class loader solution used by the two code bases above turned out
+to not be needed. See the notes above about the class loader issues.

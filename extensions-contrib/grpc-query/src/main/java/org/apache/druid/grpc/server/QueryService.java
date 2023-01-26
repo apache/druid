@@ -23,6 +23,8 @@ import io.grpc.stub.StreamObserver;
 import org.apache.druid.grpc.proto.QueryGrpc;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 
 /**
  * Implementation of the gRPC Query service. Provides a single method
@@ -41,7 +43,13 @@ class QueryService extends QueryGrpc.QueryImplBase
   @Override
   public void submitQuery(QueryRequest request, StreamObserver<QueryResponse> responseObserver)
   {
-    QueryResponse reply = driver.submitQuery(request);
+    // TODO: How will we get the auth result for gRPC?
+    AuthenticationResult authResult = new AuthenticationResult(
+        "superUser",
+        AuthConfig.ALLOW_ALL_NAME,
+        null, null
+    );
+    QueryResponse reply = driver.submitQuery(request, authResult);
     responseObserver.onNext(reply);
     responseObserver.onCompleted();
   }

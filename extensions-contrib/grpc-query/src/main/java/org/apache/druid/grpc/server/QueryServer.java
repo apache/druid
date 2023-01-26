@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Basic gRPC server adapted from the gRPC examples. Delegates to the
- * {@link QueryDriverImpl} class to do the actual work of running the query.
+ * {@link QueryDriver} class to do the actual work of running the query.
  * <p>
  * This class is preliminary. It is good enough for unit tests, but a bit more work
  * is needed to integrate this class into the Druid server.
@@ -59,7 +59,7 @@ public class QueryServer
 
   public void start() throws IOException
   {
-     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
+    server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
         .addService(new QueryService(driver))
         .build()
         .start();

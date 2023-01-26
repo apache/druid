@@ -25,7 +25,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.server.QueryDriverImpl;
+import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -45,13 +45,13 @@ public class DriverTest
   @ClassRule
   public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   private static QueryFrameworkFixture frameworkFixture;
-  private static QueryDriverImpl driver;
+  private static QueryDriver driver;
 
   @BeforeClass
   public static void setup() throws IOException
   {
     frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
-    driver = new QueryDriverImpl(
+    driver = new QueryDriver(
         frameworkFixture.jsonMapper(),
         frameworkFixture.statementFactory()
     );

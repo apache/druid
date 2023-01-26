@@ -20,7 +20,6 @@
 package org.apache.druid.grpc.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
@@ -32,22 +31,24 @@ import org.apache.druid.sql.SqlStatementFactory;
 
 import javax.inject.Inject;
 
+import java.io.IOException;
+
+/**
+ * Initializes the gRPC endpoint (server). This version uses a Netty-based server
+ * separate from Druid's primary Jetty-based server. We may want to consider a
+ * <link a="https://github.com/grpc/grpc-java/tree/master/examples/example-servlet">
+ * recent addition to the gRPC examples</a> to run gRPC as a servlet.
+ * <p>
+ * An instance of this class is created by Guice and managed via Druid's
+ * livecycle manager.
+ */
 @ManageLifecycle
 public class GrpcEndpointInitializer
 {
   private static final Logger log = new Logger(GrpcEndpointInitializer.class);
 
-  /**
-   * Name of the extension. Must match the name in the
-   * {@code $DRUID_HOME/extensions} directory.
-   */
-  public static final String EXTENSION_NAME = "grpc-query";
-
   private final GrpcQueryConfig config;
-//  private final QueryDriver driver;
-  private final ClassLoader extnClassLoader;
-  private final ObjectMapper jsonMapper;
-  private final SqlStatementFactory sqlStatementFactory;
+  private final QueryDriver driver;
 
   private QueryServer server;
 
@@ -55,63 +56,37 @@ public class GrpcEndpointInitializer
   public GrpcEndpointInitializer(
       GrpcQueryConfig config,
       final @Json ObjectMapper jsonMapper,
-      final @NativeQuery SqlStatementFactory sqlStatementFactory,
-      final ExtensionsLoader extensionsLoader
+      final @NativeQuery SqlStatementFactory sqlStatementFactory
   )
   {
     this.config = config;
-//    this.driver = new QueryDriver(jsonMapper, sqlStatementFactory);
-    this.jsonMapper = jsonMapper;
-    this.sqlStatementFactory = sqlStatementFactory;
-
-    // Retrieve the class loader for this extension. Necessary because, in an IDE,
-    // the class loader for the extension's files will be the AppClassLoader since
-    // the IDE puts our classes on the class path.
-    this.extnClassLoader = extensionsLoader.getClassLoaderForExtension(EXTENSION_NAME);
-    if (this.extnClassLoader == null) {
-      throw new ISE("No extension class loader for %s: wrong name?", EXTENSION_NAME);
-    }
+    this.driver = new QueryDriver(jsonMapper, sqlStatementFactory);
   }
 
   @LifecycleStart
   public void start()
   {
-//    ClassLoader thisLoader = getClass().getClassLoader();
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-
+    server = new QueryServer(config.getPort(), driver);
     try {
-      Thread.currentThread().setContextClassLoader(extnClassLoader);
-//      try {
-//        Class<?> found = extnClassLoader.loadClass("io.netty.handler.codec.http2.Http2Headers");
-//      } catch (ClassNotFoundException e) {
-//        throw new ISE(e, "Fatal error: grpc query server startup failed");
-//      }
+      server.start();
+    }
+    catch (IOException e) {
+      // Indicates an error when gRPC tried to start the server
+      // (such the port is already in use.)
+      log.error(e, "Fatal error: gRPC query server startup failed");
 
-      try {
-        QueryDriverImpl driver = new QueryDriverImpl(jsonMapper, sqlStatementFactory);
-        Class<?> serverClass = extnClassLoader.loadClass("org.apache.druid.grpc.server.QueryServer");
-        Class<?> driverClass = extnClassLoader.loadClass("org.apache.druid.grpc.server.QueryDriver");
-//        Object driver = driverClass
-//            .getConstructor(ObjectMapper.class, SqlStatementFactory.class)
-//            .newInstance(jsonMapper, sqlStatementFactory);
-//        Class<?> builderClass = extnClassLoader.loadClass("org.apache.druid.grpc.server.ServerBuilder");
-//        ServerBuilder builder = builderClass.getConstructor().newInstance();
-//        server = builder.buildServer(config.getPort(), driver);
-        server = (QueryServer) serverClass
-            .getConstructor(Integer.class, driverClass)
-            .newInstance(config.getPort(), driver);
+      // This exception will bring down the Broker as there is not much we can
+      // do if we can't start the gRPC endpoint.
+      throw new ISE(e, "Fatal error: grpc query server startup failed");
+    }
+    catch (Throwable t) {
+      // Catch-all for other errors. The most likely error is that some class was not found
+      // (that is, class loader issues in an IDE, or a jar missing in the extension).
+      log.error(t, "Fatal error: gRPC query server startup failed");
 
-//        server = new QueryServer(config.getPort(), driver);
-        server.start();
-      } catch (Exception e) {
-        log.error(e, "Fatal error: gRPC query server startup failed");
-        throw new ISE(e, "Fatal error: grpc query server startup failed");
-      } catch (Throwable t) {
-        log.error(t, "Fatal error: gRPC query server startup failed");
-        throw t;
-      }
-    } finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
+      // This exception will bring down the Broker as there is not much we can
+      // do if we can't start the gRPC endpoint.
+      throw t;
     }
   }
 
@@ -121,7 +96,9 @@ public class GrpcEndpointInitializer
     if (server != null) {
       try {
         server.blockUntilShutdown();
-      } catch (InterruptedException e) {
+      }
+      catch (InterruptedException e) {
+        // Just warn. We're shutting down anyway, so no need to throw an exception.
         log.warn(e, "gRPC query server shutdown failed");
       }
       server = null;
