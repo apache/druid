@@ -22,6 +22,7 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,6 +30,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
@@ -78,6 +81,11 @@ public class HttpIndexingServiceClientTest
     final SamplerResponse samplerResponse = new SamplerResponse(
         2,
         2,
+        ImmutableList.of(
+            new StringDimensionSchema("x"),
+            new StringDimensionSchema("y")
+        ),
+        RowSignature.builder().addTimeColumn().add("x", ColumnType.STRING).add("y", ColumnType.STRING).build(),
         ImmutableList.of(
             new SamplerResponse.SamplerResponseRow(
                 ImmutableMap.of("time", "2020-01-01", "x", "123", "y", "456"),
@@ -132,6 +140,11 @@ public class HttpIndexingServiceClientTest
     final SamplerResponse samplerResponse = new SamplerResponse(
         2,
         2,
+        ImmutableList.of(
+            new StringDimensionSchema("x"),
+            new StringDimensionSchema("y")
+        ),
+        RowSignature.builder().addTimeColumn().add("x", ColumnType.STRING).add("y", ColumnType.STRING).build(),
         ImmutableList.of(
             new SamplerResponse.SamplerResponseRow(
                 ImmutableMap.of("time", "2020-01-01", "x", "123", "y", "456"),

@@ -22,6 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.util.List;
 import java.util.Map;
@@ -32,17 +34,24 @@ public class SamplerResponse
 {
   private final int numRowsRead;
   private final int numRowsIndexed;
+
+  private final List<DimensionSchema> dimensions;
+  private final RowSignature segmentSchema;
   private final List<SamplerResponseRow> data;
 
   @JsonCreator
   public SamplerResponse(
       @JsonProperty("numRowsRead") int numRowsRead,
       @JsonProperty("numRowsIndexed") int numRowsIndexed,
+      @JsonProperty("dimensions") List<DimensionSchema> dimensions,
+      @JsonProperty("segmentSchema") RowSignature segmentSchema,
       @JsonProperty("data") List<SamplerResponseRow> data
   )
   {
     this.numRowsRead = numRowsRead;
     this.numRowsIndexed = numRowsIndexed;
+    this.dimensions = dimensions;
+    this.segmentSchema = segmentSchema;
     this.data = data;
   }
 
@@ -56,6 +65,18 @@ public class SamplerResponse
   public int getNumRowsIndexed()
   {
     return numRowsIndexed;
+  }
+
+  @JsonProperty
+  public List<DimensionSchema> getDimensions()
+  {
+    return dimensions;
+  }
+
+  @JsonProperty
+  public RowSignature getSegmentSchema()
+  {
+    return segmentSchema;
   }
 
   @JsonProperty
@@ -76,13 +97,14 @@ public class SamplerResponse
     SamplerResponse that = (SamplerResponse) o;
     return getNumRowsRead() == that.getNumRowsRead() &&
            getNumRowsIndexed() == that.getNumRowsIndexed() &&
-           Objects.equals(getData(), that.getData());
+           Objects.equals(segmentSchema, that.segmentSchema) &&
+           Objects.equals(data, that.data);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getNumRowsRead(), getNumRowsIndexed(), getData());
+    return Objects.hash(getNumRowsRead(), getNumRowsIndexed(), segmentSchema, data);
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
