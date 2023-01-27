@@ -107,7 +107,7 @@ jobs:
       matrix:
         sql_compatibility: [ false, true ]
     name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
-    uses: tejaswini-imply/druid/.github/workflows/ut.yml@update_uts_gha
+    uses: ${{ github.repository }}/.github/workflows/ut.yml@master
     needs: build
     with:
       jdk: 8
@@ -120,7 +120,7 @@ jobs:
         jdk: [11, 17]
         sql_compatibility: [ false, true ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: tejaswini-imply/druid/.github/workflows/ut.yml@update_uts_gha
+    uses: ${{ github.repository }}/.github/workflows/ut.yml@master
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
@@ -128,8 +128,8 @@ jobs:
 
   its:
     needs: unit-tests
-    uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
+    uses: ${{ github.repository }}/.github/workflows/it.yml@master
 
   revised-its:
-    needs: build
-    uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha
+    needs: unit-tests
+    uses: ${{ github.repository }}/.github/workflows/it-ex.yml@master
