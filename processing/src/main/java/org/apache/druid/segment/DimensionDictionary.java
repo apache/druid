@@ -156,20 +156,35 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
       return addNull();
     }
 
-    long stamp = lock.writeLock();
+    long stamp = lock.tryReadLock();
+    if (stamp != 0) {
+      try {
+        int existing = valueToId.getInt(originalValue);
+        if (existing >= 0) {
+          return existing;
+        }
+      }
+      finally {
+        lock.unlockRead(stamp);
+      }
+    }
+
+    long extraSize = 0;
+    if (computeOnHeapSize()) {
+      // Add size of new dim value and 2 references (valueToId and idToValue)
+      extraSize = estimateSizeOfValue(originalValue) + 2L * Long.BYTES;
+    }
+
+    stamp = lock.writeLock();
     try {
-      int prev = valueToId.getInt(originalValue);
+      final int index = idToValue.size();
+      final int prev = valueToId.putIfAbsent(originalValue, index);
       if (prev >= 0) {
         return prev;
       }
-      final int index = idToValue.size();
-      valueToId.put(originalValue, index);
-      idToValue.add(originalValue);
 
-      if (computeOnHeapSize()) {
-        // Add size of new dim value and 2 references (valueToId and idToValue)
-        sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
-      }
+      idToValue.add(originalValue);
+      sizeInBytes.addAndGet(extraSize);
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
