@@ -106,7 +106,7 @@ In this section you run some queries using aggregate functions and perform some 
 
 8. From the engine menu you can also edit the query context and turn off some query defaults. 
 
-   Uncheck **Use approximate COUNT(DISTINCT)** and rerun the query. The country count in the results decreases because the computation has become more exact. See [SQL aggregation functions](../querying/sql-aggregations.md) for more information.
+   Deselect **Use approximate COUNT(DISTINCT)** and rerun the query. The country count in the results decreases because the computation has become more exact. See [SQL aggregation functions](../querying/sql-aggregations.md) for more information.
 
 9.  Query view can provide information about a function, in case you aren't sure exactly what it does.
 
