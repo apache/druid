@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
@@ -119,7 +120,8 @@ public class ShuffleResourceTest
         return Futures.immediateFuture(result);
       }
     };
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
+    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }

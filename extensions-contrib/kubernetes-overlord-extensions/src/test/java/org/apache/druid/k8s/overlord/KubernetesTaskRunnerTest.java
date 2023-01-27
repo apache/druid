@@ -38,6 +38,7 @@ import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -100,7 +101,7 @@ public class KubernetesTaskRunnerTest
   private StartupLoggingConfig startupLoggingConfig;
   private ObjectMapper jsonMapper;
   private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private TaskConfig taskConfig;
+  private TaskStorageDirTracker dirTracker;
   private TaskLogPusher taskLogPusher;
   private DruidNode node;
 
@@ -135,14 +136,14 @@ public class KubernetesTaskRunnerTest
   @Before
   public void setUp() throws IOException
   {
-    List<String> baseTaskDirPaths = null;
+    List<String> baseTaskDirPaths = ImmutableList.of("src/test/resources");
     if (useMultipleBaseTaskDirPaths) {
       baseTaskDirPaths = ImmutableList.of(
           temporaryFolder.newFolder().toString(),
           temporaryFolder.newFolder().toString()
       );
     }
-    taskConfig = new TaskConfig(
+    final TaskConfig taskConfig = new TaskConfig(
         "src/test/resources",
         "src/test/resources",
         null,
@@ -159,6 +160,7 @@ public class KubernetesTaskRunnerTest
         false,
         baseTaskDirPaths
     );
+    dirTracker = new TaskStorageDirTracker(taskConfig);
     kubernetesTaskRunnerConfig = new KubernetesTaskRunnerConfig();
     kubernetesTaskRunnerConfig.namespace = "test";
     kubernetesTaskRunnerConfig.javaOptsArray = Collections.singletonList("-Xmx2g");
@@ -204,14 +206,14 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         peonClient,
-        node
+        node,
+        dirTracker
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -260,14 +262,14 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         peonClient,
-        node
+        node,
+        dirTracker
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
 
@@ -327,14 +329,14 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         peonClient,
-        node
+        node,
+        dirTracker
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -391,14 +393,14 @@ public class KubernetesTaskRunnerTest
     when(peonClient.cleanUpJob(eq(k8sTaskId))).thenReturn(true);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         adapter,
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         peonClient,
-        node
+        node,
+        dirTracker
     );
     KubernetesTaskRunner spyRunner = spy(taskRunner);
     Collection<? extends TaskRunnerWorkItem> workItems = spyRunner.getKnownTasks();
@@ -434,14 +436,14 @@ public class KubernetesTaskRunnerTest
     when(peonClient.getMainJobPod(any())).thenReturn(null).thenReturn(pod);
 
     KubernetesTaskRunner taskRunner = new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         mock(K8sTaskAdapter.class),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         peonClient,
-        node
+        node,
+        dirTracker
     );
 
     RunnerTaskState state = taskRunner.getRunnerTaskState("foo");
@@ -464,14 +466,14 @@ public class KubernetesTaskRunnerTest
         Period.millis(1)
     );
     assertThrows(IllegalArgumentException.class, () -> new KubernetesTaskRunner(
-        taskConfig,
         startupLoggingConfig,
         mock(K8sTaskAdapter.class),
         kubernetesTaskRunnerConfig,
         taskQueueConfig,
         taskLogPusher,
         mock(DruidKubernetesPeonClient.class),
-        node
+        node,
+        dirTracker
     ));
   }
 

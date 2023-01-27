@@ -59,6 +59,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -712,7 +713,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
   }
 

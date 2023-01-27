@@ -19,7 +19,9 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -64,8 +66,9 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = temporaryFolder.newFolder();
-    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
+        ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
+    );
     when(toolbox.getConfig()).thenReturn(config);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
@@ -80,7 +83,10 @@ public class AbstractTaskTest
       {
         // create a reports file to test the taskLogPusher pushes task reports
         String result = super.setup(toolbox);
-        File attemptDir = Paths.get(folder.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
+        File attemptDir = Paths.get(
+            dirTracker.getBaseTaskDirs().get(0).getAbsolutePath(),
+            "attempt", toolbox.getAttemptId()
+        ).toFile();
         File reportsDir = new File(attemptDir, "report.json");
         FileUtils.write(reportsDir, "foo", StandardCharsets.UTF_8);
         return result;
@@ -108,8 +114,9 @@ public class AbstractTaskTest
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(false);
     File folder = temporaryFolder.newFolder();
-    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
+    when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);

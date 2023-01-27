@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
@@ -64,21 +65,24 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   protected final ConcurrentHashMap<String, WorkItemType> tasks = new ConcurrentHashMap<>();
   protected final ObjectMapper jsonMapper;
   protected final TaskConfig taskConfig;
+  protected final TaskStorageDirTracker dirTracker;
 
   public BaseRestorableTaskRunner(
       ObjectMapper jsonMapper,
-      TaskConfig taskConfig
+      TaskConfig taskConfig,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskConfig = taskConfig;
+    this.dirTracker = dirTracker;
   }
 
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
     final Map<File, TaskRestoreInfo> taskRestoreInfos = new HashMap<>();
-    for (File baseDir : taskConfig.getBaseTaskDirs()) {
+    for (File baseDir : dirTracker.getBaseTaskDirs()) {
       File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
       if (restoreFile.exists()) {
         try {
@@ -96,8 +100,8 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       final TaskRestoreInfo taskRestoreInfo = entry.getValue();
       for (final String taskId : taskRestoreInfo.getRunningTasks()) {
         try {
-          taskConfig.addTask(taskId, baseDir);
-          final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
+          dirTracker.addTask(taskId, baseDir);
+          final File taskFile = new File(dirTracker.getTaskDir(taskId), "task.json");
           final Task task = jsonMapper.readValue(taskFile, Task.class);
 
           if (!task.getId().equals(taskId)) {
@@ -108,13 +112,13 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
             LOG.info("Restoring task[%s] from location[%s].", task.getId(), baseDir);
             retVal.add(Pair.of(task, run(task)));
           } else {
-            taskConfig.removeTask(taskId);
+            dirTracker.removeTask(taskId);
           }
         }
         catch (Exception e) {
           LOG.warn(e, "Failed to restore task[%s] from path[%s]. Trying to restore other tasks.",
                    taskId, baseDir);
-          taskConfig.removeTask(taskId);
+          dirTracker.removeTask(taskId);
         }
       }
     }
@@ -214,7 +218,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       return;
     }
 
-    for (File baseDir : taskConfig.getBaseTaskDirs()) {
+    for (File baseDir : dirTracker.getBaseTaskDirs()) {
       File restoreFile = new File(baseDir, TASK_RESTORE_FILENAME);
       if (restoreFile.exists()) {
         try {
@@ -232,7 +236,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
 
   private File getRestoreFile(String taskId)
   {
-    return new File(taskConfig.getBaseTaskDir(taskId), TASK_RESTORE_FILENAME);
+    return new File(dirTracker.getBaseTaskDir(taskId), TASK_RESTORE_FILENAME);
   }
 
   protected static class TaskRestoreInfo

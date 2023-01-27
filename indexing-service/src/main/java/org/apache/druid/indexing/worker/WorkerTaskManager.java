@@ -35,7 +35,7 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
@@ -103,28 +103,28 @@ public class WorkerTaskManager
   //synchronizes access to "running", "completed" and "changeHistory"
   protected final Object lock = new Object();
 
-  private final TaskConfig taskConfig;
-
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
   private final DruidLeaderClient overlordClient;
 
+  private final TaskStorageDirTracker dirTracker;
+
   @Inject
   public WorkerTaskManager(
       ObjectMapper jsonMapper,
       TaskRunner taskRunner,
-      TaskConfig taskConfig,
-      @IndexingService DruidLeaderClient overlordClient
+      @IndexingService DruidLeaderClient overlordClient,
+      TaskStorageDirTracker dirTracker
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskRunner = taskRunner;
-    this.taskConfig = taskConfig;
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+    this.dirTracker = dirTracker;
   }
 
   @LifecycleStart
@@ -314,12 +314,12 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir(String taskId)
   {
-    return new File(taskConfig.getBaseTaskDir(taskId), TEMP_WORKER);
+    return new File(dirTracker.getBaseTaskDir(taskId), TEMP_WORKER);
   }
 
   private void cleanupAndMakeTmpTaskDirs() throws IOException
   {
-    for (File baseTaskDir : taskConfig.getBaseTaskDirs()) {
+    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
       cleanupAndMakeTmpTaskDir(baseTaskDir);
     }
   }
@@ -343,12 +343,12 @@ public class WorkerTaskManager
 
   public File getAssignedTaskFile(String taskId)
   {
-    return new File(new File(taskConfig.getBaseTaskDir(taskId), ASSIGNED), taskId);
+    return new File(new File(dirTracker.getBaseTaskDir(taskId), ASSIGNED), taskId);
   }
 
   public List<File> getAssignedTaskDirs()
   {
-    return taskConfig.getBaseTaskDirs()
+    return dirTracker.getBaseTaskDirs()
                      .stream()
                      .map(location -> new File(location.getPath(), ASSIGNED))
                      .collect(Collectors.toList());
@@ -356,7 +356,7 @@ public class WorkerTaskManager
 
   private void initAssignedTasks() throws IOException
   {
-    for (File baseTaskDir : taskConfig.getBaseTaskDirs()) {
+    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
       initAssignedTasks(baseTaskDir);
     }
   }
@@ -459,7 +459,7 @@ public class WorkerTaskManager
 
   public List<File> getCompletedTaskDirs()
   {
-    return taskConfig.getBaseTaskDirs()
+    return dirTracker.getBaseTaskDirs()
                      .stream()
                      .map(location -> new File(location.getPath(), COMPLETED))
                      .collect(Collectors.toList());
@@ -467,7 +467,7 @@ public class WorkerTaskManager
 
   public File getCompletedTaskFile(String taskId)
   {
-    return new File(new File(taskConfig.getBaseTaskDir(taskId), COMPLETED), taskId);
+    return new File(new File(dirTracker.getBaseTaskDir(taskId), COMPLETED), taskId);
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
@@ -494,7 +494,7 @@ public class WorkerTaskManager
 
   private void initCompletedTasks() throws IOException
   {
-    for (File baseTaskDir : taskConfig.getBaseTaskDirs()) {
+    for (File baseTaskDir : dirTracker.getBaseTaskDirs()) {
       initCompletedTasks(baseTaskDir);
     }
   }
@@ -607,7 +607,7 @@ public class WorkerTaskManager
                   log.error(ex, "Failed to delete completed task from disk [%s].", taskFile);
                 }
                 finally {
-                  taskConfig.removeTask(taskId);
+                  dirTracker.removeTask(taskId);
                 }
 
               }

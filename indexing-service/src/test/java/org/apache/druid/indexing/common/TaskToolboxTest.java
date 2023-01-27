@@ -105,24 +105,25 @@ public class TaskToolboxTest
     EasyMock.expect(mockIndexMergerV9.create(true)).andReturn(indexMergerV9).anyTimes();
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
+    TaskConfig taskConfig = new TaskConfig(
+        temporaryFolder.newFile().toString(),
+        null,
+        null,
+        50000,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(
-            temporaryFolder.newFile().toString(),
-            null,
-            null,
-            50000,
-            null,
-            false,
-            null,
-            null,
-            null,
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false,
-            null
-        ),
+        taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
         mockEmitter,
@@ -159,7 +160,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        "1"
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
   }
 

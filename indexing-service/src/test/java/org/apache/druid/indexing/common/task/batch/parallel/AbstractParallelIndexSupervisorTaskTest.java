@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -246,26 +247,28 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
+    final TaskConfig taskConfig = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     intermediaryDataManager = new LocalIntermediaryDataManager(
         new WorkerConfig(),
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false,
-            null
-        ),
-        null
+        taskConfig,
+        null,
+        new TaskStorageDirTracker(taskConfig)
     );
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);

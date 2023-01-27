@@ -28,9 +28,11 @@ import com.google.inject.Module;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.HadoopTask;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -91,6 +93,7 @@ public class ResetCluster extends GuiceRunnable
               new DruidNode("tools", "localhost", false, -1, null, true, false)
           );
           JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
+          binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
         },
         new IndexingServiceTaskLogsModule()
     );

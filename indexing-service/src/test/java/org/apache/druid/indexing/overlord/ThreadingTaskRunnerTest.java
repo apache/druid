@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -48,31 +49,33 @@ public class ThreadingTaskRunnerTest
   @Test
   public void testTaskStatusWhenTaskThrowsExceptionWhileRunning() throws ExecutionException, InterruptedException
   {
+    final TaskConfig taskConfig = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        ImmutableList.of(),
+        false,
+        new Period("PT0S"),
+        new Period("PT10S"),
+        ImmutableList.of(),
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     ThreadingTaskRunner runner = new ThreadingTaskRunner(
         mockTaskToolboxFactory(),
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            ImmutableList.of(),
-            false,
-            new Period("PT0S"),
-            new Period("PT10S"),
-            ImmutableList.of(),
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false,
-            null
-        ),
+        taskConfig,
         new WorkerConfig(),
         new NoopTaskLogs(),
         new DefaultObjectMapper(),
         new TestAppenderatorsManager(),
         new MultipleFileTaskReportFileWriter(),
-        new DruidNode("middleManager", "host", false, 8091, null, true, false)
+        new DruidNode("middleManager", "host", false, 8091, null, true, false),
+        new TaskStorageDirTracker(taskConfig)
     );
 
     Future<TaskStatus> statusFuture = runner.run(new AbstractTask("id", "datasource", null)

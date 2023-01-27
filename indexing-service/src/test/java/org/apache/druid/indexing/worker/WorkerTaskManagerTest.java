@@ -29,6 +29,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestTasks;
@@ -132,6 +133,7 @@ public class WorkerTaskManagerTest
         false,
         baseTaskDirPaths
     );
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
@@ -179,13 +181,14 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                "1"
+                "1",
+                new TaskStorageDirTracker(taskConfig)
             ),
             taskConfig,
             location
         ),
-        taskConfig,
-        EasyMock.createNiceMock(DruidLeaderClient.class)
+        EasyMock.createNiceMock(DruidLeaderClient.class),
+        dirTracker
     )
     {
       @Override

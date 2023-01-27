@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.config;
+package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.ISE;
@@ -27,47 +27,31 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class TaskConfigTest
+public class TaskStorageDirTrackerTest
 {
 
-  private TaskConfig taskConfig;
+  private TaskStorageDirTracker dirTracker;
 
   @Before
   public void setup()
   {
-    taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("A", "B", "C")
-    );
+    dirTracker = new TaskStorageDirTracker(ImmutableList.of("A", "B", "C"));
   }
 
   @Test
   public void testGetOrSelectTaskDir()
   {
     // Test round-robin allocation
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task1").getPath(), "B");
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task2").getPath(), "C");
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task3").getPath(), "A");
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task4").getPath(), "B");
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task5").getPath(), "C");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task1").getPath(), "B");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task2").getPath(), "C");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task3").getPath(), "A");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task4").getPath(), "B");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task5").getPath(), "C");
 
     // Test that the result is always the same
     for (int i = 0; i < 10; i++) {
-      Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
+      Assert.assertEquals(dirTracker.getBaseTaskDir("task0").getPath(), "A");
     }
   }
 
@@ -75,20 +59,20 @@ public class TaskConfigTest
   public void testAddTask()
   {
     // Test add after get. task0 -> "A"
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
-    taskConfig.addTask("task0", new File("A"));
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task0").getPath(), "A");
+    dirTracker.addTask("task0", new File("A"));
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task0").getPath(), "A");
 
     // Assign base path directly
-    taskConfig.addTask("task1", new File("C"));
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task1").getPath(), "C");
+    dirTracker.addTask("task1", new File("C"));
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task1").getPath(), "C");
   }
 
   @Test
   public void testAddTaskThrowsISE()
   {
     // Test add after get. task0 -> "A"
-    Assert.assertEquals(taskConfig.getBaseTaskDir("task0").getPath(), "A");
-    Assert.assertThrows(ISE.class, () -> taskConfig.addTask("task0", new File("B")));
+    Assert.assertEquals(dirTracker.getBaseTaskDir("task0").getPath(), "A");
+    Assert.assertThrows(ISE.class, () -> dirTracker.addTask("task0", new File("B")));
   }
 }

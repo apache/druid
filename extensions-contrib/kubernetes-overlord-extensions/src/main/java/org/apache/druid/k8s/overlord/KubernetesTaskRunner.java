@@ -35,7 +35,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
@@ -101,7 +101,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ScheduledExecutorService cleanupExecutor;
 
   protected final ConcurrentHashMap<String, K8sWorkItem> tasks = new ConcurrentHashMap<>();
-  private final TaskConfig taskConfig;
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskAdapter<Pod, Job> adapter;
 
@@ -111,20 +110,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final ListeningExecutorService exec;
   private final KubernetesPeonClient client;
   private final DruidNode node;
+  private final TaskStorageDirTracker dirTracker;
 
 
   public KubernetesTaskRunner(
-      TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       TaskAdapter<Pod, Job> adapter,
       KubernetesTaskRunnerConfig k8sConfig,
       TaskQueueConfig taskQueueConfig,
       TaskLogPusher taskLogPusher,
       KubernetesPeonClient client,
-      DruidNode node
+      DruidNode node,
+      TaskStorageDirTracker dirTracker
   )
   {
-    this.taskConfig = taskConfig;
     this.startupLoggingConfig = startupLoggingConfig;
     this.adapter = adapter;
     this.k8sConfig = k8sConfig;
@@ -140,6 +139,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskQueueConfig.getMaxSize() < Integer.MAX_VALUE,
         "The task queue bounds how many concurrent k8s tasks you can have"
     );
+    this.dirTracker = dirTracker;
   }
 
 
@@ -166,7 +166,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     PeonCommandContext context = new PeonCommandContext(
                         generateCommand(task),
                         javaOpts(task),
-                        taskConfig.getTaskDir(task.getId()),
+                        dirTracker.getTaskDir(task.getId()),
                         node.isEnableTlsPort()
                     );
                     Job job = adapter.fromTask(task, context);
@@ -225,7 +225,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                     Files.deleteIfExists(log);
                   }
                   client.cleanUpJob(new K8sTaskId(task.getId()));
-                  taskConfig.removeTask(task.getId());
+                  dirTracker.removeTask(task.getId());
                   synchronized (tasks) {
                     tasks.remove(task.getId());
                   }
@@ -269,7 +269,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void shutdown(String taskid, String reason)
   {
     client.cleanUpJob(new K8sTaskId(taskid));
-    taskConfig.removeTask(taskid);
+    dirTracker.removeTask(taskid);
   }
 
 
@@ -348,7 +348,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(taskConfig.getTaskDir(task.getId()).toString());
+    command.add(dirTracker.getTaskDir(task.getId()).toString());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();

@@ -42,6 +42,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
@@ -123,10 +124,11 @@ public class ForkingTaskRunner
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
       @Self DruidNode node,
-      StartupLoggingConfig startupLoggingConfig
+      StartupLoggingConfig startupLoggingConfig,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.config = config;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
@@ -153,8 +155,8 @@ public class ForkingTaskRunner
                 public TaskStatus call()
                 {
 
-                  final String attemptId = String.valueOf(getNextAttemptID(taskConfig, task.getId()));
-                  final File taskDir = taskConfig.getTaskDir(task.getId());
+                  final String attemptId = String.valueOf(getNextAttemptID(dirTracker, task.getId()));
+                  final File taskDir = dirTracker.getTaskDir(task.getId());
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
                   final ProcessHolder processHolder;
@@ -887,9 +889,9 @@ public class ForkingTaskRunner
   }
 
   @VisibleForTesting
-  static int getNextAttemptID(TaskConfig config, String taskId)
+  static int getNextAttemptID(TaskStorageDirTracker dirTracker, String taskId)
   {
-    File taskDir = config.getTaskDir(taskId);
+    File taskDir = dirTracker.getTaskDir(taskId);
     File attemptDir = new File(taskDir, "attempt");
     try {
       FileUtils.mkdirp(attemptDir);

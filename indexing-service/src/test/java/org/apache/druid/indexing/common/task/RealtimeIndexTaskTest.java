@@ -43,6 +43,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestFirehose;
@@ -1014,7 +1015,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
 
     return toolboxFactory.build(task);

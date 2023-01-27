@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
@@ -138,8 +139,9 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
 
     // Setup data manager with expiry timeout 1s and initial delay of 1 second
     WorkerConfig workerConfig = new TestWorkerConfig(1, 1, timeoutPeriod);
+    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     LocalIntermediaryDataManager intermediaryDataManager =
-        new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
+        new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     intermediaryDataManager.addSegment(supervisorTaskId, subTaskId, segment, segmentFile);
 
     intermediaryDataManager
