@@ -200,13 +200,18 @@ function verify_docker_file {
 # Print environment for debugging
 #env
 
+DOCKER_COMPOSE=docker-compose
+
+# Change to the following once all builds run on a suitable Docker version
+#DOCKER_COMPOSE="docker compose"
+
 case $CMD in
   "-h" )
     usage
     ;;
   "help" )
     usage
-    docker compose help
+    $DOCKER_COMPOSE help
     ;;
   "prepare" )
     category $*
@@ -219,7 +224,7 @@ case $CMD in
     build_shared_dir
     docker_file
       cd $COMPOSE_DIR
-    docker compose $DOCKER_ARGS up -d
+    $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging
     #show_status
     ;;
@@ -235,12 +240,12 @@ case $CMD in
     #show_status
     verify_docker_file
       cd $COMPOSE_DIR
-    docker compose $DOCKER_ARGS $CMD
+    $DOCKER_COMPOSE $DOCKER_ARGS $CMD
     ;;
   "*" )
     category $*
     verify_docker_file
       cd $COMPOSE_DIR
-    docker compose $DOCKER_ARGS $CMD
+    $DOCKER_COMPOSE $DOCKER_ARGS $CMD
     ;;
 esac
