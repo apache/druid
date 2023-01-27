@@ -28,6 +28,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -280,6 +282,9 @@ public class NestedDataTestUtils
       List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
       for (int j = 0; j < numCopies; j++) {
         inputStreams.add(new FileInputStream(readFileFromClasspath(inputFileName)));
+        if (j + 1 < numCopies) {
+          inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
+        }
       }
       SequenceInputStream inputDataStream = new SequenceInputStream(Collections.enumeration(inputStreams));
       File segmentDir = tempFolder.newFolder();

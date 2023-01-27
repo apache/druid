@@ -336,8 +336,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         closer,
         Granularities.HOUR,
         false,
-        100,
-        100,
+        5,
+        10,
         1
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
@@ -345,7 +345,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> results = seq.toList();
     logResults(results);
     Assert.assertEquals(1, results.size());
-    Assert.assertEquals(100, ((List) results.get(0).getEvents()).size());
+    Assert.assertEquals(80, ((List) results.get(0).getEvents()).size());
   }
 
   @Test
