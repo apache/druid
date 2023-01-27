@@ -332,7 +332,41 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatMustStartWithDot()
+  public void testEmptyJsonPath()
+  {
+    List<NestedPathPart> pathParts = NestedPathFinder.parseJsonPath("$['']");
+    Assert.assertEquals(1, pathParts.size());
+    Assert.assertEquals("", pathParts.get(0).getPartIdentifier());
+    Assert.assertEquals("$['']", NestedPathFinder.toNormalizedJsonPath(pathParts));
+
+
+    pathParts = NestedPathFinder.parseJsonPath("$.x.y['']");
+    Assert.assertEquals(3, pathParts.size());
+    Assert.assertEquals("", pathParts.get(2).getPartIdentifier());
+    Assert.assertEquals("$.x.y['']", NestedPathFinder.toNormalizedJsonPath(pathParts));
+  }
+
+  @Test
+  public void testEmptyJqPath()
+  {
+    List<NestedPathPart> pathParts = NestedPathFinder.parseJqPath(".\"\"");
+    Assert.assertEquals(1, pathParts.size());
+    Assert.assertEquals("", pathParts.get(0).getPartIdentifier());
+    Assert.assertEquals(".\"\"", NestedPathFinder.toNormalizedJqPath(pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".[\"\"]");
+    Assert.assertEquals(1, pathParts.size());
+    Assert.assertEquals("", pathParts.get(0).getPartIdentifier());
+    Assert.assertEquals(".\"\"", NestedPathFinder.toNormalizedJqPath(pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".x.y.\"\"");
+    Assert.assertEquals(3, pathParts.size());
+    Assert.assertEquals("", pathParts.get(2).getPartIdentifier());
+    Assert.assertEquals(".\"x\".\"y\".\"\"", NestedPathFinder.toNormalizedJqPath(pathParts));
+  }
+
+  @Test
+  public void testBadFormatMustStartWithDotJq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, 'x.y' is not a valid 'jq' path: must start with '.'");
@@ -340,7 +374,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatNoDot()
+  public void testBadFormatNoDotJq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage(".\"x\"\"y\"' is not a valid 'jq' path: path parts must be separated with '.'");
@@ -348,7 +382,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatWithDot2()
+  public void testBadFormatWithDot2Jq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '..\"x\"' is not a valid 'jq' path: path parts separated by '.' must not be empty");
@@ -356,7 +390,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatWithDot3()
+  public void testBadFormatWithDot3Jq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x.[1]' is not a valid 'jq' path: invalid position 3 for '[', must not follow '.' or must be contained with '\"'");
@@ -364,7 +398,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatWithDot4()
+  public void testBadFormatWithDot4Jq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x[1].[2]' is not a valid 'jq' path: invalid position 6 for '[', must not follow '.' or must be contained with '\"'");
@@ -372,7 +406,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatNotANumber()
+  public void testBadFormatNotANumberJq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x[.1]' is not a valid 'jq' path: expected number for array specifier got .1 instead. Use \"\" if this value was meant to be a field name");
@@ -380,7 +414,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatUnclosedArray()
+  public void testBadFormatUnclosedArrayJq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x[1' is not a valid 'jq' path: unterminated '['");
@@ -388,7 +422,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatUnclosedArray2()
+  public void testBadFormatUnclosedArray2Jq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x[\"1\"' is not a valid 'jq' path: unterminated '['");
@@ -396,7 +430,7 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatUnclosedQuote()
+  public void testBadFormatUnclosedQuoteJq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x.\"1' is not a valid 'jq' path: unterminated '\"'");
@@ -404,11 +438,75 @@ public class NestedPathFinderTest
   }
 
   @Test
-  public void testBadFormatUnclosedQuote2()
+  public void testBadFormatUnclosedQuote2Jq()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Bad format, '.x[\"1]' is not a valid 'jq' path: unterminated '\"'");
     NestedPathFinder.parseJqPath(".x[\"1]");
+  }
+
+  @Test
+  public void testBadFormatMustStartWithDollar()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, 'x.y' is not a valid JSONPath path: must start with '$'");
+    NestedPathFinder.parseJsonPath("x.y");
+  }
+
+  @Test
+  public void testBadFormatWithDot()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$..x' is not a valid JSONPath path: path parts separated by '.' must not be empty");
+    NestedPathFinder.parseJsonPath("$..x");
+  }
+
+  @Test
+  public void testBadFormatWithDot3()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("$.x.[1]' is not a valid JSONPath path: invalid position 4 for '[', must not follow '.' or must be contained within ");
+    NestedPathFinder.parseJsonPath("$.x.[1]");
+  }
+
+  @Test
+  public void testBadFormatWithDot4()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$.x[1].[2]' is not a valid JSONPath path: invalid position 7 for '[', must not follow '.' or must be contained within '");
+    NestedPathFinder.parseJsonPath("$.x[1].[2]");
+  }
+
+  @Test
+  public void testBadFormatNotANumber()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$.x[.1]' is not a valid JSONPath path: expected number for array specifier got .1 instead. Use ' if this value was meant to be a field name");
+    NestedPathFinder.parseJsonPath("$.x[.1]");
+  }
+
+  @Test
+  public void testBadFormatUnclosedArray()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$.x[1' is not a valid JSONPath path: unterminated '['");
+    NestedPathFinder.parseJsonPath("$.x[1");
+  }
+
+  @Test
+  public void testBadFormatUnclosedArray2()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$.x['1'' is not a valid JSONPath path: unterminated '['");
+    NestedPathFinder.parseJsonPath("$.x['1'");
+  }
+
+  @Test
+  public void testBadFormatUnclosedQuote2()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Bad format, '$.x['1]' is not a valid JSONPath path: unterminated '");
+    NestedPathFinder.parseJsonPath("$.x['1]");
   }
 
 

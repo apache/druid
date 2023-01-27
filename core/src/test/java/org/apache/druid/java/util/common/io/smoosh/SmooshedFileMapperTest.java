@@ -21,10 +21,10 @@ package org.apache.druid.java.util.common.io.smoosh;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import junit.framework.Assert;
 import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -35,8 +35,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-/**
- */
 public class SmooshedFileMapperTest
 {
   @Rule
@@ -213,12 +211,54 @@ public class SmooshedFileMapperTest
     Assert.assertEquals(totalMemoryUsedBeforeAddingFile, totalMemoryUsedAfterAddingFile);
   }
 
+  @Test
+  public void testFilenameEscaping()
+  {
+    String rude = "totally\\r \\tlegit\nfilename,csv,is\"the\n\tproblem";
+    String expected = "totally\\r \\tlegit\\nfilename\\u002ccsv\\u002cis\"the\\n\tproblem";
+    Assert.assertEquals(expected, SmooshedFileMapper.escapeFilename(rude));
+    Assert.assertEquals(rude, SmooshedFileMapper.unescapeFilename(expected));
+    String toSplit = "hello," + expected + ",world";
+    String[] split = toSplit.split(",");
+    Assert.assertEquals(3, split.length);
+    Assert.assertEquals("hello", split[0]);
+    Assert.assertEquals(expected, split[1]);
+    Assert.assertEquals("world", split[2]);
+  }
+
+  @Test
+  public void testWhenWithCsvBreakingFileNames() throws Exception
+  {
+    String prefix = "foo/bar/";
+    String format = "\n%s,%d";
+    File baseDir = folder.newFolder("base");
+
+    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
+      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format(format, prefix, 19), 4);
+      writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
+
+      for (int i = 0; i < 19; ++i) {
+        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
+        Files.write(Ints.toByteArray(i), tmpFile);
+        smoosher.add(StringUtils.format(format, prefix, i), tmpFile);
+        tmpFile.delete();
+      }
+      writer.close();
+    }
+    validateOutput(baseDir, prefix, format);
+  }
+
   private void validateOutput(File baseDir) throws IOException
   {
     validateOutput(baseDir, "");
   }
 
   private void validateOutput(File baseDir, String prefix) throws IOException
+  {
+    validateOutput(baseDir, prefix, "%s%d");
+  }
+
+  private void validateOutput(File baseDir, String prefix, String format) throws IOException
   {
     File[] files = baseDir.listFiles();
     Arrays.sort(files);
@@ -231,7 +271,7 @@ public class SmooshedFileMapperTest
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        ByteBuffer buf = mapper.mapFile(StringUtils.format("%s%d", prefix, i));
+        ByteBuffer buf = mapper.mapFile(StringUtils.format(format, prefix, i));
         Assert.assertEquals(0, buf.position());
         Assert.assertEquals(4, buf.remaining());
         Assert.assertEquals(4, buf.capacity());

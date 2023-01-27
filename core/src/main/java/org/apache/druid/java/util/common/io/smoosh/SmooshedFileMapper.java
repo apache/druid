@@ -48,6 +48,7 @@ import java.util.TreeMap;
  */
 public class SmooshedFileMapper implements Closeable
 {
+  private static final String COMMA = "\u002c";
   private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
 
   public static SmooshedFileMapper load(File baseDir) throws IOException
@@ -85,7 +86,7 @@ public class SmooshedFileMapper implements Closeable
           throw new ISE("Wrong number of splits[%d] in line[%s]", splits.length, line);
         }
         internalFiles.put(
-            STRING_INTERNER.intern(splits[0]),
+            STRING_INTERNER.intern(unescapeFilename(splits[0])),
             new Metadata(Integer.parseInt(splits[1]), Integer.parseInt(splits[2]), Integer.parseInt(splits[3]))
         );
       }
@@ -165,5 +166,53 @@ public class SmooshedFileMapper implements Closeable
     if (thrown != null) {
       throw new RuntimeException(thrown);
     }
+  }
+
+  public static String escapeFilename(String fileName)
+  {
+    StringBuilder sb = new StringBuilder(fileName.length());
+    for (int i = 0; i < fileName.length(); i++) {
+      if ('\n' == fileName.charAt(i)) {
+        sb.append("\\n");
+      } else if (',' == fileName.charAt(i)) {
+        sb.append("\\u002c");
+      } else {
+        sb.append(fileName.charAt(i));
+      }
+    }
+    return sb.toString();
+  }
+
+  public static String unescapeFilename(String fileName)
+  {
+    StringBuilder sb = new StringBuilder(fileName.length());
+    boolean escaped = false;
+    for (int i = 0; i < fileName.length(); i++) {
+      if ('\\' == fileName.charAt(i)) {
+        escaped = true;
+      } else {
+        if (escaped) {
+          escaped = false;
+          if ('n' == fileName.charAt(i)) {
+            sb.append("\n");
+          } else if (
+              'u' == fileName.charAt(i) &&
+              '0' == fileName.charAt(i + 1) &&
+              '0' == fileName.charAt(i + 2) &&
+              '2' == fileName.charAt(i + 3) &&
+              'c' == fileName.charAt(i + 4)
+          ) {
+            sb.append(",");
+            i += 4;
+          } else {
+            sb.append('\\');
+            sb.append(fileName.charAt(i));
+          }
+        } else {
+          sb.append(fileName.charAt(i));
+        }
+      }
+    }
+    return sb.toString();
   }
 }

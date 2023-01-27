@@ -141,10 +141,6 @@ public class FileSmoosher implements Closeable
 
   public void add(String name, List<ByteBuffer> bufferToAdd) throws IOException
   {
-    if (name.contains(",")) {
-      throw new IAE("Cannot have a comma in the name of a file, got[%s].", name);
-    }
-
     if (internalFiles.get(name) != null) {
       throw new IAE("Cannot add files of the same name, already have [%s]", name);
     }
@@ -398,7 +394,7 @@ public class FileSmoosher implements Closeable
         final Metadata metadata = entry.getValue();
         out.write(
             JOINER.join(
-                entry.getKey(),
+                SmooshedFileMapper.escapeFilename(entry.getKey()),
                 metadata.getFileNum(),
                 metadata.getStartOffset(),
                 metadata.getEndOffset()
