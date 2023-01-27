@@ -77,7 +77,7 @@ jobs:
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ ( steps.maven-restore.outputs.cache-hit && format('{0} {1}', env.MVN + ' dependency:go-offline') ) || env.MVN }}
+          MVN: ${{ ( steps.maven-restore.outputs.cache-hit && format('{0} {1}', env.MVN, ' dependency:go-offline') ) || env.MVN }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
