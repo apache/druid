@@ -77,7 +77,15 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
   @Nullable
   public T getValue(int id)
   {
-    long stamp = lock.readLock();
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = idToValue.get(id);
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
       if (id == idForNull) {
         return null;
@@ -107,9 +115,18 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   public int size()
   {
-    long stamp = lock.readLock();
+    // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
+
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    int size = idToValue.size();
+    if (lock.validate(stamp)) {
+      return size;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
-      // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
       return idToValue.size();
     }
     finally {
@@ -166,7 +183,15 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   public T getMinValue()
   {
-    long stamp = lock.readLock();
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = minValue;
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
       return minValue;
     }
@@ -177,7 +202,15 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   public T getMaxValue()
   {
-    long stamp = lock.readLock();
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = maxValue;
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
       return maxValue;
     }
