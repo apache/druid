@@ -315,6 +315,75 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIngestWithMoreMergesAndScanSegments() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+
+
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedInput(
+        helper,
+        tempFolder,
+        closer,
+        Granularities.HOUR,
+        false,
+        100,
+        100,
+        1
+    );
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    logResults(results);
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(100, ((List) results.get(0).getEvents()).size());
+  }
+
+  @Test
+  public void testIngestWithMoreMergesAndScanSegmentsRollup() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+
+
+    // same rows over and over so expect same 8 rows after rollup
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedInput(
+        helper,
+        tempFolder,
+        closer,
+        Granularities.HOUR,
+        true,
+        5,
+        100,
+        1
+    );
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    logResults(results);
+  }
+
+  @Test
   public void testIngestAndScanSegmentsAndFilter() throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
@@ -386,8 +455,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   private static void logResults(List<ScanResultValue> results)
   {
     StringBuilder bob = new StringBuilder();
+    int ctr = 0;
     for (Object event : (List) results.get(0).getEvents()) {
-      bob.append("[").append(event).append("]").append("\n");
+      bob.append("row:").append(++ctr).append(" - ").append(event).append("\n");
     }
     LOG.info("results:\n%s", bob);
   }

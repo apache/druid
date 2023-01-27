@@ -45,8 +45,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class NestedDataTestUtils
@@ -210,6 +213,92 @@ public class NestedDataTestUtils
 
     final List<Segment> segments = Lists.transform(
         ImmutableList.of(segmentDir),
+        dir -> {
+          try {
+            return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
+          }
+          catch (IOException ex) {
+            throw new RuntimeException(ex);
+          }
+        }
+    );
+
+    return segments;
+  }
+
+  public static List<Segment> createSegmentsWithConcatenatedInput(
+      AggregationTestHelper helper,
+      TemporaryFolder tempFolder,
+      Closer closer,
+      Granularity granularity,
+      boolean rollup,
+      int maxRowCount,
+      int numCopies,
+      int numSegments
+  ) throws Exception
+  {
+    return createSegmentsWithConcatenatedInput(
+        helper,
+        tempFolder,
+        closer,
+        SIMPLE_DATA_FILE,
+        SIMPLE_PARSER_FILE,
+        null,
+        SIMPLE_AGG_FILE,
+        granularity,
+        rollup,
+        maxRowCount,
+        numCopies,
+        numSegments
+    );
+  }
+
+  /**
+   * turn small test data into bigger test data by duplicating itself into a bigger stream
+   */
+  public static List<Segment> createSegmentsWithConcatenatedInput(
+      AggregationTestHelper helper,
+      TemporaryFolder tempFolder,
+      Closer closer,
+      String inputFileName,
+      String parserJsonFileName,
+      String transformSpecJsonFileName,
+      String aggJsonFileName,
+      Granularity granularity,
+      boolean rollup,
+      int maxRowCount,
+      int numCopies,
+      int numSegments
+  ) throws Exception
+  {
+    String parserJson = readFileFromClasspathAsString(parserJsonFileName);
+    String transformSpecJson = transformSpecJsonFileName != null ? readFileFromClasspathAsString(transformSpecJsonFileName) : null;
+    String aggJson = readFileFromClasspathAsString(aggJsonFileName);
+
+    List<File> segmentDirs = Lists.newArrayListWithCapacity(numSegments);
+    for (int i = 0; i < numSegments; i++) {
+      List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
+      for (int j = 0; j < numCopies; j++) {
+        inputStreams.add(new FileInputStream(readFileFromClasspath(inputFileName)));
+      }
+      SequenceInputStream inputDataStream = new SequenceInputStream(Collections.enumeration(inputStreams));
+      File segmentDir = tempFolder.newFolder();
+      helper.createIndex(
+          inputDataStream,
+          parserJson,
+          transformSpecJson,
+          aggJson,
+          segmentDir,
+          0,
+          granularity,
+          maxRowCount,
+          rollup
+      );
+      segmentDirs.add(segmentDir);
+    }
+
+    final List<Segment> segments = Lists.transform(
+        segmentDirs,
         dir -> {
           try {
             return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
