@@ -54,7 +54,7 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  test:
+  test: # Github job that runs a given standard/old IT for a given testing group
     name: ${{ inputs.group }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
     runs-on: ubuntu-22.04
     steps:
@@ -77,7 +77,7 @@ jobs:
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ ( steps.maven-restore.outputs.cache-hit && format('{0} {1}', env.MVN, ' dependency:go-offline') ) || env.MVN }}
+          MVN: ${{ ( steps.maven-restore.outputs.cache-hit && format('{0} {1}', env.MVN, 'dependency:go-offline') ) || env.MVN }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"

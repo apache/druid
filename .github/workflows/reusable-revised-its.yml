@@ -39,16 +39,10 @@ on:
         type: string
 
 env:
-  MVN: mvn -B
-  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-  MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
-  JVM_RUNTIME: -Djvm.runtime=${{ inputs.runtime_jdk }}
-  USE_INDEXER: ${{ inputs.use_indexer }}
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  test:
+  test: # Github job that runs a given revised/new IT against retrieved cached druid docker image
     name: ${{ inputs.it }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }})
     runs-on: ubuntu-22.04
     steps:
