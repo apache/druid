@@ -1,0 +1,3 @@
+# Adds techdocsmith and vtlim as code owners for documentation related directories. 
+/docs/** @techdocsmith @vtlim
+/examples/quickstart/jupyter-notebooks/** @techdocsmith @vtlim
