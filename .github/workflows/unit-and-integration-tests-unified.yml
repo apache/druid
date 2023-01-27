@@ -38,6 +38,7 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
+
       - name: Cache Maven m2 repository
         id: maven
         uses: actions/cache@v3
@@ -46,47 +47,40 @@ jobs:
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             maven-${{ runner.os }}-${{ matrix.jdk }}
+
+      - name: Setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
+
+      - name: Maven build
+        id: maven_build
+        run: |
+          ./it.sh ci
+
       - name: Cache targets
         id: target
         uses: actions/cache@v3
         with:
           path: |
-            ./target
-            ./extendedset/target
-            ./hll/target
-            ./processing/target
-            ./server/target
-            ./indexing-hadoop/target
-            ./web-console/target
-            ./indexing-service/target
-            ./services/target
-            ./benchmarks/target
-            ./distribution/target
-            ./integration-tests/target
+            ./**/target
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             maven-${{ runner.os }}-${{ matrix.jdk }}-targets
-      - name: Setup java
-        if: (steps.target.outputs.cache-hit != 'true')
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
-      - name: Maven build
-        if: (steps.maven.outputs.cache-hit != 'true' || steps.target.outputs.cache-hit != 'true')
-        id: maven_build
-        run: |
-          ./it.sh ci
+
       - name: Container build
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
+
       - name: Set docker image name
         id: docker_image_name
         run: |
           source ./integration-tests-ex/image/target/env.sh
           echo "DRUID_IT_IMAGE_NAME=$(echo $DRUID_IT_IMAGE_NAME | sed 's/\./_/g; s/\//_/g; s/\:/-/g')" >> $GITHUB_OUTPUT
+
       - name: Save docker container to archive
         run: |
           source ./integration-tests-ex/image/target/env.sh
@@ -121,9 +115,9 @@ jobs:
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
   its:
-    needs: unit-tests
+    needs: build
     uses: tejaswini-imply/druid/.github/workflows/it.yml@update_uts_gha
 
   revised-its:
-    needs: unit-tests
+    needs: build
     uses: tejaswini-imply/druid/.github/workflows/it-ex.yml@update_uts_gha

@@ -57,11 +57,6 @@ jobs:
         with:
           node-version: 16.17.0
 
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.17.0
-
       - name: setup variables
         run: |
           export base_ref=${{ github.base_ref }}
@@ -76,7 +71,7 @@ jobs:
           # This is not needed for build triggered by tags, since there will be no code diff.
           git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
 
-      - name: Setup diff-test-coverage
+      - name: setup diff-test-coverage
         run: npm install @connectis/diff-test-coverage@1.5.3
 
       - name: test & coverage
