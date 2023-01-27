@@ -62,11 +62,12 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   public int getId(@Nullable T value)
   {
+    if (value == null) {
+      return idForNull;
+    }
+
     long stamp = lock.readLock();
     try {
-      if (value == null) {
-        return idForNull;
-      }
       return valueToId.getInt(value);
     }
     finally {
@@ -77,6 +78,10 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
   @Nullable
   public T getValue(int id)
   {
+    if (id == idForNull) {
+      return null;
+    }
+
     // optimistic read
     long stamp = lock.tryOptimisticRead();
     T output = idToValue.get(id);
@@ -87,9 +92,6 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
     // classic lock
     stamp = lock.readLock();
     try {
-      if (id == idForNull) {
-        return null;
-      }
       return idToValue.get(id);
     }
     finally {
@@ -104,7 +106,7 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
     long stamp = lock.readLock();
     try {
       for (int i = 0; i < ids.length; i++) {
-        values[i] = (ids[i] == idForNull) ? null : idToValue.get(ids[i]);
+        values[i] = idToValue.get(ids[i]);
       }
       return values;
     }
@@ -150,15 +152,12 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
 
   public int add(@Nullable T originalValue)
   {
+    if (originalValue == null) {
+      return addNull();
+    }
+
     long stamp = lock.writeLock();
     try {
-      if (originalValue == null) {
-        if (idForNull == ABSENT_VALUE_ID) {
-          idForNull = idToValue.size();
-          idToValue.add(null);
-        }
-        return idForNull;
-      }
       int prev = valueToId.getInt(originalValue);
       if (prev >= 0) {
         return prev;
@@ -175,6 +174,26 @@ public abstract class DimensionDictionary<T extends Comparable<T>>
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
       return index;
+    }
+    finally {
+      lock.unlockWrite(stamp);
+    }
+  }
+
+  private int addNull()
+  {
+    if (idForNull != ABSENT_VALUE_ID) {
+      return idForNull;
+    }
+
+    long stamp = lock.writeLock();
+    try {
+      // check, in case it was changed by another thread
+      if (idForNull == ABSENT_VALUE_ID) {
+        idForNull = idToValue.size();
+        idToValue.add(null);
+      }
+      return idForNull;
     }
     finally {
       lock.unlockWrite(stamp);
