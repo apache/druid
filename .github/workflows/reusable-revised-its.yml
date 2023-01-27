@@ -49,7 +49,7 @@ env:
 
 jobs:
   test:
-    name: (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}) ${{ inputs.it }} integration test
+    name: ${{ inputs.it }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }})
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
@@ -61,14 +61,6 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ inputs.build_jdk }}
           cache: maven
-
-      - name: Retrieve cached target folders
-        uses: actions/cache/restore@v3
-        with:
-          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-          path: |
-            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
 
       - name: Retrieve cached docker image
         uses: actions/cache/restore@v3

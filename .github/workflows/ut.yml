@@ -26,13 +26,6 @@ on:
         default: true
         description: 'For SQL compatibility'
 
-env:
-  MVN: mvn -B
-  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-  MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
-  FORCE_COLOR: 2
-
 jobs:
   indexing_modules_test:
     uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
@@ -40,7 +33,7 @@ jobs:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: indexing
-      maven_projects: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
+      maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
   processing_modules_test:
     uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
@@ -48,7 +41,7 @@ jobs:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: processing
-      maven_projects: processing
+      maven_projects: 'processing'
 
   server_modules_test:
     uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
@@ -56,7 +49,7 @@ jobs:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: server
-      maven_projects: server
+      maven_projects: 'server'
 
   other_modules_test:
     uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
