@@ -452,6 +452,56 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(4, ((List) results.get(0).getEvents()).size());
   }
 
+  @Test
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscovery() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            NestedDataTestUtils.TYPES_DATA_FILE,
+            NestedDataTestUtils.TYPES_PARSER_FILE,
+            NestedDataTestUtils.SIMPLE_AGG_FILE,
+            Granularities.DAY,
+            true,
+            false,
+            1000
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        helper,
+        tempFolder,
+        closer,
+        NestedDataTestUtils.TYPES_DATA_FILE,
+        NestedDataTestUtils.TYPES_PARSER_FILE,
+        NestedDataTestUtils.SIMPLE_AGG_FILE,
+        Granularities.DAY,
+        true,
+        100
+    );
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
   private static void logResults(List<ScanResultValue> results)
   {
     StringBuilder bob = new StringBuilder();

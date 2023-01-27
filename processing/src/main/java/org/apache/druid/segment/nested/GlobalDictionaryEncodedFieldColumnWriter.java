@@ -134,9 +134,15 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       fillNull(row);
     }
     final T value = processValue(val);
-    final int globalId = lookupGlobalId(value);
-    Preconditions.checkArgument(globalId >= 0, "Value [%s] is not present in global dictionary", value);
-    final int localId = localDictionary.add(globalId);
+    final int localId;
+    // null is always 0
+    if (value == null) {
+      localId = localDictionary.add(0);
+    } else {
+      final int globalId = lookupGlobalId(value);
+      Preconditions.checkArgument(globalId >= 0, "Value [%s] is not present in global dictionary", value);
+      localId = localDictionary.add(globalId);
+    }
     intermediateValueWriter.write(localId);
     writeValue(value);
     cursorPosition++;

@@ -63,6 +63,9 @@ public class NestedDataTestUtils
   public static final String SIMPLE_PARSER_TSV_TRANSFORM_FILE = "simple-nested-test-data-tsv-transform.json";
   public static final String SIMPLE_AGG_FILE = "simple-nested-test-data-aggs.json";
 
+  public static final String TYPES_DATA_FILE = "types-test-data.json";
+  public static final String TYPES_PARSER_FILE = "types-test-data-parser.json";
+
   public static final String NUMERIC_DATA_FILE = "numeric-nested-test-data.json";
   public static final String NUMERIC_PARSER_FILE = "numeric-nested-test-data-parser.json";
 

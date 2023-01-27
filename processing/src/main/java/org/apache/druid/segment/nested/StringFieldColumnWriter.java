@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -48,7 +49,7 @@ public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldC
     if (value == null) {
       return null;
     }
-    return String.valueOf(value);
+    return NullHandling.emptyToNullIfNeeded(String.valueOf(value));
   }
 
   @Override
