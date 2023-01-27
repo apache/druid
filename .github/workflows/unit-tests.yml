@@ -28,7 +28,7 @@ on:
 
 jobs:
   indexing_modules_test:
-    uses: ./.github/workflows/reusable-unit-tests.yml
+    uses: ./.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
@@ -44,7 +44,7 @@ jobs:
       maven_projects: 'processing'
 
   server_modules_test:
-    uses: .github/workflows/reusable-unit-tests.yml
+    uses: ./.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
@@ -52,7 +52,7 @@ jobs:
       maven_projects: 'server'
 
   other_modules_test:
-    uses: ./.github/workflows/reusable-unit-tests.yml
+    uses: ./.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
