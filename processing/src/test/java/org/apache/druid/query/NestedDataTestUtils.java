@@ -154,7 +154,7 @@ public class NestedDataTestUtils
   {
     File segmentDir = tempFolder.newFolder();
     File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
+    FileInputStream inputDataStream = closer.register(new FileInputStream(inputFile));
     String parserJson = readFileFromClasspathAsString(parserJsonFileName);
     String aggJson = readFileFromClasspathAsString(aggJsonFileName);
 
@@ -199,7 +199,7 @@ public class NestedDataTestUtils
   {
     File segmentDir = tempFolder.newFolder();
     File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
+    FileInputStream inputDataStream = closer.register(new FileInputStream(inputFile));
     String parserJson = readFileFromClasspathAsString(parserJsonFileName);
     String transformSpecJson = readFileFromClasspathAsString(transformSpecJsonFileName);
     String aggJson = readFileFromClasspathAsString(aggJsonFileName);
@@ -284,7 +284,7 @@ public class NestedDataTestUtils
     for (int i = 0; i < numSegments; i++) {
       List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
       for (int j = 0; j < numCopies; j++) {
-        inputStreams.add(new FileInputStream(readFileFromClasspath(inputFileName)));
+        inputStreams.add(closer.register(new FileInputStream(readFileFromClasspath(inputFileName))));
         if (j + 1 < numCopies) {
           inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
         }
@@ -355,6 +355,7 @@ public class NestedDataTestUtils
         maxRowCount,
         rollup
     );
+    inputDataStream.close();
     return new IncrementalIndexSegment(index, SegmentId.dummy("test_datasource"));
   }
 
