@@ -24,7 +24,7 @@ jobs:
       matrix:
         #jdk: [8, 11, 17]
         jdk: [8]
-        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex]
+        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: apache/druid/.github/workflows/reusable-revised-its.yml@master
