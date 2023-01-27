@@ -61,8 +61,6 @@ jobs:
       - name: Maven build
         id: maven_build
         run: |
-          #debug repo
-          echo ${{ github.repository }}
           ./it.sh ci
 
       - name: Cache targets
