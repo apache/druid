@@ -32,23 +32,25 @@ function usage
   cat <<EOF
 Usage: $0 cmd [category]
   build
-      build Druid and the distribution
+      Build Druid and the distribution
   dist
-      build the Druid distribution (only)
+      Build the Druid distribution (only)
   tools
-      build druid-it-tools
+      Build druid-it-tools
   image
-      build the test image
+      Build the test image
   up <category>
-      start the cluster for category
+      Start the cluster for category
   down <category>
-      stop the cluster for category
+      Stop the cluster for category
   test <category>
-      start the cluster, run the test for category, and stop the cluster
+      Start the cluster, run the test for category, and stop the cluster
   tail <category>
-      show the last 20 lines of each container log
+      Show the last 20 lines of each container log
   travis <category>
-      run one IT in Travis (build dist, image, run test, tail logs)
+      Run one IT in Travis (build dist, image, run test, tail logs)
+  gen
+      Generate docker-compose.yaml files (done automatically on up)
   prune
       prune Docker volumes
 
@@ -202,6 +204,13 @@ case $CMD in
   "image" )
     cd $DRUID_DEV/integration-tests-ex/image
     mvn install -P test-image $MAVEN_IGNORE
+    ;;
+  "gen")
+    # Generate the docker-compose.yaml files. Mostly for debugging
+    # since the up command does generation implicitly.
+    prepare_category $1
+    prepare_docker
+    ./cluster.sh gen $CATEGORY
     ;;
   "up" )
     prepare_category $1

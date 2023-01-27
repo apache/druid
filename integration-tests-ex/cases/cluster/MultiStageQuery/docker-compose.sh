@@ -18,9 +18,8 @@
 
 set -e
 
-TEMPLATE=$0
 export MODULE_DIR=$(cd $(dirname $0) && pwd)
-CATEGORY=$(basename $MODULE_DIR)
+export CATEGORY=$(basename $MODULE_DIR)
 
 # MSQ uses the indexer by default. This should be fixed: it should be MM
 # by default, and indexer only if the following variable is set.
@@ -34,8 +33,7 @@ function gen_indexer_env {
 	gen_common_env \
         "druid_msq_intermediate_storage_enable=true" \
         "druid_msq_intermediate_storage_type=local" \
-        "druid_msq_intermediate_storage_basePath=/shared/durablestorage/" \
-EOF
+        "druid_msq_intermediate_storage_basePath=/shared/durablestorage/"
 }
 
 gen_compose_file $CATEGORY

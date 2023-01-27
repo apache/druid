@@ -44,6 +44,9 @@ Usage: $0 cmd [category]
       Status of the cluster (for debugging within build scripts)
   compose-cmd category
       Pass the command to Docker compose. Cluster should already be up.
+  gen category
+      Generate docker-compose.yaml files (only.) Done automatically as
+      part of up. Use only for debugging.
 EOF
 }
 
@@ -218,12 +221,18 @@ case $CMD in
     build_shared_dir
     docker_file
     ;;
+  "gen" )
+    category $*
+    build_shared_dir
+    docker_file
+    echo "Generated file is in $COMPOSE_DIR"
+    ;;
   "up" )
     category $*
     echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
     build_shared_dir
     docker_file
-      cd $COMPOSE_DIR
+    cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging
     #show_status
@@ -231,7 +240,7 @@ case $CMD in
   "status" )
     category $*
     docker_file
-      cd $COMPOSE_DIR
+    cd $COMPOSE_DIR
     show_status
     ;;
   "down" )
@@ -239,13 +248,13 @@ case $CMD in
     # Enable the following for debugging
     #show_status
     verify_docker_file
-      cd $COMPOSE_DIR
+    cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS $CMD
     ;;
   "*" )
     category $*
     verify_docker_file
-      cd $COMPOSE_DIR
+    cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS $CMD
     ;;
 esac

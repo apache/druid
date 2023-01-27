@@ -23,9 +23,8 @@
 
 set -e
 
-TEMPLATE=$0
 export MODULE_DIR=$(cd $(dirname $0) && pwd)
-CATEGORY=$(basename $MODULE_DIR)
+export CATEGORY=$(basename $MODULE_DIR)
 
 . $MODULE_DIR/../Common/gen-docker.sh
 

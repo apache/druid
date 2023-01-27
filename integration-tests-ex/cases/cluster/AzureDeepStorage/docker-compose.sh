@@ -18,9 +18,8 @@
 
 set -e
 
-TEMPLATE=$0
 export MODULE_DIR=$(cd $(dirname $0) && pwd)
-CATEGORY=$(basename $MODULE_DIR)
+export CATEGORY=$(basename $MODULE_DIR)
 
 # This test seems to prefer the indexer.
 export USE_INDEXER="indexer"

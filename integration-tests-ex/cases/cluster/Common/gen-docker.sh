@@ -93,7 +93,7 @@ function gen_header {
 # THIS FILE IS GENERATED -- DO NOT EDIT!
 #
 # Instead, edit the template from which this file was generated.
-# Template: $TEMPLATE
+# Template: cluster/$CATEGORY/docker-compose.sh
 
 EOF
   	gen_header_comment
@@ -399,21 +399,9 @@ function gen_docker {
   	gen_services
 }
 
-function usage {
-	cat << EOF
-USAGE: $0 <category>
-
-Requires a (possibly empty) template in cluster/$category/docker.sh.
-
-Generates into target/$cluster/docker-compose.sh
-EOF
-}
-
 function gen_compose_file {
-
-	CATEGORY=$1
 	if [ -z $CATEGORY ]; then
-		usage
+		echo "CATEGORY must be set by caller" 1>&2
 		exit 1
 	fi
 
