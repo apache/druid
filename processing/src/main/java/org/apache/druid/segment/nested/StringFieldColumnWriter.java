@@ -45,6 +45,9 @@ public final class StringFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   @Override
   String processValue(Object value)
   {
+    if (value == null) {
+      return null;
+    }
     return String.valueOf(value);
   }
 

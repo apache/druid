@@ -238,11 +238,12 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     dictionaryWriter.write(null);
     globalDictionaryIdLookup.addString(null);
     for (String value : dictionaryValues) {
-      if (NullHandling.emptyToNullIfNeeded(value) == null) {
+      value = NullHandling.emptyToNullIfNeeded(value);
+      if (value == null) {
         continue;
       }
+
       dictionaryWriter.write(value);
-      value = NullHandling.emptyToNullIfNeeded(value);
       globalDictionaryIdLookup.addString(value);
     }
   }
