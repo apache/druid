@@ -58,6 +58,10 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
 
+      - name: Setup variables
+        run: |
+
+
       - name: Maven build
         id: maven_build
         run: |
@@ -102,7 +106,7 @@ jobs:
       matrix:
         sql_compatibility: [ false, true ]
     name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
-    uses: ${{ github.repository }}/.github/workflows/unit-tests.yml@update_uts_gha
+    uses: format('{0}/{1}', github.repository, '.github/workflows/unit-tests.yml@update_uts_gha')
     needs: build
     with:
       jdk: 8
@@ -115,7 +119,7 @@ jobs:
         jdk: [11, 17]
         sql_compatibility: [ false, true ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: ${{ github.repository }}/.github/workflows/unit-tests.yml@update_uts_gha
+    uses: format('{0}/{1}', github.repository, '.github/workflows/unit-tests.yml@update_uts_gha')
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
@@ -123,8 +127,8 @@ jobs:
 
   standard-its:
     needs: unit-tests
-    uses: ${{ github.repository }}/.github/workflows/standard-its.yml@update_uts_gha
+    uses: format('{0}/{1}', github.repository, '.github/workflows/standard-its.yml@update_uts_gha')
 
   revised-its:
     needs: unit-tests
-    uses: ${{ github.repository }}/.github/workflows/revised-its.yml@update_uts_gha
+    uses: format('{0}/{1}', github.repository, '.github/workflows/revised-its.yml@update_uts_gha')

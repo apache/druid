@@ -47,8 +47,6 @@ jobs:
 
       - name: set java version
         run: |
-          #debug repo
-          echo ${{ github.repository }}/.github/workflows/revised-its.yml@update_uts_gha
           export jdk=${{ matrix.java }}
           echo "java_version=${jdk:3}" >> $GITHUB_ENV
 
