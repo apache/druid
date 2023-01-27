@@ -76,5 +76,5 @@ jobs:
 
       - name: test & coverage
         env:
-          MAVEN_PROJECTS: ${{ inputs.maven_project }}
+          MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: ./.github/scripts/unit_tests_script.sh

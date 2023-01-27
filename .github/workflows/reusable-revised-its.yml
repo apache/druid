@@ -62,6 +62,14 @@ jobs:
           java-version: ${{ inputs.build_jdk }}
           cache: maven
 
+      - name: Retrieve cached target folders
+        uses: actions/cache/restore@v3
+        with:
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          path: |
+            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+
       - name: Retrieve cached docker image
         uses: actions/cache/restore@v3
         with:
