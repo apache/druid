@@ -256,7 +256,10 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "Cannot use ORDER BY with a REPLACE statement, use CLUSTERED BY instead.")
+        .expectValidationError(
+            SqlPlanningException.class,
+            "ORDER BY is not supported within a REPLACE statement, use CLUSTERED BY instead."
+         )
         .verify();
   }
 

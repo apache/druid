@@ -481,8 +481,8 @@ public class DruidSqlParserUtils
 
   /**
    * Throws an IAE with appropriate message if the granularity supplied is not present in
-   * {@link org.apache.druid.java.util.common.granularity.Granularities}. It also filters out NONE as it is not a valid
-   * granularity that can be supplied in PARTITIONED BY
+   * {@link Granularities}. It also filters out {@code NONE} as it is not a valid
+   * granularity that can be supplied in {@code PARTITIONED BY}.
    */
   public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
   {

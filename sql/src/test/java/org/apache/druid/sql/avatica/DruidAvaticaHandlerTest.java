@@ -292,6 +292,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
             binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
             binder.bind(JoinableFactoryWrapper.class).toInstance(CalciteTests.createJoinableFactoryWrapper());
+            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           }
          )
         .build();

@@ -360,7 +360,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (source instanceof SqlOrderBy) {
       throw new IAE(
           "Cannot have ORDER BY on %s %s statement, use CLUSTERED BY instead.",
-          "INSERT".equals(operationName) ? "an" : "a",
+          statementArticle(operationName),
           operationName
       );
     }
@@ -373,14 +373,24 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       orderByList = select.getOrderList();
       if (orderByList != null && orderByList.size() != 0) {
         throw new IAE(
-            "Cannot use ORDER BY with %s %s statement, use CLUSTERED BY instead.",
-            "INSERT".equals(operationName) ? "an" : "a",
+            "ORDER BY is not supported within %s %s statement, use CLUSTERED BY instead.",
+            statementArticle(operationName),
             operationName
         );
       }
     } else {
-      throw new IAE("Cannot execute %s.", source.getKind());
+      throw new IAE(
+          "%s is not supported within %s %s statement.",
+          source.getKind(),
+          statementArticle(operationName),
+          operationName
+      );
     }
+  }
+
+  private String statementArticle(String operationName)
+  {
+    return "INSERT".equals(operationName) ? "an" : "a";
   }
 
   private SqlNodeList convertCatalogClustering(final DatasourceFacade tableMetadata)

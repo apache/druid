@@ -169,7 +169,7 @@ public class DruidPlanner implements Closeable
     if (query.isA(SqlKind.QUERY)) {
       return new SelectHandler(handlerContext, query, explain);
     }
-    throw new ValidationException(StringUtils.format("Cannot execute [%s].", node.getKind()));
+    throw new ValidationException(StringUtils.format("Druid does not support [%s].", node.getKind()));
   }
 
   /**

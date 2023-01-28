@@ -111,7 +111,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .dataSource(externalDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("x", "y", "z")
-                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
         .expectLogicalPlanFrom("insertFromExternal")
@@ -139,7 +139,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .dataSource(externalDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("x", "y", "z")
-                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
         .expectLogicalPlanFrom("insertFromExternal")
@@ -215,7 +215,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 // SQL project list or the defined schema. Here we just check that the
                 // set of columns is correct, but not their order.
                 .columns("b", "e", "v0", "v1", "v2", "v3")
-                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
         .verify();
@@ -224,7 +224,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
   /**
    * Insert from a table with a schema defined in the catalog.
    *
-   * @see {@link org.apache.druid.sql.calcite.CalciteInsertDmlTest#testInsertFromTable}
+   * @see {@link CalciteInsertDmlTest#testInsertFromTable}
    * for the non-catalog version
    */
   @Test
@@ -245,7 +245,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 // SQL project list or the defined schema. Here we just check that the
                 // set of columns is correct, but not their order.
                 .columns("__time", "cnt", "dim1", "dim2", "extra1", "extra2", "extra3", "m1", "m2")
-                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
         .expectLogicalPlanFrom("insertFromTable")
@@ -269,7 +269,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "cnt", "dim1", "dim2", "extra1", "extra2", "extra3", "m1", "m2")
-                .context(CalciteInsertDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
         .verify();
@@ -386,7 +386,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
   /**
    * Base test with manually-provided PARTIIONED BY and CLUSTERED BY
    *
-   * @see {@link org.apache.druid.sql.calcite.CalciteInsertDmlTest#testInsertWithClusteredBy}
+   * @see {@link CalciteInsertDmlTest#testInsertWithClusteredBy}
    * for the non-catalog version
    */
   @Test
@@ -433,12 +433,10 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
 
   /**
    * Test when clustering comes from the catalog.
-   * For now, the catalog does not allow expressions in cluster keys,
-   * only column names. (Since it is hard to parse an expression
-   * in the validation phase.)
+   * For now, the catalog does not allow expressions in cluster keys,only column names.
+   * (It is hard to parse an expression when validating a catalog update.)
    *
-   * @see {@link org.apache.druid.sql.calcite.CalciteInsertDmlTest#testInsertWithClusteredBy}
-   * for the non-catalog version
+   * @see {@link CalciteInsertDmlTest#testInsertWithClusteredBy} for the non-catalog version
    */
   @Test
   public void testInsertWithClusteredByFromCatalog()

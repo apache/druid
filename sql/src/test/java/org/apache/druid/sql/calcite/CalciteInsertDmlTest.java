@@ -698,7 +698,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Cannot have ORDER BY on an INSERT statement, use CLUSTERED BY instead.",
+          "ORDER BY is not supported within an INSERT statement, use CLUSTERED BY instead.",
           e.getMessage()
       );
     }
@@ -742,7 +742,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     }
     catch (SqlPlanningException e) {
       Assert.assertEquals(
-          "Cannot have ORDER BY on an INSERT statement, use CLUSTERED BY instead.",
+          "ORDER BY is not supported within an INSERT statement, use CLUSTERED BY instead.",
           e.getMessage()
       );
     }
@@ -851,7 +851,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("An INSERT must include a SELECT statement", e.getMessage());
+    Assert.assertEquals("UNION is not supported within an INSERT statement.", e.getMessage());
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
     didTest = true;
