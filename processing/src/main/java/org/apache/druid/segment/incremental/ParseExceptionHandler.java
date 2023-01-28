@@ -22,13 +22,18 @@ package org.apache.druid.segment.incremental;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceLogEvent;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
  * A handler for {@link ParseException}s thrown during ingestion. Based on the given configuration, this handler can
@@ -48,14 +53,27 @@ public class ParseExceptionHandler
   private final int maxAllowedParseExceptions;
   @Nullable
   private final CircularBuffer<ParseExceptionReport> savedParseExceptionReports;
+  private final ServiceEmitter emitter;
+  private final Map<String, Object> taskMetadata;
 
   public ParseExceptionHandler(
       RowIngestionMeters rowIngestionMeters,
       boolean logParseExceptions,
       int maxAllowedParseExceptions,
-      int maxSavedParseExceptions
+      int maxSavedParseExceptions,
+      ServiceEmitter emitter
   )
   {
+    this(rowIngestionMeters, logParseExceptions, maxAllowedParseExceptions,maxSavedParseExceptions, emitter, null);
+  }
+
+  public ParseExceptionHandler(RowIngestionMeters rowIngestionMeters,
+                               boolean logParseExceptions,
+                               int maxAllowedParseExceptions,
+                               int maxSavedParseExceptions,
+                               ServiceEmitter emitter,
+                               @Nullable Map<String, Object> taskMetadata
+  ) {
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.logParseExceptions = logParseExceptions;
     this.maxAllowedParseExceptions = maxAllowedParseExceptions;
@@ -64,10 +82,15 @@ public class ParseExceptionHandler
     } else {
       this.savedParseExceptionReports = null;
     }
+    this.emitter = emitter;
+    if (taskMetadata == null) {
+      this.taskMetadata = ImmutableMap.of();
+    } else {
+      this.taskMetadata = taskMetadata;
+    }
   }
 
-  public void handle(@Nullable ParseException e)
-  {
+  public void handle(@Nullable ParseException e, @Nullable Map<String, Object> taskMetadata) {
     if (e == null) {
       return;
     }
@@ -76,6 +99,16 @@ public class ParseExceptionHandler
       rowIngestionMeters.incrementProcessedWithError();
     } else {
       rowIngestionMeters.incrementUnparseable();
+      if (emitter != null) {
+        ServiceLogEvent.Builder eventBuilder = ServiceLogEvent.builder();
+        if (taskMetadata != null) {
+          eventBuilder.setDimensions(taskMetadata);
+        }
+        eventBuilder.setDimensions(this.taskMetadata);
+        eventBuilder.setDimension("input", e.getInput());
+        eventBuilder.setDimension("detailMessage", e.getMessage());
+        emitter.emit(eventBuilder.build(DateTimes.utc(e.getTimeOfExceptionMillis())));
+      }
     }
 
     logParseExceptionHelper(e);
@@ -95,6 +128,10 @@ public class ParseExceptionHandler
     if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError() > maxAllowedParseExceptions) {
       throw new RE("Max parse exceptions[%s] exceeded", maxAllowedParseExceptions);
     }
+  }
+  public void handle(@Nullable ParseException e)
+  {
+    handle(e, null);
   }
 
   @Nullable

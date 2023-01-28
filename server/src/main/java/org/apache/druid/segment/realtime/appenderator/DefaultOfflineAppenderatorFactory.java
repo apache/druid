@@ -22,6 +22,8 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
@@ -31,6 +33,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+
+import java.util.Map;
 
 
 public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
@@ -55,7 +59,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   }
 
   @Override
-  public Appenderator build(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics)
+  public Appenderator build(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics, ServiceEmitter emitter, Map<String, Object> taskMetadata)
   {
     final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     return Appenderators.createClosedSegmentsOffline(
@@ -72,7 +76,9 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
             rowIngestionMeters,
             false,
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
-            0
+            0,
+            emitter,
+            taskMetadata
         ),
         true
     );

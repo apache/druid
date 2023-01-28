@@ -367,7 +367,7 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getJsonMapper()
     );
 
-    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
+    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics, toolbox.getEmitter(), toolbox.getTaskMetadata().toMap());
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
 

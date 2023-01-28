@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.core.LogEvent;
 import org.junit.Assert;
@@ -49,7 +50,8 @@ public class ParseExceptionHandlerTest
         rowIngestionMeters,
         false,
         Integer.MAX_VALUE,
-        0
+        0,
+        null
     );
 
     IntStream.range(0, 100).forEach(i -> {
@@ -67,7 +69,8 @@ public class ParseExceptionHandlerTest
         rowIngestionMeters,
         true,
         Integer.MAX_VALUE,
-        0
+        0,
+        null
     );
     parseExceptionHandler.handle(parseException);
 
@@ -84,7 +87,8 @@ public class ParseExceptionHandlerTest
         new SimpleRowIngestionMeters(),
         false,
         Integer.MAX_VALUE,
-        0
+        0,
+        null
     );
     Assert.assertNull(parseExceptionHandler.getSavedParseExceptionReports());
   }
@@ -99,7 +103,8 @@ public class ParseExceptionHandlerTest
         rowIngestionMeters,
         false,
         maxAllowedParseExceptions,
-        0
+        0,
+        null
     );
 
     IntStream.range(0, maxAllowedParseExceptions).forEach(i -> parseExceptionHandler.handle(parseException));
@@ -125,7 +130,8 @@ public class ParseExceptionHandlerTest
         rowIngestionMeters,
         false,
         Integer.MAX_VALUE,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptionReports());
     int exceptionCounter = 0;

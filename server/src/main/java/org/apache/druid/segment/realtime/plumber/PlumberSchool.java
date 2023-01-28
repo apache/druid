@@ -21,9 +21,12 @@ package org.apache.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+
+import java.util.Map;
 
 /**
  */
@@ -39,6 +42,6 @@ public interface PlumberSchool
    *
    * @return returns a plumber
    */
-  Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
+  Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics, ServiceEmitter emitter, Map<String, Object> taskMetadata);
 
 }

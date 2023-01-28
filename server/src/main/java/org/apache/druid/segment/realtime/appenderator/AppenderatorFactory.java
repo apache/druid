@@ -21,9 +21,12 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+
+import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -35,6 +38,8 @@ public interface AppenderatorFactory
   Appenderator build(
       DataSchema schema,
       RealtimeTuningConfig config,
-      FireDepartmentMetrics metrics
+      FireDepartmentMetrics metrics,
+      ServiceEmitter emitter,
+      Map<String, Object> taskMetadata
   );
 }

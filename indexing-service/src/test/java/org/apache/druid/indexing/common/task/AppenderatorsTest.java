@@ -54,6 +54,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderator;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Period;
@@ -245,7 +246,7 @@ public class AppenderatorsTest
               indexIO,
               indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, new NoopServiceEmitter()),
               false
           );
           break;
@@ -260,7 +261,7 @@ public class AppenderatorsTest
               indexIO,
               indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, new NoopServiceEmitter()),
               false
           );
 
@@ -276,7 +277,7 @@ public class AppenderatorsTest
               indexIO,
               indexMerger,
               rowIngestionMeters,
-              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+              new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, new NoopServiceEmitter()),
               false
           );
           break;

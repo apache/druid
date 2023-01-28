@@ -39,6 +39,8 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Duration;
 
+import java.util.Map;
+
 /**
  * This plumber just drops segments at the end of a flush duration instead of handing them off. It is only useful if you want to run
  * a real time node without the rest of the Druid cluster.
@@ -112,7 +114,9 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   public Plumber findPlumber(
       final DataSchema schema,
       final RealtimeTuningConfig config,
-      final FireDepartmentMetrics metrics
+      final FireDepartmentMetrics metrics,
+      final ServiceEmitter emitter,
+      final Map<String, Object> taskMetadata
   )
   {
     verifyState();

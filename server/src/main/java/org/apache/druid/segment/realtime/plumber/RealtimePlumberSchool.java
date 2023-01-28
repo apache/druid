@@ -40,6 +40,8 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.SegmentPublisher;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 
+import java.util.Map;
+
 /**
  *
  */
@@ -99,7 +101,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   public Plumber findPlumber(
       final DataSchema schema,
       final RealtimeTuningConfig config,
-      final FireDepartmentMetrics metrics
+      final FireDepartmentMetrics metrics,
+      final ServiceEmitter emitter,
+      final Map<String, Object> taskMetadata
   )
   {
     verifyState();

@@ -20,7 +20,7 @@
 package org.apache.druid.msq.indexing.error;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEvent;
+import org.apache.druid.java.util.emitter.service.ServiceLogEvent;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -63,7 +63,7 @@ public class MSQFilteredEmitterWarningPublisher implements MSQWarningPublisher
     if (acceptableErrorCode.contains(errorCode)) {
       MSQErrorReport errorReport = MSQErrorReport.fromException(workerId, host, stageNumber, e);
       String errorMessage = errorReport.getFault().getErrorMessage();
-      ServiceEvent.Builder serviceEventBuilder =  ServiceEvent.builder();
+      ServiceLogEvent.Builder serviceEventBuilder =  ServiceLogEvent.builder();
       serviceEventBuilder.setFeed("serviceEvent");
       serviceEventBuilder.setDimension("taskId", taskId);
       serviceEventBuilder.setDimension("groupId", controllerTaskId);

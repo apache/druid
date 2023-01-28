@@ -365,7 +365,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         rowIngestionMeters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        toolbox.getEmitter(),
+        toolbox.getTaskMetadata().toMap()
     );
 
     // Now we can initialize StreamChunkReader with the given toolbox.

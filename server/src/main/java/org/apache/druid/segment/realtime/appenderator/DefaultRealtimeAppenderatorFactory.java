@@ -42,6 +42,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import java.io.File;
+import java.util.Map;
 
 public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
 {
@@ -91,7 +92,9 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   public Appenderator build(
       final DataSchema schema,
       final RealtimeTuningConfig config,
-      final FireDepartmentMetrics metrics
+      final FireDepartmentMetrics metrics,
+      final ServiceEmitter emitter,
+      final Map<String, Object> taskMetadata
   )
   {
     final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
@@ -123,7 +126,9 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
             rowIngestionMeters,
             false,
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
-            0
+            0,
+            emitter,
+            taskMetadata
         ),
         true
     );

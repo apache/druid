@@ -57,6 +57,7 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -256,7 +257,8 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0,
+                  new NoopServiceEmitter()
               ),
               false
           );
@@ -279,7 +281,8 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0,
+                  new NoopServiceEmitter()
               ),
               false
           );
@@ -303,7 +306,8 @@ public class BatchAppenderatorsTest
                   rowIngestionMeters,
                   false,
                   Integer.MAX_VALUE,
-                  0
+                  0,
+                  new NoopServiceEmitter()
               ),
               false
           );

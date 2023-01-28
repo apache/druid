@@ -240,6 +240,7 @@ public class TaskToolboxFactory
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
+        .taskMetadata(new TaskMetadata(task.getId(), task.getGroupId(), task.getDataSource()))
         .build();
   }
 }

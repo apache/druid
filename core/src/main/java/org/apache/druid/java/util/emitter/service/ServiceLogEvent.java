@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 @PublicApi
-public class ServiceEvent implements Event
+public class ServiceLogEvent implements Event
 {
   public static Builder builder()
   {
@@ -27,7 +27,7 @@ public class ServiceEvent implements Event
   private final Map<String, Object> userDims;
   private final String feed;
 
-  private ServiceEvent(
+  private ServiceLogEvent(
       DateTime createdTime,
       ImmutableMap<String, String> serviceDims,
       Map<String, Object> userDims,
@@ -114,28 +114,34 @@ public class ServiceEvent implements Event
       return this;
     }
 
+    public Builder setDimensions(Map<String, Object> dimensions)
+    {
+      userDims.putAll(dimensions);
+      return this;
+    }
+
     public Object getDimension(String dim)
     {
       return userDims.get(dim);
     }
 
-    public ServiceEventBuilder<ServiceEvent> build(
+    public ServiceEventBuilder<ServiceLogEvent> build(
     )
     {
       return build(null);
     }
 
-    public ServiceEventBuilder<ServiceEvent> build(
+    public ServiceEventBuilder<ServiceLogEvent> build(
         final DateTime createdTime
     )
     {
 
-      return new ServiceEventBuilder<ServiceEvent>()
+      return new ServiceEventBuilder<ServiceLogEvent>()
       {
         @Override
-        public ServiceEvent build(ImmutableMap<String, String> serviceDimensions)
+        public ServiceLogEvent build(ImmutableMap<String, String> serviceDimensions)
         {
-          return new ServiceEvent(
+          return new ServiceLogEvent(
               createdTime,
               serviceDimensions,
               userDims,

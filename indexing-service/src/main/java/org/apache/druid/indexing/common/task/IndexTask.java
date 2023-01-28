@@ -472,13 +472,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           determinePartitionsMeters,
           ingestionSchema.getTuningConfig().isLogParseExceptions(),
           ingestionSchema.getTuningConfig().getMaxParseExceptions(),
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions(),
+          toolbox.getEmitter(),
+          toolbox.getTaskMetadata().toMap()
       );
       this.buildSegmentsParseExceptionHandler = new ParseExceptionHandler(
           buildSegmentsMeters,
           ingestionSchema.getTuningConfig().isLogParseExceptions(),
           ingestionSchema.getTuningConfig().getMaxParseExceptions(),
-          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions(),
+          toolbox.getEmitter(),
+          toolbox.getTaskMetadata().toMap()
       );
 
       final boolean determineIntervals = ingestionSchema.getDataSchema()

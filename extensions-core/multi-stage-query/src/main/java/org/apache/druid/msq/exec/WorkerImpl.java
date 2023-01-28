@@ -299,7 +299,6 @@ public class WorkerImpl implements Worker
     } else {
       criticalWarningCodes = ImmutableSet.of();
     }
-
     final MSQWarningPublisher filteredEmitterWarningPublisher = new MSQFilteredEmitterWarningPublisher(
         id(),
         task.getControllerTaskId(),
@@ -858,7 +857,14 @@ public class WorkerImpl implements Worker
             processorBouncer,
             counters,
             MSQWarningReportPublisher,
-            new ParseExceptionHandler(frameContext.rowIngestionMeters(), TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS, TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS, TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS)
+            new ParseExceptionHandler(frameContext.rowIngestionMeters(),
+                                      TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS,
+                                      TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS,
+                                      TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS,
+                                      context.emitter(),
+                                      ImmutableMap.of("taskId", task.getId(),
+                                                      "groupId", task.getControllerTaskId(),
+                                                      "datasource", task.getDataSource()))
         );
 
     final ListenableFuture<ClusterByPartitions> stagePartitionBoundariesFuture;

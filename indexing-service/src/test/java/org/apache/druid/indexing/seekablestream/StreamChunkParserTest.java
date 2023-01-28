@@ -40,6 +40,7 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,7 +74,8 @@ public class StreamChunkParserTest
       rowIngestionMeters,
       false,
       0,
-      0
+      0,
+      new NoopServiceEmitter()
   );
 
   @Test

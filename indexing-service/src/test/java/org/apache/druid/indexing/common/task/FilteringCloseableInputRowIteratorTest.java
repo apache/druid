@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,7 +69,8 @@ public class FilteringCloseableInputRowIteratorTest
         rowIngestionMeters,
         true,
         Integer.MAX_VALUE,
-        1024 // do not use Integer.MAX_VALUE since it will create an object array of this length
+        1024, // do not use Integer.MAX_VALUE since it will create an object array of this length
+        new NoopServiceEmitter()
     ));
   }
 

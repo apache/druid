@@ -214,7 +214,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         buildSegmentsMeters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
+        tuningConfig.getMaxSavedParseExceptions(),
+        toolbox.getEmitter(),
+        toolbox.getTaskMetadata().toMap()
     );
     final boolean determineIntervals = granularitySpec.inputIntervals().isEmpty();
 
