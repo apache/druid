@@ -302,15 +302,14 @@ use join datasources.
 SQL joins take the form:
 
 ```
-<o1> [ INNER | LEFT [OUTER] | CROSS ] JOIN <o2> ON <condition>
+<o1> [ [ INNER | LEFT [OUTER] JOIN ON ] | CROSS JOIN <o2> 
 ```
 
 JOIN conditions have the following requirements:
-- You can only use equality statements in JOIN conditions. For example: `t1.x = t2.x`
+- Druid only supports the equality operator, `=`, in JOIN conditions; inequality operators are unsupported. For example: `t1.x = t2.x`, but not `t1.x <> t2.x`.
 - You can use functions on the operands in JOIN conditions. For example: `LOWER(t1.x) = t2.x`
 - You can apply multiple equality conditions using the AND operator. For example: `t1.x = t2.x AND t1.y = t2.y`
-- Inequality conditions are unsupported. For example: `t1.x <> t2.x`
-- Conditions are optional for CROSS JOIN.
+- CROSS JOIN does not accept an ON condition.
 
 Note that Druid SQL is less rigid than what native join datasources can handle. In cases where a SQL query does
 something that is not allowed as-is with a native join datasource, Druid SQL will generate a subquery. This can have
