@@ -154,7 +154,7 @@ public class NestedDataTestUtils
   {
     File segmentDir = tempFolder.newFolder();
     File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = closer.register(new FileInputStream(inputFile));
+    FileInputStream inputDataStream = new FileInputStream(inputFile);
     String parserJson = readFileFromClasspathAsString(parserJsonFileName);
     String aggJson = readFileFromClasspathAsString(aggJsonFileName);
 
@@ -168,6 +168,7 @@ public class NestedDataTestUtils
         maxRowCount,
         rollup
     );
+    inputDataStream.close();
 
     final List<Segment> segments = Lists.transform(
         ImmutableList.of(segmentDir),
@@ -199,7 +200,7 @@ public class NestedDataTestUtils
   {
     File segmentDir = tempFolder.newFolder();
     File inputFile = readFileFromClasspath(inputFileName);
-    FileInputStream inputDataStream = closer.register(new FileInputStream(inputFile));
+    FileInputStream inputDataStream = new FileInputStream(inputFile);
     String parserJson = readFileFromClasspathAsString(parserJsonFileName);
     String transformSpecJson = readFileFromClasspathAsString(transformSpecJsonFileName);
     String aggJson = readFileFromClasspathAsString(aggJsonFileName);
@@ -215,6 +216,7 @@ public class NestedDataTestUtils
         maxRowCount,
         rollup
     );
+    inputDataStream.close();
 
     final List<Segment> segments = Lists.transform(
         ImmutableList.of(segmentDir),
@@ -284,7 +286,7 @@ public class NestedDataTestUtils
     for (int i = 0; i < numSegments; i++) {
       List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
       for (int j = 0; j < numCopies; j++) {
-        inputStreams.add(closer.register(new FileInputStream(readFileFromClasspath(inputFileName))));
+        inputStreams.add(new FileInputStream(readFileFromClasspath(inputFileName)));
         if (j + 1 < numCopies) {
           inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
         }
@@ -302,6 +304,7 @@ public class NestedDataTestUtils
           maxRowCount,
           rollup
       );
+      inputDataStream.close();
       segmentDirs.add(segmentDir);
     }
 
