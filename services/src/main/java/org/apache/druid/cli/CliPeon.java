@@ -144,10 +144,10 @@ public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
   @Required
-  @Arguments(description = "taskDirPath attemptId")
+  @Arguments(description = "baseTaskDirPath taskId attemptId")
   public List<String> taskAndStatusFile;
 
-  // path to the task Directory
+  // path to the base task Directory
   private String taskDirPath;
 
   // the attemptId
@@ -200,8 +200,8 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
-            taskDirPath = taskAndStatusFile.get(0);
-            attemptId = taskAndStatusFile.get(1);
+            taskDirPath = Paths.get(taskAndStatusFile.get(0), taskAndStatusFile.get(1)).toAbsolutePath().toString();
+            attemptId = taskAndStatusFile.get(2);
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -224,6 +224,8 @@ public class CliPeon extends GuiceRunnable
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile())
                 .setLockFile(Paths.get(taskDirPath, "lock").toFile());
 
+            TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(taskAndStatusFile.get(0)));
+            binder.bind(TaskStorageDirTracker.class).toInstance(dirTracker);
 
             if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
               log.info("Running peon in k8s mode");

@@ -156,6 +156,7 @@ public class ForkingTaskRunner
                 {
 
                   final String attemptId = String.valueOf(getNextAttemptID(dirTracker, task.getId()));
+                  final String baseTaskDir = dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath();
                   final File taskDir = dirTracker.getTaskDir(task.getId());
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
@@ -371,7 +372,8 @@ public class ForkingTaskRunner
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
-                        command.add(taskDir.toString());
+                        command.add(baseTaskDir);
+                        command.add(task.getId());
                         command.add(attemptId);
                         String nodeType = task.getNodeType();
                         if (nodeType != null) {

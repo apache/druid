@@ -101,7 +101,7 @@ public class TaskToolbox
   private final JoinableFactory joinableFactory;
   private final SegmentCacheManager segmentCacheManager;
   private final ObjectMapper jsonMapper;
-  private final File taskWokDir;
+  private final File taskWorkDir;
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -128,7 +128,6 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
-
   private final TaskStorageDirTracker dirTracker;
 
 

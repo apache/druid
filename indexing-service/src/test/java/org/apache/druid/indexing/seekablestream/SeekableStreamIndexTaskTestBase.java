@@ -708,7 +708,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         null,
         null,
         "1",
-        new TaskStorageDirTracker(taskConfig
+        new TaskStorageDirTracker(taskConfig)
     );
   }
 

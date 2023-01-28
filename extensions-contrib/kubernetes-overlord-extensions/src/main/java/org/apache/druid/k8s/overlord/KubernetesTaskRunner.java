@@ -348,7 +348,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     final List<String> command = new ArrayList<>();
     command.add("/peon.sh");
-    command.add(dirTracker.getTaskDir(task.getId()).toString());
+    command.add(dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath());
+    command.add(task.getId());
     command.add("1"); // the attemptId is always 1, we never run the task twice on the same pod.
 
     String nodeType = task.getNodeType();
