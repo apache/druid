@@ -182,7 +182,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 "1",
-                new TaskStorageDirTracker(taskConfig)
+                dirTracker
             ),
             taskConfig,
             location

@@ -702,26 +702,25 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
+    TaskConfig config = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     return new TaskToolbox.Builder()
-        .config(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null,
-                false,
-                null
-            )
-        )
+        .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(actionClient)
         .segmentPusher(
@@ -755,6 +754,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
+        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 

@@ -66,10 +66,11 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
+    when(toolbox.getConfig()).thenReturn(config);
     TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
         ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
     );
-    when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getDirTracker()).thenReturn(dirTracker);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -84,7 +85,7 @@ public class AbstractTaskTest
         // create a reports file to test the taskLogPusher pushes task reports
         String result = super.setup(toolbox);
         File attemptDir = Paths.get(
-            dirTracker.getBaseTaskDirs().get(0).getAbsolutePath(),
+            dirTracker.getTaskDir("myID").getAbsolutePath(),
             "attempt", toolbox.getAttemptId()
         ).toFile();
         File reportsDir = new File(attemptDir, "report.json");
