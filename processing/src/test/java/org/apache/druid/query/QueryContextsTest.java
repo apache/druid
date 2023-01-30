@@ -186,15 +186,6 @@ public class QueryContextsTest
   }
 
   @Test
-  public void testGetMaxInputBytesPerWorker()
-  {
-    Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.MAX_INPUT_BYTES_PER_WORKER, 1024);
-
-    Assert.assertEquals(1024, QueryContext.of(queryContext).getMaxInputBytesPerWorker(10));
-  }
-
-  @Test
   public void testGetTimeout_withNonNumericValue()
   {
     Map<String, Object> queryContext = new HashMap<>();

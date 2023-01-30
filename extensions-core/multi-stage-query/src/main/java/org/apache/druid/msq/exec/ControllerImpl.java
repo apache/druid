@@ -1600,7 +1600,7 @@ public class ControllerImpl implements Controller
           generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
 
       final long maxInputBytesPerWorker =
-          querySpec.getQuery().context().getMaxInputBytesPerWorker(Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER);
+          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getQuery().context());
 
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
