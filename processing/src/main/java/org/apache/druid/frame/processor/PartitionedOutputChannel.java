@@ -119,4 +119,14 @@ public class PartitionedOutputChannel
       );
     }
   }
+
+
+  /**
+   * Returns a read-only version of this instance. Read-only versions have neither {@link #getWritableChannel()} nor
+   * {@link #getFrameMemoryAllocator()}, and therefore require substantially less memory.
+   */
+  public PartitionedOutputChannel readOnly()
+  {
+    return new PartitionedOutputChannel(null, null, readableChannelSupplier);
+  }
 }

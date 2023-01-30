@@ -609,7 +609,10 @@ public class SuperSorter
         );
         writableChannel = partitionedOutputChannel.getWritableChannel();
         frameAllocator = partitionedOutputChannel.getFrameMemoryAllocator();
-        levelAndRankToReadableChannelMap.put(levelAndRankKey, partitionedOutputChannel);
+        // We add the readOnly() channel even though we require the writableChannel and the frame allocator because
+        // the original partitionedOutputChannel would contain the reference to those, which would get cleaned up
+        // appropriately and not be held up in the class level map
+        levelAndRankToReadableChannelMap.put(levelAndRankKey, partitionedOutputChannel.readOnly());
       }
 
       final FrameChannelMerger worker =
