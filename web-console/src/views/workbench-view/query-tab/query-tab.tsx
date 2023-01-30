@@ -24,6 +24,7 @@ import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
+import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
 import {
@@ -67,10 +68,10 @@ import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-pa
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
 import { HelperQuery } from '../helper-query/helper-query';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
-import { useMetadataStateStore } from '../metadata-state-store';
+import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import { RunPanel } from '../run-panel/run-panel';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './query-tab.scss';
 
@@ -252,7 +253,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     incrementWorkVersion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,7 +264,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const execution = executionState.data;
 
-  const incrementMetadataVersion = useMetadataStateStore(state => state.increment);
+  const incrementMetadataVersion = useStore(
+    metadataStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     if (execution?.isSuccessfulInsert()) {
       incrementMetadataVersion();

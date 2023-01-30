@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
 import {
@@ -57,10 +58,10 @@ import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summ
 import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
-import { useMetadataStateStore } from '../metadata-state-store';
+import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import { RunPanel } from '../run-panel/run-panel';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './helper-query.scss';
 
@@ -223,7 +224,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     incrementWorkVersion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -231,7 +235,10 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
 
   const execution = executionState.data;
 
-  const incrementMetadataVersion = useMetadataStateStore(state => state.increment);
+  const incrementMetadataVersion = useStore(
+    metadataStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     if (execution?.isSuccessfulInsert()) {
       incrementMetadataVersion();
