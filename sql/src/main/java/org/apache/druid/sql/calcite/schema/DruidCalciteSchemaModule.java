@@ -27,6 +27,7 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.sql.guice.SqlBindings;
 
 /**
@@ -55,6 +56,7 @@ public class DruidCalciteSchemaModule implements Module
     binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
     binder.bind(InformationSchema.class).in(Scopes.SINGLETON);
     binder.bind(LookupSchema.class).in(Scopes.SINGLETON);
+    binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
 
     // Binder to inject different schema to Calcite
     SqlBindings.addSchema(binder, NamedDruidSchema.class);
