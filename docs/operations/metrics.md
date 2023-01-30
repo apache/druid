@@ -64,8 +64,8 @@ Metrics may have additional dimensions beyond those listed above.
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`| |
-|`broker/serverview/init/time`|Time taken to initialize the broker server view.||Depends on the number of segments|
-|`segment/metadatacache/init/time`|Time taken to initialize the broker segment metadata cache.||Depends on the number of segments|
+|`broker/serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
+|`segment/metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
 
 ### Historical
 

@@ -339,6 +339,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
+    overlordServerView.start();
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
