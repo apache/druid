@@ -17,6 +17,7 @@
 set -e
 
 export KUBECTL="sudo /usr/local/bin/kubectl"
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # setup client keystore
 cd integration-tests
