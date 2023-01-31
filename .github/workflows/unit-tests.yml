@@ -28,7 +28,7 @@ on:
 
 jobs:
   indexing_modules_test:
-    uses: apache/druid/.github/workflows/reusable-unit-tests.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
@@ -36,7 +36,7 @@ jobs:
       maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
   processing_modules_test:
-    uses: apache/druid/.github/workflows/reusable-unit-tests.yml
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
@@ -44,7 +44,7 @@ jobs:
       maven_projects: 'processing'
 
   server_modules_test:
-    uses: apache/druid/.github/workflows/reusable-unit-tests.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
@@ -52,7 +52,7 @@ jobs:
       maven_projects: 'server'
 
   other_modules_test:
-    uses: apache/druid/.github/workflows/reusable-unit-tests.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-unit-tests.yml@update_uts_gha
     with:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}

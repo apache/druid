@@ -27,7 +27,7 @@ jobs:
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
-    uses: apache/druid/.github/workflows/reusable-revised-its.yml@master
+    uses: tejaswini-imply/druid/.github/workflows/reusable-revised-its.yml@update_uts_gha
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
