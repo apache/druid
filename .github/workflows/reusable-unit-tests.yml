@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
+          key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ hashFiles('**/pom.xml') }}
 
       - name: setup node
         uses: actions/setup-node@v3
