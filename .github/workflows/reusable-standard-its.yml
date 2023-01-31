@@ -26,6 +26,7 @@ on:
         required: true
         type: string
       override_config_path:
+        description: 'Existing Druid configuration (using Docker) can be overridden or new config vars can be set e.g. when using cloud storage'
         required: false
         type: string
       group:

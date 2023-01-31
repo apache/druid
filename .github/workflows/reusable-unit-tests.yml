@@ -41,6 +41,7 @@ env:
   MAVEN_SKIP_TESTS: -P skip-tests
   MAVEN_OPTS: -Xmx3000m
   FORCE_COLOR: 2
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
   unit-tests:
@@ -57,7 +58,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.jdk }}
-          cache: 'maven'
+
+      - name: Restore Maven repository
+        id: maven-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
 
       - name: setup node
         uses: actions/setup-node@v3
@@ -84,4 +91,5 @@ jobs:
       - name: test & coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
+          MVN: ${{ ( steps.maven-restore.outputs.cache-hit && format('{0} {1}', env.MVN, 'dependency:go-offline') ) || env.MVN }}
         run: ./.github/scripts/unit_tests_script.sh

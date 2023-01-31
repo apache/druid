@@ -58,10 +58,6 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
 
-      - name: Setup variables
-        run: |
-
-
       - name: Maven build
         id: maven_build
         run: |
