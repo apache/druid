@@ -149,15 +149,15 @@ import type {
   CacheRows,
   ExampleManifest,
   SampleEntry,
-  SampleHeaderAndRows,
   SampleResponse,
   SampleResponseWithExtraInfo,
   SampleStrategy,
 } from '../../utils/sampler';
 import {
   getCacheRowsFromSampleResponse,
+  getHeaderNamesFromSampleResponse,
   getProxyOverlordModules,
-  headerAndRowsFromSampleResponse,
+  guessDimensionsFromSampleResponse,
   sampleForConnect,
   sampleForExampleManifests,
   sampleForFilter,
@@ -237,19 +237,22 @@ function formatSampleEntries(sampleEntries: SampleEntry[], isDruidSource: boolea
   }
 }
 
-function getTimestampSpec(headerAndRows: SampleHeaderAndRows | null): TimestampSpec {
-  if (!headerAndRows) return CONSTANT_TIMESTAMP_SPEC;
+function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec {
+  if (!sampleResponse) return CONSTANT_TIMESTAMP_SPEC;
 
-  const timestampSpecs = filterMap(headerAndRows.header, sampleHeader => {
-    const possibleFormat = possibleDruidFormatForValues(
-      filterMap(headerAndRows.rows, d => (d.parsed ? d.parsed[sampleHeader] : undefined)),
-    );
-    if (!possibleFormat) return;
-    return {
-      column: sampleHeader,
-      format: possibleFormat,
-    };
-  });
+  const timestampSpecs = filterMap(
+    getHeaderNamesFromSampleResponse(sampleResponse),
+    sampleHeader => {
+      const possibleFormat = possibleDruidFormatForValues(
+        filterMap(sampleResponse.data, d => (d.parsed ? d.parsed[sampleHeader] : undefined)),
+      );
+      if (!possibleFormat) return;
+      return {
+        column: sampleHeader,
+        format: possibleFormat,
+      };
+    },
+  );
 
   return (
     timestampSpecs.find(ts => /time/i.test(ts.column)) || // Use a suggestion that has time in the name if possible
@@ -354,30 +357,31 @@ export interface LoadDataViewState {
   inputQueryState: QueryState<SampleResponseWithExtraInfo>;
 
   // for parser
-  parserQueryState: QueryState<SampleHeaderAndRows>;
+  parserQueryState: QueryState<SampleResponse>;
 
   // for flatten
   selectedFlattenField?: SelectedIndex<FlattenField>;
 
   // for timestamp
   timestampQueryState: QueryState<{
-    headerAndRows: SampleHeaderAndRows;
+    sampleResponse: SampleResponse;
     spec: Partial<IngestionSpec>;
   }>;
 
   // for transform
-  transformQueryState: QueryState<SampleHeaderAndRows>;
+  transformQueryState: QueryState<SampleResponse>;
   selectedTransform?: SelectedIndex<Transform>;
 
   // for filter
-  filterQueryState: QueryState<SampleHeaderAndRows>;
+  filterQueryState: QueryState<SampleResponse>;
   selectedFilter?: SelectedIndex<DruidFilter>;
 
   // for schema
   schemaQueryState: QueryState<{
-    headerAndRows: SampleHeaderAndRows;
+    sampleResponse: SampleResponse;
     dimensions: (string | DimensionSpec)[] | undefined;
     metricsSpec: MetricSpec[] | undefined;
+    definedDimensions: boolean;
   }>;
   selectedAutoDimension?: string;
   selectedDimensionSpec?: SelectedIndex<DimensionSpec>;
@@ -1427,10 +1431,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState(({ parserQueryState }) => ({
       cacheRows: getCacheRowsFromSampleResponse(sampleResponse),
       parserQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse({
-          sampleResponse,
-          ignoreTimeColumn: true,
-        }),
+        data: sampleResponse,
         lastData: parserQueryState.getSomeData(),
       }),
     }));
@@ -1473,7 +1474,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </div>
           {data && (
             <ParseDataTable
-              sampleData={data}
+              sampleResponse={data}
               columnFilter={columnFilter}
               canFlatten={canHaveNestedData}
               flattenedColumnsOnly={specialColumnsOnly}
@@ -1492,7 +1493,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     let suggestedFlattenFields: FlattenField[] | undefined;
     if (canHaveNestedData && !flattenFields.length && parserQueryState.data) {
       suggestedFlattenFields = computeFlattenPathsForData(
-        filterMap(parserQueryState.data.rows, r => r.input),
+        filterMap(parserQueryState.data.data, r => r.input),
         'ignore-arrays',
       );
     }
@@ -1668,9 +1669,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState(({ timestampQueryState }) => ({
       timestampQueryState: new QueryState({
         data: {
-          headerAndRows: headerAndRowsFromSampleResponse({
-            sampleResponse,
-          }),
+          sampleResponse,
           spec,
         },
         lastData: timestampQueryState.getSomeData(),
@@ -1717,7 +1716,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               columnFilter={columnFilter}
               possibleTimestampColumnsOnly={specialColumnsOnly}
               selectedColumnName={parseTimeTableSelectedColumnName(
-                data.headerAndRows,
+                data.sampleResponse,
                 timestampSpec,
               )}
               onTimestampColumnSelect={this.onTimestampColumnSelect}
@@ -1858,9 +1857,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     this.setState(({ transformQueryState }) => ({
       transformQueryState: new QueryState({
-        data: headerAndRowsFromSampleResponse({
-          sampleResponse,
-        }),
+        data: sampleResponse,
         lastData: transformQueryState.getSomeData(),
       }),
     }));
@@ -1876,7 +1873,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (transformQueryState.isInit()) {
       mainFill = <CenterMessage>Please fill in the previous steps</CenterMessage>;
     } else {
-      const data = transformQueryState.getSomeData();
+      const sampleResponse = transformQueryState.getSomeData();
+
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -1892,13 +1890,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               disabled={!transforms.length}
             />
           </div>
-          {data && (
+          {sampleResponse && (
             <TransformTable
-              sampleData={data}
+              sampleResponse={sampleResponse}
               columnFilter={columnFilter}
               transformedColumnsOnly={specialColumnsOnly}
               transforms={transforms}
-              selectedColumnName={transformTableSelectedColumnName(data, selectedTransform?.value)}
+              selectedColumnName={transformTableSelectedColumnName(
+                sampleResponse,
+                selectedTransform?.value,
+              )}
               onTransformSelect={this.onTransformSelect}
             />
           )}
@@ -2045,10 +2046,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (sampleResponse.data.length) {
       this.setState(({ filterQueryState }) => ({
         filterQueryState: new QueryState({
-          data: headerAndRowsFromSampleResponse({
-            sampleResponse,
-            parsedOnly: true,
-          }),
+          data: sampleResponse,
           lastData: filterQueryState.getSomeData(),
         }),
       }));
@@ -2067,15 +2065,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       return;
     }
 
-    const headerAndRowsNoFilter = headerAndRowsFromSampleResponse({
-      sampleResponse: sampleResponseNoFilter,
-      parsedOnly: true,
-    });
-
     this.setState(({ filterQueryState }) => ({
       // cacheRows: sampleResponseNoFilter.cacheKey,
       filterQueryState: new QueryState({
-        data: deepSet(headerAndRowsNoFilter, 'rows', []),
+        data: sampleResponseNoFilter,
         lastData: filterQueryState.getSomeData(),
       }),
     }));
@@ -2095,7 +2088,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (filterQueryState.isInit()) {
       mainFill = <CenterMessage>Please enter more details for the previous steps</CenterMessage>;
     } else {
-      const data = filterQueryState.getSomeData();
+      const filterQuery = filterQueryState.getSomeData();
+
       mainFill = (
         <div className="table-with-control">
           <div className="table-control">
@@ -2105,12 +2099,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               placeholder="Search columns"
             />
           </div>
-          {data && (
+          {filterQuery && (
             <FilterTable
-              sampleData={data}
+              sampleResponse={filterQuery}
               columnFilter={columnFilter}
               dimensionFilters={dimensionFilters}
-              selectedFilterName={filterTableSelectedColumnName(data, selectedFilter?.value)}
+              selectedFilterName={filterTableSelectedColumnName(filterQuery, selectedFilter?.value)}
               onFilterSelect={this.onFilterSelect}
             />
           )}
@@ -2243,15 +2237,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     this.setState(({ schemaQueryState }) => ({
       schemaQueryState: new QueryState({
         data: {
-          headerAndRows: headerAndRowsFromSampleResponse({
-            sampleResponse,
-            columnOrder: [TIME_COLUMN].concat(
-              dimensions ? dimensions.map(getDimensionSpecName) : [],
-            ),
-            suffixColumnOrder: metricsSpec ? metricsSpec.map(getMetricSpecName) : undefined,
-          }),
-          dimensions,
+          sampleResponse,
+          dimensions: dimensions || guessDimensionsFromSampleResponse(sampleResponse),
           metricsSpec,
+          definedDimensions: Boolean(dimensions),
         },
         lastData: schemaQueryState.getSomeData(),
       }),
@@ -2569,13 +2558,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(
-              spec,
-              headerAndRowsFromSampleResponse({ sampleResponse }),
-              getDimensionMode(spec),
-              newRollup,
-              true,
-            ),
+            updateSchemaWithSample(spec, sampleResponse, getDimensionMode(spec), newRollup, true),
           );
         }}
         confirmButtonText={`Yes - ${newRollup ? 'enable' : 'disable'} rollup`}
@@ -2600,12 +2583,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(
-              spec,
-              headerAndRowsFromSampleResponse({ sampleResponse }),
-              newDimensionMode,
-              getRollup(spec),
-            ),
+            updateSchemaWithSample(spec, sampleResponse, newDimensionMode, getRollup(spec)),
           );
         }}
         confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly set'} columns`}

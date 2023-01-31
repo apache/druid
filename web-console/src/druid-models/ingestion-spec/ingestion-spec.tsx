@@ -39,7 +39,7 @@ import {
   parseCsvLine,
   typeIs,
 } from '../../utils';
-import type { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleResponse } from '../../utils/sampler';
 import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
   getDimensionSpecName,
@@ -269,6 +269,9 @@ export interface DataSchema {
 export type DimensionMode = 'specific' | 'auto-detect';
 
 export function getDimensionMode(spec: Partial<IngestionSpec>): DimensionMode {
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
+    return 'auto-detect';
+  }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
 }
@@ -2182,8 +2185,8 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessInputFormat(sampleData: string[], canBeMultiLineJson = false): InputFormat {
-  let sampleDatum = sampleData[0];
+export function guessInputFormat(sampleRaw: string[], canBeMultiLineJson = false): InputFormat {
+  let sampleDatum = sampleRaw[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
 
@@ -2319,11 +2322,11 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
 
 // ------------------------
 
-export function guessIsArrayFromHeaderAndRows(
-  headerAndRows: SampleHeaderAndRows,
+export function guessIsArrayFromSampleResponse(
+  sampleResponse: SampleResponse,
   column: string,
 ): boolean {
-  return headerAndRows.rows.some(r => isSimpleArray(r.input?.[column]));
+  return sampleResponse.data.some(r => isSimpleArray(r.input?.[column]));
 }
 
 export function guessColumnTypeFromInput(
@@ -2355,13 +2358,13 @@ export function guessColumnTypeFromInput(
   }
 }
 
-export function guessColumnTypeFromHeaderAndRows(
-  headerAndRows: SampleHeaderAndRows,
+export function guessColumnTypeFromSampleResponse(
+  sampleResponse: SampleResponse,
   column: string,
   guessNumericStringsAsNumbers: boolean,
 ): string {
   return guessColumnTypeFromInput(
-    filterMap(headerAndRows.rows, r => r.input?.[column]),
+    filterMap(sampleResponse.data, r => r.input?.[column]),
     guessNumericStringsAsNumbers,
   );
 }
@@ -2391,7 +2394,7 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
-  headerAndRows: SampleHeaderAndRows,
+  sampleResponse: SampleResponse,
   dimensionMode: DimensionMode,
   rollup: boolean,
   forcePartitionInitialization = false,
@@ -2404,26 +2407,24 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions', true);
     newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
   } else {
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
     newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
-
-    const dimensions = getDimensionSpecs(
-      headerAndRows,
-      typeHints,
-      guessNumericStringsAsNumbers,
-      rollup,
+    newSpec = deepSet(
+      newSpec,
+      'spec.dataSchema.dimensionsSpec.dimensions',
+      getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
     );
-    if (dimensions) {
-      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
-    }
   }
 
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(headerAndRows, typeHints, guessNumericStringsAsNumbers);
+    const metrics = getMetricSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }

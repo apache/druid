@@ -20,6 +20,7 @@ import { dedupe } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
+  DimensionSpec,
   DimensionsSpec,
   IngestionSpec,
   IngestionType,
@@ -32,6 +33,7 @@ import type {
 } from '../druid-models';
 import {
   getDimensionNamesFromTransforms,
+  getDimensionSpecName,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -43,10 +45,9 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
+import { EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
-const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   numRows: 500,
   timeoutMs: 15000,
@@ -63,6 +64,38 @@ export interface SamplerConfig {
 
 export interface SampleResponse {
   data: SampleEntry[];
+  logicalSegmentSchema: { name: string; type: string }[];
+  logicalDimensions: DimensionSpec[];
+  physicalDimensions: DimensionSpec[];
+  numRowsIndexed: number;
+  numRowsRead: number;
+}
+
+export function getHeaderNamesFromSampleResponse(
+  sampleResponse: SampleResponse,
+  ignoreTimeColumn = false,
+) {
+  return filterMap(sampleResponse.logicalSegmentSchema, s =>
+    ignoreTimeColumn && s.name === '__time' ? undefined : s.name,
+  );
+}
+
+export function guessDimensionsFromSampleResponse(sampleResponse: SampleResponse): DimensionSpec[] {
+  const { logicalDimensions, physicalDimensions, data } = sampleResponse;
+  return logicalDimensions.map(d => {
+    // Boolean column are currently reported as "long" so let's turn them into "string"
+    if (
+      d.type === 'long' &&
+      physicalDimensions.find(_ => _.name === d.name)?.type === 'json' &&
+      typeof data[0]?.input?.[d.name] === 'boolean'
+    ) {
+      return {
+        name: d.name,
+        type: 'string',
+      };
+    }
+    return d;
+  });
 }
 
 export type CacheRows = Record<string, any>[];
@@ -79,11 +112,6 @@ export interface SampleEntry {
   parsed?: Record<string, any>;
   unparseable?: boolean;
   error?: string;
-}
-
-export interface SampleHeaderAndRows {
-  header: string[];
-  rows: SampleEntry[];
 }
 
 export interface ExampleManifest {
@@ -126,46 +154,6 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   return sampleSpec;
 }
 
-export interface HeaderFromSampleResponseOptions {
-  sampleResponse: SampleResponse;
-  ignoreTimeColumn?: boolean;
-  columnOrder?: string[];
-  suffixColumnOrder?: string[];
-  useInput?: boolean;
-}
-
-export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
-  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder, useInput } = options;
-
-  const key = useInput ? 'input' : 'parsed';
-  let columns = arrangeWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s[key] ? Object.keys(s[key]!) : []))),
-    columnOrder || [TIME_COLUMN],
-    suffixColumnOrder || [],
-  );
-
-  if (ignoreTimeColumn) {
-    columns = columns.filter(c => c !== TIME_COLUMN);
-  }
-
-  return columns;
-}
-
-export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSampleResponseOptions {
-  parsedOnly?: boolean;
-}
-
-export function headerAndRowsFromSampleResponse(
-  options: HeaderAndRowsFromSampleResponseOptions,
-): SampleHeaderAndRows {
-  const { sampleResponse, parsedOnly } = options;
-
-  return {
-    header: headerFromSampleResponse(options),
-    rows: parsedOnly ? sampleResponse.data.filter(d => d.parsed) : sampleResponse.data,
-  };
-}
-
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
@@ -185,7 +173,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await Api.instance.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -332,7 +320,9 @@ export async function sampleForParser(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: {},
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         granularitySpec: {
           rollup: false,
         },
@@ -359,7 +349,9 @@ export async function sampleForTimestamp(
       ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        dimensionsSpec: {},
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
         granularitySpec: {
           rollup: false,
@@ -380,7 +372,7 @@ export async function sampleForTimestamp(
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-  // If we are trying to parts a column then get a bit fancy:
+  // If we are trying to parse a column then get a bit fancy:
   // Query the same sample again (same cache key)
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -388,7 +380,9 @@ export async function sampleForTimestamp(
       ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        dimensionsSpec: {},
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         timestampSpec,
         transformSpec: {
           transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
@@ -430,8 +424,8 @@ export async function sampleForTransform(
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
-  // Extra step to simulate auto detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = {};
+  // Extra step to simulate auto-detecting dimension with transforms
+  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -440,7 +434,9 @@ export async function sampleForTransform(
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
-          dimensionsSpec: {},
+          dimensionsSpec: {
+            useSchemaDiscovery: true,
+          },
           granularitySpec: {
             rollup: false,
           },
@@ -458,10 +454,10 @@ export async function sampleForTransform(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        headerFromSampleResponse({
-          sampleResponse: sampleResponseHack,
-          ignoreTimeColumn: true,
-        }).concat(getDimensionNamesFromTransforms(transforms)),
+        (
+          guessDimensionsFromSampleResponse(sampleResponseHack) as (DimensionSpec | string)[]
+        ).concat(getDimensionNamesFromTransforms(transforms)),
+        getDimensionSpecName,
       ),
     );
   }
@@ -497,8 +493,8 @@ export async function sampleForFilter(
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
 
-  // Extra step to simulate auto detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = {};
+  // Extra step to simulate auto-detecting dimension with transforms
+  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -507,7 +503,9 @@ export async function sampleForFilter(
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
-          dimensionsSpec: {},
+          dimensionsSpec: {
+            useSchemaDiscovery: true,
+          },
           granularitySpec: {
             rollup: false,
           },
@@ -525,10 +523,9 @@ export async function sampleForFilter(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        headerFromSampleResponse({
-          sampleResponse: sampleResponseHack,
-          ignoreTimeColumn: true,
-        }).concat(getDimensionNamesFromTransforms(transforms)),
+        getHeaderNamesFromSampleResponse(sampleResponseHack, true).concat(
+          getDimensionNamesFromTransforms(transforms),
+        ),
       ),
     );
   }
