@@ -164,11 +164,12 @@ public class AvroFlattenerMakerTest
     final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
 
     SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
-
+    // isFieldPrimitive on someStringArray is false
+    // as it contains items as nulls and strings
+    // so flattenerNested should only be able to discover it
     Assert.assertEquals(
         ImmutableSet.of(
             "someOtherId",
-            "someStringArray",
             "someIntArray",
             "someFloat",
             "eventType",
@@ -208,6 +209,45 @@ public class AvroFlattenerMakerTest
         ),
         ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
     );
+  }
+
+
+  @Test
+  public void testNullsInStringArray()
+  {
+    final AvroFlattenerMaker flattenerNested = new AvroFlattenerMaker(false, false, true, true);
+
+    SomeAvroDatum input = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            "someStringValueMap",
+            "someOtherId",
+            "someStringArray",
+            "someIntArray",
+            "someFloat",
+            "isValid",
+            "someIntValueMap",
+            "eventType",
+            "someFixed",
+            "someBytes",
+            "someRecord",
+            "someMultiMemberUnion",
+            "someNull",
+            "someRecordArray",
+            "someUnion",
+            "id",
+            "someEnum",
+            "someLong",
+            "someInt",
+            "timestamp"
+        ),
+        ImmutableSet.copyOf(flattenerNested.discoverRootFields(input))
+    );
+
+    ArrayList<Object> results = (ArrayList<Object>) flattenerNested.getRootField(input, "someStringArray");
+    // 4 strings a 1 null for a total of 5
+    Assert.assertEquals(5, results.size());
   }
 
   private void getRootField_common(final SomeAvroDatum record, final AvroFlattenerMaker flattener)
