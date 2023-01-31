@@ -201,7 +201,7 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
             null,
             "pow",
             ImmutableList.of(
-                    new FieldAccessPostAggregator("value", "value"),
+                    new FieldAccessPostAggregator("base", "value"),
                     new ConstantPostAggregator("zero", 0)
             ),
             "numericFirst"

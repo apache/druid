@@ -1364,7 +1364,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 l.input ? l.input.raw : undefined,
               );
 
-              const issue = issueWithSampleData(sampleLines);
+              const issue = issueWithSampleData(sampleLines, spec);
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
