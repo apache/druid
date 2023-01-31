@@ -341,7 +341,8 @@ public class StageDefinition
            && Objects.equals(broadcastInputNumbers, that.broadcastInputNumbers)
            && Objects.equals(processorFactory, that.processorFactory)
            && Objects.equals(signature, that.signature)
-           && Objects.equals(shuffleSpec, that.shuffleSpec);
+           && Objects.equals(shuffleSpec, that.shuffleSpec)
+           && Objects.equals(maxInputBytesPerWorker, that.maxInputBytesPerWorker);
   }
 
   @Override
@@ -355,7 +356,8 @@ public class StageDefinition
         signature,
         maxWorkerCount,
         shuffleCheckHasMultipleValues,
-        shuffleSpec
+        shuffleSpec,
+        maxInputBytesPerWorker
     );
   }
 
@@ -371,6 +373,7 @@ public class StageDefinition
            ", maxWorkerCount=" + maxWorkerCount +
            ", shuffleSpec=" + shuffleSpec +
            (shuffleCheckHasMultipleValues ? ", shuffleCheckHasMultipleValues=" + shuffleCheckHasMultipleValues : "") +
+           ", maxInputBytesPerWorker=" + maxInputBytesPerWorker +
            '}';
   }
 }
