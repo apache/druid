@@ -99,6 +99,40 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
 
   }
@@ -139,6 +173,34 @@ public class MSQInsertTest extends MSQTestBase
                              .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
                              .buildChannelCounter(),
                          0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(68).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(68).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(81).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(81).frames(1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -186,6 +248,40 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(MSQInsertTest.this.context)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
 
   }
@@ -300,6 +396,40 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
 
   }
@@ -323,6 +453,40 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(5).bytes(251).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                          null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
 
   }
@@ -410,6 +574,40 @@ public class MSQInsertTest extends MSQTestBase
                          0
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(68).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(68).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(81).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(1).bytes(81).frames(1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
   }
 
@@ -455,6 +653,40 @@ public class MSQInsertTest extends MSQTestBase
                          new Object[]{1466985600000L, "Wikipedia", 1L},
                          new Object[]{1466985600000L, "Википедия", 1L}
                      ))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
+                             .buildChannelCounter(),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(6).bytes(343).frames(1)
+                             .buildChannelCounter(),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(6).bytes(343).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(6).bytes(421).frames(1)
+                             .buildChannelCounter(),
+                         1, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotBuilder
+                             .with().rows(6).bytes(421).frames(1)
+                             .buildChannelCounter(),
+                         2, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         null,
+                         2, 0, "output"
+                     )
                      .verifyResults();
 
   }

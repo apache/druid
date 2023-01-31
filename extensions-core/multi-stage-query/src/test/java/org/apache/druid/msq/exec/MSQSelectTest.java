@@ -163,6 +163,24 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(316).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(292).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, !useDefault ? "" : null},
             new Object[]{1L, "10.1"},
@@ -207,7 +225,26 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "en"},
             new Object[]{1L, "ru"},
             new Object[]{1L, "he"}
-        )).verifyResults();
+        ))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(3).bytes(175).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(3).bytes(163).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -248,6 +285,24 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(1).bytes(72).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(1).bytes(68).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -306,6 +361,24 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{1f, 1L}
             )
         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(238).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(214).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -345,6 +418,24 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(160).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(136).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -476,6 +567,24 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(261).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(261).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -594,6 +703,24 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(261).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(261).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
@@ -654,7 +781,26 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{2f, 2d},
                 new Object[]{1f, 1d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(238).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(214).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -711,7 +857,26 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{5f, 5d},
                 new Object[]{4f, 4d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(238).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(214).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -768,7 +933,26 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{5f, 5d},
                 new Object[]{4f, 4d}
             )
-        ).verifyResults();
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(238).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(6).bytes(214).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
   }
 
   @Test
@@ -842,6 +1026,18 @@ public class MSQSelectTest extends MSQTestBase
                 .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
                 .buildChannelCounter(),
             0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(1).bytes(72).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(1).bytes(68).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
         )
         .verifyResults();
   }
@@ -963,6 +1159,24 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "ru"},
             new Object[]{1L, "he"}
         ))
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().totalFiles(1)
+                .buildChannelCounter(),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(3).bytes(175).frames(1)
+                .buildChannelCounter(),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotBuilder
+                .with().rows(3).bytes(163).frames(1)
+                .buildChannelCounter(),
+            0, 0, "shuffle"
+        )
         .verifyResults();
   }
 
