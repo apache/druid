@@ -262,8 +262,6 @@ public class SegmentAllocationQueue
   {
     clearQueueIfNotLeader();
 
-    // Process all batches which are due
-    log.debug("Processing batches which are due. Queue size [%d].", processingQueue.size());
     int numProcessedBatches = 0;
 
     AllocateRequestKey nextKey = processingQueue.peekFirst();
@@ -278,7 +276,6 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         nextBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch [%s]", nextKey);
       }
 
       // Requeue if not fully processed yet
