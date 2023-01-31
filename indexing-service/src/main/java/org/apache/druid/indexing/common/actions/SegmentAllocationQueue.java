@@ -263,19 +263,20 @@ public class SegmentAllocationQueue
     clearQueueIfNotLeader();
 
     int numProcessedBatches = 0;
-
     AllocateRequestKey nextKey = processingQueue.peekFirst();
     while (nextKey != null && nextKey.isDue()) {
       processingQueue.pollFirst();
-      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
 
+      // Process the next batch in the queue
       boolean processed;
+      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
       try {
         processed = processBatch(nextBatch);
       }
       catch (Throwable t) {
         nextBatch.failPendingRequests(t);
         processed = true;
+        log.error(t, "Error while processing batch [%s]", nextKey);
       }
 
       // Requeue if not fully processed yet
