@@ -301,7 +301,7 @@ public class SegmentAllocationQueue
       nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
     }
     scheduleQueuePoll(nextScheduleDelay);
-    log.info("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
+    log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
   }
 
   /**
@@ -355,7 +355,7 @@ public class SegmentAllocationQueue
 
     emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
-    log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
+    log.debug("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
       log.debug("All requests in batch [%s] have been processed.", requestKey);
@@ -601,7 +601,7 @@ public class SegmentAllocationQueue
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
-        log.info(
+        log.debug(
             "Allocation failed in attempt [%d] due to error [%s]. Can still retry. Action: %s",
             request.getAttempts(),
             result.getErrorMessage(),
