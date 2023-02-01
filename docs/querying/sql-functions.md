@@ -1357,6 +1357,11 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
 
+## UNNEST
+
+`UNNEST(source)) as unnested (target)`
+
+Unnests a source column that includes arrays (multi-value dimensions) into a target column.
 
 ## UPPER
 

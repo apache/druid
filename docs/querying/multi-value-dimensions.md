@@ -147,6 +147,12 @@ only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you
 your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
 improve performance.
 
+## Unnesting
+
+You can unnest a column that contains multi-value dimensions (arrays) by using either the [UNNEST function (SQL)](../querying/sql.md#unnest) and the helper function MV_TO_ARRAY or the [`unnest` datasource (native)](../querying/datasource.md#unnest) .
+
+For examples, see the [tutorial](../tutorials/tutorial-unnest-datasource.md).
+
 ## Example: GroupBy query with no filtering
 
 See [GroupBy querying](groupbyquery.md) for details.
