@@ -75,7 +75,7 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFilteredEmitterWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningPublisher;
-import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
+import org.apache.druid.msq.indexing.error.MSQWarningLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlice;
@@ -317,7 +317,7 @@ public class WorkerImpl implements Worker
             MSQTasks.getHostFromSelfNode(selfDruidNode)
         )));
 
-    final MSQWarningPublisher msqWarningPublisher = new MSQWarningReportLimiterPublisher(
+    final MSQWarningPublisher msqWarningPublisher = new MSQWarningLimiterPublisher(
         compositeWarningPublisher,
         Limits.MAX_VERBOSE_WARNINGS,
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxVerboseParseExceptions),

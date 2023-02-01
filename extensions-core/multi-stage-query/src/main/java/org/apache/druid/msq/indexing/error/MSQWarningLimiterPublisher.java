@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * of {@link MSQWarningPublisher} that is wrapped in this class cannot be sure that the warning handed off
  * is trully published
  */
-public class MSQWarningReportLimiterPublisher implements MSQWarningPublisher
+public class MSQWarningLimiterPublisher implements MSQWarningPublisher
 {
 
   private final MSQWarningPublisher delegate;
@@ -67,7 +67,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningPublisher
    * @param workerId workerId, used to construct the error report
    * @param host worker' host, used to construct the error report
    */
-  public MSQWarningReportLimiterPublisher(
+  public MSQWarningLimiterPublisher(
       MSQWarningPublisher delegate,
       long totalLimit,
       Map<String, Long> errorCodeToLimit,
@@ -108,6 +108,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningPublisher
         return;
       }
     }
+
     long limitForFault = errorCodeToLimit.getOrDefault(errorCode, -1L);
     synchronized (lock) {
       if (limitForFault != -1 && errorCodeToCurrentCount.getOrDefault(errorCode, 0L) > limitForFault) {

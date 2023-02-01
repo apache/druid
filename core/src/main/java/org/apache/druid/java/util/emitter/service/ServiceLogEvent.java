@@ -14,6 +14,10 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * This is an event that isn't a metric or an alert. its for events that are worthwhile to emit, but dont fall into
+ * either of those use cases.
+ */
 @PublicApi
 public class ServiceLogEvent implements Event
 {
@@ -94,7 +98,7 @@ public class ServiceLogEvent implements Event
   public static class Builder
   {
     private final Map<String, Object> userDims = new TreeMap<>();
-    private String feed = "serviceEvent";
+    private String feed = "serviceLogEvent";
 
     public Builder setFeed(String feed)
     {
