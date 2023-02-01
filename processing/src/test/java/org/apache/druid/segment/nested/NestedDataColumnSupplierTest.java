@@ -21,13 +21,13 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -94,12 +94,12 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(new RoaringBitmapFactory());
 
   List<Map<String, Object>> data = ImmutableList.of(
-      ImmutableMap.of("x", 1L, "y", 1.0, "z", "a", "v", "100"),
-      ImmutableMap.of("y", 3.0, "z", "d", "v", 1000L),
-      ImmutableMap.of("x", 5L, "y", 5.0, "z", "b"),
-      ImmutableMap.of("x", 3L, "y", 4.0, "z", "c", "v", 3000.333),
-      ImmutableMap.of("x", 2L, "v", "40000"),
-      ImmutableMap.of("x", 4L, "y", 2.0, "z", "e", "v", 11111L)
+      TestHelper.makeMap("x", 1L, "y", 1.0, "z", "a", "v", "100", "nullish", "notnull"),
+      TestHelper.makeMap("y", 3.0, "z", "d", "v", 1000L, "nullish", null),
+      TestHelper.makeMap("x", 5L, "y", 5.0, "z", "b", "nullish", ""),
+      TestHelper.makeMap("x", 3L, "y", 4.0, "z", "c", "v", 3000.333, "nullish", "null"),
+      TestHelper.makeMap("x", 2L, "v", "40000"),
+      TestHelper.makeMap("x", 4L, "y", 2.0, "z", "e", "v", 11111L, "nullish", null)
   );
 
   Closer closer = Closer.create();
@@ -320,7 +320,18 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     DruidPredicateIndex vPredicateIndex = vIndexSupplier.as(DruidPredicateIndex.class);
     NullValueIndex vNulls = vIndexSupplier.as(NullValueIndex.class);
 
-    Assert.assertEquals(ImmutableList.of(vPath, xPath, yPath, zPath), column.getNestedFields());
+    final List<NestedPathPart> nullishPath = NestedPathFinder.parseJsonPath("$.nullish");
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(nullishPath));
+    Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(nullishPath).getCapabilities().toColumnType());
+    ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, offset);
+    DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, offset, null);
+    ColumnIndexSupplier nullishIndexSupplier = column.getColumnIndexSupplier(nullishPath);
+    Assert.assertNotNull(nullishIndexSupplier);
+    StringValueSetIndex nullishValueIndex = nullishIndexSupplier.as(StringValueSetIndex.class);
+    DruidPredicateIndex nullishPredicateIndex = nullishIndexSupplier.as(DruidPredicateIndex.class);
+    NullValueIndex nullishNulls = nullishIndexSupplier.as(NullValueIndex.class);
+
+    Assert.assertEquals(ImmutableList.of(nullishPath, vPath, xPath, yPath, zPath), column.getNestedFields());
 
     for (int i = 0; i < data.size(); i++) {
       Map row = data.get(i);
@@ -333,6 +344,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       testPath(row, i, "x", xSelector, xDimSelector, xValueIndex, xPredicateIndex, xNulls, ColumnType.LONG);
       testPath(row, i, "y", ySelector, yDimSelector, yValueIndex, yPredicateIndex, yNulls, ColumnType.DOUBLE);
       testPath(row, i, "z", zSelector, zDimSelector, zValueIndex, zPredicateIndex, zNulls, ColumnType.STRING);
+      testPath(row, i, "nullish", nullishSelector, nullishDimSelector, nullishValueIndex, nullishPredicateIndex, nullishNulls, ColumnType.STRING);
 
       offset.increment();
     }
@@ -350,16 +362,22 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       @Nullable ColumnType singleType
   )
   {
-    if (row.containsKey(path) && row.get(path) != null) {
-      Assert.assertEquals(row.get(path), valueSelector.getObject());
+    final Object inputValue = row.get(path);
+    // in default value mode, even though the input row had an empty string, the selector spits out null, so we want
+    // to take the null checking path
+    final boolean isStringAndNullEquivalent =
+        inputValue instanceof String && NullHandling.isNullOrEquivalent((String) inputValue);
+
+    if (row.containsKey(path) && inputValue != null && !isStringAndNullEquivalent) {
+      Assert.assertEquals(inputValue, valueSelector.getObject());
       if (ColumnType.LONG.equals(singleType)) {
-        Assert.assertEquals(row.get(path), valueSelector.getLong());
+        Assert.assertEquals(inputValue, valueSelector.getLong());
       } else if (ColumnType.DOUBLE.equals(singleType)) {
-        Assert.assertEquals((double) row.get(path), valueSelector.getDouble(), 0.0);
+        Assert.assertEquals((double) inputValue, valueSelector.getDouble(), 0.0);
       }
       Assert.assertFalse(valueSelector.isNull());
 
-      final String theString = String.valueOf(row.get(path));
+      final String theString = String.valueOf(inputValue);
       Assert.assertEquals(theString, dimSelector.getObject());
       String dimSelectorLookupVal = dimSelector.lookupName(dimSelector.getRow().get(0));
       Assert.assertEquals(theString, dimSelectorLookupVal);

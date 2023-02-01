@@ -49,17 +49,30 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
 
   private final int[] pointers;
   private final RowsAndColumns rac;
+  private final int start;
+  private final int end;
 
   public RearrangedRowsAndColumns(
       int[] pointers,
       RowsAndColumns rac
   )
   {
-    if (pointers.length != rac.numRows()) {
-      throw new IAE("length mismatch, pointers[%,d], rac[%,d]", pointers.length, rac.numRows());
-    }
+    this(pointers, 0, pointers.length, rac);
+  }
 
+  public RearrangedRowsAndColumns(
+      int[] pointers,
+      int start,
+      int end,
+      RowsAndColumns rac
+  )
+  {
+    if (end - start < 0 || end > pointers.length) {
+      throw new IAE("end[%,d] - start[%,d] was invalid!? pointers.length[%,d]", end, start, pointers.length);
+    }
     this.pointers = pointers;
+    this.start = start;
+    this.end = end;
     this.rac = rac;
   }
 
@@ -72,13 +85,14 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
   @Override
   public int numRows()
   {
-    return pointers.length;
+    return end - start;
   }
 
   @Override
   @Nullable
   public Column findColumn(String name)
   {
+    // We do a containsKey here so that we can negative-cache nulls.
     if (columnCache.containsKey(name)) {
       return columnCache.get(name);
     } else {
@@ -101,50 +115,50 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
             @Override
             public int numRows()
             {
-              return pointers.length;
+              return end - start;
             }
 
             @Override
             public boolean isNull(int rowNum)
             {
-              return accessor.isNull(pointers[rowNum]);
+              return accessor.isNull(pointers[start + rowNum]);
             }
 
             @Nullable
             @Override
             public Object getObject(int rowNum)
             {
-              return accessor.getObject(pointers[rowNum]);
+              return accessor.getObject(pointers[start + rowNum]);
             }
 
             @Override
             public double getDouble(int rowNum)
             {
-              return accessor.getDouble(pointers[rowNum]);
+              return accessor.getDouble(pointers[start + rowNum]);
             }
 
             @Override
             public float getFloat(int rowNum)
             {
-              return accessor.getFloat(pointers[rowNum]);
+              return accessor.getFloat(pointers[start + rowNum]);
             }
 
             @Override
             public long getLong(int rowNum)
             {
-              return accessor.getLong(pointers[rowNum]);
+              return accessor.getLong(pointers[start + rowNum]);
             }
 
             @Override
             public int getInt(int rowNum)
             {
-              return accessor.getInt(pointers[rowNum]);
+              return accessor.getInt(pointers[start + rowNum]);
             }
 
             @Override
             public int compareRows(int lhsRowNum, int rhsRowNum)
             {
-              return accessor.compareRows(pointers[lhsRowNum], pointers[rhsRowNum]);
+              return accessor.compareRows(pointers[lhsRowNum], pointers[start + rhsRowNum]);
             }
           }
       );

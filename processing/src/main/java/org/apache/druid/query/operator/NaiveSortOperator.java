@@ -22,6 +22,7 @@ package org.apache.druid.query.operator;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 
 /**
@@ -44,22 +45,23 @@ public class NaiveSortOperator implements Operator
   }
 
   @Override
-  public void go(Receiver receiver)
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    child.go(
+    return child.goOrContinue(
+        continuation,
         new Receiver()
         {
           NaiveSortMaker.NaiveSorter sorter = null;
 
           @Override
-          public boolean push(RowsAndColumns rac)
+          public Signal push(RowsAndColumns rac)
           {
             if (sorter == null) {
               sorter = NaiveSortMaker.fromRAC(rac).make(sortColumns);
             } else {
               sorter.moreData(rac);
             }
-            return true;
+            return Signal.GO;
           }
 
           @Override

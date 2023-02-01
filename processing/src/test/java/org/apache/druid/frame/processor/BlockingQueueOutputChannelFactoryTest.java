@@ -19,31 +19,19 @@
 
 package org.apache.druid.frame.processor;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-public class BlockingQueueOutputChannelFactoryTest
+public class BlockingQueueOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @Test
-  public void test_openChannel()
+  public BlockingQueueOutputChannelFactoryTest()
   {
-    final int frameSize = 100;
-    final BlockingQueueOutputChannelFactory factory = new BlockingQueueOutputChannelFactory(frameSize);
-    final OutputChannel channel = factory.openChannel(1);
-
-    Assert.assertEquals(1, channel.getPartitionNumber());
-    Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+    super(new BlockingQueueOutputChannelFactory(100), 100);
   }
 
+  @Override
   @Test
-  public void test_openNilChannel()
+  public void test_openPartitionedChannel()
   {
-    final int frameSize = 100;
-    final BlockingQueueOutputChannelFactory factory = new BlockingQueueOutputChannelFactory(frameSize);
-    final OutputChannel channel = factory.openNilChannel(1);
-
-    Assert.assertEquals(1, channel.getPartitionNumber());
-    Assert.assertTrue(channel.getReadableChannel().isFinished());
-    Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
+    // Do nothing since partitioned channels aren't implemented for BlockingQueueOutputChannelFactory yet.
   }
 }

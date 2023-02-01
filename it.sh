@@ -31,6 +31,8 @@ function usage
 {
   cat <<EOF
 Usage: $0 cmd [category]
+  ci
+      build Druid and the distribution for CI pipelines
   build
       Build Druid and the distribution
   dist
@@ -51,6 +53,9 @@ Usage: $0 cmd [category]
       Run one IT in Travis (build dist, image, run test, tail logs)
   gen
       Generate docker-compose.yaml files (done automatically on up)
+      run one IT in Travis (build dist, image, run test, tail logs)
+  github <category>
+      Run one IT in Github Workflows (run test, tail logs)
   prune
       prune Docker volumes
 
@@ -192,6 +197,9 @@ case $CMD in
   "help" )
     usage
     ;;
+  "ci" )
+    mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE -T1.0C
+    ;;
   "build" )
     mvn clean package -P dist $MAVEN_IGNORE -T1.0C
     ;;
@@ -237,6 +245,11 @@ case $CMD in
     prepare_category $1
     $0 dist
     $0 image
+    $0 test $CATEGORY
+    $0 tail $CATEGORY
+    ;;
+  "github" )
+    prepare_category $1
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;

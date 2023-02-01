@@ -2133,7 +2133,12 @@ export function updateIngestionType(
   return newSpec;
 }
 
-export function issueWithSampleData(sampleData: string[]): JSX.Element | undefined {
+export function issueWithSampleData(
+  sampleData: string[],
+  spec: Partial<IngestionSpec>,
+): JSX.Element | undefined {
+  if (isStreamingSpec(spec)) return;
+
   if (sampleData.length) {
     const firstData = sampleData[0];
 
@@ -2166,14 +2171,18 @@ export function fillInputFormatIfNeeded(
   sampleData: string[],
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
-  return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
+  return deepSet(
+    spec,
+    'spec.ioConfig.inputFormat',
+    guessInputFormat(sampleData, isStreamingSpec(spec)),
+  );
 }
 
 function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessInputFormat(sampleData: string[]): InputFormat {
+export function guessInputFormat(sampleData: string[], canBeMultiLineJson = false): InputFormat {
   let sampleDatum = sampleData[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
@@ -2260,6 +2269,11 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
         findColumnsFromHeader: noNumbers(lineAsTsvPipe),
         numColumns: lineAsTsvPipe.length,
       });
+    }
+
+    // If the object is a single json object spanning multiple lines than the first one will just start with `{`
+    if (canBeMultiLineJson && sampleDatum.startsWith('{')) {
+      return { type: 'json', useJsonNodeReader: true };
     }
   }
 

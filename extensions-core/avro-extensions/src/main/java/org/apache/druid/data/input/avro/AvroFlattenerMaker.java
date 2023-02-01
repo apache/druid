@@ -39,7 +39,6 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -194,7 +193,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     } else if (field instanceof Utf8) {
       return field.toString();
     } else if (field instanceof List) {
-      return ((List<?>) field).stream().filter(Objects::nonNull).map(this::transformValue).collect(Collectors.toList());
+      return ((List<?>) field).stream().map(this::transformValue).collect(Collectors.toList());
     } else if (field instanceof GenericEnumSymbol) {
       return field.toString();
     } else if (field instanceof GenericFixed) {

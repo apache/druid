@@ -353,7 +353,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  private static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
   {
     // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
     return !DruidRels.isScanOrMapping(left, true);
@@ -372,7 +372,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
-  private static Pair<String, RowSignature> computeJoinRowSignature(
+  static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
       final RowSignature rightSignature
   )

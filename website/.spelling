@@ -723,6 +723,9 @@ rowsInMemory
 segmentSortOrder
 rowsPerSegment
 durableShuffleStorage
+composedIntermediateSuperSorterStorageEnabled
+intermediateSuperSorterStorageMaxLocalBytes
+ResourceLimitExceededException
 # Aggregations
 groupByEnableMultiValueUnnesting
 APPROX_COUNT_DISTINCT_DS_HLL
@@ -2312,3 +2315,6 @@ MacOS
 RHEL
 psutil
 pathlib
+- ../docs/tutorials/tutorial-sql-query-view.md
+kttm_simple
+dist_country

@@ -43,7 +43,7 @@ public class QueryVerification
     }
 
     @Override
-    public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.ExecuteQuery execStep)
+    public QueryTestRunner.QueryVerifyStep make(QueryTestRunner.BaseExecuteQuery execStep)
     {
       return () -> {
         for (QueryTestRunner.QueryResults queryResults : execStep.results()) {

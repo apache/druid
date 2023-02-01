@@ -284,6 +284,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
+        legacy,
         V_0112_0114
     );
 
@@ -334,6 +335,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
+            legacy,
             V_0112_0114
         ),
         legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
@@ -371,6 +373,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
+            legacy,
             V_0112_0114
         ),
         legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
@@ -403,6 +406,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           // filtered values with day granularity
           new String[]{
               "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
@@ -466,6 +470,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
+        legacy,
         // filtered values with day granularity
         new String[]{
             "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\tpreferred\tmpreferred\t1000.000000",
@@ -529,6 +534,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
+        legacy,
         V_0112_0114
     );
 
@@ -592,6 +598,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
 
@@ -681,6 +688,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           expectedRet
       );
       if (legacy) {
@@ -769,6 +777,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
       if (legacy) {
@@ -861,6 +870,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           expectedRet //segments in reverse order from above
       );
       if (legacy) {
@@ -1008,11 +1018,12 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             "indexMaxFloat",
             "quality_uniques"
         },
+        legacy,
         valueSet
     );
   }
 
-  private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
+  public static List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, boolean legacy, final String[]... valueSet)
   {
     List<String> values = new ArrayList<>();
     for (String[] vSet : valueSet) {
@@ -1074,13 +1085,30 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     if (specs.length == 1 || specs[1].equals("STRING")) {
                       eventVal = values1[i];
                     } else if (specs[1].equals("TIME")) {
-                      eventVal = toTimestamp(values1[i]);
+                      eventVal = toTimestamp(values1[i], legacy);
                     } else if (specs[1].equals("FLOAT")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Float!");
+                      }
                     } else if (specs[1].equals("DOUBLE")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultDoubleValue() : Double.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty()
+                                   ? NullHandling.defaultDoubleValue()
+                                   : Double.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Double!");
+                      }
                     } else if (specs[1].equals("LONG")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Long!");
+                      }
                     } else if (specs[1].equals(("NULL"))) {
                       eventVal = null;
                     } else if (specs[1].equals("STRINGS")) {
@@ -1099,7 +1127,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return events;
   }
 
-  private Object toTimestamp(final String value)
+  private static Object toTimestamp(final String value, boolean legacy)
   {
     if (legacy) {
       return DateTimes.of(value);
