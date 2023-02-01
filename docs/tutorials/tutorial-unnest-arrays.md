@@ -193,7 +193,7 @@ This virtual column is the product of the two source columns. Notice how the tot
 Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
 ```sql
-select d45 from nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS unnested(d45)
+select d45 from nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS UNNESTED (d45)
 ```
 
 ### Unnest a column from a subset of a table
