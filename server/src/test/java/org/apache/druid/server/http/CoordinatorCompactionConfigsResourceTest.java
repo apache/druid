@@ -416,6 +416,6 @@ public class CoordinatorCompactionConfigsResourceTest
         null
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertTrue(((Collection)response.getEntity()).isEmpty());
+    Assert.assertTrue(((Collection) response.getEntity()).isEmpty());
   }
 }
