@@ -19,9 +19,7 @@
 
 package org.apache.druid.catalog.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistryImpl;
@@ -30,19 +28,18 @@ import org.apache.druid.catalog.sql.LiveCatalogResolver;
 import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
+import org.apache.druid.catalog.sync.CatalogUpdateReceiver;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog.CatalogSource;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.guice.SqlBindings;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Configures the metadata catalog on the Broker to use a cache
@@ -86,10 +83,16 @@ public class CatalogBrokerModule implements DruidModule
         .to(SchemaRegistryImpl.class)
         .in(LazySingleton.class);
 
-    // Temporary catalog resolver for the planner, since
-    // INSERT doesn't use Calcite's validation mechanism.
-    PolyBind.optionBinder(binder, Key.get(CatalogResolver.class))
-        .addBinding(LiveCatalogResolver.TYPE)
+    // Lifecycle-managed class to prime the metadata cache
+    binder
+        .bind(CatalogUpdateReceiver.class)
+        .in(ManageLifecycle.class);
+    LifecycleModule.register(binder, CatalogUpdateReceiver.class);
+
+    // Catalog resolver for the planner. This will override the
+    // base binding.
+    binder
+        .bind(CatalogResolver.class)
         .to(LiveCatalogResolver.class)
         .in(LazySingleton.class);
 
@@ -99,11 +102,5 @@ public class CatalogBrokerModule implements DruidModule
     // The listener resource sends to the catalog
     // listener (the cached catalog.)
     Jerseys.addResource(binder, CatalogListenerResource.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
   }
 }

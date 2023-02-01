@@ -71,7 +71,7 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTableNames();
     } else {
-      return segmentCache.getDatasourceNames();
+      return catalogResolver.getTableNames(segmentCache.getDatasourceNames());
     }
   }
 }

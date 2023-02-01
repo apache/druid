@@ -1,0 +1,26 @@
+[
+  {
+    "description": "Verify that the ext schema is visible",
+    "query": {
+      "query": "SELECT CATALOG_NAME, SCHEMA_NAME
+                FROM INFORMATION_SCHEMA.SCHEMATA
+                ORDER BY CATALOG_NAME, SCHEMA_NAME"
+    },
+    "expectedResults": [
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "INFORMATION_SCHEMA"},
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "druid"},
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "ext"},
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "lookup"},
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "sys"},
+        {"CATALOG_NAME": "druid", "SCHEMA_NAME": "view"}
+    ]
+   }
+  {
+    "description": "Verify the target datasource schema",
+    "query": {
+      "query": "SELECT host, server_type, is_leader FROM sys.servers ORDER BY host"
+    },
+    "expectedResults": [
+    ]
+   }
+ ]

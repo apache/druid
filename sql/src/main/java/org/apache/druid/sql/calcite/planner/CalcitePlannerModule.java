@@ -20,12 +20,10 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 
 /**
@@ -49,18 +47,9 @@ public class CalcitePlannerModule implements Module
     Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);
 
     // Catalog resolver: the planner's interface into the (optional) catalog.
-    // This version is temporary until the planner uses Calcite for semantic
-    // analysis rather than the ad-hoc code used at present.
-    PolyBind.optionBinder(binder, Key.get(CatalogResolver.class))
-            .addBinding(CatalogResolver.NullCatalogResolver.TYPE)
-            .to(CatalogResolver.NullCatalogResolver.class)
-            .in(LazySingleton.class);
-
-    PolyBind.createChoiceWithDefault(
-        binder,
-        PROPERTY_SQL_CATALOG_TYPE,
-        Key.get(CatalogResolver.class),
-        CatalogResolver.NullCatalogResolver.TYPE
-    );
+    // This is the default no-op binding used unless the catalog is enabled.
+    binder.bind(CatalogResolver.class)
+          .to(CatalogResolver.NullCatalogResolver.class)
+          .in(LazySingleton.class);
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.catalog.sql;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -46,8 +47,6 @@ import java.util.Set;
 
 public class LiveCatalogResolver implements CatalogResolver
 {
-  public static final String TYPE = "catalog";
-
   private final MetadataCatalog catalog;
 
   @Inject
@@ -199,5 +198,18 @@ public class LiveCatalogResolver implements CatalogResolver
   public boolean ingestRequiresExistingTable()
   {
     return false;
+  }
+
+  @Override
+  public Set<String> getTableNames(Set<String> datasourceNames)
+  {
+    Set<String> catalogTableNames = catalog.tableNames(TableId.DRUID_SCHEMA);
+    if (catalogTableNames.isEmpty()) {
+      return datasourceNames;
+    }
+    return ImmutableSet.<String>builder()
+        .addAll(datasourceNames)
+        .addAll(catalogTableNames)
+        .build();
   }
 }

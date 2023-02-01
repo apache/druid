@@ -131,6 +131,8 @@ public class CalciteTests
             }
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
+          case ResourceType.EXTERNAL:
+            return Access.OK;
           default:
             return new Access(false);
         }
@@ -460,7 +462,6 @@ public class CalciteTests
     @Override
     public void registerListener(Listener listener)
     {
-
     }
   }
 

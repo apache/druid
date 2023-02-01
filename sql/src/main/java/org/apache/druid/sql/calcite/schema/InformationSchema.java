@@ -503,27 +503,25 @@ public class InformationSchema extends AbstractSchema
       final Set<String> names
   )
   {
-    if (schema != null) {
-      return ImmutableSet.copyOf(
-          AuthorizationUtils.filterAuthorizedResources(
-              authenticationResult,
-              names,
-              name -> {
-                final String resoureType = schema.getSchemaResourceType(name);
-                if (resoureType != null) {
-                  return Collections.singletonList(
-                      new ResourceAction(new Resource(name, resoureType), Action.READ)
-                  );
-                } else {
-                  return Collections.emptyList();
-                }
-              },
-              authorizerMapper
-          )
-      );
-    } else {
+    if (schema == null) {
       // for schemas with no resource type, or that are not named schemas, we don't filter anything
       return names;
     }
+    return ImmutableSet.copyOf(
+        AuthorizationUtils.filterAuthorizedResources(
+            authenticationResult,
+            names,
+            name -> {
+              final String resourseType = schema.getSchemaResourceType(name);
+              if (resourseType == null) {
+                return Collections.emptyList();
+              }
+              return Collections.singletonList(
+                  new ResourceAction(new Resource(name, resourseType), Action.READ)
+              );
+            },
+            authorizerMapper
+        )
+    );
   }
 }

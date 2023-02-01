@@ -203,7 +203,7 @@ public class CatalogSyncTest
     TableMetadata table2 = TableBuilder.datasource("table2", "P1D")
         .timeColumn()
         .column("dim", Columns.VARCHAR)
-        .column("measure", "BIGINT")
+        .column("measure", Columns.BIGINT)
         .build();
     storage.validate(table2);
     storage.tables().create(table2);
@@ -253,7 +253,7 @@ public class CatalogSyncTest
       assertEquals("dim", cols.get(1).name());
       assertEquals(Columns.VARCHAR, cols.get(1).sqlType());
       assertEquals("measure", cols.get(2).name());
-      assertEquals("BIGINT", cols.get(2).sqlType());
+      assertEquals(Columns.BIGINT, cols.get(2).sqlType());
 
       DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
       assertEquals("P1D", ds.segmentGranularityString());
@@ -303,7 +303,7 @@ public class CatalogSyncTest
     // Create a table 3
     TableMetadata table3 = TableBuilder.datasource("table3", "P1D")
         .timeColumn()
-        .column("x", "FLOAT")
+        .column("x", Columns.FLOAT)
         .build();
     storage.tables().create(table3);
   }

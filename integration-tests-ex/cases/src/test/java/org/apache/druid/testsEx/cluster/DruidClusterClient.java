@@ -21,6 +21,7 @@ package org.apache.druid.testsEx.cluster;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,9 +42,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Client to the Druid cluster described by the test cluster
@@ -175,28 +178,47 @@ public class DruidClusterClient
     return send(HttpMethod.GET, url);
   }
 
+  /**
+   * Low-level HTTP get for the given URL.
+   */
   public StatusResponseHolder send(HttpMethod method, String url)
   {
     try {
-      StatusResponseHolder response = httpClient.go(
+      return httpClient.go(
           new Request(method, new URL(url)),
           StatusResponseHandler.getInstance()
       ).get();
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error from %s [%s] status [%s] content [%s]",
-            method,
-            url,
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-      return response;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static final Set<HttpResponseStatus> OK_STATUS_SET =
+      ImmutableSet.of(HttpResponseStatus.OK);
+
+  /**
+   * Low-level HTTP that expects an OK response from the given URL.
+   */
+  public StatusResponseHolder expectOk(HttpMethod method, String url)
+  {
+    return expect(method, url, OK_STATUS_SET);
+  }
+
+  public StatusResponseHolder expect(HttpMethod method, String url, Set<HttpResponseStatus> expected)
+  {
+    StatusResponseHolder response = send(method, url);
+
+    if (!expected.contains(response.getStatus())) {
+      throw new ISE(
+          "Error from %s [%s] status [%s] content [%s]",
+          method,
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+    return response;
   }
 
   public StatusResponseHolder post(String url, Object body)
@@ -300,7 +322,7 @@ public class DruidClusterClient
 
   public <T> T delete(String url, Class<T> clazz)
   {
-    StatusResponseHolder response = send(HttpMethod.DELETE, url);
+    StatusResponseHolder response = expectOk(HttpMethod.DELETE, url);
     try {
       return jsonMapper.readValue(response.getContent(), clazz);
     }

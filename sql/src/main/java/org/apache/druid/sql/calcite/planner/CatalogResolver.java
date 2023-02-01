@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import java.util.Set;
+
 /**
  * Facade onto the (optional) Druid catalog. Configured in Guice to be
  * the {@link CatalogResolver.NullCatalogResolver} or to an actual catalog.
@@ -35,8 +37,6 @@ public interface CatalogResolver
    */
   class NullCatalogResolver implements CatalogResolver
   {
-    public static final String TYPE = "null";
-
     @Override
     public boolean ingestRequiresExistingTable()
     {
@@ -51,6 +51,12 @@ public interface CatalogResolver
     {
       return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
     }
+
+    @Override
+    public Set<String> getTableNames(Set<String> datasourceNames)
+    {
+      return datasourceNames;
+    }
   }
 
   /**
@@ -63,4 +69,6 @@ public interface CatalogResolver
       String tableName,
       DatasourceTable.PhysicalDatasourceMetadata dsMetadata
   );
+
+  Set<String> getTableNames(Set<String> datasourceNames);
 }
