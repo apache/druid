@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrays;
@@ -52,7 +53,7 @@ import java.nio.channels.WritableByteChannel;
  * for all literal writers, which for this type of writer entails building a local dictionary to map into to the global
  * dictionary ({@link #localDictionary}) and writes this unsorted localId to an intermediate integer column,
  * {@link #intermediateValueWriter}.
- *
+ * <p>
  * When processing the 'raw' value column is complete, the {@link #writeTo(int, FileSmoosher)} method will sort the
  * local ids and write them out to a local sorted dictionary, iterate over {@link #intermediateValueWriter} swapping
  * the unsorted local ids with the sorted ids and writing to the compressed id column writer
@@ -133,8 +134,15 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       fillNull(row);
     }
     final T value = processValue(val);
-    final int globalId = lookupGlobalId(value);
-    final int localId = localDictionary.add(globalId);
+    final int localId;
+    // null is always 0
+    if (value == null) {
+      localId = localDictionary.add(0);
+    } else {
+      final int globalId = lookupGlobalId(value);
+      Preconditions.checkArgument(globalId >= 0, "Value [%s] is not present in global dictionary", value);
+      localId = localDictionary.add(globalId);
+    }
     intermediateValueWriter.write(localId);
     writeValue(value);
     cursorPosition++;
