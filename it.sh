@@ -189,6 +189,11 @@ function verify_env_vars {
 	esac
 }
 
+if [ $# = 0 ]; then
+  usage
+  exit 1
+fi
+
 CMD=$1
 shift
 MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true"
