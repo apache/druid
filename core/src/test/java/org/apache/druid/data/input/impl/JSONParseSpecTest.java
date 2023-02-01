@@ -114,7 +114,7 @@ public class JSONParseSpecTest
   }
 
   @Test
-  public void testParseRowWithNullsInMVD()
+  public void testParseRowWithNullsInArrays()
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
@@ -124,9 +124,11 @@ public class JSONParseSpecTest
             ImmutableList.of(
                 // https://github.com/apache/druid/issues/6653 $.x.y.z where y is missing
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.baz.[?(@.maybe_object)].maybe_object"),
-                // https://github.com/apache/druid/issues/6653 $.x.y.z where y is null
-                new JSONPathFieldSpec(JSONPathFieldType.PATH, "nullFoo", "$.nullFoo.[?(@.value)].foo"),
+                // https://github.com/apache/druid/issues/6653 $.x.y.z where y is from an array and is null
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "nullFoo", "$.nullFoo.[?(@.value)][0].foo"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.baz"),
+                // $.x.y.z where x is from an array and is null
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "nullBaz", "$.baz[1].foo.maybe_object"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
             )
         ),
@@ -138,10 +140,11 @@ public class JSONParseSpecTest
     expected.put("foo", new ArrayList<>());
     expected.put("baz", Arrays.asList("1", null, "2", null));
     expected.put("bar", Collections.singletonList("test"));
-    expected.put("nullFoo", Collections.singletonList(null));
+    expected.put("nullFoo", new ArrayList<>());
+    expected.put("nullBaz", null);
 
     final Parser<String, Object> parser = parseSpec.makeParser();
-    final Map<String, Object> parsedRow = parser.parseToMap("{\"baz\":[\"1\",null,\"2\",null],\"nullFoo\":{\"value\":null},\"something_else\": {\"foo\": \"test\"}}");
+    final Map<String, Object> parsedRow = parser.parseToMap("{\"baz\":[\"1\",null,\"2\",null],\"nullFoo\":{\"value\":[null,null]},\"something_else\": {\"foo\": \"test\"}}");
 
     Assert.assertNotNull(parsedRow);
     Assert.assertEquals(expected, parsedRow);

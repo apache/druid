@@ -141,7 +141,11 @@ public class JsonLineReaderTest
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
         Assert.assertEquals("test", Iterables.getOnlyElement(row.getDimension("bar")));
-        Assert.assertEquals("null", row.getDimension("foo").get(0));
+        // Since foo is in the JSONPathSpec it comes as an array of [null]
+        // row.getRaw("foo") comes out as an array of nulls but the
+        // row.getDimension("foo") stringifies it as "null". A future developer should aim to relieve this
+        Assert.assertEquals(Collections.singletonList(null), row.getRaw("foo"));
+        Assert.assertEquals(Collections.singletonList("null"), row.getDimension("foo"));
         Assert.assertTrue(row.getDimension("baz").isEmpty());
         numActualIterations++;
       }

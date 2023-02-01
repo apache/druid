@@ -247,7 +247,11 @@ public class AvroFlattenerMakerTest
 
     ArrayList<Object> results = (ArrayList<Object>) flattenerNested.getRootField(input, "someStringArray");
     // 4 strings a 1 null for a total of 5
-    Assert.assertEquals(5, results.size());
+    Assert.assertEquals("8", results.get(0).toString());
+    Assert.assertEquals("4", results.get(1).toString());
+    Assert.assertEquals("2", results.get(2).toString());
+    Assert.assertEquals("1", results.get(3).toString());
+    Assert.assertEquals(null, results.get(4));
   }
 
   private void getRootField_common(final SomeAvroDatum record, final AvroFlattenerMaker flattener)
