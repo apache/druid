@@ -31,6 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -752,7 +753,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           log.debug("Running the Sync Monitoring.");
 
           try {
-            for (Map.Entry<String, WorkerHolder> e : workers.entrySet()) {
+            // Ensure that the collection is not being modified during iteration. Iterate over a copy
+            final Set<Map.Entry<String, WorkerHolder>> workerEntrySet = ImmutableSet.copyOf(workers.entrySet());
+            for (Map.Entry<String, WorkerHolder> e : workerEntrySet) {
               WorkerHolder workerHolder = e.getValue();
               if (!workerHolder.getUnderlyingSyncer().isOK()) {
                 synchronized (workers) {
