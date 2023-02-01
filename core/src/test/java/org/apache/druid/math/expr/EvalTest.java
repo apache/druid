@@ -813,5 +813,20 @@ public class EvalTest extends InitializedNullHandlingTest
     eval = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[] {1.0, 2L, "3", true, false});
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {"1.0", "2", "3", "true", "false"}, (Object[]) eval.value());
+
+    // json type isn't defined in druid-core
+    ExpressionType json = ExpressionType.fromString("COMPLEX<json>");
+    eval = ExprEval.ofType(json, ImmutableMap.of("x", 1L, "y", 2L));
+    Assert.assertEquals(json, eval.type());
+    Assert.assertEquals(ImmutableMap.of("x", 1L, "y", 2L), eval.value());
+
+    eval = ExprEval.ofType(json, "hello");
+    Assert.assertEquals(json, eval.type());
+    Assert.assertEquals("hello", eval.value());
+
+    ExpressionType stringyComplexThing = ExpressionType.fromString("COMPLEX<somestringything>");
+    eval = ExprEval.ofType(stringyComplexThing, "notbase64");
+    Assert.assertEquals(stringyComplexThing, eval.type());
+    Assert.assertEquals("notbase64", eval.value());
   }
 }

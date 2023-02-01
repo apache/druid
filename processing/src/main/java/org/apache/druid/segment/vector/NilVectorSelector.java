@@ -24,6 +24,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 public class NilVectorSelector
     implements VectorValueSelector, VectorObjectSelector, SingleValueDimensionVectorSelector, IdLookup
@@ -82,9 +83,11 @@ public class NilVectorSelector
           DEFAULT_OBJECT_VECTOR
       );
     } else {
+      final boolean[] nulls = new boolean[vectorSizeInspector.getMaxVectorSize()];
+      Arrays.fill(nulls, NullHandling.sqlCompatible());
       return new NilVectorSelector(
           vectorSizeInspector,
-          new boolean[vectorSizeInspector.getMaxVectorSize()],
+          nulls,
           new int[vectorSizeInspector.getMaxVectorSize()],
           new long[vectorSizeInspector.getMaxVectorSize()],
           new float[vectorSizeInspector.getMaxVectorSize()],

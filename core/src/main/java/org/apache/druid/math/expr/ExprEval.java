@@ -520,9 +520,18 @@ public abstract class ExprEval<T>
         }
         return ofDouble(null);
       case COMPLEX:
+        // json isn't currently defined in druid-core, this can be reworked once
+        // https://github.com/apache/druid/pull/13698 is merged (or COMPLEX<json> is promoted to a real built-in type(s)
+        if ("json".equals(type.getComplexTypeName())) {
+          return ofComplex(type, value);
+        }
         byte[] bytes = null;
         if (value instanceof String) {
-          bytes = StringUtils.decodeBase64String((String) value);
+          try {
+            bytes = StringUtils.decodeBase64String((String) value);
+          }
+          catch (IllegalArgumentException ignored) {
+          }
         } else if (value instanceof byte[]) {
           bytes = (byte[]) value;
         }
