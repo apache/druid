@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
@@ -78,6 +77,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -200,6 +200,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1252,59 +1253,59 @@ public class ControllerImpl implements Controller
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    final Set<DataSegment> segmentsToDrop;
-    List<DataSegment> segmentsWithTombstones = new ArrayList<>(segments);
+    Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
 
-      if (intervalsToDrop.isEmpty()) {
-        segmentsToDrop = null;
-      } else {
-        // Determine which segments to drop as part of the replace operation. This is safe because, in the case where we
-        // are doing a replace, the isReady method (which runs prior to the task starting) acquires an exclusive lock.
-        segmentsToDrop =
-            ImmutableSet.copyOf(
-                context.taskActionClient().submit(
-                    new RetrieveUsedSegmentsAction(
-                        task.getDataSource(),
-                        null,
-                        intervalsToDrop,
-                        Segments.ONLY_VISIBLE
-                    )
-                )
+      if (!intervalsToDrop.isEmpty()) {
+        final List<Interval> usedIntervals =
+            getCondensedUsedIntervals(
+                task.getDataSource(),
+                destination.getReplaceTimeChunks(),
+                context.taskActionClient()
             );
+        Granularity granularity = destination.getSegmentGranularity();
+
 
         Map<String, Object> tombstoneLoadSpec = new HashMap<>();
-
         tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
         tombstoneLoadSpec.put("path", null);
 
-        for (Interval intervalToDrop : intervalsToDrop) {
-          final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
-          String version = null;
-          for (final TaskLock lock : locks) {
-            if (lock.getInterval().contains(intervalToDrop)) {
-              version = lock.getVersion();
+        IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(intervalsToDrop, granularity);
+
+
+        Iterator<Interval> emptySegmentsIterator = intervalsToDropByGranularity.granularityIntervalsIterator();
+        while (emptySegmentsIterator.hasNext()) {
+          final Interval emptyInterval = emptySegmentsIterator.next();
+
+          for (Interval usedInterval : usedIntervals) {
+            if (emptyInterval.overlaps(usedInterval)) {
+              final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
+              String version = null;
+              for (final TaskLock lock : locks) {
+                if (lock.getInterval().contains(emptyInterval)) {
+                  version = lock.getVersion();
+                }
+              }
+
+              if (version == null) {
+                // Lock was revoked, probably, because we should have originally acquired it in isReady.
+                throw new MSQException(InsertLockPreemptedFault.INSTANCE);
+              }
+
+              DataSegment tombstone = DataSegment.builder()
+                                                 .dataSource(task.getDataSource())
+                                                 .interval(emptyInterval)
+                                                 .version(version)
+                                                 .shardSpec(new TombstoneShardSpec())
+                                                 .loadSpec(tombstoneLoadSpec)
+                                                 .size(1)
+                                                 .build();
+              segmentsWithTombstones.add(tombstone);
             }
           }
-
-          if (version == null) {
-            // Lock was revoked, probably, because we should have originally acquired it in isReady.
-            throw new MSQException(InsertLockPreemptedFault.INSTANCE);
-          }
-
-          DataSegment tombstone = DataSegment.builder()
-                                             .dataSource(task.getDataSource())
-                                             .interval(intervalToDrop)
-                                             .version(version)
-                                             .shardSpec(new TombstoneShardSpec())
-                                             .loadSpec(tombstoneLoadSpec)
-                                             .size(1)
-                                             .build();
-          segmentsWithTombstones.add(tombstone);
         }
-
       }
 
       if (segmentsWithTombstones.isEmpty()) {
@@ -1317,7 +1318,7 @@ public class ControllerImpl implements Controller
       } else {
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, segmentsToDrop, segments)
+            SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
@@ -2604,6 +2605,38 @@ public class ControllerImpl implements Controller
     }
     return mergeMode;
   }
+
+  private List<Interval> getCondensedUsedIntervals(
+      String dataSource,
+      List<Interval> replaceIntervals,
+      TaskActionClient taskActionClient
+  )
+      throws IOException
+  {
+    List<Interval> retVal = new ArrayList<>();
+
+    List<Interval> condensedReplaceIntervals = JodaUtils.condenseIntervals(replaceIntervals);
+    if (!condensedReplaceIntervals.isEmpty()) {
+      Collection<DataSegment> usedSegmentsInInputInterval =
+          taskActionClient.submit(new RetrieveUsedSegmentsAction(
+              dataSource,
+              null,
+              condensedReplaceIntervals,
+              Segments.ONLY_VISIBLE
+          ));
+      for (DataSegment usedSegment : usedSegmentsInInputInterval) {
+        for (Interval condensedInputInterval : condensedReplaceIntervals) {
+          if (condensedInputInterval.overlaps(usedSegment.getInterval())) {
+            retVal.add(usedSegment.getInterval());
+            break;
+          }
+        }
+      }
+    }
+
+    return JodaUtils.condenseIntervals(retVal);
+  }
+
 
   /**
    * Interface used by {@link #contactWorkersForStage}.
