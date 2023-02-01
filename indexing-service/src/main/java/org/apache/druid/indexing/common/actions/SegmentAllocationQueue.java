@@ -353,10 +353,9 @@ public class SegmentAllocationQueue
 
     emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
-    log.debug("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
+    log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
-      log.debug("All requests in batch [%s] have been processed.", requestKey);
       return true;
     }
 
@@ -599,7 +598,7 @@ public class SegmentAllocationQueue
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
-        log.debug(
+        log.info(
             "Allocation failed in attempt [%d] due to error [%s]. Can still retry. Action: %s",
             request.getAttempts(),
             result.getErrorMessage(),
