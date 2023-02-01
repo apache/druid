@@ -97,7 +97,7 @@ SELECT target_column FROM datasource, UNNEST(source) as UNNESTED(target_column)
   * A table, such as  `FROM a_table`
   * A subset of a table based on a query, such as `FROM (SELECT columnA,columnB,columnC from a_table)` or a filter.
   * An inline array, which is treated as the `datasource` and the `source`, such as `FROM UNNEST(ARRAY[1,2,3])`
-* The `source` for UNNEST must exist in the `datasource`. It can be a column that contains arrays or a virtual column. UNNEST supports helper functions, such as MV_TO_ARRAY. Depending on your usage, you may need to include them. For example, if your column includes multi-dimension strings, you'll need to use MV_TO_ARRAY.
+* The `source` for the UNNEST function must be an array that exists in the `datasource`. Depending on how the `source` column is formatted, you may need to use helper functions. For example, if your column includes multi-dimension strings, you'll need to use MV_TO_ARRAY. Or if you're trying to join 2 columns with arrays, you'd need to use `ARRAY_CONCAT(column1,column2)` as the source..
 * The `as UNNESTED(target_column)` clause is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. If you don't provide this, Druid uses an nondescriptive name, such as `EXPR$0`.
 
 Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.

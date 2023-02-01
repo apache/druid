@@ -190,7 +190,7 @@ SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY[dim4,dim5]) as UNNESTED (d45
 
 This virtual column is the product of the two source columns. Notice how the total number of rows has grown. The table `nested_data` had only 7 rows originally.
 
-Another way to unnest a virtual column is to concat them like so:
+Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
 ```sql
 select d45 from nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS unnested(d45)
