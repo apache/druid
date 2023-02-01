@@ -1359,9 +1359,11 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 ## UNNEST
 
-`UNNEST(source)) as unnested (target)`
+`UNNEST(source)) as UNNESTED (target)`
 
 Unnests a source column that includes arrays (multi-value dimensions) into a target column.
+
+For more information, see [UNNEST](./sql.md#unnest)
 
 ## UPPER
 
