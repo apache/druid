@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -58,6 +59,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -430,7 +432,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           log.debug("Running the Sync Monitoring.");
 
           try {
-            for (Map.Entry<String, DruidServerHolder> e : servers.entrySet()) {
+            // Ensure that the collection is not being modified during iteration. Iterate over a copy
+            final Set<Map.Entry<String, DruidServerHolder>> serverEntrySet = ImmutableSet.copyOf(servers.entrySet());
+            for (Map.Entry<String, DruidServerHolder> e : serverEntrySet) {
               DruidServerHolder serverHolder = e.getValue();
               if (!serverHolder.syncer.isOK()) {
                 synchronized (servers) {
