@@ -21,10 +21,10 @@ import React from 'react';
 
 import { QueryState } from '../../../utils';
 
+import type { SupervisorStatisticsTableRow } from './supervisor-statistics-table';
 import {
   normalizeSupervisorStatisticsResults,
   SupervisorStatisticsTable,
-  SupervisorStatisticsTableRow,
 } from './supervisor-statistics-table';
 
 let supervisorStatisticsState: QueryState<SupervisorStatisticsTableRow[]> = QueryState.INIT;

@@ -19,7 +19,8 @@
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { QueryExplanation, QueryState } from '../../../utils';
+import type { QueryExplanation } from '../../../utils';
+import { QueryState } from '../../../utils';
 
 import { ExplainDialog } from './explain-dialog';
 

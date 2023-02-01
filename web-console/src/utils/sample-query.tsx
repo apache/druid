@@ -16,17 +16,14 @@
  * limitations under the License.
  */
 
+import type { Column, LiteralValue, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import {
   C,
-  Column,
   F,
   L,
-  LiteralValue,
-  QueryResult,
   RefName,
   SqlAlias,
   SqlColumnList,
-  SqlExpression,
   SqlQuery,
   SqlRecord,
   SqlValues,

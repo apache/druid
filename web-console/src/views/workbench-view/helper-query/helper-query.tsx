@@ -20,17 +20,16 @@ import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
+import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
+import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import {
-  DruidEngine,
   Execution,
   fitExternalConfigPattern,
-  LastExecution,
-  QueryContext,
   summarizeExternalConfig,
   WorkbenchQuery,
 } from '../../../druid-models';
@@ -44,13 +43,12 @@ import { usePermanentCallback, useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
-import {
-  WorkbenchRunningPromise,
-  WorkbenchRunningPromises,
-} from '../../../singletons/workbench-running-promises';
-import { ColumnMetadata, DruidError, QueryAction, QueryManager, RowColumn } from '../../../utils';
+import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
+import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
+import type { ColumnMetadata, QueryAction, RowColumn } from '../../../utils';
+import { DruidError, QueryManager } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';

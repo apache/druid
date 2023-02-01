@@ -18,11 +18,12 @@
 
 import { Button, Callout, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { CancelToken } from 'axios';
-import { F, QueryResult, SqlExpression, SqlFunction, SqlQuery } from 'druid-query-toolkit';
+import type { CancelToken } from 'axios';
+import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
+import { F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import React, { useEffect } from 'react';
 
-import { Execution } from '../../../../druid-models';
+import type { Execution } from '../../../../druid-models';
 import { executionBackgroundStatusCheck, submitTaskQuery } from '../../../../helpers';
 import { useQueryManager } from '../../../../hooks';
 import { filterMap, formatPercentClapped, IntermediateQueryState } from '../../../../utils';

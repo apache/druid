@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyString } from '../utils';

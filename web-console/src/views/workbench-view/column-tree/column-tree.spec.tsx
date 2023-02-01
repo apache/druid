@@ -20,7 +20,7 @@ import { SqlQuery } from 'druid-query-toolkit';
 import { shallow } from 'enzyme';
 import React from 'react';
 
-import { ColumnMetadata } from '../../../utils';
+import type { ColumnMetadata } from '../../../utils';
 
 import { ColumnTree } from './column-tree';
 

@@ -20,7 +20,8 @@ import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
 import React from 'react';
 
-import { AutoForm, ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { AutoForm, ExternalLink } from '../../components';
 import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
@@ -38,28 +39,27 @@ import {
   parseCsvLine,
   typeIs,
 } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleHeaderAndRows } from '../../utils/sampler';
+import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
-  DimensionsSpec,
   getDimensionSpecName,
   getDimensionSpecs,
   getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
-import { IndexSpec, summarizeIndexSpec } from '../index-spec/index-spec';
-import { InputFormat, issueWithInputFormat } from '../input-format/input-format';
-import {
-  FILTER_SUGGESTIONS,
-  InputSource,
-  issueWithInputSource,
-} from '../input-source/input-source';
+import type { IndexSpec } from '../index-spec/index-spec';
+import { summarizeIndexSpec } from '../index-spec/index-spec';
+import type { InputFormat } from '../input-format/input-format';
+import { issueWithInputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
+import { FILTER_SUGGESTIONS, issueWithInputSource } from '../input-source/input-source';
+import type { MetricSpec } from '../metric-spec/metric-spec';
 import {
   getMetricSpecOutputType,
   getMetricSpecs,
   getMetricSpecSingleFieldName,
-  MetricSpec,
 } from '../metric-spec/metric-spec';
-import { TimestampSpec } from '../timestamp-spec/timestamp-spec';
-import { TransformSpec } from '../transform-spec/transform-spec';
+import type { TimestampSpec } from '../timestamp-spec/timestamp-spec';
+import type { TransformSpec } from '../transform-spec/transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 
