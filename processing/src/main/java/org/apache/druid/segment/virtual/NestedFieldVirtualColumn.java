@@ -248,7 +248,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     ColumnHolder holder = columnSelector.getColumnHolder(columnName);
     if (holder == null) {
       // column doesn't exist
-      return dimensionSpec.decorate(DimensionSelector.constant(null));
+      return dimensionSpec.decorate(DimensionSelector.constant(null, dimensionSpec.getExtractionFn()));
     }
     if (hasNegativeArrayIndex) {
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
@@ -275,7 +275,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // ok, so not a nested column, but we can still do stuff
     if (!parts.isEmpty()) {
       // we are being asked for a path that will never exist, so we are null selector
-      return DimensionSelector.constant(null);
+      return DimensionSelector.constant(null, extractionFn);
     }
 
     // the path was the 'root', we're in luck, spit out a selector that behaves the same way as a nested column
