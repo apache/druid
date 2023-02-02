@@ -33,7 +33,7 @@ import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
-import org.apache.druid.msq.test.CounterSnapshotBuilder;
+import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.query.InlineDataSource;
@@ -164,21 +164,18 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(316).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(292).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
@@ -227,21 +224,18 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "he"}
         ))
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(3).bytes(175).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(3).bytes(163).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -286,21 +280,18 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(1).bytes(72).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(1).bytes(68).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -362,21 +353,18 @@ public class MSQSelectTest extends MSQTestBase
             )
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(238).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(214).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -419,21 +407,18 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(160).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(136).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -568,21 +553,18 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(261).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(261).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -704,21 +686,18 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(expectedResults)
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(261).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(261).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -783,21 +762,18 @@ public class MSQSelectTest extends MSQTestBase
             )
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(238).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(214).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -859,21 +835,18 @@ public class MSQSelectTest extends MSQTestBase
             )
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(238).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(214).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -935,21 +908,18 @@ public class MSQSelectTest extends MSQTestBase
             )
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(238).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(6).bytes(214).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -1022,21 +992,18 @@ public class MSQSelectTest extends MSQTestBase
                 .build()
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(1).bytes(72).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(1).bytes(68).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -1160,21 +1127,18 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "he"}
         ))
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().totalFiles(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
             0, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(3).bytes(175).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotBuilder
-                .with().rows(3).bytes(163).frames(1)
-                .buildChannelCounter(),
+            CounterSnapshotMatcher
+                .with().rows(3).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();

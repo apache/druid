@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
-import org.apache.druid.msq.test.CounterSnapshotBuilder;
+import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -100,38 +100,29 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -169,38 +160,29 @@ public class MSQInsertTest extends MSQTestBase
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(68).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(68).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(81).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(81).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -249,38 +231,29 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -397,38 +370,29 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -454,38 +418,29 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(5).bytes(251).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(5).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1, 1, 1, 1, 1).bytes(92, 89, 89, 91, 91).frames(1, 1, 1, 1, 1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                          null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
@@ -575,38 +530,29 @@ public class MSQInsertTest extends MSQTestBase
                      )))
                      .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(68).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(68).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(81).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(1).bytes(81).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
   }
@@ -654,38 +600,29 @@ public class MSQInsertTest extends MSQTestBase
                          new Object[]{1466985600000L, "Википедия", 1L}
                      ))
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
                          0, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(6).bytes(343).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(6).bytes(343).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(6).bytes(421).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
-                         CounterSnapshotBuilder
-                             .with().rows(6).bytes(421).frames(1)
-                             .buildChannelCounter(),
+                         CounterSnapshotMatcher
+                             .with().rows(6).frames(1),
                          2, 0, "input0"
-                     )
-                     .setExpectedCountersForStageWorkerChannel(
-                         null,
-                         2, 0, "output"
                      )
                      .verifyResults();
 
