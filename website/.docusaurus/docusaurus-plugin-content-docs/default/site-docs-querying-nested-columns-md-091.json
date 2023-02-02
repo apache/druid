@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/nested-columns",
+  "id": "querying/nested-columns",
+  "title": "Nested columns",
+  "description": "<!--",
+  "source": "@site/../docs/querying/nested-columns.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/nested-columns",
+  "permalink": "/docs/querying/nested-columns",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/nested-columns.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "nested-columns",
+    "title": "Nested columns",
+    "sidebar_label": "Nested columns"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Multi-value dimensions",
+    "permalink": "/docs/querying/multi-value-dimensions"
+  },
+  "next": {
+    "title": "Multitenancy",
+    "permalink": "/docs/querying/multitenancy"
+  }
+}

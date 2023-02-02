@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-basic-security",
+  "id": "development/extensions-core/druid-basic-security",
+  "title": "Basic Security",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-basic-security.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-basic-security",
+  "permalink": "/docs/development/extensions-core/druid-basic-security",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-basic-security.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-basic-security",
+    "title": "Basic Security"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DataSketches Tuple Sketch module",
+    "permalink": "/docs/development/extensions-core/datasketches-tuple"
+  },
+  "next": {
+    "title": "Kerberos",
+    "permalink": "/docs/development/extensions-core/druid-kerberos"
+  }
+}

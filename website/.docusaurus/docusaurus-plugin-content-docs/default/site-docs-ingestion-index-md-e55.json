@@ -1,0 +1,30 @@
+{
+  "unversionedId": "ingestion/index",
+  "id": "ingestion/index",
+  "title": "Ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/index.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/",
+  "permalink": "/docs/ingestion/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/index.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "index",
+    "title": "Ingestion"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "ZooKeeper",
+    "permalink": "/docs/dependencies/zookeeper"
+  },
+  "next": {
+    "title": "Data formats",
+    "permalink": "/docs/ingestion/data-formats"
+  }
+}

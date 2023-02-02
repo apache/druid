@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/postgresql",
+  "id": "development/extensions-core/postgresql",
+  "title": "PostgreSQL Metadata Store",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/postgresql.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/postgresql",
+  "permalink": "/docs/development/extensions-core/postgresql",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/postgresql.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "postgresql",
+    "title": "PostgreSQL Metadata Store"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Parquet Extension",
+    "permalink": "/docs/development/extensions-core/parquet"
+  },
+  "next": {
+    "title": "Protobuf",
+    "permalink": "/docs/development/extensions-core/protobuf"
+  }
+}

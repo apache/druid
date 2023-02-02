@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/sorting-orders",
+  "id": "querying/sorting-orders",
+  "title": "String comparators",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sorting-orders.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sorting-orders",
+  "permalink": "/docs/querying/sorting-orders",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sorting-orders.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sorting-orders",
+    "title": "String comparators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Sorting (topN)",
+    "permalink": "/docs/querying/topnmetricspec"
+  },
+  "next": {
+    "title": "Virtual columns",
+    "permalink": "/docs/querying/virtual-columns"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/segmentmetadataquery",
+  "id": "querying/segmentmetadataquery",
+  "title": "SegmentMetadata queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/segmentmetadataquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/segmentmetadataquery",
+  "permalink": "/docs/querying/segmentmetadataquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/segmentmetadataquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "segmentmetadataquery",
+    "title": "SegmentMetadata queries",
+    "sidebar_label": "SegmentMetadata"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "TimeBoundary",
+    "permalink": "/docs/querying/timeboundaryquery"
+  },
+  "next": {
+    "title": "DatasourceMetadata",
+    "permalink": "/docs/querying/datasourcemetadataquery"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/virtual-columns",
+  "id": "querying/virtual-columns",
+  "title": "Virtual columns",
+  "description": "<!--",
+  "source": "@site/../docs/querying/virtual-columns.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/virtual-columns",
+  "permalink": "/docs/querying/virtual-columns",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/virtual-columns.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "virtual-columns",
+    "title": "Virtual columns"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "String comparators",
+    "permalink": "/docs/querying/sorting-orders"
+  },
+  "next": {
+    "title": "Spatial filters",
+    "permalink": "/docs/development/geo"
+  }
+}

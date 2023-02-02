@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/select-query",
+  "id": "querying/select-query",
+  "title": "Select queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/select-query.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/select-query",
+  "permalink": "/docs/querying/select-query",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/select-query.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "select-query",
+    "title": "Select queries",
+    "sidebar_label": "Select"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Cardinality/HyperUnique aggregators",
+    "permalink": "/docs/querying/hll-old"
+  },
+  "next": {
+    "title": "Firehose (deprecated)",
+    "permalink": "/docs/ingestion/native-batch-firehose"
+  }
+}

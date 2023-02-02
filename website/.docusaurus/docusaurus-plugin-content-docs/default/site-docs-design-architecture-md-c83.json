@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/architecture",
+  "id": "design/architecture",
+  "title": "Design",
+  "description": "<!--",
+  "source": "@site/../docs/design/architecture.md",
+  "sourceDirName": "design",
+  "slug": "/design/architecture",
+  "permalink": "/docs/design/architecture",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/architecture.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "architecture",
+    "title": "Design"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "JDBC connector",
+    "permalink": "/docs/tutorials/tutorial-jdbc"
+  },
+  "next": {
+    "title": "Segments",
+    "permalink": "/docs/design/segments"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "ingestion/schema-design",
+  "id": "ingestion/schema-design",
+  "title": "Schema design tips",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/schema-design.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/schema-design",
+  "permalink": "/docs/ingestion/schema-design",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/schema-design.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "schema-design",
+    "title": "Schema design tips"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Ingestion spec",
+    "permalink": "/docs/ingestion/ingestion-spec"
+  },
+  "next": {
+    "title": "Apache Kafka ingestion",
+    "permalink": "/docs/development/extensions-core/kafka-ingestion"
+  }
+}

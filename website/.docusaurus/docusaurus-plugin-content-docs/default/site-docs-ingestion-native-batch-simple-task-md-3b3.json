@@ -1,0 +1,31 @@
+{
+  "unversionedId": "ingestion/native-batch-simple-task",
+  "id": "ingestion/native-batch-simple-task",
+  "title": "Native batch simple task indexing",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/native-batch-simple-task.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/native-batch-simple-task",
+  "permalink": "/docs/ingestion/native-batch-simple-task",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/native-batch-simple-task.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "native-batch-simple-task",
+    "title": "Native batch simple task indexing",
+    "sidebar_label": "Native batch (simple)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Firehose (deprecated)",
+    "permalink": "/docs/ingestion/native-batch-firehose"
+  },
+  "next": {
+    "title": "Realtime Process",
+    "permalink": "/docs/ingestion/standalone-realtime"
+  }
+}

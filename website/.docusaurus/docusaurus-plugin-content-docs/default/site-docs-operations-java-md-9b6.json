@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/java",
+  "id": "operations/java",
+  "title": "Java runtime",
+  "description": "<!--",
+  "source": "@site/../docs/operations/java.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/java",
+  "permalink": "/docs/operations/java",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/java.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "java",
+    "title": "Java runtime"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Web console",
+    "permalink": "/docs/operations/web-console"
+  },
+  "next": {
+    "title": "Security overview",
+    "permalink": "/docs/operations/security-overview"
+  }
+}

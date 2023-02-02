@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/protobuf",
+  "id": "development/extensions-core/protobuf",
+  "title": "Protobuf",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/protobuf.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/protobuf",
+  "permalink": "/docs/development/extensions-core/protobuf",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/protobuf.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "protobuf",
+    "title": "Protobuf"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "PostgreSQL Metadata Store",
+    "permalink": "/docs/development/extensions-core/postgresql"
+  },
+  "next": {
+    "title": "S3-compatible",
+    "permalink": "/docs/development/extensions-core/s3"
+  }
+}

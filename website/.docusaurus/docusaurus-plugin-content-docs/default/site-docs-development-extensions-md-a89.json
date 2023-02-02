@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions",
+  "id": "development/extensions",
+  "title": "Extensions",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions.md",
+  "sourceDirName": "development",
+  "slug": "/development/extensions",
+  "permalink": "/docs/development/extensions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "extensions",
+    "title": "Extensions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Configuration reference",
+    "permalink": "/docs/configuration/"
+  },
+  "next": {
+    "title": "Logging",
+    "permalink": "/docs/configuration/logging"
+  }
+}

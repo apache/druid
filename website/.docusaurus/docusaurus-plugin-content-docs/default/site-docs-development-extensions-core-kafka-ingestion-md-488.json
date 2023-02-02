@@ -1,0 +1,32 @@
+{
+  "unversionedId": "development/extensions-core/kafka-ingestion",
+  "id": "development/extensions-core/kafka-ingestion",
+  "title": "Apache Kafka ingestion",
+  "description": "Overview of the Kafka indexing service for Druid. Includes example supervisor specs to help you get started.",
+  "source": "@site/../docs/development/extensions-core/kafka-ingestion.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kafka-ingestion",
+  "permalink": "/docs/development/extensions-core/kafka-ingestion",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-ingestion.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kafka-ingestion",
+    "title": "Apache Kafka ingestion",
+    "sidebar_label": "Apache Kafka ingestion",
+    "description": "Overview of the Kafka indexing service for Druid. Includes example supervisor specs to help you get started."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Schema design tips",
+    "permalink": "/docs/ingestion/schema-design"
+  },
+  "next": {
+    "title": "Apache Kafka supervisor",
+    "permalink": "/docs/development/extensions-core/kafka-supervisor-reference"
+  }
+}

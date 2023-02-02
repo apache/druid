@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/topnquery",
+  "id": "querying/topnquery",
+  "title": "TopN queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/topnquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/topnquery",
+  "permalink": "/docs/querying/topnquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/topnquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "topnquery",
+    "title": "TopN queries",
+    "sidebar_label": "TopN"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Timeseries",
+    "permalink": "/docs/querying/timeseriesquery"
+  },
+  "next": {
+    "title": "GroupBy",
+    "permalink": "/docs/querying/groupbyquery"
+  }
+}

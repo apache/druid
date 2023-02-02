@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/build",
+  "id": "development/build",
+  "title": "Build from source",
+  "description": "<!--",
+  "source": "@site/../docs/development/build.md",
+  "sourceDirName": "development",
+  "slug": "/development/build",
+  "permalink": "/docs/development/build",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/build.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "build",
+    "title": "Build from source"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "JavaScript functionality",
+    "permalink": "/docs/development/javascript"
+  },
+  "next": {
+    "title": "Versioning",
+    "permalink": "/docs/development/versioning"
+  }
+}

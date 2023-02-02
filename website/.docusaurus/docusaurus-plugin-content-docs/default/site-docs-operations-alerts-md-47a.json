@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/alerts",
+  "id": "operations/alerts",
+  "title": "Alerts",
+  "description": "<!--",
+  "source": "@site/../docs/operations/alerts.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/alerts",
+  "permalink": "/docs/operations/alerts",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/alerts.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "alerts",
+    "title": "Alerts"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Metrics",
+    "permalink": "/docs/operations/metrics"
+  },
+  "next": {
+    "title": "API reference",
+    "permalink": "/docs/operations/api-reference"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "operations/mixed-workloads",
+  "id": "operations/mixed-workloads",
+  "title": "Configure Druid for mixed workloads",
+  "description": "<!--",
+  "source": "@site/../docs/operations/mixed-workloads.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/mixed-workloads",
+  "permalink": "/docs/operations/mixed-workloads",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/mixed-workloads.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "mixed-workloads",
+    "title": "Configure Druid for mixed workloads",
+    "sidebar_label": "Mixed workloads"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Segment size optimization",
+    "permalink": "/docs/operations/segment-optimization"
+  },
+  "next": {
+    "title": "HTTP compression",
+    "permalink": "/docs/operations/http-compression"
+  }
+}

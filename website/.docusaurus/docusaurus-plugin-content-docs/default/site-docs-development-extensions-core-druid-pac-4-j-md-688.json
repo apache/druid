@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-pac4j",
+  "id": "development/extensions-core/druid-pac4j",
+  "title": "Druid pac4j based Security extension",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-pac4j.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-pac4j",
+  "permalink": "/docs/development/extensions-core/druid-pac4j",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-pac4j.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-pac4j",
+    "title": "Druid pac4j based Security extension"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "ORC Extension",
+    "permalink": "/docs/development/extensions-core/orc"
+  },
+  "next": {
+    "title": "Apache Parquet Extension",
+    "permalink": "/docs/development/extensions-core/parquet"
+  }
+}

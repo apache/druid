@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-query",
+  "id": "tutorials/tutorial-query",
+  "title": "Tutorial: Querying data",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-query.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-query",
+  "permalink": "/docs/tutorials/tutorial-query",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-query.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-query",
+    "title": "Tutorial: Querying data",
+    "sidebar_label": "Querying data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Load from Apache Hadoop",
+    "permalink": "/docs/tutorials/tutorial-batch-hadoop"
+  },
+  "next": {
+    "title": "Roll-up",
+    "permalink": "/docs/tutorials/tutorial-rollup"
+  }
+}

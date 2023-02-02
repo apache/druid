@@ -1,0 +1,30 @@
+{
+  "unversionedId": "comparisons/druid-vs-kudu",
+  "id": "comparisons/druid-vs-kudu",
+  "title": "Apache Druid vs Kudu",
+  "description": "<!--",
+  "source": "@site/../docs/comparisons/druid-vs-kudu.md",
+  "sourceDirName": "comparisons",
+  "slug": "/comparisons/druid-vs-kudu",
+  "permalink": "/docs/comparisons/druid-vs-kudu",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-kudu.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-vs-kudu",
+    "title": "Apache Druid vs Kudu"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)",
+    "permalink": "/docs/comparisons/druid-vs-key-value"
+  },
+  "next": {
+    "title": "Apache Druid vs Redshift",
+    "permalink": "/docs/comparisons/druid-vs-redshift"
+  }
+}

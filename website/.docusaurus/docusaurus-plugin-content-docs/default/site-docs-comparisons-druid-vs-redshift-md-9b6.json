@@ -1,0 +1,30 @@
+{
+  "unversionedId": "comparisons/druid-vs-redshift",
+  "id": "comparisons/druid-vs-redshift",
+  "title": "Apache Druid vs Redshift",
+  "description": "<!--",
+  "source": "@site/../docs/comparisons/druid-vs-redshift.md",
+  "sourceDirName": "comparisons",
+  "slug": "/comparisons/druid-vs-redshift",
+  "permalink": "/docs/comparisons/druid-vs-redshift",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-redshift.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-vs-redshift",
+    "title": "Apache Druid vs Redshift"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Druid vs Kudu",
+    "permalink": "/docs/comparisons/druid-vs-kudu"
+  },
+  "next": {
+    "title": "Apache Druid vs Spark",
+    "permalink": "/docs/comparisons/druid-vs-spark"
+  }
+}

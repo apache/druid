@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql",
+  "id": "querying/sql",
+  "title": "Druid SQL overview",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql",
+  "permalink": "/docs/querying/sql",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql",
+    "title": "Druid SQL overview",
+    "sidebar_label": "Overview and syntax"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Automatic compaction",
+    "permalink": "/docs/data-management/automatic-compaction"
+  },
+  "next": {
+    "title": "SQL data types",
+    "permalink": "/docs/querying/sql-data-types"
+  }
+}

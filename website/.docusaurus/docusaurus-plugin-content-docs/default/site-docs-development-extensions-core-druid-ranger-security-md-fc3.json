@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-ranger-security",
+  "id": "development/extensions-core/druid-ranger-security",
+  "title": "Apache Ranger Security",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-ranger-security.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-ranger-security",
+  "permalink": "/docs/development/extensions-core/druid-ranger-security",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-ranger-security.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-ranger-security",
+    "title": "Apache Ranger Security"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Cached Lookup Module",
+    "permalink": "/docs/development/extensions-core/druid-lookups"
+  },
+  "next": {
+    "title": "Google Cloud Storage",
+    "permalink": "/docs/development/extensions-core/google"
+  }
+}

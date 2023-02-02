@@ -1,0 +1,32 @@
+{
+  "unversionedId": "tutorials/tutorial-msq-convert-spec",
+  "id": "tutorials/tutorial-msq-convert-spec",
+  "title": "Tutorial: Convert an ingestion spec for SQL-based ingestion",
+  "description": "How to convert an ingestion spec to a query for SQL-based ingestion in the web console.",
+  "source": "@site/../docs/tutorials/tutorial-msq-convert-spec.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-msq-convert-spec",
+  "permalink": "/docs/tutorials/tutorial-msq-convert-spec",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-msq-convert-spec.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-msq-convert-spec",
+    "title": "Tutorial: Convert an ingestion spec for SQL-based ingestion",
+    "sidebar_label": "Convert ingestion spec to SQL",
+    "description": "How to convert an ingestion spec to a query for SQL-based ingestion in the web console."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Kerberized HDFS deep storage",
+    "permalink": "/docs/tutorials/tutorial-kerberos-hadoop"
+  },
+  "next": {
+    "title": "JDBC connector",
+    "permalink": "/docs/tutorials/tutorial-jdbc"
+  }
+}

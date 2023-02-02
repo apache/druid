@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-api",
+  "id": "querying/sql-api",
+  "title": "Druid SQL API",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-api.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-api",
+  "permalink": "/docs/querying/sql-api",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-api.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-api",
+    "title": "Druid SQL API",
+    "sidebar_label": "Druid SQL API"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "All functions",
+    "permalink": "/docs/querying/sql-functions"
+  },
+  "next": {
+    "title": "JDBC driver API",
+    "permalink": "/docs/querying/sql-jdbc"
+  }
+}

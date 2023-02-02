@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-operators",
+  "id": "querying/sql-operators",
+  "title": "Druid SQL Operators",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-operators.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-operators",
+  "permalink": "/docs/querying/sql-operators",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-operators.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-operators",
+    "title": "Druid SQL Operators",
+    "sidebar_label": "Operators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SQL data types",
+    "permalink": "/docs/querying/sql-data-types"
+  },
+  "next": {
+    "title": "Scalar functions",
+    "permalink": "/docs/querying/sql-scalar"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/lookups-cached-global",
+  "id": "development/extensions-core/lookups-cached-global",
+  "title": "Globally Cached Lookups",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/lookups-cached-global.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/lookups-cached-global",
+  "permalink": "/docs/development/extensions-core/lookups-cached-global",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/lookups-cached-global.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "lookups-cached-global",
+    "title": "Globally Cached Lookups"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Kafka Lookups",
+    "permalink": "/docs/development/extensions-core/kafka-extraction-namespace"
+  },
+  "next": {
+    "title": "MySQL Metadata Store",
+    "permalink": "/docs/development/extensions-core/mysql"
+  }
+}

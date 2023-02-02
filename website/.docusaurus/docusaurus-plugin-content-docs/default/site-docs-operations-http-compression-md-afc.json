@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/http-compression",
+  "id": "operations/http-compression",
+  "title": "HTTP compression",
+  "description": "<!--",
+  "source": "@site/../docs/operations/http-compression.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/http-compression",
+  "permalink": "/docs/operations/http-compression",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/http-compression.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "http-compression",
+    "title": "HTTP compression"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Mixed workloads",
+    "permalink": "/docs/operations/mixed-workloads"
+  },
+  "next": {
+    "title": "Automated metadata cleanup",
+    "permalink": "/docs/operations/clean-metadata-store"
+  }
+}

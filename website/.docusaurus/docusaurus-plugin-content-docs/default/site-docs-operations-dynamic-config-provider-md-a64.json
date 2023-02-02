@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/dynamic-config-provider",
+  "id": "operations/dynamic-config-provider",
+  "title": "Dynamic Config Providers",
+  "description": "<!--",
+  "source": "@site/../docs/operations/dynamic-config-provider.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/dynamic-config-provider",
+  "permalink": "/docs/operations/dynamic-config-provider",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/dynamic-config-provider.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "dynamic-config-provider",
+    "title": "Dynamic Config Providers"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Password providers",
+    "permalink": "/docs/operations/password-provider"
+  },
+  "next": {
+    "title": "Authentication and Authorization",
+    "permalink": "/docs/design/auth"
+  }
+}

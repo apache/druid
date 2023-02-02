@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/test-stats",
+  "id": "development/extensions-core/test-stats",
+  "title": "Test Stats Aggregators",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/test-stats.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/test-stats",
+  "permalink": "/docs/development/extensions-core/test-stats",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/test-stats.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "test-stats",
+    "title": "Test Stats Aggregators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Stats aggregator",
+    "permalink": "/docs/development/extensions-core/stats"
+  },
+  "next": {
+    "title": "Druid AWS RDS Module",
+    "permalink": "/docs/development/extensions-core/druid-aws-rds"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/searchquery",
+  "id": "querying/searchquery",
+  "title": "Search queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/searchquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/searchquery",
+  "permalink": "/docs/querying/searchquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/searchquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "searchquery",
+    "title": "Search queries",
+    "sidebar_label": "Search"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Scan",
+    "permalink": "/docs/querying/scan-query"
+  },
+  "next": {
+    "title": "TimeBoundary",
+    "permalink": "/docs/querying/timeboundaryquery"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/lookups",
+  "id": "querying/lookups",
+  "title": "Lookups",
+  "description": "<!--",
+  "source": "@site/../docs/querying/lookups.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/lookups",
+  "permalink": "/docs/querying/lookups",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/lookups.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "lookups",
+    "title": "Lookups"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Joins",
+    "permalink": "/docs/querying/joins"
+  },
+  "next": {
+    "title": "Multi-value dimensions",
+    "permalink": "/docs/querying/multi-value-dimensions"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/orc",
+  "id": "development/extensions-core/orc",
+  "title": "ORC Extension",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/orc.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/orc",
+  "permalink": "/docs/development/extensions-core/orc",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/orc.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "orc",
+    "title": "ORC Extension"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "MySQL Metadata Store",
+    "permalink": "/docs/development/extensions-core/mysql"
+  },
+  "next": {
+    "title": "Druid pac4j based Security extension",
+    "permalink": "/docs/development/extensions-core/druid-pac4j"
+  }
+}

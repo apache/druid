@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/indexer",
+  "id": "design/indexer",
+  "title": "Indexer Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/indexer.md",
+  "sourceDirName": "design",
+  "slug": "/design/indexer",
+  "permalink": "/docs/design/indexer",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/indexer.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "layout": "doc_page",
+    "title": "Indexer Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Historical Process",
+    "permalink": "/docs/design/historical"
+  },
+  "next": {
+    "title": "Indexing Service",
+    "permalink": "/docs/design/indexing-service"
+  }
+}

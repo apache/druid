@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/s3",
+  "id": "development/extensions-core/s3",
+  "title": "S3-compatible",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/s3.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/s3",
+  "permalink": "/docs/development/extensions-core/s3",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/s3.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "s3",
+    "title": "S3-compatible"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Protobuf",
+    "permalink": "/docs/development/extensions-core/protobuf"
+  },
+  "next": {
+    "title": "Simple SSLContext Provider Module",
+    "permalink": "/docs/development/extensions-core/simple-client-sslcontext"
+  }
+}

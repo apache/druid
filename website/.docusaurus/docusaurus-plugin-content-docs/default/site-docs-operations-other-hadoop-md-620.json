@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/other-hadoop",
+  "id": "operations/other-hadoop",
+  "title": "Working with different versions of Apache Hadoop",
+  "description": "<!--",
+  "source": "@site/../docs/operations/other-hadoop.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/other-hadoop",
+  "permalink": "/docs/operations/other-hadoop",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/other-hadoop.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "other-hadoop",
+    "title": "Working with different versions of Apache Hadoop"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Using rules to drop and retain data",
+    "permalink": "/docs/operations/rule-configuration"
+  },
+  "next": {
+    "title": "dump-segment tool",
+    "permalink": "/docs/operations/dump-segment"
+  }
+}

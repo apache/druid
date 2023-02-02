@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/using-caching",
+  "id": "querying/using-caching",
+  "title": "Using query caching",
+  "description": "<!--",
+  "source": "@site/../docs/querying/using-caching.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/using-caching",
+  "permalink": "/docs/querying/using-caching",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/using-caching.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "using-caching",
+    "title": "Using query caching"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Query caching",
+    "permalink": "/docs/querying/caching"
+  },
+  "next": {
+    "title": "Query context",
+    "permalink": "/docs/querying/query-context"
+  }
+}

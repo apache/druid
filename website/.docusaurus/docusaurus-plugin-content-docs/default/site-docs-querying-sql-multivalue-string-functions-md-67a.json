@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-multivalue-string-functions",
+  "id": "querying/sql-multivalue-string-functions",
+  "title": "SQL multi-value string functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-multivalue-string-functions.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-multivalue-string-functions",
+  "permalink": "/docs/querying/sql-multivalue-string-functions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-multivalue-string-functions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-multivalue-string-functions",
+    "title": "SQL multi-value string functions",
+    "sidebar_label": "Multi-value string functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Aggregation functions",
+    "permalink": "/docs/querying/sql-aggregations"
+  },
+  "next": {
+    "title": "JSON functions",
+    "permalink": "/docs/querying/sql-json-functions"
+  }
+}

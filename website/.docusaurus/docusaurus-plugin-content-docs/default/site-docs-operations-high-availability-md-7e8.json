@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/high-availability",
+  "id": "operations/high-availability",
+  "title": "High availability",
+  "description": "<!--",
+  "source": "@site/../docs/operations/high-availability.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/high-availability",
+  "permalink": "/docs/operations/high-availability",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/high-availability.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "high-availability",
+    "title": "High availability"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "API reference",
+    "permalink": "/docs/operations/api-reference"
+  },
+  "next": {
+    "title": "Rolling updates",
+    "permalink": "/docs/operations/rolling-updates"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-aggregations",
+  "id": "querying/sql-aggregations",
+  "title": "SQL aggregation functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-aggregations.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-aggregations",
+  "permalink": "/docs/querying/sql-aggregations",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-aggregations.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-aggregations",
+    "title": "SQL aggregation functions",
+    "sidebar_label": "Aggregation functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Scalar functions",
+    "permalink": "/docs/querying/sql-scalar"
+  },
+  "next": {
+    "title": "Multi-value string functions",
+    "permalink": "/docs/querying/sql-multivalue-string-functions"
+  }
+}

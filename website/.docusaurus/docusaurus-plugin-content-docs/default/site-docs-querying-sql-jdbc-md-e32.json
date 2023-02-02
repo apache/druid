@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-jdbc",
+  "id": "querying/sql-jdbc",
+  "title": "SQL JDBC driver API",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-jdbc.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-jdbc",
+  "permalink": "/docs/querying/sql-jdbc",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-jdbc.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-jdbc",
+    "title": "SQL JDBC driver API",
+    "sidebar_label": "JDBC driver API"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Druid SQL API",
+    "permalink": "/docs/querying/sql-api"
+  },
+  "next": {
+    "title": "SQL query context",
+    "permalink": "/docs/querying/sql-query-context"
+  }
+}

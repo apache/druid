@@ -1,0 +1,31 @@
+{
+  "unversionedId": "operations/auth-ldap",
+  "id": "operations/auth-ldap",
+  "title": "Configure LDAP authentication",
+  "description": "<!--",
+  "source": "@site/../docs/operations/auth-ldap.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/auth-ldap",
+  "permalink": "/docs/operations/auth-ldap",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/auth-ldap.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "auth-ldap",
+    "title": "Configure LDAP authentication",
+    "sidebar_label": "LDAP auth"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "User authentication and authorization",
+    "permalink": "/docs/operations/security-user-auth"
+  },
+  "next": {
+    "title": "Password providers",
+    "permalink": "/docs/operations/password-provider"
+  }
+}

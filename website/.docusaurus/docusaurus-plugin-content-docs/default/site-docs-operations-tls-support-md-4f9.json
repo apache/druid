@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/tls-support",
+  "id": "operations/tls-support",
+  "title": "TLS support",
+  "description": "<!--",
+  "source": "@site/../docs/operations/tls-support.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/tls-support",
+  "permalink": "/docs/operations/tls-support",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/tls-support.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tls-support",
+    "title": "TLS support"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Authentication and Authorization",
+    "permalink": "/docs/design/auth"
+  },
+  "next": {
+    "title": "Basic cluster tuning",
+    "permalink": "/docs/operations/basic-cluster-tuning"
+  }
+}

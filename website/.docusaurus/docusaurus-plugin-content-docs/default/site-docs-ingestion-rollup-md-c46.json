@@ -1,0 +1,32 @@
+{
+  "unversionedId": "ingestion/rollup",
+  "id": "ingestion/rollup",
+  "title": "Data rollup",
+  "description": "Introduces rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup.",
+  "source": "@site/../docs/ingestion/rollup.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/rollup",
+  "permalink": "/docs/ingestion/rollup",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/rollup.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "rollup",
+    "title": "Data rollup",
+    "sidebar_label": "Data rollup",
+    "description": "Introduces rollup as a concept. Provides suggestions to maximize the benefits of rollup. Differentiates between perfect and best-effort rollup."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Data model",
+    "permalink": "/docs/ingestion/data-model"
+  },
+  "next": {
+    "title": "Partitioning",
+    "permalink": "/docs/ingestion/partitioning"
+  }
+}

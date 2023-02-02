@@ -1,0 +1,31 @@
+{
+  "unversionedId": "ingestion/standalone-realtime",
+  "id": "ingestion/standalone-realtime",
+  "title": "Realtime Process",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/standalone-realtime.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/standalone-realtime",
+  "permalink": "/docs/ingestion/standalone-realtime",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/standalone-realtime.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "standalone-realtime",
+    "layout": "doc_page",
+    "title": "Realtime Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Amazon Kinesis",
+    "permalink": "/docs/development/extensions-core/kinesis-ingestion"
+  },
+  "next": {
+    "title": "Native batch",
+    "permalink": "/docs/ingestion/native-batch"
+  }
+}

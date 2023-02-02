@@ -1,0 +1,30 @@
+{
+  "unversionedId": "data-management/automatic-compaction",
+  "id": "data-management/automatic-compaction",
+  "title": "Automatic compaction",
+  "description": "<!--",
+  "source": "@site/../docs/data-management/automatic-compaction.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/automatic-compaction",
+  "permalink": "/docs/data-management/automatic-compaction",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/automatic-compaction.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "automatic-compaction",
+    "title": "Automatic compaction"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Compaction",
+    "permalink": "/docs/data-management/compaction"
+  },
+  "next": {
+    "title": "Overview and syntax",
+    "permalink": "/docs/querying/sql"
+  }
+}

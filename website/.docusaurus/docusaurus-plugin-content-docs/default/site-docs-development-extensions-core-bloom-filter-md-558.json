@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/bloom-filter",
+  "id": "development/extensions-core/bloom-filter",
+  "title": "Bloom Filter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/bloom-filter.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/bloom-filter",
+  "permalink": "/docs/development/extensions-core/bloom-filter",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/bloom-filter.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "bloom-filter",
+    "title": "Bloom Filter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Microsoft Azure",
+    "permalink": "/docs/development/extensions-core/azure"
+  },
+  "next": {
+    "title": "DataSketches extension",
+    "permalink": "/docs/development/extensions-core/datasketches-extension"
+  }
+}

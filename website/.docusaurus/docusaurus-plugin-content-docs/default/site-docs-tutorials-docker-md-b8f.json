@@ -1,0 +1,30 @@
+{
+  "unversionedId": "tutorials/docker",
+  "id": "tutorials/docker",
+  "title": "Tutorial: Run with Docker",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/docker.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/docker",
+  "permalink": "/docs/tutorials/docker",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/docker.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "docker",
+    "title": "Tutorial: Run with Docker"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Transforming input data",
+    "permalink": "/docs/tutorials/tutorial-transform-spec"
+  },
+  "next": {
+    "title": "Kerberized HDFS deep storage",
+    "permalink": "/docs/tutorials/tutorial-kerberos-hadoop"
+  }
+}

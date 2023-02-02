@@ -1,0 +1,21 @@
+{
+  "unversionedId": "development/experimental-features",
+  "id": "development/experimental-features",
+  "title": "Experimental features",
+  "description": "<!--",
+  "source": "@site/../docs/development/experimental-features.md",
+  "sourceDirName": "development",
+  "slug": "/development/experimental-features",
+  "permalink": "/docs/development/experimental-features",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/experimental-features.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "experimental-features",
+    "title": "Experimental features"
+  }
+}

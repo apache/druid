@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/peons",
+  "id": "design/peons",
+  "title": "Peons",
+  "description": "<!--",
+  "source": "@site/../docs/design/peons.md",
+  "sourceDirName": "design",
+  "slug": "/design/peons",
+  "permalink": "/docs/design/peons",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/peons.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "peons",
+    "title": "Peons"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Router Process",
+    "permalink": "/docs/design/router"
+  },
+  "next": {
+    "title": "Approximate Histogram aggregators",
+    "permalink": "/docs/development/extensions-core/approximate-histograms"
+  }
+}

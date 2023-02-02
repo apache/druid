@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-lookups",
+  "id": "development/extensions-core/druid-lookups",
+  "title": "Cached Lookup Module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-lookups.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-lookups",
+  "permalink": "/docs/development/extensions-core/druid-lookups",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-lookups.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-lookups",
+    "title": "Cached Lookup Module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Kerberos",
+    "permalink": "/docs/development/extensions-core/druid-kerberos"
+  },
+  "next": {
+    "title": "Apache Ranger Security",
+    "permalink": "/docs/development/extensions-core/druid-ranger-security"
+  }
+}

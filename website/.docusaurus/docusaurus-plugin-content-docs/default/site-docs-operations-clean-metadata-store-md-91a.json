@@ -1,0 +1,32 @@
+{
+  "unversionedId": "operations/clean-metadata-store",
+  "id": "operations/clean-metadata-store",
+  "title": "Automated cleanup for metadata records",
+  "description": "Defines a strategy to maintain Druid metadata store performance by automatically removing leftover records for deleted entities: datasources, supervisors, rules, compaction configuration, audit records, etc. Most applicable to databases with 'high-churn' datasources.",
+  "source": "@site/../docs/operations/clean-metadata-store.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/clean-metadata-store",
+  "permalink": "/docs/operations/clean-metadata-store",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/clean-metadata-store.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "clean-metadata-store",
+    "title": "Automated cleanup for metadata records",
+    "sidebar_label": "Automated metadata cleanup",
+    "description": "Defines a strategy to maintain Druid metadata store performance by automatically removing leftover records for deleted entities: datasources, supervisors, rules, compaction configuration, audit records, etc. Most applicable to databases with 'high-churn' datasources."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "HTTP compression",
+    "permalink": "/docs/operations/http-compression"
+  },
+  "next": {
+    "title": "Request logging",
+    "permalink": "/docs/operations/request-logging"
+  }
+}

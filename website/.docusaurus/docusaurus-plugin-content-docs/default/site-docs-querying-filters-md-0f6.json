@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/filters",
+  "id": "querying/filters",
+  "title": "Query filters",
+  "description": "<!--",
+  "source": "@site/../docs/querying/filters.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/filters",
+  "permalink": "/docs/querying/filters",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/filters.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "filters",
+    "title": "Query filters",
+    "sidebar_label": "Filters"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DatasourceMetadata",
+    "permalink": "/docs/querying/datasourcemetadataquery"
+  },
+  "next": {
+    "title": "Granularities",
+    "permalink": "/docs/querying/granularities"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/timeboundaryquery",
+  "id": "querying/timeboundaryquery",
+  "title": "TimeBoundary queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/timeboundaryquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/timeboundaryquery",
+  "permalink": "/docs/querying/timeboundaryquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/timeboundaryquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "timeboundaryquery",
+    "title": "TimeBoundary queries",
+    "sidebar_label": "TimeBoundary"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Search",
+    "permalink": "/docs/querying/searchquery"
+  },
+  "next": {
+    "title": "SegmentMetadata",
+    "permalink": "/docs/querying/segmentmetadataquery"
+  }
+}

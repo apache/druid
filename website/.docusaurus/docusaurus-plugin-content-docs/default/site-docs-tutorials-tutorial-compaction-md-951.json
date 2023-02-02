@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-compaction",
+  "id": "tutorials/tutorial-compaction",
+  "title": "Tutorial: Compacting segments",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-compaction.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-compaction",
+  "permalink": "/docs/tutorials/tutorial-compaction",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-compaction.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-compaction",
+    "title": "Tutorial: Compacting segments",
+    "sidebar_label": "Compacting segments"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Updating existing data",
+    "permalink": "/docs/tutorials/tutorial-update-data"
+  },
+  "next": {
+    "title": "Deleting data",
+    "permalink": "/docs/tutorials/tutorial-delete-data"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/historical",
+  "id": "design/historical",
+  "title": "Historical Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/historical.md",
+  "sourceDirName": "design",
+  "slug": "/design/historical",
+  "permalink": "/docs/design/historical",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/historical.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "historical",
+    "title": "Historical Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Coordinator Process",
+    "permalink": "/docs/design/coordinator"
+  },
+  "next": {
+    "title": "Indexer Process",
+    "permalink": "/docs/design/indexer"
+  }
+}

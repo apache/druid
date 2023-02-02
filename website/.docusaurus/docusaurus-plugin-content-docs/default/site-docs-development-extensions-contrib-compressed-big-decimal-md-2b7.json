@@ -1,0 +1,21 @@
+{
+  "unversionedId": "development/extensions-contrib/compressed-big-decimal",
+  "id": "development/extensions-contrib/compressed-big-decimal",
+  "title": "Compressed Big Decimal",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/compressed-big-decimal.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/compressed-big-decimal",
+  "permalink": "/docs/development/extensions-contrib/compressed-big-decimal",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/compressed-big-decimal.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "compressed-big-decimal",
+    "title": "Compressed Big Decimal"
+  }
+}

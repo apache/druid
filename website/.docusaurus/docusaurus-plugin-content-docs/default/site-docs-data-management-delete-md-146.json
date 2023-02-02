@@ -1,0 +1,30 @@
+{
+  "unversionedId": "data-management/delete",
+  "id": "data-management/delete",
+  "title": "Data deletion",
+  "description": "<!--",
+  "source": "@site/../docs/data-management/delete.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/delete",
+  "permalink": "/docs/data-management/delete",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/delete.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "delete",
+    "title": "Data deletion"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Data updates",
+    "permalink": "/docs/data-management/update"
+  },
+  "next": {
+    "title": "Schema changes",
+    "permalink": "/docs/data-management/schema-changes"
+  }
+}

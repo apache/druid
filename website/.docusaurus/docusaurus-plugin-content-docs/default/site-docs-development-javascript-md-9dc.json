@@ -1,0 +1,31 @@
+{
+  "unversionedId": "development/javascript",
+  "id": "development/javascript",
+  "title": "JavaScript programming guide",
+  "description": "<!--",
+  "source": "@site/../docs/development/javascript.md",
+  "sourceDirName": "development",
+  "slug": "/development/javascript",
+  "permalink": "/docs/development/javascript",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/javascript.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "javascript",
+    "title": "JavaScript programming guide",
+    "sidebar_label": "JavaScript functionality"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Creating extensions",
+    "permalink": "/docs/development/modules"
+  },
+  "next": {
+    "title": "Build from source",
+    "permalink": "/docs/development/build"
+  }
+}

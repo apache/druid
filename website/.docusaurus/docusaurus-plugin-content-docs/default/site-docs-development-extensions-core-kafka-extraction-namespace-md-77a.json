@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/kafka-extraction-namespace",
+  "id": "development/extensions-core/kafka-extraction-namespace",
+  "title": "Apache Kafka Lookups",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/kafka-extraction-namespace.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kafka-extraction-namespace",
+  "permalink": "/docs/development/extensions-core/kafka-extraction-namespace",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-extraction-namespace.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kafka-extraction-namespace",
+    "title": "Apache Kafka Lookups"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "HDFS",
+    "permalink": "/docs/development/extensions-core/hdfs"
+  },
+  "next": {
+    "title": "Globally Cached Lookups",
+    "permalink": "/docs/development/extensions-core/lookups-cached-global"
+  }
+}

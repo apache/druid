@@ -1,0 +1,31 @@
+{
+  "unversionedId": "multi-stage-query/examples",
+  "id": "multi-stage-query/examples",
+  "title": "SQL-based ingestion query examples",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/examples.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/examples",
+  "permalink": "/docs/multi-stage-query/examples",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/examples.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "examples",
+    "title": "SQL-based ingestion query examples",
+    "sidebar_label": "Examples"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Security",
+    "permalink": "/docs/multi-stage-query/security"
+  },
+  "next": {
+    "title": "Reference",
+    "permalink": "/docs/multi-stage-query/reference"
+  }
+}

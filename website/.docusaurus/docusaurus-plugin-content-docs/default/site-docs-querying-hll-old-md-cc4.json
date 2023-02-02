@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/hll-old",
+  "id": "querying/hll-old",
+  "title": "Cardinality/HyperUnique aggregators",
+  "description": "<!--",
+  "source": "@site/../docs/querying/hll-old.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/hll-old",
+  "permalink": "/docs/querying/hll-old",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/hll-old.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "hll-old",
+    "title": "Cardinality/HyperUnique aggregators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "kubernetes",
+    "permalink": "/docs/operations/kubernetes"
+  },
+  "next": {
+    "title": "Select",
+    "permalink": "/docs/querying/select-query"
+  }
+}

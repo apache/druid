@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/broker",
+  "id": "design/broker",
+  "title": "Broker",
+  "description": "<!--",
+  "source": "@site/../docs/design/broker.md",
+  "sourceDirName": "design",
+  "slug": "/design/broker",
+  "permalink": "/docs/design/broker",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/broker.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "broker",
+    "title": "Broker"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Authentication and Authorization",
+    "permalink": "/docs/design/auth"
+  },
+  "next": {
+    "title": "Coordinator Process",
+    "permalink": "/docs/design/coordinator"
+  }
+}

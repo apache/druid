@@ -1,0 +1,31 @@
+{
+  "unversionedId": "ingestion/native-batch",
+  "id": "ingestion/native-batch",
+  "title": "Native batch ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/native-batch.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/native-batch",
+  "permalink": "/docs/ingestion/native-batch",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/native-batch.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "native-batch",
+    "title": "Native batch ingestion",
+    "sidebar_label": "Native batch"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Realtime Process",
+    "permalink": "/docs/ingestion/standalone-realtime"
+  },
+  "next": {
+    "title": "Native batch: input sources",
+    "permalink": "/docs/ingestion/native-batch-input-sources"
+  }
+}

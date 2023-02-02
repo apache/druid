@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-retention",
+  "id": "tutorials/tutorial-retention",
+  "title": "Tutorial: Configuring data retention",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-retention.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-retention",
+  "permalink": "/docs/tutorials/tutorial-retention",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-retention.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-retention",
+    "title": "Tutorial: Configuring data retention",
+    "sidebar_label": "Configuring data retention"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Theta sketches",
+    "permalink": "/docs/tutorials/tutorial-sketches-theta"
+  },
+  "next": {
+    "title": "Updating existing data",
+    "permalink": "/docs/tutorials/tutorial-update-data"
+  }
+}

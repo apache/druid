@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/kubernetes",
+  "id": "operations/kubernetes",
+  "title": "kubernetes",
+  "description": "<!--",
+  "source": "@site/../docs/operations/kubernetes.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/kubernetes",
+  "permalink": "/docs/operations/kubernetes",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/kubernetes.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kubernetes",
+    "title": "kubernetes"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Prometheus Emitter",
+    "permalink": "/docs/development/extensions-contrib/prometheus"
+  },
+  "next": {
+    "title": "Cardinality/HyperUnique aggregators",
+    "permalink": "/docs/querying/hll-old"
+  }
+}

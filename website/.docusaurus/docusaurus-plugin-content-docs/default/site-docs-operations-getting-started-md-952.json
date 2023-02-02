@@ -1,0 +1,21 @@
+{
+  "unversionedId": "operations/getting-started",
+  "id": "operations/getting-started",
+  "title": "Getting started with Apache Druid",
+  "description": "<!--",
+  "source": "@site/../docs/operations/getting-started.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/getting-started",
+  "permalink": "/docs/operations/getting-started",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/getting-started.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "getting-started",
+    "title": "Getting started with Apache Druid"
+  }
+}

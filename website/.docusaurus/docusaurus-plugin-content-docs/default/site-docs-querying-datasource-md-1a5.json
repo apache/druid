@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/datasource",
+  "id": "querying/datasource",
+  "title": "Datasources",
+  "description": "<!--",
+  "source": "@site/../docs/querying/datasource.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/datasource",
+  "permalink": "/docs/querying/datasource",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/datasource.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "datasource",
+    "title": "Datasources"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Troubleshooting",
+    "permalink": "/docs/querying/troubleshooting"
+  },
+  "next": {
+    "title": "Joins",
+    "permalink": "/docs/querying/joins"
+  }
+}

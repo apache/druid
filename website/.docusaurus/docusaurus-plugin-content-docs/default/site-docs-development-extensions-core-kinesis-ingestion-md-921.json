@@ -1,0 +1,31 @@
+{
+  "unversionedId": "development/extensions-core/kinesis-ingestion",
+  "id": "development/extensions-core/kinesis-ingestion",
+  "title": "Amazon Kinesis ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/kinesis-ingestion.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kinesis-ingestion",
+  "permalink": "/docs/development/extensions-core/kinesis-ingestion",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kinesis-ingestion.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kinesis-ingestion",
+    "title": "Amazon Kinesis ingestion",
+    "sidebar_label": "Amazon Kinesis"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Kafka operations",
+    "permalink": "/docs/development/extensions-core/kafka-supervisor-operations"
+  },
+  "next": {
+    "title": "Realtime Process",
+    "permalink": "/docs/ingestion/standalone-realtime"
+  }
+}

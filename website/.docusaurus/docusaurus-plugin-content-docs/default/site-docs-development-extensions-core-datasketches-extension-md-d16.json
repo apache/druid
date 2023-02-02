@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/datasketches-extension",
+  "id": "development/extensions-core/datasketches-extension",
+  "title": "DataSketches extension",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/datasketches-extension.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/datasketches-extension",
+  "permalink": "/docs/development/extensions-core/datasketches-extension",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-extension.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "datasketches-extension",
+    "title": "DataSketches extension"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Bloom Filter",
+    "permalink": "/docs/development/extensions-core/bloom-filter"
+  },
+  "next": {
+    "title": "DataSketches HLL Sketch module",
+    "permalink": "/docs/development/extensions-core/datasketches-hll"
+  }
+}

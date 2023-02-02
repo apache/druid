@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/mysql",
+  "id": "development/extensions-core/mysql",
+  "title": "MySQL Metadata Store",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/mysql.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/mysql",
+  "permalink": "/docs/development/extensions-core/mysql",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/mysql.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "mysql",
+    "title": "MySQL Metadata Store"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Globally Cached Lookups",
+    "permalink": "/docs/development/extensions-core/lookups-cached-global"
+  },
+  "next": {
+    "title": "ORC Extension",
+    "permalink": "/docs/development/extensions-core/orc"
+  }
+}

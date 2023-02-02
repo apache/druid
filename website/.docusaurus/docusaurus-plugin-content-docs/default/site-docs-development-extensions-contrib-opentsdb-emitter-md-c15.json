@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/opentsdb-emitter",
+  "id": "development/extensions-contrib/opentsdb-emitter",
+  "title": "OpenTSDB Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/opentsdb-emitter.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/opentsdb-emitter",
+  "permalink": "/docs/development/extensions-contrib/opentsdb-emitter",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/opentsdb-emitter.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "opentsdb-emitter",
+    "title": "OpenTSDB Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Moving Average Query",
+    "permalink": "/docs/development/extensions-contrib/moving-average-query"
+  },
+  "next": {
+    "title": "Druid Redis Cache",
+    "permalink": "/docs/development/extensions-contrib/redis-cache"
+  }
+}

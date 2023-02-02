@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/basic-cluster-tuning",
+  "id": "operations/basic-cluster-tuning",
+  "title": "Basic cluster tuning",
+  "description": "<!--",
+  "source": "@site/../docs/operations/basic-cluster-tuning.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/basic-cluster-tuning",
+  "permalink": "/docs/operations/basic-cluster-tuning",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/basic-cluster-tuning.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "basic-cluster-tuning",
+    "title": "Basic cluster tuning"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "TLS support",
+    "permalink": "/docs/operations/tls-support"
+  },
+  "next": {
+    "title": "Segment size optimization",
+    "permalink": "/docs/operations/segment-optimization"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/statsd",
+  "id": "development/extensions-contrib/statsd",
+  "title": "StatsD Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/statsd.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/statsd",
+  "permalink": "/docs/development/extensions-contrib/statsd",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/statsd.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "statsd",
+    "title": "StatsD Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Microsoft SQLServer",
+    "permalink": "/docs/development/extensions-contrib/sqlserver"
+  },
+  "next": {
+    "title": "T-Digest Quantiles Sketch module",
+    "permalink": "/docs/development/extensions-contrib/tdigestsketch-quantiles"
+  }
+}

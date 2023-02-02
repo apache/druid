@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/rule-configuration",
+  "id": "operations/rule-configuration",
+  "title": "Using rules to drop and retain data",
+  "description": "<!--",
+  "source": "@site/../docs/operations/rule-configuration.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/rule-configuration",
+  "permalink": "/docs/operations/rule-configuration",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/rule-configuration.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "rule-configuration",
+    "title": "Using rules to drop and retain data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Rolling updates",
+    "permalink": "/docs/operations/rolling-updates"
+  },
+  "next": {
+    "title": "Working with different versions of Apache Hadoop",
+    "permalink": "/docs/operations/other-hadoop"
+  }
+}

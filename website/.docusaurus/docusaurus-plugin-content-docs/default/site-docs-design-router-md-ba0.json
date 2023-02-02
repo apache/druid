@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/router",
+  "id": "design/router",
+  "title": "Router Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/router.md",
+  "sourceDirName": "design",
+  "slug": "/design/router",
+  "permalink": "/docs/design/router",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/router.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "router",
+    "title": "Router Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overlord Process",
+    "permalink": "/docs/design/overlord"
+  },
+  "next": {
+    "title": "Peons",
+    "permalink": "/docs/design/peons"
+  }
+}

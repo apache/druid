@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/troubleshooting",
+  "id": "querying/troubleshooting",
+  "title": "Troubleshooting query execution in Druid",
+  "description": "<!--",
+  "source": "@site/../docs/querying/troubleshooting.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/troubleshooting",
+  "permalink": "/docs/querying/troubleshooting",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/troubleshooting.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "troubleshooting",
+    "title": "Troubleshooting query execution in Druid",
+    "sidebar_label": "Troubleshooting"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Query execution",
+    "permalink": "/docs/querying/query-execution"
+  },
+  "next": {
+    "title": "Datasources",
+    "permalink": "/docs/querying/datasource"
+  }
+}

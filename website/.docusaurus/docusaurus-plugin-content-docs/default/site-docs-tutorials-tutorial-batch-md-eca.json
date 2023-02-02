@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-batch",
+  "id": "tutorials/tutorial-batch",
+  "title": "Tutorial: Loading a file",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-batch.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-batch",
+  "permalink": "/docs/tutorials/tutorial-batch",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-batch.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-batch",
+    "title": "Tutorial: Loading a file",
+    "sidebar_label": "Load files natively"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Clustered deployment",
+    "permalink": "/docs/tutorials/cluster"
+  },
+  "next": {
+    "title": "Load files using SQL 🆕",
+    "permalink": "/docs/tutorials/tutorial-msq-extern"
+  }
+}

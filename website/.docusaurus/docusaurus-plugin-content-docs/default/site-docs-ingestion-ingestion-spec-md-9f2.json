@@ -1,0 +1,32 @@
+{
+  "unversionedId": "ingestion/ingestion-spec",
+  "id": "ingestion/ingestion-spec",
+  "title": "Ingestion spec reference",
+  "description": "Reference for the configuration options in the ingestion spec.",
+  "source": "@site/../docs/ingestion/ingestion-spec.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/ingestion-spec",
+  "permalink": "/docs/ingestion/ingestion-spec",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/ingestion-spec.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "ingestion-spec",
+    "title": "Ingestion spec reference",
+    "sidebar_label": "Ingestion spec",
+    "description": "Reference for the configuration options in the ingestion spec."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Partitioning",
+    "permalink": "/docs/ingestion/partitioning"
+  },
+  "next": {
+    "title": "Schema design tips",
+    "permalink": "/docs/ingestion/schema-design"
+  }
+}

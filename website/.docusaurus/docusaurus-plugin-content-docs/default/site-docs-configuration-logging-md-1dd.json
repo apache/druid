@@ -1,0 +1,30 @@
+{
+  "unversionedId": "configuration/logging",
+  "id": "configuration/logging",
+  "title": "Logging",
+  "description": "<!--",
+  "source": "@site/../docs/configuration/logging.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/logging",
+  "permalink": "/docs/configuration/logging",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/logging.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "logging",
+    "title": "Logging"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Extensions",
+    "permalink": "/docs/development/extensions"
+  },
+  "next": {
+    "title": "Web console",
+    "permalink": "/docs/operations/web-console"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-json-functions",
+  "id": "querying/sql-json-functions",
+  "title": "SQL JSON functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-json-functions.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-json-functions",
+  "permalink": "/docs/querying/sql-json-functions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-json-functions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-json-functions",
+    "title": "SQL JSON functions",
+    "sidebar_label": "JSON functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Multi-value string functions",
+    "permalink": "/docs/querying/sql-multivalue-string-functions"
+  },
+  "next": {
+    "title": "All functions",
+    "permalink": "/docs/querying/sql-functions"
+  }
+}

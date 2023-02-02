@@ -1,0 +1,30 @@
+{
+  "unversionedId": "configuration/index",
+  "id": "configuration/index",
+  "title": "Configuration reference",
+  "description": "<!--",
+  "source": "@site/../docs/configuration/index.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/",
+  "permalink": "/docs/configuration/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/index.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "index",
+    "title": "Configuration reference"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Spatial filters",
+    "permalink": "/docs/development/geo"
+  },
+  "next": {
+    "title": "Extensions",
+    "permalink": "/docs/development/extensions"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "multi-stage-query/security",
+  "id": "multi-stage-query/security",
+  "title": "SQL-based ingestion security",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/security.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/security",
+  "permalink": "/docs/multi-stage-query/security",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/security.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "security",
+    "title": "SQL-based ingestion security",
+    "sidebar_label": "Security"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "API",
+    "permalink": "/docs/multi-stage-query/api"
+  },
+  "next": {
+    "title": "Examples",
+    "permalink": "/docs/multi-stage-query/examples"
+  }
+}

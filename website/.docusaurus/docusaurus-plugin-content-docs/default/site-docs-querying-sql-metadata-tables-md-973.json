@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-metadata-tables",
+  "id": "querying/sql-metadata-tables",
+  "title": "SQL metadata tables",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-metadata-tables.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-metadata-tables",
+  "permalink": "/docs/querying/sql-metadata-tables",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-metadata-tables.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-metadata-tables",
+    "title": "SQL metadata tables",
+    "sidebar_label": "SQL metadata tables"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SQL query context",
+    "permalink": "/docs/querying/sql-query-context"
+  },
+  "next": {
+    "title": "SQL query translation",
+    "permalink": "/docs/querying/sql-translation"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/web-console",
+  "id": "operations/web-console",
+  "title": "Web console",
+  "description": "<!--",
+  "source": "@site/../docs/operations/web-console.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/web-console",
+  "permalink": "/docs/operations/web-console",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/web-console.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "web-console",
+    "title": "Web console"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Logging",
+    "permalink": "/docs/configuration/logging"
+  },
+  "next": {
+    "title": "Java runtime",
+    "permalink": "/docs/operations/java"
+  }
+}

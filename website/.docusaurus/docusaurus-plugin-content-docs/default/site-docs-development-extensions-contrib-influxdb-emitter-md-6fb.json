@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/influxdb-emitter",
+  "id": "development/extensions-contrib/influxdb-emitter",
+  "title": "InfluxDB Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/influxdb-emitter.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/influxdb-emitter",
+  "permalink": "/docs/development/extensions-contrib/influxdb-emitter",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/influxdb-emitter.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "influxdb-emitter",
+    "title": "InfluxDB Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "InfluxDB Line Protocol Parser",
+    "permalink": "/docs/development/extensions-contrib/influx"
+  },
+  "next": {
+    "title": "Kafka Emitter",
+    "permalink": "/docs/development/extensions-contrib/kafka-emitter"
+  }
+}

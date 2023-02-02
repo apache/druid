@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/scan-query",
+  "id": "querying/scan-query",
+  "title": "Scan queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/scan-query.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/scan-query",
+  "permalink": "/docs/querying/scan-query",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/scan-query.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "scan-query",
+    "title": "Scan queries",
+    "sidebar_label": "Scan"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "GroupBy",
+    "permalink": "/docs/querying/groupbyquery"
+  },
+  "next": {
+    "title": "Search",
+    "permalink": "/docs/querying/searchquery"
+  }
+}

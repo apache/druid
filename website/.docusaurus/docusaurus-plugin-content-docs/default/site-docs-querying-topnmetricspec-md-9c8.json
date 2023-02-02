@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/topnmetricspec",
+  "id": "querying/topnmetricspec",
+  "title": "Sorting (topN)",
+  "description": "<!--",
+  "source": "@site/../docs/querying/topnmetricspec.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/topnmetricspec",
+  "permalink": "/docs/querying/topnmetricspec",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/topnmetricspec.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "topnmetricspec",
+    "title": "Sorting (topN)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Sorting and limiting (groupBy)",
+    "permalink": "/docs/querying/limitspec"
+  },
+  "next": {
+    "title": "String comparators",
+    "permalink": "/docs/querying/sorting-orders"
+  }
+}

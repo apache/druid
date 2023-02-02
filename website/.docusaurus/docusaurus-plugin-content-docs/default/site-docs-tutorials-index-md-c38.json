@@ -1,0 +1,30 @@
+{
+  "unversionedId": "tutorials/index",
+  "id": "tutorials/index",
+  "title": "Quickstart (local)",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/index.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/",
+  "permalink": "/docs/tutorials/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/index.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "index",
+    "title": "Quickstart (local)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Introduction to Apache Druid",
+    "permalink": "/docs/design/"
+  },
+  "next": {
+    "title": "Single server deployment",
+    "permalink": "/docs/operations/single-server"
+  }
+}

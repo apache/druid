@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/dump-segment",
+  "id": "operations/dump-segment",
+  "title": "dump-segment tool",
+  "description": "<!--",
+  "source": "@site/../docs/operations/dump-segment.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/dump-segment",
+  "permalink": "/docs/operations/dump-segment",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/dump-segment.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "dump-segment",
+    "title": "dump-segment tool"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Working with different versions of Apache Hadoop",
+    "permalink": "/docs/operations/other-hadoop"
+  },
+  "next": {
+    "title": "reset-cluster tool",
+    "permalink": "/docs/operations/reset-cluster"
+  }
+}

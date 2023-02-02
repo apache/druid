@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/experimental",
+  "id": "development/experimental",
+  "title": "Experimental features",
+  "description": "<!--",
+  "source": "@site/../docs/development/experimental.md",
+  "sourceDirName": "development",
+  "slug": "/development/experimental",
+  "permalink": "/docs/development/experimental",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/experimental.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "experimental",
+    "title": "Experimental features"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Versioning",
+    "permalink": "/docs/development/versioning"
+  },
+  "next": {
+    "title": "Papers",
+    "permalink": "/docs/misc/papers-and-talks"
+  }
+}

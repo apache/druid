@@ -1,0 +1,32 @@
+{
+  "unversionedId": "tutorials/tutorial-msq-extern",
+  "id": "tutorials/tutorial-msq-extern",
+  "title": "Tutorial: Load files with SQL-based ingestion",
+  "description": "How to generate a query that references externally hosted data",
+  "source": "@site/../docs/tutorials/tutorial-msq-extern.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-msq-extern",
+  "permalink": "/docs/tutorials/tutorial-msq-extern",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-msq-extern.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-msq-extern",
+    "title": "Tutorial: Load files with SQL-based ingestion",
+    "sidebar_label": "Load files using SQL 🆕",
+    "description": "How to generate a query that references externally hosted data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Load files natively",
+    "permalink": "/docs/tutorials/tutorial-batch"
+  },
+  "next": {
+    "title": "Load from Apache Kafka",
+    "permalink": "/docs/tutorials/tutorial-kafka"
+  }
+}

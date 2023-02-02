@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-batch-hadoop",
+  "id": "tutorials/tutorial-batch-hadoop",
+  "title": "Tutorial: Load batch data using Apache Hadoop",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-batch-hadoop.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-batch-hadoop",
+  "permalink": "/docs/tutorials/tutorial-batch-hadoop",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-batch-hadoop.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-batch-hadoop",
+    "title": "Tutorial: Load batch data using Apache Hadoop",
+    "sidebar_label": "Load from Apache Hadoop"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Load from Apache Kafka",
+    "permalink": "/docs/tutorials/tutorial-kafka"
+  },
+  "next": {
+    "title": "Querying data",
+    "permalink": "/docs/tutorials/tutorial-query"
+  }
+}

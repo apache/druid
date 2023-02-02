@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/cloudfiles",
+  "id": "development/extensions-contrib/cloudfiles",
+  "title": "Rackspace Cloud Files",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/cloudfiles.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/cloudfiles",
+  "permalink": "/docs/development/extensions-contrib/cloudfiles",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/cloudfiles.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "cloudfiles",
+    "title": "Rackspace Cloud Files"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Cassandra",
+    "permalink": "/docs/development/extensions-contrib/cassandra"
+  },
+  "next": {
+    "title": "DistinctCount Aggregator",
+    "permalink": "/docs/development/extensions-contrib/distinctcount"
+  }
+}

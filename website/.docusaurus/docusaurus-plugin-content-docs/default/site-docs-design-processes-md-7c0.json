@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/processes",
+  "id": "design/processes",
+  "title": "Processes and servers",
+  "description": "<!--",
+  "source": "@site/../docs/design/processes.md",
+  "sourceDirName": "design",
+  "slug": "/design/processes",
+  "permalink": "/docs/design/processes",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/processes.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "processes",
+    "title": "Processes and servers"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Segments",
+    "permalink": "/docs/design/segments"
+  },
+  "next": {
+    "title": "Deep storage",
+    "permalink": "/docs/dependencies/deep-storage"
+  }
+}

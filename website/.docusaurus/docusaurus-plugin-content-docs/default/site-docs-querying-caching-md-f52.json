@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/caching",
+  "id": "querying/caching",
+  "title": "Query caching",
+  "description": "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy.",
+  "source": "@site/../docs/querying/caching.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/caching",
+  "permalink": "/docs/querying/caching",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/caching.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "caching",
+    "title": "Query caching",
+    "description": "Describes Apache Druid per-segment and whole-query cache types. Identifies services where you can enable caching and suggestions for caching strategy."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Multitenancy",
+    "permalink": "/docs/querying/multitenancy"
+  },
+  "next": {
+    "title": "Using query caching",
+    "permalink": "/docs/querying/using-caching"
+  }
+}

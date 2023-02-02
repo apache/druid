@@ -1,0 +1,31 @@
+{
+  "unversionedId": "ingestion/faq",
+  "id": "ingestion/faq",
+  "title": "Ingestion troubleshooting FAQ",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/faq.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/faq",
+  "permalink": "/docs/ingestion/faq",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/faq.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "faq",
+    "title": "Ingestion troubleshooting FAQ",
+    "sidebar_label": "Troubleshooting FAQ"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Task reference",
+    "permalink": "/docs/ingestion/tasks"
+  },
+  "next": {
+    "title": "Overview",
+    "permalink": "/docs/data-management/"
+  }
+}

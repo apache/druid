@@ -1,0 +1,30 @@
+{
+  "unversionedId": "misc/math-expr",
+  "id": "misc/math-expr",
+  "title": "Expressions",
+  "description": "<!--",
+  "source": "@site/../docs/misc/math-expr.md",
+  "sourceDirName": "misc",
+  "slug": "/misc/math-expr",
+  "permalink": "/docs/misc/math-expr",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/misc/math-expr.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "math-expr",
+    "title": "Expressions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Post-aggregations",
+    "permalink": "/docs/querying/post-aggregations"
+  },
+  "next": {
+    "title": "Having filters (groupBy)",
+    "permalink": "/docs/querying/having"
+  }
+}

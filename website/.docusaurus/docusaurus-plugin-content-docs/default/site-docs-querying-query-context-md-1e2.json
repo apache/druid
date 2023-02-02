@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/query-context",
+  "id": "querying/query-context",
+  "title": "Query context",
+  "description": "<!--",
+  "source": "@site/../docs/querying/query-context.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/query-context",
+  "permalink": "/docs/querying/query-context",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/query-context.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "query-context",
+    "title": "Query context",
+    "sidebar_label": "Query context"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Using query caching",
+    "permalink": "/docs/querying/using-caching"
+  },
+  "next": {
+    "title": "Timeseries",
+    "permalink": "/docs/querying/timeseriesquery"
+  }
+}

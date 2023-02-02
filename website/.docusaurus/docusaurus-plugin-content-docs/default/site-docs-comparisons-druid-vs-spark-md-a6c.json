@@ -1,0 +1,30 @@
+{
+  "unversionedId": "comparisons/druid-vs-spark",
+  "id": "comparisons/druid-vs-spark",
+  "title": "Apache Druid vs Spark",
+  "description": "<!--",
+  "source": "@site/../docs/comparisons/druid-vs-spark.md",
+  "sourceDirName": "comparisons",
+  "slug": "/comparisons/druid-vs-spark",
+  "permalink": "/docs/comparisons/druid-vs-spark",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-spark.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-vs-spark",
+    "title": "Apache Druid vs Spark"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Druid vs Redshift",
+    "permalink": "/docs/comparisons/druid-vs-redshift"
+  },
+  "next": {
+    "title": "Apache Druid vs SQL-on-Hadoop",
+    "permalink": "/docs/comparisons/druid-vs-sql-on-hadoop"
+  }
+}

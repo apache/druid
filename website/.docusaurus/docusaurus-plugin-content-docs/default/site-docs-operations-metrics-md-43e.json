@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/metrics",
+  "id": "operations/metrics",
+  "title": "Metrics",
+  "description": "<!--",
+  "source": "@site/../docs/operations/metrics.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/metrics",
+  "permalink": "/docs/operations/metrics",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/metrics.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "metrics",
+    "title": "Metrics"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Request logging",
+    "permalink": "/docs/operations/request-logging"
+  },
+  "next": {
+    "title": "Alerts",
+    "permalink": "/docs/operations/alerts"
+  }
+}

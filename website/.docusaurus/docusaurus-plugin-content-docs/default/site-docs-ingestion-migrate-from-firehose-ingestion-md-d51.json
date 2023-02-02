@@ -1,0 +1,31 @@
+{
+  "unversionedId": "ingestion/migrate-from-firehose",
+  "id": "ingestion/migrate-from-firehose",
+  "title": "Migrate from firehose to input source ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/migrate-from-firehose-ingestion.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/migrate-from-firehose",
+  "permalink": "/docs/ingestion/migrate-from-firehose",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/migrate-from-firehose-ingestion.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "migrate-from-firehose",
+    "title": "Migrate from firehose to input source ingestion",
+    "sidebar_label": "Migrate from firehose"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Native batch: input sources",
+    "permalink": "/docs/ingestion/native-batch-input-sources"
+  },
+  "next": {
+    "title": "Firehose (deprecated)",
+    "permalink": "/docs/ingestion/native-batch-firehose"
+  }
+}

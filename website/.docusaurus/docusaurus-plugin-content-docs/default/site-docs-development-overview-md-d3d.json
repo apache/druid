@@ -1,0 +1,31 @@
+{
+  "unversionedId": "development/overview",
+  "id": "development/overview",
+  "title": "Developing on Apache Druid",
+  "description": "<!--",
+  "source": "@site/../docs/development/overview.md",
+  "sourceDirName": "development",
+  "slug": "/development/overview",
+  "permalink": "/docs/development/overview",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/overview.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "overview",
+    "title": "Developing on Apache Druid",
+    "sidebar_label": "Developing on Druid"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Content for build.sbt",
+    "permalink": "/docs/operations/use_sbt_to_build_fat_jar"
+  },
+  "next": {
+    "title": "Creating extensions",
+    "permalink": "/docs/development/modules"
+  }
+}

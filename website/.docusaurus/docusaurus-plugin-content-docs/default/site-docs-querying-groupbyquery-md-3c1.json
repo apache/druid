@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/groupbyquery",
+  "id": "querying/groupbyquery",
+  "title": "GroupBy queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/groupbyquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/groupbyquery",
+  "permalink": "/docs/querying/groupbyquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/groupbyquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "groupbyquery",
+    "title": "GroupBy queries",
+    "sidebar_label": "GroupBy"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "TopN",
+    "permalink": "/docs/querying/topnquery"
+  },
+  "next": {
+    "title": "Scan",
+    "permalink": "/docs/querying/scan-query"
+  }
+}

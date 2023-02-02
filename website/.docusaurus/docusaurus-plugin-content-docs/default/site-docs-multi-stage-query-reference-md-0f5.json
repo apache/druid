@@ -1,0 +1,31 @@
+{
+  "unversionedId": "multi-stage-query/reference",
+  "id": "multi-stage-query/reference",
+  "title": "SQL-based ingestion reference",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/reference.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/reference",
+  "permalink": "/docs/multi-stage-query/reference",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/reference.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "reference",
+    "title": "SQL-based ingestion reference",
+    "sidebar_label": "Reference"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Examples",
+    "permalink": "/docs/multi-stage-query/examples"
+  },
+  "next": {
+    "title": "Known issues",
+    "permalink": "/docs/multi-stage-query/known-issues"
+  }
+}

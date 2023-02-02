@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/tdigestsketch-quantiles",
+  "id": "development/extensions-contrib/tdigestsketch-quantiles",
+  "title": "T-Digest Quantiles Sketch module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/tdigestsketch-quantiles.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/tdigestsketch-quantiles",
+  "permalink": "/docs/development/extensions-contrib/tdigestsketch-quantiles",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/tdigestsketch-quantiles.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tdigestsketch-quantiles",
+    "title": "T-Digest Quantiles Sketch module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "StatsD Emitter",
+    "permalink": "/docs/development/extensions-contrib/statsd"
+  },
+  "next": {
+    "title": "Thrift",
+    "permalink": "/docs/development/extensions-contrib/thrift"
+  }
+}

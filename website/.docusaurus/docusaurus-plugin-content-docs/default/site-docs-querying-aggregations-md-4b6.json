@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/aggregations",
+  "id": "querying/aggregations",
+  "title": "Aggregations",
+  "description": "<!--",
+  "source": "@site/../docs/querying/aggregations.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/aggregations",
+  "permalink": "/docs/querying/aggregations",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/aggregations.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "aggregations",
+    "title": "Aggregations"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Dimensions",
+    "permalink": "/docs/querying/dimensionspecs"
+  },
+  "next": {
+    "title": "Post-aggregations",
+    "permalink": "/docs/querying/post-aggregations"
+  }
+}

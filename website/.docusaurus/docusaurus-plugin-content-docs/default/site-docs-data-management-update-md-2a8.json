@@ -1,0 +1,30 @@
+{
+  "unversionedId": "data-management/update",
+  "id": "data-management/update",
+  "title": "Data updates",
+  "description": "<!--",
+  "source": "@site/../docs/data-management/update.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/update",
+  "permalink": "/docs/data-management/update",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/update.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "update",
+    "title": "Data updates"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/docs/data-management/"
+  },
+  "next": {
+    "title": "Data deletion",
+    "permalink": "/docs/data-management/delete"
+  }
+}

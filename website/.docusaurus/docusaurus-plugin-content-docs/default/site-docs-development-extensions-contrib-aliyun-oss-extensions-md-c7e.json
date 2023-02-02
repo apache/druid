@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/aliyun-oss",
+  "id": "development/extensions-contrib/aliyun-oss",
+  "title": "Aliyun OSS",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/aliyun-oss-extensions.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/aliyun-oss",
+  "permalink": "/docs/development/extensions-contrib/aliyun-oss",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/aliyun-oss-extensions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "aliyun-oss",
+    "title": "Aliyun OSS"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "GCE Extensions",
+    "permalink": "/docs/development/extensions-contrib/gce-extensions"
+  },
+  "next": {
+    "title": "Prometheus Emitter",
+    "permalink": "/docs/development/extensions-contrib/prometheus"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/cassandra",
+  "id": "development/extensions-contrib/cassandra",
+  "title": "Apache Cassandra",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/cassandra.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/cassandra",
+  "permalink": "/docs/development/extensions-contrib/cassandra",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/cassandra.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "cassandra",
+    "title": "Apache Cassandra"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Ambari Metrics Emitter",
+    "permalink": "/docs/development/extensions-contrib/ambari-metrics-emitter"
+  },
+  "next": {
+    "title": "Rackspace Cloud Files",
+    "permalink": "/docs/development/extensions-contrib/cloudfiles"
+  }
+}

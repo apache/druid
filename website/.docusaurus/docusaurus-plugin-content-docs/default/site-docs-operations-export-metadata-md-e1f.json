@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/export-metadata",
+  "id": "operations/export-metadata",
+  "title": "Export Metadata Tool",
+  "description": "<!--",
+  "source": "@site/../docs/operations/export-metadata.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/export-metadata",
+  "permalink": "/docs/operations/export-metadata",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/export-metadata.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "export-metadata",
+    "title": "Export Metadata Tool"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Deep storage migration",
+    "permalink": "/docs/operations/deep-storage-migration"
+  },
+  "next": {
+    "title": "Metadata Migration",
+    "permalink": "/docs/operations/metadata-migration"
+  }
+}

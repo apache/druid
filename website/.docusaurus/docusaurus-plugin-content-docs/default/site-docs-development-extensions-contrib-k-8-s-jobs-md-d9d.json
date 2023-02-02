@@ -1,0 +1,21 @@
+{
+  "unversionedId": "development/extensions-contrib/k8s-jobs",
+  "id": "development/extensions-contrib/k8s-jobs",
+  "title": "MM-less Druid in K8s",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/k8s-jobs.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/k8s-jobs",
+  "permalink": "/docs/development/extensions-contrib/k8s-jobs",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/k8s-jobs.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "k8s-jobs",
+    "title": "MM-less Druid in K8s"
+  }
+}

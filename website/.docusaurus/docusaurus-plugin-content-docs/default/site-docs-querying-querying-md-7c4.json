@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/querying",
+  "id": "querying/querying",
+  "title": "Native queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/querying.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/",
+  "permalink": "/docs/querying/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/querying.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "querying",
+    "title": "Native queries"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SQL query translation",
+    "permalink": "/docs/querying/sql-translation"
+  },
+  "next": {
+    "title": "Query execution",
+    "permalink": "/docs/querying/query-execution"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "unversionedId": "development/extensions-core/kafka-supervisor-operations",
+  "id": "development/extensions-core/kafka-supervisor-operations",
+  "title": "Apache Kafka supervisor operations reference",
+  "description": "Reference topic for running and maintaining Apache Kafka supervisors",
+  "source": "@site/../docs/development/extensions-core/kafka-supervisor-operations.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kafka-supervisor-operations",
+  "permalink": "/docs/development/extensions-core/kafka-supervisor-operations",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-supervisor-operations.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kafka-supervisor-operations",
+    "title": "Apache Kafka supervisor operations reference",
+    "sidebar_label": "Apache Kafka operations",
+    "description": "Reference topic for running and maintaining Apache Kafka supervisors"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Kafka supervisor",
+    "permalink": "/docs/development/extensions-core/kafka-supervisor-reference"
+  },
+  "next": {
+    "title": "Amazon Kinesis",
+    "permalink": "/docs/development/extensions-core/kinesis-ingestion"
+  }
+}

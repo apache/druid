@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/ambari-metrics-emitter",
+  "id": "development/extensions-contrib/ambari-metrics-emitter",
+  "title": "Ambari Metrics Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/ambari-metrics-emitter.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/ambari-metrics-emitter",
+  "permalink": "/docs/development/extensions-contrib/ambari-metrics-emitter",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/ambari-metrics-emitter.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "ambari-metrics-emitter",
+    "title": "Ambari Metrics Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Kubernetes",
+    "permalink": "/docs/development/extensions-core/kubernetes"
+  },
+  "next": {
+    "title": "Apache Cassandra",
+    "permalink": "/docs/development/extensions-contrib/cassandra"
+  }
+}

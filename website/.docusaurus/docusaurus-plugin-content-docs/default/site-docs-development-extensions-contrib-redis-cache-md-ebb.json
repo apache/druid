@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/redis-cache",
+  "id": "development/extensions-contrib/redis-cache",
+  "title": "Druid Redis Cache",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/redis-cache.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/redis-cache",
+  "permalink": "/docs/development/extensions-contrib/redis-cache",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/redis-cache.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "redis-cache",
+    "title": "Druid Redis Cache"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "OpenTSDB Emitter",
+    "permalink": "/docs/development/extensions-contrib/opentsdb-emitter"
+  },
+  "next": {
+    "title": "Microsoft SQLServer",
+    "permalink": "/docs/development/extensions-contrib/sqlserver"
+  }
+}

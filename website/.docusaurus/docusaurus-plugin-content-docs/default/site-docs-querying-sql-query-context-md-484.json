@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-query-context",
+  "id": "querying/sql-query-context",
+  "title": "SQL query context",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-query-context.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-query-context",
+  "permalink": "/docs/querying/sql-query-context",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-query-context.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-query-context",
+    "title": "SQL query context",
+    "sidebar_label": "SQL query context"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "JDBC driver API",
+    "permalink": "/docs/querying/sql-jdbc"
+  },
+  "next": {
+    "title": "SQL metadata tables",
+    "permalink": "/docs/querying/sql-metadata-tables"
+  }
+}

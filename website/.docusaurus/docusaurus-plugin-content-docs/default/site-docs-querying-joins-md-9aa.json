@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/joins",
+  "id": "querying/joins",
+  "title": "Joins",
+  "description": "<!--",
+  "source": "@site/../docs/querying/joins.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/joins",
+  "permalink": "/docs/querying/joins",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/joins.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "joins",
+    "title": "Joins"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Datasources",
+    "permalink": "/docs/querying/datasource"
+  },
+  "next": {
+    "title": "Lookups",
+    "permalink": "/docs/querying/lookups"
+  }
+}

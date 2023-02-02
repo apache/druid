@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/modules",
+  "id": "development/modules",
+  "title": "Creating extensions",
+  "description": "<!--",
+  "source": "@site/../docs/development/modules.md",
+  "sourceDirName": "development",
+  "slug": "/development/modules",
+  "permalink": "/docs/development/modules",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/modules.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "modules",
+    "title": "Creating extensions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Developing on Druid",
+    "permalink": "/docs/development/overview"
+  },
+  "next": {
+    "title": "JavaScript functionality",
+    "permalink": "/docs/development/javascript"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "unversionedId": "ingestion/data-model",
+  "id": "ingestion/data-model",
+  "title": "Druid data model",
+  "description": "Introduces concepts of datasources, primary timestamp, dimensions, and metrics.",
+  "source": "@site/../docs/ingestion/data-model.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/data-model",
+  "permalink": "/docs/ingestion/data-model",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/data-model.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "data-model",
+    "title": "Druid data model",
+    "sidebar_label": "Data model",
+    "description": "Introduces concepts of datasources, primary timestamp, dimensions, and metrics."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Data formats",
+    "permalink": "/docs/ingestion/data-formats"
+  },
+  "next": {
+    "title": "Data rollup",
+    "permalink": "/docs/ingestion/rollup"
+  }
+}

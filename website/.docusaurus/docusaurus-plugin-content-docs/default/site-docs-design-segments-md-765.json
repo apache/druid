@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/segments",
+  "id": "design/segments",
+  "title": "Segments",
+  "description": "<!--",
+  "source": "@site/../docs/design/segments.md",
+  "sourceDirName": "design",
+  "slug": "/design/segments",
+  "permalink": "/docs/design/segments",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/segments.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "segments",
+    "title": "Segments"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Design",
+    "permalink": "/docs/design/architecture"
+  },
+  "next": {
+    "title": "Processes and servers",
+    "permalink": "/docs/design/processes"
+  }
+}

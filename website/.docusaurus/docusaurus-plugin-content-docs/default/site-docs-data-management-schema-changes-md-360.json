@@ -1,0 +1,30 @@
+{
+  "unversionedId": "data-management/schema-changes",
+  "id": "data-management/schema-changes",
+  "title": "Schema changes",
+  "description": "<!--",
+  "source": "@site/../docs/data-management/schema-changes.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/schema-changes",
+  "permalink": "/docs/data-management/schema-changes",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/schema-changes.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "schema-changes",
+    "title": "Schema changes"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Data deletion",
+    "permalink": "/docs/data-management/delete"
+  },
+  "next": {
+    "title": "Compaction",
+    "permalink": "/docs/data-management/compaction"
+  }
+}

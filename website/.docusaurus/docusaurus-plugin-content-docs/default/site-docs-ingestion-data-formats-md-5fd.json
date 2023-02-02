@@ -1,0 +1,30 @@
+{
+  "unversionedId": "ingestion/data-formats",
+  "id": "ingestion/data-formats",
+  "title": "Data formats",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/data-formats.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/data-formats",
+  "permalink": "/docs/ingestion/data-formats",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/data-formats.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "data-formats",
+    "title": "Data formats"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Ingestion",
+    "permalink": "/docs/ingestion/"
+  },
+  "next": {
+    "title": "Data model",
+    "permalink": "/docs/ingestion/data-model"
+  }
+}

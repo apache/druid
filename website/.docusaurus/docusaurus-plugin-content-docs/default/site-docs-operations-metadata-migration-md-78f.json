@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/metadata-migration",
+  "id": "operations/metadata-migration",
+  "title": "Metadata Migration",
+  "description": "<!--",
+  "source": "@site/../docs/operations/metadata-migration.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/metadata-migration",
+  "permalink": "/docs/operations/metadata-migration",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/metadata-migration.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "metadata-migration",
+    "title": "Metadata Migration"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Export Metadata Tool",
+    "permalink": "/docs/operations/export-metadata"
+  },
+  "next": {
+    "title": "Content for build.sbt",
+    "permalink": "/docs/operations/use_sbt_to_build_fat_jar"
+  }
+}

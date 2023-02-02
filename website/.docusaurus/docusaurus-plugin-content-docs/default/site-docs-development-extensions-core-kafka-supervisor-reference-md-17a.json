@@ -1,0 +1,32 @@
+{
+  "unversionedId": "development/extensions-core/kafka-supervisor-reference",
+  "id": "development/extensions-core/kafka-supervisor-reference",
+  "title": "Apache Kafka supervisor reference",
+  "description": "Reference topic for Apache Kafka supervisors",
+  "source": "@site/../docs/development/extensions-core/kafka-supervisor-reference.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kafka-supervisor-reference",
+  "permalink": "/docs/development/extensions-core/kafka-supervisor-reference",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-supervisor-reference.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kafka-supervisor-reference",
+    "title": "Apache Kafka supervisor reference",
+    "sidebar_label": "Apache Kafka supervisor",
+    "description": "Reference topic for Apache Kafka supervisors"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Kafka ingestion",
+    "permalink": "/docs/development/extensions-core/kafka-ingestion"
+  },
+  "next": {
+    "title": "Apache Kafka operations",
+    "permalink": "/docs/development/extensions-core/kafka-supervisor-operations"
+  }
+}

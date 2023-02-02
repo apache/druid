@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/gce-extensions",
+  "id": "development/extensions-contrib/gce-extensions",
+  "title": "GCE Extensions",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/gce-extensions.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/gce-extensions",
+  "permalink": "/docs/development/extensions-contrib/gce-extensions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/gce-extensions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "gce-extensions",
+    "title": "GCE Extensions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Timestamp Min/Max aggregators",
+    "permalink": "/docs/development/extensions-contrib/time-min-max"
+  },
+  "next": {
+    "title": "Aliyun OSS",
+    "permalink": "/docs/development/extensions-contrib/aliyun-oss"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/datasketches-tuple",
+  "id": "development/extensions-core/datasketches-tuple",
+  "title": "DataSketches Tuple Sketch module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/datasketches-tuple.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/datasketches-tuple",
+  "permalink": "/docs/development/extensions-core/datasketches-tuple",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-tuple.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "datasketches-tuple",
+    "title": "DataSketches Tuple Sketch module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DataSketches Theta Sketch module",
+    "permalink": "/docs/development/extensions-core/datasketches-theta"
+  },
+  "next": {
+    "title": "Basic Security",
+    "permalink": "/docs/development/extensions-core/druid-basic-security"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/use_sbt_to_build_fat_jar",
+  "id": "operations/use_sbt_to_build_fat_jar",
+  "title": "Content for build.sbt",
+  "description": "<!--",
+  "source": "@site/../docs/operations/use_sbt_to_build_fat_jar.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/use_sbt_to_build_fat_jar",
+  "permalink": "/docs/operations/use_sbt_to_build_fat_jar",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/use_sbt_to_build_fat_jar.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "use_sbt_to_build_fat_jar",
+    "title": "Content for build.sbt"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Metadata Migration",
+    "permalink": "/docs/operations/metadata-migration"
+  },
+  "next": {
+    "title": "Developing on Druid",
+    "permalink": "/docs/development/overview"
+  }
+}

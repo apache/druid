@@ -1,0 +1,32 @@
+{
+  "unversionedId": "multi-stage-query/index",
+  "id": "multi-stage-query/index",
+  "title": "SQL-based ingestion",
+  "description": "Introduces multi-stage query architecture and its task engine",
+  "source": "@site/../docs/multi-stage-query/index.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/",
+  "permalink": "/docs/multi-stage-query/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/index.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "index",
+    "title": "SQL-based ingestion",
+    "sidebar_label": "Overview",
+    "description": "Introduces multi-stage query architecture and its task engine"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Hadoop-based",
+    "permalink": "/docs/ingestion/hadoop"
+  },
+  "next": {
+    "title": "Key concepts",
+    "permalink": "/docs/multi-stage-query/concepts"
+  }
+}

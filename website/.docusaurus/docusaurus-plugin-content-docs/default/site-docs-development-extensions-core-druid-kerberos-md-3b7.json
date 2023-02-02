@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-kerberos",
+  "id": "development/extensions-core/druid-kerberos",
+  "title": "Kerberos",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-kerberos.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-kerberos",
+  "permalink": "/docs/development/extensions-core/druid-kerberos",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-kerberos.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-kerberos",
+    "title": "Kerberos"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Basic Security",
+    "permalink": "/docs/development/extensions-core/druid-basic-security"
+  },
+  "next": {
+    "title": "Cached Lookup Module",
+    "permalink": "/docs/development/extensions-core/druid-lookups"
+  }
+}

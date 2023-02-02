@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-scalar",
+  "id": "querying/sql-scalar",
+  "title": "SQL scalar functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-scalar.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-scalar",
+  "permalink": "/docs/querying/sql-scalar",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-scalar.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-scalar",
+    "title": "SQL scalar functions",
+    "sidebar_label": "Scalar functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Operators",
+    "permalink": "/docs/querying/sql-operators"
+  },
+  "next": {
+    "title": "Aggregation functions",
+    "permalink": "/docs/querying/sql-aggregations"
+  }
+}

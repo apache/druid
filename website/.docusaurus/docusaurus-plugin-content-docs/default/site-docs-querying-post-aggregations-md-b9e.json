@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/post-aggregations",
+  "id": "querying/post-aggregations",
+  "title": "Post-aggregations",
+  "description": "<!--",
+  "source": "@site/../docs/querying/post-aggregations.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/post-aggregations",
+  "permalink": "/docs/querying/post-aggregations",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/post-aggregations.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "post-aggregations",
+    "title": "Post-aggregations"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Aggregations",
+    "permalink": "/docs/querying/aggregations"
+  },
+  "next": {
+    "title": "Expressions",
+    "permalink": "/docs/misc/math-expr"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/versioning",
+  "id": "development/versioning",
+  "title": "Versioning",
+  "description": "<!--",
+  "source": "@site/../docs/development/versioning.md",
+  "sourceDirName": "development",
+  "slug": "/development/versioning",
+  "permalink": "/docs/development/versioning",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/versioning.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "versioning",
+    "title": "Versioning"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Build from source",
+    "permalink": "/docs/development/build"
+  },
+  "next": {
+    "title": "Experimental features",
+    "permalink": "/docs/development/experimental"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-sketches-theta",
+  "id": "tutorials/tutorial-sketches-theta",
+  "title": "Approximations with Theta sketches",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-sketches-theta.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-sketches-theta",
+  "permalink": "/docs/tutorials/tutorial-sketches-theta",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-sketches-theta.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-sketches-theta",
+    "title": "Approximations with Theta sketches",
+    "sidebar_label": "Theta sketches"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Roll-up",
+    "permalink": "/docs/tutorials/tutorial-rollup"
+  },
+  "next": {
+    "title": "Configuring data retention",
+    "permalink": "/docs/tutorials/tutorial-retention"
+  }
+}

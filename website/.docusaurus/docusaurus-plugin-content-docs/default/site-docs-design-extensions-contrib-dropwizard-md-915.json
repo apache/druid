@@ -1,0 +1,21 @@
+{
+  "unversionedId": "design/extensions-contrib/dropwizard",
+  "id": "design/extensions-contrib/dropwizard",
+  "title": "Dropwizard metrics emitter",
+  "description": "<!--",
+  "source": "@site/../docs/design/extensions-contrib/dropwizard.md",
+  "sourceDirName": "design/extensions-contrib",
+  "slug": "/design/extensions-contrib/dropwizard",
+  "permalink": "/docs/design/extensions-contrib/dropwizard",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/extensions-contrib/dropwizard.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "layout": "doc_page",
+    "title": "Dropwizard metrics emitter"
+  }
+}

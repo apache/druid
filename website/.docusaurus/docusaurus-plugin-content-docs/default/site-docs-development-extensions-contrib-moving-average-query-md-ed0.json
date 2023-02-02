@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/moving-average-query",
+  "id": "development/extensions-contrib/moving-average-query",
+  "title": "Moving Average Query",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/moving-average-query.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/moving-average-query",
+  "permalink": "/docs/development/extensions-contrib/moving-average-query",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/moving-average-query.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "moving-average-query",
+    "title": "Moving Average Query"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Moment Sketches for Approximate Quantiles module",
+    "permalink": "/docs/development/extensions-contrib/momentsketch-quantiles"
+  },
+  "next": {
+    "title": "OpenTSDB Emitter",
+    "permalink": "/docs/development/extensions-contrib/opentsdb-emitter"
+  }
+}

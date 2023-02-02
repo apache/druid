@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-data-types",
+  "id": "querying/sql-data-types",
+  "title": "SQL data types",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-data-types.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-data-types",
+  "permalink": "/docs/querying/sql-data-types",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-data-types.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-data-types",
+    "title": "SQL data types",
+    "sidebar_label": "SQL data types"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview and syntax",
+    "permalink": "/docs/querying/sql"
+  },
+  "next": {
+    "title": "Operators",
+    "permalink": "/docs/querying/sql-operators"
+  }
+}

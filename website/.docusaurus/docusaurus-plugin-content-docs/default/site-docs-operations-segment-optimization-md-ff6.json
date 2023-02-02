@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/segment-optimization",
+  "id": "operations/segment-optimization",
+  "title": "Segment size optimization",
+  "description": "<!--",
+  "source": "@site/../docs/operations/segment-optimization.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/segment-optimization",
+  "permalink": "/docs/operations/segment-optimization",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/segment-optimization.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "segment-optimization",
+    "title": "Segment size optimization"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Basic cluster tuning",
+    "permalink": "/docs/operations/basic-cluster-tuning"
+  },
+  "next": {
+    "title": "Mixed workloads",
+    "permalink": "/docs/operations/mixed-workloads"
+  }
+}

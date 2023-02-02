@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/timeseriesquery",
+  "id": "querying/timeseriesquery",
+  "title": "Timeseries queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/timeseriesquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/timeseriesquery",
+  "permalink": "/docs/querying/timeseriesquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/timeseriesquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "timeseriesquery",
+    "title": "Timeseries queries",
+    "sidebar_label": "Timeseries"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Query context",
+    "permalink": "/docs/querying/query-context"
+  },
+  "next": {
+    "title": "TopN",
+    "permalink": "/docs/querying/topnquery"
+  }
+}

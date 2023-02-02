@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-kafka",
+  "id": "tutorials/tutorial-kafka",
+  "title": "Tutorial: Load streaming data from Apache Kafka",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-kafka.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-kafka",
+  "permalink": "/docs/tutorials/tutorial-kafka",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-kafka.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-kafka",
+    "title": "Tutorial: Load streaming data from Apache Kafka",
+    "sidebar_label": "Load from Apache Kafka"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Load files using SQL 🆕",
+    "permalink": "/docs/tutorials/tutorial-msq-extern"
+  },
+  "next": {
+    "title": "Load from Apache Hadoop",
+    "permalink": "/docs/tutorials/tutorial-batch-hadoop"
+  }
+}

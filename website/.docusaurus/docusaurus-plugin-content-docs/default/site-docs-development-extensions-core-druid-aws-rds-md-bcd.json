@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/druid-aws-rds",
+  "id": "development/extensions-core/druid-aws-rds",
+  "title": "Druid AWS RDS Module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/druid-aws-rds.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/druid-aws-rds",
+  "permalink": "/docs/development/extensions-core/druid-aws-rds",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-aws-rds.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-aws-rds",
+    "title": "Druid AWS RDS Module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Test Stats Aggregators",
+    "permalink": "/docs/development/extensions-core/test-stats"
+  },
+  "next": {
+    "title": "Kubernetes",
+    "permalink": "/docs/development/extensions-core/kubernetes"
+  }
+}

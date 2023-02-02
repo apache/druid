@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/coordinator",
+  "id": "design/coordinator",
+  "title": "Coordinator Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/coordinator.md",
+  "sourceDirName": "design",
+  "slug": "/design/coordinator",
+  "permalink": "/docs/design/coordinator",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/coordinator.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "coordinator",
+    "title": "Coordinator Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Broker",
+    "permalink": "/docs/design/broker"
+  },
+  "next": {
+    "title": "Historical Process",
+    "permalink": "/docs/design/historical"
+  }
+}

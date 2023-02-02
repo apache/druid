@@ -1,0 +1,30 @@
+{
+  "unversionedId": "querying/multi-value-dimensions",
+  "id": "querying/multi-value-dimensions",
+  "title": "Multi-value dimensions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/multi-value-dimensions.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/multi-value-dimensions",
+  "permalink": "/docs/querying/multi-value-dimensions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/multi-value-dimensions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "multi-value-dimensions",
+    "title": "Multi-value dimensions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Lookups",
+    "permalink": "/docs/querying/lookups"
+  },
+  "next": {
+    "title": "Nested columns",
+    "permalink": "/docs/querying/nested-columns"
+  }
+}

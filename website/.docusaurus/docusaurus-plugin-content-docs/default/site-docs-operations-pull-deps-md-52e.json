@@ -1,0 +1,30 @@
+{
+  "unversionedId": "operations/pull-deps",
+  "id": "operations/pull-deps",
+  "title": "pull-deps tool",
+  "description": "<!--",
+  "source": "@site/../docs/operations/pull-deps.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/pull-deps",
+  "permalink": "/docs/operations/pull-deps",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/pull-deps.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "pull-deps",
+    "title": "pull-deps tool"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "insert-segment-to-db tool",
+    "permalink": "/docs/operations/insert-segment-to-db"
+  },
+  "next": {
+    "title": "Deep storage migration",
+    "permalink": "/docs/operations/deep-storage-migration"
+  }
+}

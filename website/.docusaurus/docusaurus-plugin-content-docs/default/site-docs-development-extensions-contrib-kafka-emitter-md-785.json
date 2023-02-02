@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/kafka-emitter",
+  "id": "development/extensions-contrib/kafka-emitter",
+  "title": "Kafka Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/kafka-emitter.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/kafka-emitter",
+  "permalink": "/docs/development/extensions-contrib/kafka-emitter",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/kafka-emitter.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "kafka-emitter",
+    "title": "Kafka Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "InfluxDB Emitter",
+    "permalink": "/docs/development/extensions-contrib/influxdb-emitter"
+  },
+  "next": {
+    "title": "Materialized View",
+    "permalink": "/docs/development/extensions-contrib/materialized-view"
+  }
+}

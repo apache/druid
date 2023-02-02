@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/stats",
+  "id": "development/extensions-core/stats",
+  "title": "Stats aggregator",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/stats.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/stats",
+  "permalink": "/docs/development/extensions-core/stats",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/stats.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "stats",
+    "title": "Stats aggregator"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Simple SSLContext Provider Module",
+    "permalink": "/docs/development/extensions-core/simple-client-sslcontext"
+  },
+  "next": {
+    "title": "Test Stats Aggregators",
+    "permalink": "/docs/development/extensions-core/test-stats"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "unversionedId": "data-management/compaction",
+  "id": "data-management/compaction",
+  "title": "Compaction",
+  "description": "Defines compaction and automatic compaction (auto-compaction or autocompaction) for segment optimization. Use cases and strategies for compaction. Describes compaction task configuration.",
+  "source": "@site/../docs/data-management/compaction.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/compaction",
+  "permalink": "/docs/data-management/compaction",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/compaction.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "compaction",
+    "title": "Compaction",
+    "description": "Defines compaction and automatic compaction (auto-compaction or autocompaction) for segment optimization. Use cases and strategies for compaction. Describes compaction task configuration."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Schema changes",
+    "permalink": "/docs/data-management/schema-changes"
+  },
+  "next": {
+    "title": "Automatic compaction",
+    "permalink": "/docs/data-management/automatic-compaction"
+  }
+}

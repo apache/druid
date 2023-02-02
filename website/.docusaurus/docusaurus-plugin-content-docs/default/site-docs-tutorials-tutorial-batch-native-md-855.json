@@ -1,0 +1,21 @@
+{
+  "unversionedId": "tutorials/tutorial-batch-native",
+  "id": "tutorials/tutorial-batch-native",
+  "title": "Load data with native batch ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-batch-native.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-batch-native",
+  "permalink": "/docs/tutorials/tutorial-batch-native",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-batch-native.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-batch-native",
+    "title": "Load data with native batch ingestion"
+  }
+}

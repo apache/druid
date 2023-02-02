@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-transform-spec",
+  "id": "tutorials/tutorial-transform-spec",
+  "title": "Tutorial: Transforming input data",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-transform-spec.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-transform-spec",
+  "permalink": "/docs/tutorials/tutorial-transform-spec",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-transform-spec.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-transform-spec",
+    "title": "Tutorial: Transforming input data",
+    "sidebar_label": "Transforming input data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Writing an ingestion spec",
+    "permalink": "/docs/tutorials/tutorial-ingestion-spec"
+  },
+  "next": {
+    "title": "Tutorial: Run with Docker",
+    "permalink": "/docs/tutorials/docker"
+  }
+}

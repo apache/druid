@@ -1,0 +1,31 @@
+{
+  "unversionedId": "operations/request-logging",
+  "id": "operations/request-logging",
+  "title": "Request logging",
+  "description": "<!--",
+  "source": "@site/../docs/operations/request-logging.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/request-logging",
+  "permalink": "/docs/operations/request-logging",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/request-logging.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "request-logging",
+    "title": "Request logging",
+    "sidebar_label": "Request logging"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Automated metadata cleanup",
+    "permalink": "/docs/operations/clean-metadata-store"
+  },
+  "next": {
+    "title": "Metrics",
+    "permalink": "/docs/operations/metrics"
+  }
+}

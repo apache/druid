@@ -1,0 +1,30 @@
+{
+  "unversionedId": "dependencies/zookeeper",
+  "id": "dependencies/zookeeper",
+  "title": "ZooKeeper",
+  "description": "<!--",
+  "source": "@site/../docs/dependencies/zookeeper.md",
+  "sourceDirName": "dependencies",
+  "slug": "/dependencies/zookeeper",
+  "permalink": "/docs/dependencies/zookeeper",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/dependencies/zookeeper.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "zookeeper",
+    "title": "ZooKeeper"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Metadata storage",
+    "permalink": "/docs/dependencies/metadata-storage"
+  },
+  "next": {
+    "title": "Ingestion",
+    "permalink": "/docs/ingestion/"
+  }
+}

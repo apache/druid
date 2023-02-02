@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-core/datasketches-quantiles",
+  "id": "development/extensions-core/datasketches-quantiles",
+  "title": "DataSketches Quantiles Sketch module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/datasketches-quantiles.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/datasketches-quantiles",
+  "permalink": "/docs/development/extensions-core/datasketches-quantiles",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-quantiles.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "datasketches-quantiles",
+    "title": "DataSketches Quantiles Sketch module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DataSketches HLL Sketch module",
+    "permalink": "/docs/development/extensions-core/datasketches-hll"
+  },
+  "next": {
+    "title": "DataSketches Theta Sketch module",
+    "permalink": "/docs/development/extensions-core/datasketches-theta"
+  }
+}

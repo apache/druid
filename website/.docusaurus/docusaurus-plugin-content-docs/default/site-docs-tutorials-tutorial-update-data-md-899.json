@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-update-data",
+  "id": "tutorials/tutorial-update-data",
+  "title": "Tutorial: Updating existing data",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-update-data.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-update-data",
+  "permalink": "/docs/tutorials/tutorial-update-data",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-update-data.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-update-data",
+    "title": "Tutorial: Updating existing data",
+    "sidebar_label": "Updating existing data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Configuring data retention",
+    "permalink": "/docs/tutorials/tutorial-retention"
+  },
+  "next": {
+    "title": "Compacting segments",
+    "permalink": "/docs/tutorials/tutorial-compaction"
+  }
+}

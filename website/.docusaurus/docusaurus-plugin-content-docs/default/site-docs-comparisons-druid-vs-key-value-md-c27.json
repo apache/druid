@@ -1,0 +1,30 @@
+{
+  "unversionedId": "comparisons/druid-vs-key-value",
+  "id": "comparisons/druid-vs-key-value",
+  "title": "Apache Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)",
+  "description": "<!--",
+  "source": "@site/../docs/comparisons/druid-vs-key-value.md",
+  "sourceDirName": "comparisons",
+  "slug": "/comparisons/druid-vs-key-value",
+  "permalink": "/docs/comparisons/druid-vs-key-value",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-key-value.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-vs-key-value",
+    "title": "Apache Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Druid vs Elasticsearch",
+    "permalink": "/docs/comparisons/druid-vs-elasticsearch"
+  },
+  "next": {
+    "title": "Apache Druid vs Kudu",
+    "permalink": "/docs/comparisons/druid-vs-kudu"
+  }
+}

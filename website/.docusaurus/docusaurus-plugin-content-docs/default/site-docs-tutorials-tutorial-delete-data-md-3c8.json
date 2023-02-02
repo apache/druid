@@ -1,0 +1,31 @@
+{
+  "unversionedId": "tutorials/tutorial-delete-data",
+  "id": "tutorials/tutorial-delete-data",
+  "title": "Tutorial: Deleting data",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/tutorial-delete-data.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/tutorial-delete-data",
+  "permalink": "/docs/tutorials/tutorial-delete-data",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-delete-data.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "tutorial-delete-data",
+    "title": "Tutorial: Deleting data",
+    "sidebar_label": "Deleting data"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Compacting segments",
+    "permalink": "/docs/tutorials/tutorial-compaction"
+  },
+  "next": {
+    "title": "Writing an ingestion spec",
+    "permalink": "/docs/tutorials/tutorial-ingestion-spec"
+  }
+}

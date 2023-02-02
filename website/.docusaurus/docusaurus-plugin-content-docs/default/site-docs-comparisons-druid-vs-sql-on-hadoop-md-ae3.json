@@ -1,0 +1,30 @@
+{
+  "unversionedId": "comparisons/druid-vs-sql-on-hadoop",
+  "id": "comparisons/druid-vs-sql-on-hadoop",
+  "title": "Apache Druid vs SQL-on-Hadoop",
+  "description": "<!--",
+  "source": "@site/../docs/comparisons/druid-vs-sql-on-hadoop.md",
+  "sourceDirName": "comparisons",
+  "slug": "/comparisons/druid-vs-sql-on-hadoop",
+  "permalink": "/docs/comparisons/druid-vs-sql-on-hadoop",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-sql-on-hadoop.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "druid-vs-sql-on-hadoop",
+    "title": "Apache Druid vs SQL-on-Hadoop"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Druid vs Spark",
+    "permalink": "/docs/comparisons/druid-vs-spark"
+  },
+  "next": {
+    "title": "Authentication and Authorization",
+    "permalink": "/docs/design/auth"
+  }
+}

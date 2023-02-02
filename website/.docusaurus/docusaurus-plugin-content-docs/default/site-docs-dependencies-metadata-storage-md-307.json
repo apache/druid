@@ -1,0 +1,30 @@
+{
+  "unversionedId": "dependencies/metadata-storage",
+  "id": "dependencies/metadata-storage",
+  "title": "Metadata storage",
+  "description": "<!--",
+  "source": "@site/../docs/dependencies/metadata-storage.md",
+  "sourceDirName": "dependencies",
+  "slug": "/dependencies/metadata-storage",
+  "permalink": "/docs/dependencies/metadata-storage",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/dependencies/metadata-storage.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "metadata-storage",
+    "title": "Metadata storage"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Deep storage",
+    "permalink": "/docs/dependencies/deep-storage"
+  },
+  "next": {
+    "title": "ZooKeeper",
+    "permalink": "/docs/dependencies/zookeeper"
+  }
+}

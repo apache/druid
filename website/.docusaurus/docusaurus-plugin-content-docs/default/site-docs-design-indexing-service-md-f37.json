@@ -1,0 +1,30 @@
+{
+  "unversionedId": "design/indexing-service",
+  "id": "design/indexing-service",
+  "title": "Indexing Service",
+  "description": "<!--",
+  "source": "@site/../docs/design/indexing-service.md",
+  "sourceDirName": "design",
+  "slug": "/design/indexing-service",
+  "permalink": "/docs/design/indexing-service",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/indexing-service.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "indexing-service",
+    "title": "Indexing Service"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Indexer Process",
+    "permalink": "/docs/design/indexer"
+  },
+  "next": {
+    "title": "MiddleManager Process",
+    "permalink": "/docs/design/middlemanager"
+  }
+}

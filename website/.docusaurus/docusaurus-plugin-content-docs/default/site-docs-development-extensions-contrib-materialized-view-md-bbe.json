@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/materialized-view",
+  "id": "development/extensions-contrib/materialized-view",
+  "title": "Materialized View",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/materialized-view.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/materialized-view",
+  "permalink": "/docs/development/extensions-contrib/materialized-view",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/materialized-view.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "materialized-view",
+    "title": "Materialized View"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Kafka Emitter",
+    "permalink": "/docs/development/extensions-contrib/kafka-emitter"
+  },
+  "next": {
+    "title": "Moment Sketches for Approximate Quantiles module",
+    "permalink": "/docs/development/extensions-contrib/momentsketch-quantiles"
+  }
+}

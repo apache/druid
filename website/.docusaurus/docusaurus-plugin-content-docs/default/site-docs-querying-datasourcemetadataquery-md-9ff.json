@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/datasourcemetadataquery",
+  "id": "querying/datasourcemetadataquery",
+  "title": "DatasourceMetadata queries",
+  "description": "<!--",
+  "source": "@site/../docs/querying/datasourcemetadataquery.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/datasourcemetadataquery",
+  "permalink": "/docs/querying/datasourcemetadataquery",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/datasourcemetadataquery.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "datasourcemetadataquery",
+    "title": "DatasourceMetadata queries",
+    "sidebar_label": "DatasourceMetadata"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SegmentMetadata",
+    "permalink": "/docs/querying/segmentmetadataquery"
+  },
+  "next": {
+    "title": "Filters",
+    "permalink": "/docs/querying/filters"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "unversionedId": "configuration/human-readable-byte",
+  "id": "configuration/human-readable-byte",
+  "title": "Human-readable Byte Configuration Reference",
+  "description": "<!--",
+  "source": "@site/../docs/configuration/human-readable-byte.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/human-readable-byte",
+  "permalink": "/docs/configuration/human-readable-byte",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/human-readable-byte.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "human-readable-byte",
+    "title": "Human-readable Byte Configuration Reference"
+  }
+}

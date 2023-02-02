@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-translation",
+  "id": "querying/sql-translation",
+  "title": "SQL query translation",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-translation.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-translation",
+  "permalink": "/docs/querying/sql-translation",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-translation.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-translation",
+    "title": "SQL query translation",
+    "sidebar_label": "SQL query translation"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "SQL metadata tables",
+    "permalink": "/docs/querying/sql-metadata-tables"
+  },
+  "next": {
+    "title": "Native queries",
+    "permalink": "/docs/querying/"
+  }
+}

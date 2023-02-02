@@ -1,0 +1,31 @@
+{
+  "unversionedId": "querying/sql-functions",
+  "id": "querying/sql-functions",
+  "title": "All Druid SQL functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-functions.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-functions",
+  "permalink": "/docs/querying/sql-functions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-functions.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "sql-functions",
+    "title": "All Druid SQL functions",
+    "sidebar_label": "All functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "JSON functions",
+    "permalink": "/docs/querying/sql-json-functions"
+  },
+  "next": {
+    "title": "Druid SQL API",
+    "permalink": "/docs/querying/sql-api"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "unversionedId": "development/extensions-contrib/momentsketch-quantiles",
+  "id": "development/extensions-contrib/momentsketch-quantiles",
+  "title": "Moment Sketches for Approximate Quantiles module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/momentsketch-quantiles.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/momentsketch-quantiles",
+  "permalink": "/docs/development/extensions-contrib/momentsketch-quantiles",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/momentsketch-quantiles.md",
+  "tags": [],
+  "version": "current",
+  "lastUpdatedBy": "Author",
+  "lastUpdatedAt": 1539502055,
+  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "frontMatter": {
+    "id": "momentsketch-quantiles",
+    "title": "Moment Sketches for Approximate Quantiles module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Materialized View",
+    "permalink": "/docs/development/extensions-contrib/materialized-view"
+  },
+  "next": {
+    "title": "Moving Average Query",
+    "permalink": "/docs/development/extensions-contrib/moving-average-query"
+  }
+}
