@@ -78,7 +78,7 @@ jobs:
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ format('{0} {1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '-o' || '-U')) }}
+          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
