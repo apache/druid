@@ -574,7 +574,12 @@ public class WorkerImpl implements Worker
         holder -> {
           cleanStageOutput(stageId, true);
           // Mark the stage as FINISHED
-          holder.getStageKernelMap().get(stageId).setStageFinished();
+          WorkerStageKernel stageKernel = holder.getStageKernelMap().get(stageId);
+          if (stageKernel == null) {
+            log.warn("Stage id [%s] non existent. Unable to mark the stage kernel for it as FINISHED", stageId);
+          } else {
+            stageKernel.setStageFinished();
+          }
         }
     );
   }
