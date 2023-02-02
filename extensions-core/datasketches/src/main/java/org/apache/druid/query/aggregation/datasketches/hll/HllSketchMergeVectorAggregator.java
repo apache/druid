@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.WritableMemory;
@@ -71,7 +70,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
 
     final Union union = Union.writableWrap(mem);
     for (int i = startRow; i < endRow; i++) {
-      union.update((HllSketch) vector[i]);
+      union.update(((HllSketchHolder) vector[i]).getSketch());
     }
   }
 
@@ -87,7 +86,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
     final Object[] vector = objectSupplier.get();
 
     for (int i = 0; i < numRows; i++) {
-      final HllSketch o = (HllSketch) vector[rows != null ? rows[i] : i];
+      final HllSketchHolder o = (HllSketchHolder) vector[rows != null ? rows[i] : i];
 
       if (o != null) {
         final int position = positions[i] + positionOffset;
@@ -96,7 +95,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
                                                  .writableRegion(position, helper.getSize());
 
         final Union union = Union.writableWrap(mem);
-        union.update(o);
+        union.update(o.getSketch());
       }
     }
   }
@@ -104,7 +103,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    return helper.get(buf, position);
+    return HllSketchHolder.of(helper.get(buf, position));
   }
 
   @Override

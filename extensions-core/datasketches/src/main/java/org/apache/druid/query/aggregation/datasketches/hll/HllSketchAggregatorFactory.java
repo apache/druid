@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
 import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
@@ -48,8 +47,8 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
-  static final Comparator<HllSketch> COMPARATOR =
-      Comparator.nullsFirst(Comparator.comparingDouble(HllSketch::getEstimate));
+  static final Comparator<HllSketchHolder> COMPARATOR =
+      Comparator.nullsFirst(Comparator.comparingDouble(HllSketchHolder::getEstimate));
 
   private final String name;
   private final String fieldName;
@@ -133,24 +132,28 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public HllSketch deserialize(final Object object)
+  public HllSketchHolder deserialize(final Object object)
   {
-    return HllSketchMergeComplexMetricSerde.deserializeSketch(object);
+    return HllSketchHolder.fromObj(object);
   }
 
   @Override
-  public HllSketch combine(final Object objectA, final Object objectB)
+  public Object combine(final Object lhs, final Object rhs)
   {
-    final Union union = new Union(lgK);
-    union.update((HllSketch) objectA);
-    union.update((HllSketch) objectB);
-    return union.getResult(tgtHllType);
+    if (lhs == null) {
+      return rhs;
+    }
+
+    if (rhs == null) {
+      return lhs;
+    }
+    return ((HllSketchHolder) lhs).merge((HllSketchHolder) rhs);
   }
 
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new ObjectAggregateCombiner<HllSketch>()
+    return new ObjectAggregateCombiner<HllSketchHolder>()
     {
       private final Union union = new Union(lgK);
 
@@ -164,21 +167,21 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(final ColumnValueSelector selector)
       {
-        final HllSketch sketch = (HllSketch) selector.getObject();
-        union.update(sketch);
+        final HllSketchHolder sketch = (HllSketchHolder) selector.getObject();
+        union.update(sketch.getSketch());
       }
 
       @Nullable
       @Override
-      public HllSketch getObject()
+      public HllSketchHolder getObject()
       {
-        return union.getResult(tgtHllType);
+        return HllSketchHolder.of(union.getResult(tgtHllType));
       }
 
       @Override
-      public Class<HllSketch> classOfObject()
+      public Class<HllSketchHolder> classOfObject()
       {
-        return HllSketch.class;
+        return HllSketchHolder.class;
       }
     };
   }
@@ -197,7 +200,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       return object;
     }
 
-    final HllSketch sketch = (HllSketch) object;
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(object);
     final double estimate = sketch.getEstimate();
 
     if (round) {
@@ -208,7 +211,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Comparator<HllSketch> getComparator()
+  public Comparator<HllSketchHolder> getComparator()
   {
     return COMPARATOR;
   }
