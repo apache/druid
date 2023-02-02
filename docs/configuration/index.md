@@ -980,7 +980,7 @@ http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
 ##### Lookups Dynamic Configuration
-These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.md)
+These configuration options control Coordinator lookup management. See [dynamic configuration for lookups](../querying/lookups.md#dynamic-configuration) configurations that affect lookup propagation.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -989,7 +989,7 @@ These configuration options control the behavior of the Lookup dynamic configura
 |`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10S|
 |`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60S|
 |`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
-|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
+|`druid.manager.lookups.period`|Number of milliseconds between checks for configuration changes|120000 (2 minutes)|
 
 ##### Automatic compaction dynamic configuration
 
