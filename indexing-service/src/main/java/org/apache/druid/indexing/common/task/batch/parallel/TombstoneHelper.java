@@ -96,7 +96,12 @@ public class TombstoneHelper
     List<Interval> retVal = new ArrayList<>();
     GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     List<Interval> pushedSegmentsIntervals = getCondensedPushedSegmentsIntervals();
-    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals();
+    List<Interval> intervalsForUsedSegments = getCondensedUsedIntervals(
+        dataSchema.getGranularitySpec()
+                  .inputIntervals(),
+        dataSchema.getDataSource(),
+        taskActionClient
+    );
     for (Interval timeChunkInterval : granularitySpec.sortedBucketIntervals()) {
       // is it an empty time chunk?
       boolean isEmpty = true;
@@ -122,7 +127,7 @@ public class TombstoneHelper
     return retVal;
   }
 
-  private DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, ShardSpec shardSpec, Interval timeChunkInterval)
+  public static DataSegment createTombstoneForTimeChunkInterval(String dataSource, String version, ShardSpec shardSpec, Interval timeChunkInterval)
   {
 
 
@@ -151,18 +156,26 @@ public class TombstoneHelper
   /**
    * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
    * since those that not cover used intervals will be redundant.
+   * @param inputIntervals Intervals corresponding to the task
+   * @param dataSource Datasource corresponding to the task
+   * @param taskActionClient Task action client to fetch the used intervals for the datasource
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
-  public List<Interval> getCondensedUsedIntervals() throws IOException
+  public static List<Interval> getCondensedUsedIntervals(
+      List<Interval> inputIntervals,
+      String dataSource,
+      TaskActionClient taskActionClient
+  ) throws IOException
   {
     List<Interval> retVal = new ArrayList<>();
 
-    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(dataSchema.getGranularitySpec().inputIntervals());
+    List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(inputIntervals);
     if (!condensedInputIntervals.isEmpty()) {
       Collection<DataSegment> usedSegmentsInInputInterval =
           taskActionClient.submit(new RetrieveUsedSegmentsAction(
-              dataSchema.getDataSource(), null,
+              dataSource,
+              null,
               condensedInputIntervals,
               Segments.ONLY_VISIBLE
           ));

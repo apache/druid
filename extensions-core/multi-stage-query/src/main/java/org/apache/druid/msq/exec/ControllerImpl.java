@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -92,6 +93,7 @@ import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
+import org.apache.druid.msq.indexing.MSQTombstoneHelper;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
@@ -1259,53 +1261,15 @@ public class ControllerImpl implements Controller
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
 
       if (!intervalsToDrop.isEmpty()) {
-        final List<Interval> usedIntervals =
-            getCondensedUsedIntervals(
-                task.getDataSource(),
-                destination.getReplaceTimeChunks(),
-                context.taskActionClient()
-            );
-        Granularity granularity = destination.getSegmentGranularity();
-
-
-        Map<String, Object> tombstoneLoadSpec = new HashMap<>();
-        tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
-        tombstoneLoadSpec.put("path", null);
-
-        IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(intervalsToDrop, granularity);
-
-
-        Iterator<Interval> emptySegmentsIterator = intervalsToDropByGranularity.granularityIntervalsIterator();
-        while (emptySegmentsIterator.hasNext()) {
-          final Interval emptyInterval = emptySegmentsIterator.next();
-
-          for (Interval usedInterval : usedIntervals) {
-            if (emptyInterval.overlaps(usedInterval)) {
-              final List<TaskLock> locks = context.taskActionClient().submit(new LockListAction());
-              String version = null;
-              for (final TaskLock lock : locks) {
-                if (lock.getInterval().contains(emptyInterval)) {
-                  version = lock.getVersion();
-                }
-              }
-
-              if (version == null) {
-                // Lock was revoked, probably, because we should have originally acquired it in isReady.
-                throw new MSQException(InsertLockPreemptedFault.INSTANCE);
-              }
-
-              DataSegment tombstone = DataSegment.builder()
-                                                 .dataSource(task.getDataSource())
-                                                 .interval(emptyInterval)
-                                                 .version(version)
-                                                 .shardSpec(new TombstoneShardSpec())
-                                                 .loadSpec(tombstoneLoadSpec)
-                                                 .size(1)
-                                                 .build();
-              segmentsWithTombstones.add(tombstone);
-            }
-          }
-        }
+        MSQTombstoneHelper msqTombstoneHelper = new MSQTombstoneHelper(
+            intervalsToDrop,
+            destination.getReplaceTimeChunks(),
+            task.getDataSource(),
+            context.taskActionClient(),
+            destination.getSegmentGranularity()
+        );
+        Set<DataSegment> tombstones = msqTombstoneHelper.computeTombstones();
+        segmentsWithTombstones.addAll(tombstones);
       }
 
       if (segmentsWithTombstones.isEmpty()) {
@@ -2606,36 +2570,6 @@ public class ControllerImpl implements Controller
     return mergeMode;
   }
 
-  private List<Interval> getCondensedUsedIntervals(
-      String dataSource,
-      List<Interval> replaceIntervals,
-      TaskActionClient taskActionClient
-  )
-      throws IOException
-  {
-    List<Interval> retVal = new ArrayList<>();
-
-    List<Interval> condensedReplaceIntervals = JodaUtils.condenseIntervals(replaceIntervals);
-    if (!condensedReplaceIntervals.isEmpty()) {
-      Collection<DataSegment> usedSegmentsInInputInterval =
-          taskActionClient.submit(new RetrieveUsedSegmentsAction(
-              dataSource,
-              null,
-              condensedReplaceIntervals,
-              Segments.ONLY_VISIBLE
-          ));
-      for (DataSegment usedSegment : usedSegmentsInInputInterval) {
-        for (Interval condensedInputInterval : condensedReplaceIntervals) {
-          if (condensedInputInterval.overlaps(usedSegment.getInterval())) {
-            retVal.add(usedSegment.getInterval());
-            break;
-          }
-        }
-      }
-    }
-
-    return JodaUtils.condenseIntervals(retVal);
-  }
 
 
   /**
