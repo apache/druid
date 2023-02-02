@@ -202,7 +202,7 @@ case $CMD in
     usage
     ;;
   "ci" )
-    mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE -T1.0C
+    mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
     mvn clean package -P dist $MAVEN_IGNORE -T1.0C
