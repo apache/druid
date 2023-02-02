@@ -215,7 +215,12 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <!-- Do not include the grpc-shaded module in this list. It is instead built
+             via an exec plugin in the grpc-query module. The shaded jar cannot appear
+             in this list as it will cause Guava conficts in an IDE. The IDE loads the
+             pre-shaded dependencies, not the shaded jar, if this module is listed here.
         <module>extensions-contrib/grpc-shaded</module>
+         -->
         <module>extensions-contrib/grpc-query</module>
         <!-- distribution packaging -->
         <module>distribution</module>
