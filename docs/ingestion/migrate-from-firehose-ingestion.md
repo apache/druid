@@ -53,7 +53,7 @@ Edit the new file as follows:
 4. Move the `format` definition from `parser.parseSpec` to an `inputFormat` definition in `ioConfig`.
 5. Delete the `parser` definition.
 6. Save the file.
-<br>You can check the format of your new ingestion file against the [migrated example](#example-ingestion-spec-after-migration) below.
+<br />You can check the format of your new ingestion file against the [migrated example](#example-ingestion-spec-after-migration) below.
 7. Test the new ingestion spec with a temporary data source.
 8. Once you've successfully ingested sample data with the new spec, stop firehose ingestion and switch to the new spec.
 
