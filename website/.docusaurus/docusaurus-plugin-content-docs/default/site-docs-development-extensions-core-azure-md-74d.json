@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/azure.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Karan Kumar",
+  "lastUpdatedAt": 1645534663,
+  "formattedLastUpdatedAt": "Feb 22, 2022",
   "frontMatter": {
     "id": "azure",
     "title": "Microsoft Azure"

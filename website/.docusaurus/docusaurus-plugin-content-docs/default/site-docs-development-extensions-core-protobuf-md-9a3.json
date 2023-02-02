@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/protobuf.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Clint Wylie",
+  "lastUpdatedAt": 1629363146,
+  "formattedLastUpdatedAt": "Aug 19, 2021",
   "frontMatter": {
     "id": "protobuf",
     "title": "Protobuf"

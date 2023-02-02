@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-hll.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Victoria Lim",
+  "lastUpdatedAt": 1671302886,
+  "formattedLastUpdatedAt": "Dec 17, 2022",
   "frontMatter": {
     "id": "datasketches-hll",
     "title": "DataSketches HLL Sketch module"

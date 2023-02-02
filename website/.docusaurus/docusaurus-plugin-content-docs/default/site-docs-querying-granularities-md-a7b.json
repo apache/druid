@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/granularities.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Frank Chen",
+  "lastUpdatedAt": 1657778548,
+  "formattedLastUpdatedAt": "Jul 14, 2022",
   "frontMatter": {
     "id": "granularities",
     "title": "Query granularities",

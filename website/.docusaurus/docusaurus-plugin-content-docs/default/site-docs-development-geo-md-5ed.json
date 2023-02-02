@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/geo.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Katya Macedo",
+  "lastUpdatedAt": 1663739316,
+  "formattedLastUpdatedAt": "Sep 21, 2022",
   "frontMatter": {
     "id": "geo",
     "title": "Spatial filters"

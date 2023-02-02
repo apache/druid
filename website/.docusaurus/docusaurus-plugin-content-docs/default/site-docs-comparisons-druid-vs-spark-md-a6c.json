@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-spark.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1566362939,
+  "formattedLastUpdatedAt": "Aug 21, 2019",
   "frontMatter": {
     "id": "druid-vs-spark",
     "title": "Apache Druid vs Spark"

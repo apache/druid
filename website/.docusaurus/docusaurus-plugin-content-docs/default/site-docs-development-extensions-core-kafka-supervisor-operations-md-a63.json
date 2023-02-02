@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-supervisor-operations.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Tejaswini Bandlamudi",
+  "lastUpdatedAt": 1665579668,
+  "formattedLastUpdatedAt": "Oct 12, 2022",
   "frontMatter": {
     "id": "kafka-supervisor-operations",
     "title": "Apache Kafka supervisor operations reference",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/reset-cluster.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Tushar Raj",
+  "lastUpdatedAt": 1617075515,
+  "formattedLastUpdatedAt": "Mar 30, 2021",
   "frontMatter": {
     "id": "reset-cluster",
     "title": "reset-cluster tool"

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/dependencies/zookeeper.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Katya Macedo",
+  "lastUpdatedAt": 1637611122,
+  "formattedLastUpdatedAt": "Nov 22, 2021",
   "frontMatter": {
     "id": "zookeeper",
     "title": "ZooKeeper"

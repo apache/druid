@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/simple-client-sslcontext.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Eyal Yurman",
+  "lastUpdatedAt": 1674033368,
+  "formattedLastUpdatedAt": "Jan 18, 2023",
   "frontMatter": {
     "id": "simple-client-sslcontext",
     "title": "Simple SSLContext Provider Module"

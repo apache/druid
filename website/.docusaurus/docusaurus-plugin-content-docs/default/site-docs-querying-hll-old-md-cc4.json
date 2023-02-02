@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/hll-old.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jonathan Wei",
+  "lastUpdatedAt": 1578072799,
+  "formattedLastUpdatedAt": "Jan 3, 2020",
   "frontMatter": {
     "id": "hll-old",
     "title": "Cardinality/HyperUnique aggregators"

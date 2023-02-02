@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/aliyun-oss-extensions.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "frank chen",
+  "lastUpdatedAt": 1628555255,
+  "formattedLastUpdatedAt": "Aug 10, 2021",
   "frontMatter": {
     "id": "aliyun-oss",
     "title": "Aliyun OSS"

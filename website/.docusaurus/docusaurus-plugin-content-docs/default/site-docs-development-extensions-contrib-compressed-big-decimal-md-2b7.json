@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/compressed-big-decimal.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "senthilkv",
+  "lastUpdatedAt": 1662448017,
+  "formattedLastUpdatedAt": "Sep 6, 2022",
   "frontMatter": {
     "id": "compressed-big-decimal",
     "title": "Compressed Big Decimal"

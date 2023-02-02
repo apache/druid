@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/build.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Vadim Ogievetsky",
+  "lastUpdatedAt": 1663624937,
+  "formattedLastUpdatedAt": "Sep 19, 2022",
   "frontMatter": {
     "id": "build",
     "title": "Build from source"

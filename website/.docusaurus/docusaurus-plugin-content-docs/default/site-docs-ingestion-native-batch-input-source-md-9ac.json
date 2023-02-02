@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/native-batch-input-source.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Victoria Lim",
+  "lastUpdatedAt": 1674679819,
+  "formattedLastUpdatedAt": "Jan 25, 2023",
   "frontMatter": {
     "id": "native-batch-input-sources",
     "title": "Native batch input sources",

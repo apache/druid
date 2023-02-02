@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/timeseriesquery.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Clint Wylie",
+  "lastUpdatedAt": 1660880963,
+  "formattedLastUpdatedAt": "Aug 19, 2022",
   "frontMatter": {
     "id": "timeseriesquery",
     "title": "Timeseries queries",

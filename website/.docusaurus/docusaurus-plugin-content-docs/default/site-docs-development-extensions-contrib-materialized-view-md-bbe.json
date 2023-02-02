@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/materialized-view.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jihoon Son",
+  "lastUpdatedAt": 1638561540,
+  "formattedLastUpdatedAt": "Dec 3, 2021",
   "frontMatter": {
     "id": "materialized-view",
     "title": "Materialized View"

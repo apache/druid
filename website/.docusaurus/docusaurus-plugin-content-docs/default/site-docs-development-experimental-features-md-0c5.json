@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/experimental-features.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jill Osborne",
+  "lastUpdatedAt": 1669805083,
+  "formattedLastUpdatedAt": "Nov 30, 2022",
   "frontMatter": {
     "id": "experimental-features",
     "title": "Experimental features"

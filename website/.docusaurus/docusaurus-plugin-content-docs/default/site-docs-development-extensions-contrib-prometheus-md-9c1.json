@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/prometheus.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "cristian-popa",
+  "lastUpdatedAt": 1666032960,
+  "formattedLastUpdatedAt": "Oct 17, 2022",
   "frontMatter": {
     "id": "prometheus",
     "title": "Prometheus Emitter"

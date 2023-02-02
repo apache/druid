@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/cluster.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Rishabh Singh",
+  "lastUpdatedAt": 1670612642,
+  "formattedLastUpdatedAt": "Dec 9, 2022",
   "frontMatter": {
     "id": "cluster",
     "title": "Clustered deployment"

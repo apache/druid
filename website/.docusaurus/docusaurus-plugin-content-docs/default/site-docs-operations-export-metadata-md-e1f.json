@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/export-metadata.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Vadim Ogievetsky",
+  "lastUpdatedAt": 1569189652,
+  "formattedLastUpdatedAt": "Sep 22, 2019",
   "frontMatter": {
     "id": "export-metadata",
     "title": "Export Metadata Tool"

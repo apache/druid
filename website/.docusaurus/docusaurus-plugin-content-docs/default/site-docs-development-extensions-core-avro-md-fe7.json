@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/avro.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Charles Smith",
+  "lastUpdatedAt": 1638087018,
+  "formattedLastUpdatedAt": "Nov 28, 2021",
   "frontMatter": {
     "id": "avro",
     "title": "Apache Avro"

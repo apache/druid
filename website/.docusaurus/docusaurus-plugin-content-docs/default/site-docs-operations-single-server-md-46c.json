@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/single-server.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Vadim Ogievetsky",
+  "lastUpdatedAt": 1673500372,
+  "formattedLastUpdatedAt": "Jan 12, 2023",
   "frontMatter": {
     "id": "single-server",
     "title": "Single server deployment"

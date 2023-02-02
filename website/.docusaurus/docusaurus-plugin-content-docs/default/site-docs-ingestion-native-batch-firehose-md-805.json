@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/native-batch-firehose.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jill Osborne",
+  "lastUpdatedAt": 1669058232,
+  "formattedLastUpdatedAt": "Nov 21, 2022",
   "frontMatter": {
     "id": "native-batch-firehose",
     "title": "Native batch ingestion with firehose (Deprecated)",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/pull-deps.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1663787817,
+  "formattedLastUpdatedAt": "Sep 21, 2022",
   "frontMatter": {
     "id": "pull-deps",
     "title": "pull-deps tool"

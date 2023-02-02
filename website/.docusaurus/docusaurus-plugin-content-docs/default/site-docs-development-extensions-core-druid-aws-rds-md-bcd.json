@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/druid-aws-rds.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Himanshu",
+  "lastUpdatedAt": 1609996529,
+  "formattedLastUpdatedAt": "Jan 7, 2021",
   "frontMatter": {
     "id": "druid-aws-rds",
     "title": "Druid AWS RDS Module"

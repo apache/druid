@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/timeboundaryquery.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1586992340,
+  "formattedLastUpdatedAt": "Apr 15, 2020",
   "frontMatter": {
     "id": "timeboundaryquery",
     "title": "TimeBoundary queries",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-jupyter-index.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "317brian",
+  "lastUpdatedAt": 1674692569,
+  "formattedLastUpdatedAt": "Jan 26, 2023",
   "frontMatter": {
     "id": "tutorial-jupyter-index",
     "title": "Jupyter Notebook tutorials"

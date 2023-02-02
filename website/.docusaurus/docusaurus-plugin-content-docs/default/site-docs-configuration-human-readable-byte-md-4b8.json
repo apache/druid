@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/human-readable-byte.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Dr. Sizzles",
+  "lastUpdatedAt": 1647400727,
+  "formattedLastUpdatedAt": "Mar 16, 2022",
   "frontMatter": {
     "id": "human-readable-byte",
     "title": "Human-readable Byte Configuration Reference"

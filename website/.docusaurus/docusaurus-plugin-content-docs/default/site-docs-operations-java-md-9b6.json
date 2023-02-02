@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/java.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1661887969,
+  "formattedLastUpdatedAt": "Aug 30, 2022",
   "frontMatter": {
     "id": "java",
     "title": "Java runtime"

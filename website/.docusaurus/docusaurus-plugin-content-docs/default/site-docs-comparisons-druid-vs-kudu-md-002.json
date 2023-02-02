@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/comparisons/druid-vs-kudu.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "benkrug",
+  "lastUpdatedAt": 1626879494,
+  "formattedLastUpdatedAt": "Jul 21, 2021",
   "frontMatter": {
     "id": "druid-vs-kudu",
     "title": "Apache Druid vs Kudu"

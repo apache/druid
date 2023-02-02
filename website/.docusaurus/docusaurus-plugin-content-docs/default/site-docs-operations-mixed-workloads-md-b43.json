@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/mixed-workloads.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Victoria Lim",
+  "lastUpdatedAt": 1642220528,
+  "formattedLastUpdatedAt": "Jan 15, 2022",
   "frontMatter": {
     "id": "mixed-workloads",
     "title": "Configure Druid for mixed workloads",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/automatic-compaction.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "AmatyaAvadhanula",
+  "lastUpdatedAt": 1667823903,
+  "formattedLastUpdatedAt": "Nov 7, 2022",
   "frontMatter": {
     "id": "automatic-compaction",
     "title": "Automatic compaction"

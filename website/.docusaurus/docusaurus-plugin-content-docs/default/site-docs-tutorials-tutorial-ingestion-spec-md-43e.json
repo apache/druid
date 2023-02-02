@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-ingestion-spec.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Charles Smith",
+  "lastUpdatedAt": 1659007333,
+  "formattedLastUpdatedAt": "Jul 28, 2022",
   "frontMatter": {
     "id": "tutorial-ingestion-spec",
     "title": "Tutorial: Writing an ingestion spec",

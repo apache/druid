@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/auth.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Antoine Huret",
+  "lastUpdatedAt": 1594263501,
+  "formattedLastUpdatedAt": "Jul 9, 2020",
   "frontMatter": {
     "id": "auth",
     "title": "Authentication and Authorization"

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/stats.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Apoorv Gupta",
+  "lastUpdatedAt": 1650684908,
+  "formattedLastUpdatedAt": "Apr 23, 2022",
   "frontMatter": {
     "id": "stats",
     "title": "Stats aggregator"

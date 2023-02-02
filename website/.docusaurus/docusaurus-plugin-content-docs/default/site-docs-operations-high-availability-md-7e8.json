@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/high-availability.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Charles Smith",
+  "lastUpdatedAt": 1629301025,
+  "formattedLastUpdatedAt": "Aug 18, 2021",
   "frontMatter": {
     "id": "high-availability",
     "title": "High availability"

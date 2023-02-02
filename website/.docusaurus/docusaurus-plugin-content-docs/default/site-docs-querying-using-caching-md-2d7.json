@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/using-caching.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Peter Marshall",
+  "lastUpdatedAt": 1650272421,
+  "formattedLastUpdatedAt": "Apr 18, 2022",
   "frontMatter": {
     "id": "using-caching",
     "title": "Using query caching"

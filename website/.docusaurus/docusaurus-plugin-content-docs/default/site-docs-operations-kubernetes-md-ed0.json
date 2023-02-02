@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/kubernetes.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Benedict Jin",
+  "lastUpdatedAt": 1662798960,
+  "formattedLastUpdatedAt": "Sep 10, 2022",
   "frontMatter": {
     "id": "kubernetes",
     "title": "kubernetes"

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/select-query.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1597355784,
+  "formattedLastUpdatedAt": "Aug 13, 2020",
   "frontMatter": {
     "id": "select-query",
     "title": "Select queries",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/moving-average-query.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Yi Yuan",
+  "lastUpdatedAt": 1623322013,
+  "formattedLastUpdatedAt": "Jun 10, 2021",
   "frontMatter": {
     "id": "moving-average-query",
     "title": "Moving Average Query"

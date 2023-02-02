@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-extraction-namespace.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jill Osborne",
+  "lastUpdatedAt": 1661444806,
+  "formattedLastUpdatedAt": "Aug 25, 2022",
   "frontMatter": {
     "id": "kafka-extraction-namespace",
     "title": "Apache Kafka Lookups"

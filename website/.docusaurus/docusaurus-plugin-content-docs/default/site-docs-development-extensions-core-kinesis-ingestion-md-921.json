@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kinesis-ingestion.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1673588034,
+  "formattedLastUpdatedAt": "Jan 13, 2023",
   "frontMatter": {
     "id": "kinesis-ingestion",
     "title": "Amazon Kinesis ingestion",

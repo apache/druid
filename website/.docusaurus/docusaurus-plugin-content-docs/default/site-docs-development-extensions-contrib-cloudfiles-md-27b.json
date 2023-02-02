@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/cloudfiles.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Charles Smith",
+  "lastUpdatedAt": 1638529634,
+  "formattedLastUpdatedAt": "Dec 3, 2021",
   "frontMatter": {
     "id": "cloudfiles",
     "title": "Rackspace Cloud Files"

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/hadoop.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Katya Macedo",
+  "lastUpdatedAt": 1633663371,
+  "formattedLastUpdatedAt": "Oct 8, 2021",
   "frontMatter": {
     "id": "hadoop",
     "title": "Hadoop-based ingestion",

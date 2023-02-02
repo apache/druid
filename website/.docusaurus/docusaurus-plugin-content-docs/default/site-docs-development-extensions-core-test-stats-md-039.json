@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/test-stats.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jonathan Wei",
+  "lastUpdatedAt": 1578072799,
+  "formattedLastUpdatedAt": "Jan 3, 2020",
   "frontMatter": {
     "id": "test-stats",
     "title": "Test Stats Aggregators"

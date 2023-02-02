@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-functions.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Clint Wylie",
+  "lastUpdatedAt": 1660954339,
+  "formattedLastUpdatedAt": "Aug 20, 2022",
   "frontMatter": {
     "id": "sql-functions",
     "title": "All Druid SQL functions",

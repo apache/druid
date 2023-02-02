@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/clean-metadata-store.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Vadim Ogievetsky",
+  "lastUpdatedAt": 1663555233,
+  "formattedLastUpdatedAt": "Sep 19, 2022",
   "frontMatter": {
     "id": "clean-metadata-store",
     "title": "Automated cleanup for metadata records",

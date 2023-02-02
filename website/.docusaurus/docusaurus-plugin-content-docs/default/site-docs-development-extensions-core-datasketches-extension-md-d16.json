@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-extension.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Alexander Saydakov",
+  "lastUpdatedAt": 1661573964,
+  "formattedLastUpdatedAt": "Aug 27, 2022",
   "frontMatter": {
     "id": "datasketches-extension",
     "title": "DataSketches extension"

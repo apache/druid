@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/postgresql.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "317brian",
+  "lastUpdatedAt": 1663811180,
+  "formattedLastUpdatedAt": "Sep 22, 2022",
   "frontMatter": {
     "id": "postgresql",
     "title": "PostgreSQL Metadata Store"

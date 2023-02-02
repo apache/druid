@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/tasks.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Kashif Faraz",
+  "lastUpdatedAt": 1671137401,
+  "formattedLastUpdatedAt": "Dec 15, 2022",
   "frontMatter": {
     "id": "tasks",
     "title": "Task reference"

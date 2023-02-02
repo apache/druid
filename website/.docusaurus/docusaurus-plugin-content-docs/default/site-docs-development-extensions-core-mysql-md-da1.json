@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/mysql.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Rui Chen",
+  "lastUpdatedAt": 1656515746,
+  "formattedLastUpdatedAt": "Jun 29, 2022",
   "frontMatter": {
     "id": "mysql",
     "title": "MySQL Metadata Store"

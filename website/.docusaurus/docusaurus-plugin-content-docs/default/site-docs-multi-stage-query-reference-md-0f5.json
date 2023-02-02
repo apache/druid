@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/reference.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Rohan Garg",
+  "lastUpdatedAt": 1674502323,
+  "formattedLastUpdatedAt": "Jan 23, 2023",
   "frontMatter": {
     "id": "reference",
     "title": "SQL-based ingestion reference",

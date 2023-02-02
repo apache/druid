@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-aggregations.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "hosswald",
+  "lastUpdatedAt": 1663722214,
+  "formattedLastUpdatedAt": "Sep 21, 2022",
   "frontMatter": {
     "id": "sql-aggregations",
     "title": "SQL aggregation functions",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/rollup.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Andreas Maechler",
+  "lastUpdatedAt": 1668094384,
+  "formattedLastUpdatedAt": "Nov 10, 2022",
   "frontMatter": {
     "id": "rollup",
     "title": "Data rollup",

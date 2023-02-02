@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/logging.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Charles Smith",
+  "lastUpdatedAt": 1663811209,
+  "formattedLastUpdatedAt": "Sep 22, 2022",
   "frontMatter": {
     "id": "logging",
     "title": "Logging"

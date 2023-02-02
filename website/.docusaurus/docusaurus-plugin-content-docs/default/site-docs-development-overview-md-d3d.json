@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/overview.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Yuanli Han",
+  "lastUpdatedAt": 1620634446,
+  "formattedLastUpdatedAt": "May 10, 2021",
   "frontMatter": {
     "id": "overview",
     "title": "Developing on Apache Druid",

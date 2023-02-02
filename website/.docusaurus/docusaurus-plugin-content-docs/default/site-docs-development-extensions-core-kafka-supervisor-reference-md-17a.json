@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kafka-supervisor-reference.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Gian Merlino",
+  "lastUpdatedAt": 1670302439,
+  "formattedLastUpdatedAt": "Dec 6, 2022",
   "frontMatter": {
     "id": "kafka-supervisor-reference",
     "title": "Apache Kafka supervisor reference",

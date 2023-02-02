@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/concepts.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Paul Rogers",
+  "lastUpdatedAt": 1673973717,
+  "formattedLastUpdatedAt": "Jan 17, 2023",
   "frontMatter": {
     "id": "concepts",
     "title": "SQL-based ingestion concepts",

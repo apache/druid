@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/multi-value-dimensions.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Karan Kumar",
+  "lastUpdatedAt": 1645025006,
+  "formattedLastUpdatedAt": "Feb 16, 2022",
   "frontMatter": {
     "id": "multi-value-dimensions",
     "title": "Multi-value dimensions"

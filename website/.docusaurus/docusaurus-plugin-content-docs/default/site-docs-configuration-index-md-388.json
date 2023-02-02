@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/configuration/index.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Abhishek Agarwal",
+  "lastUpdatedAt": 1673370111,
+  "formattedLastUpdatedAt": "Jan 10, 2023",
   "frontMatter": {
     "id": "index",
     "title": "Configuration reference"

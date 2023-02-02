@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/tutorial-kerberos-hadoop.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jad Naous",
+  "lastUpdatedAt": 1571780441,
+  "formattedLastUpdatedAt": "Oct 22, 2019",
   "frontMatter": {
     "id": "tutorial-kerberos-hadoop",
     "title": "Configuring Apache Druid to use Kerberized Apache Hadoop as deep storage",

@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/s3.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "317brian",
+  "lastUpdatedAt": 1649373776,
+  "formattedLastUpdatedAt": "Apr 7, 2022",
   "frontMatter": {
     "id": "s3",
     "title": "S3-compatible"

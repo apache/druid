@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/parquet.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jihoon Son",
+  "lastUpdatedAt": 1579305125,
+  "formattedLastUpdatedAt": "Jan 17, 2020",
   "frontMatter": {
     "id": "parquet",
     "title": "Apache Parquet Extension"

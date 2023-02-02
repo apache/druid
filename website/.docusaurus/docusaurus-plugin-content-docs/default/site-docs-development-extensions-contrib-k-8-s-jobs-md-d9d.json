@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/k8s-jobs.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Dr. Sizzles",
+  "lastUpdatedAt": 1667443487,
+  "formattedLastUpdatedAt": "Nov 3, 2022",
   "frontMatter": {
     "id": "k8s-jobs",
     "title": "MM-less Druid in K8s"

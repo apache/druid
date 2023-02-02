@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/migrate-from-firehose-ingestion.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "brian.le",
+  "lastUpdatedAt": 1675377713,
+  "formattedLastUpdatedAt": "Feb 2, 2023",
   "frontMatter": {
     "id": "migrate-from-firehose",
     "title": "Migrate from firehose to input source ingestion",

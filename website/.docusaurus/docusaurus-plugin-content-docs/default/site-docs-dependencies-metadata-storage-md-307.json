@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/dependencies/metadata-storage.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Victoria Lim",
+  "lastUpdatedAt": 1643312454,
+  "formattedLastUpdatedAt": "Jan 27, 2022",
   "frontMatter": {
     "id": "metadata-storage",
     "title": "Metadata storage"

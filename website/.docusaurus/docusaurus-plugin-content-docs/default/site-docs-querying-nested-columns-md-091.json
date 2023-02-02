@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/nested-columns.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Victoria Lim",
+  "lastUpdatedAt": 1673046577,
+  "formattedLastUpdatedAt": "Jan 6, 2023",
   "frontMatter": {
     "id": "nested-columns",
     "title": "Nested columns",

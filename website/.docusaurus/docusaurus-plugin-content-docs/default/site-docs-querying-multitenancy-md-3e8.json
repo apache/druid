@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/multitenancy.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "Jill Osborne",
+  "lastUpdatedAt": 1654191134,
+  "formattedLastUpdatedAt": "Jun 2, 2022",
   "frontMatter": {
     "id": "multitenancy",
     "title": "Multitenancy considerations",

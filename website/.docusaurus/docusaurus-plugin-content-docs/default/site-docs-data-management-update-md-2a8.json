@@ -11,9 +11,9 @@
   "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/update.md",
   "tags": [],
   "version": "current",
-  "lastUpdatedBy": "Author",
-  "lastUpdatedAt": 1539502055,
-  "formattedLastUpdatedAt": "Oct 14, 2018",
+  "lastUpdatedBy": "sairam devarashetty",
+  "lastUpdatedAt": 1674692620,
+  "formattedLastUpdatedAt": "Jan 26, 2023",
   "frontMatter": {
     "id": "update",
     "title": "Data updates"
