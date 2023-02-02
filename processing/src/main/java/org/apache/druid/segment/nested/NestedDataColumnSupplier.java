@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
@@ -75,6 +74,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
 
     if (version == 0x03 || version == 0x04) {
       try {
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final NestedDataColumnMetadata metadata;
         final GenericIndexed<String> fields;
         final NestedLiteralTypeInfo fieldInfo;
@@ -84,7 +84,6 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
-        final SmooshedFileMapper mapper = Preconditions.checkNotNull(columnBuilder.getFileMapper(), "Null fileMapper");
         ColumnType simpleType;
 
         metadata = jsonMapper.readValue(
