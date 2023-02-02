@@ -84,7 +84,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SmooshedFileMapper mapper = Preconditions.checkNotNull(columnBuilder.getFileMapper(), "Null fileMapper");
         ColumnType simpleType;
 
         metadata = jsonMapper.readValue(
@@ -196,7 +196,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             longDictionarySupplier,
             doubleDictionarySupplier,
             columnConfig,
-            Preconditions.checkNotNull(mapper, "Null fileMapper"),
+            mapper,
             simpleType
         );
       }

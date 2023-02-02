@@ -31,6 +31,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -78,16 +79,16 @@ import java.util.Objects;
  * Optimized virtual column that can make direct selectors into a {@link NestedDataComplexColumn} or any associated
  * nested fields ({@link org.apache.druid.segment.nested.NestedFieldLiteralDictionaryEncodedColumn}) including using
  * their indexes.
- *
+ * <p>
  * This virtual column is used for the SQL operators JSON_VALUE (if {@link #processFromRaw} is set to false) or
  * JSON_QUERY (if it is true), and accepts 'JSONPath' or 'jq' syntax string representations of paths, or a parsed
  * list of {@link NestedPathPart} in order to determine what should be selected from the column.
- *
+ * <p>
  * Type information for nested fields is completely absent in the SQL planner, so it guesses the best it can to set
  * {@link #expectedType} from the context of how something is being used, e.g. an aggregators default type or an
  * explicit cast, or, if using the 'RETURNING' syntax which explicitly specifies type. This might not be the same as
  * if it had actual type information, but, we try to stick with whatever we chose there to do the best we can for now.
- *
+ * <p>
  * Since {@link #capabilities(ColumnInspector, String)} is determined by the {@link #expectedType}, the results will
  * be best effor cast to the expected type if the column is not natively the expected type so that this column can
  * fulfill the contract of the type of selector that is likely to be created to read this column.
@@ -217,7 +218,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // written to segment, so we fall back to processing the structured data from a column value selector on the
     // complex column
     ColumnValueSelector<?> valueSelector = makeColumnValueSelector(dimensionSpec.getOutputName(), factory);
-    return new FieldDimensionSelector(valueSelector);
+    return dimensionSpec.decorate(new FieldDimensionSelector(valueSelector));
   }
 
   @Override
@@ -247,7 +248,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     ColumnHolder holder = columnSelector.getColumnHolder(columnName);
     if (holder == null) {
       // column doesn't exist
-      return DimensionSelector.constant(null);
+      return dimensionSpec.decorate(DimensionSelector.constant(null));
     }
     if (hasNegativeArrayIndex) {
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
@@ -256,10 +257,19 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return null;
     }
 
+    return dimensionSpec.decorate(makeDimensionSelectorUndecorated(holder, offset, dimensionSpec.getExtractionFn()));
+  }
+
+  private DimensionSelector makeDimensionSelectorUndecorated(
+      ColumnHolder holder,
+      ReadableOffset offset,
+      @Nullable ExtractionFn extractionFn
+  )
+  {
     BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
-      return column.makeDimensionSelector(parts, offset, dimensionSpec.getExtractionFn());
+      return column.makeDimensionSelector(parts, offset, extractionFn);
     }
 
     // ok, so not a nested column, but we can still do stuff
@@ -271,12 +281,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // the path was the 'root', we're in luck, spit out a selector that behaves the same way as a nested column
     if (theColumn instanceof DictionaryEncodedColumn) {
       final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
-      return new AutoCastingValueSelector(column.makeDimensionSelector(offset, dimensionSpec.getExtractionFn()));
+      return new AutoCastingValueSelector(column.makeDimensionSelector(offset, extractionFn));
     }
     return ValueTypes.makeNumericWrappingDimensionSelector(
         holder.getCapabilities().getType(),
         theColumn.makeColumnValueSelector(offset),
-        dimensionSpec.getExtractionFn()
+        extractionFn
     );
   }
 
@@ -338,10 +348,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   {
     ColumnHolder holder = columnSelector.getColumnHolder(columnName);
     if (holder == null) {
-      return NilVectorSelector.create(offset);
+      return dimensionSpec.decorate(NilVectorSelector.create(offset));
     }
-    BaseColumn theColumn = holder.getColumn();
 
+    return dimensionSpec.decorate(makeSingleValueVectorDimensionSelectorUndecorated(holder, offset));
+  }
+
+  private SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelectorUndecorated(
+      ColumnHolder holder,
+      ReadableVectorOffset offset
+  )
+  {
+    BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof NestedDataComplexColumn) {
       final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
       return column.makeSingleValueDimensionVectorSelector(parts, offset);
@@ -357,6 +375,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // so no need for magic casting like nonvectorized engine
     return ((DictionaryEncodedColumn) theColumn).makeSingleValueDimensionVectorSelector(offset);
   }
+
 
   @Nullable
   @Override
@@ -445,6 +464,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         @Nullable
         private boolean[] nullVector = null;
         private int id = ReadableVectorInspector.NULL_ID;
+
         @Override
         public long[] getLongVector()
         {
@@ -593,7 +613,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // from here
     return ColumnCapabilitiesImpl.createDefault()
                                  .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                 .setHasNulls(expectedType == null || (expectedType.isNumeric() && NullHandling.sqlCompatible()));
+                                 .setHasNulls(expectedType == null || (expectedType.isNumeric()
+                                                                       && NullHandling.sqlCompatible()));
   }
 
   @Override
@@ -616,7 +637,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                    .setDictionaryValuesSorted(true)
                                    .setDictionaryValuesUnique(true)
                                    .setHasBitmapIndexes(true)
-                                   .setHasNulls(expectedType == null || (expectedType.isNumeric() && NullHandling.sqlCompatible()));
+                                   .setHasNulls(expectedType == null || (expectedType.isNumeric()
+                                                                         && NullHandling.sqlCompatible()));
     }
     return capabilities(columnName);
   }
@@ -671,7 +693,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   /**
    * Process the "raw" data to extract literals with {@link NestedPathFinder#findLiteral(Object, List)}. Like
    * {@link RawFieldColumnSelector} but only literals and does not wrap the results in {@link StructuredData}.
-   *
+   * <p>
    * This is used as a selector on realtime data when the native field columns are not available.
    */
   public static class RawFieldLiteralColumnValueSelector extends RawFieldColumnSelector
@@ -886,7 +908,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   /**
-   * DimensionSelector that implements implicit casting when used via
+   * {@link DimensionSelector} that provides implicit numeric casting when used as a value selector, trying best effort
+   * to implement {@link #getLong()}, {@link #getDouble()}, {@link #getFloat()}, {@link #isNull()} on top of some
+   * other {@link DimensionSelector}.
+   * <p>
+   * This is used as a fall-back when making a selector and the underlying column is NOT a
+   * {@link NestedDataComplexColumn}, whose field {@link DimensionSelector} natively implement this behavior.
    */
   private static class AutoCastingValueSelector implements DimensionSelector
   {

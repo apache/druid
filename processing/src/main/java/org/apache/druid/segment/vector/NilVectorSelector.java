@@ -37,9 +37,7 @@ public class NilVectorSelector
   private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
 
   static {
-    for (int i = 0; i < DEFAULT_NULLS_VECTOR.length; i++) {
-      DEFAULT_NULLS_VECTOR[i] = NullHandling.sqlCompatible();
-    }
+    Arrays.fill(DEFAULT_NULLS_VECTOR, NullHandling.sqlCompatible());
   }
 
   private final VectorSizeInspector vectorSizeInspector;

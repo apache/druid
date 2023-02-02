@@ -175,6 +175,22 @@ public class ExpressionVectorSelectorsCastTest
             Assert.assertEquals(doubles[i], castDoubles[i], 0.0);
           }
           break;
+
+        case FLOAT:
+          nulls = selector.getNullVector();
+          castNulls = selector.getNullVector();
+          float[] floats = selector.getFloatVector();
+          float[] castFloats = castSelector.getFloatVector();
+          for (int i = 0; i < selector.getCurrentVectorSize(); i++) {
+            if (nulls != null) {
+              Assert.assertEquals(nulls[i], castNulls[i]);
+            }
+            Assert.assertEquals(floats[i], castFloats[i], 0.0);
+          }
+          break;
+        default:
+          Assert.fail("this shouldn't happen");
+          return;
       }
 
       cursor.advance();
@@ -201,6 +217,9 @@ public class ExpressionVectorSelectorsCastTest
             Assert.assertEquals(objects[i], otherObjects[i]);
           }
           break;
+        default:
+          Assert.fail("this shouldn't happen");
+          return;
       }
 
       cursor.advance();
