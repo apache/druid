@@ -127,18 +127,17 @@
               </goals>
               <configuration>
                 <relocations>
-                  <!-- Shade in the guava stuff so it doesn't collide with druid -->
+                  <!-- Shade in the guava stuff so it doesn't collide with druid.
+                       Unfortunately, Guava doesn't have a unique base directory: it
+                       shares the com.google path with Protobuf. So, we have to enumerate
+                       the Guava component packages. -->
                   <relocation>
                     <pattern>com.google.guava</pattern>
                     <shadedPattern>org.apache.druid.grpc.shaded.com.google.guava</shadedPattern>
                   </relocation>
                   <relocation>
-                    <pattern>com.google.common.base</pattern>
-                    <shadedPattern>org.apache.druid.grpc.shaded.com.google.common.base</shadedPattern>
-                  </relocation>
-                  <relocation>
-                    <pattern>com.google.common.util.concurrent</pattern>
-                    <shadedPattern>org.apache.druid.grpc.shaded.com.google.common.util.concurrent</shadedPattern>
+                    <pattern>com.google.common</pattern>
+                    <shadedPattern>org.apache.druid.grpc.shaded.com.google.common</shadedPattern>
                   </relocation>
                 </relocations>
                 <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>

@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 public class GrpcQueryTest
 {
   @ClassRule
-  private static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   private static QueryFrameworkFixture frameworkFixture;
   private static QueryServer server;
   private static TestClient client;
