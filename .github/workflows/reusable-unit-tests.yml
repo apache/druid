@@ -91,5 +91,5 @@ jobs:
       - name: test & coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
-          MVN: ${{ format('{0} {1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '-o' || '-U')) }}
+          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
         run: ./.github/scripts/unit_tests_script.sh
