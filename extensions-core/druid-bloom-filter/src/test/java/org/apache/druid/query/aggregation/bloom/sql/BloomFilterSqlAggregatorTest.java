@@ -24,13 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -87,19 +80,6 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
       final Injector injector
   ) throws IOException
   {
-    InputRowSchema schema = new InputRowSchema(
-        new TimestampSpec("t", "iso", null),
-        new DimensionsSpec(
-            ImmutableList.<DimensionSchema>builder()
-                         .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                         .add(new DoubleDimensionSchema("d1"))
-                         .add(new FloatDimensionSchema("f1"))
-                         .add(new LongDimensionSchema("l1"))
-                         .build()
-        ),
-        null
-    );
-
     final QueryableIndex index =
         IndexBuilder.create()
                     .tmpDir(temporaryFolder.newFolder())
