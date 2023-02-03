@@ -125,7 +125,7 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
-  private final TaskMetadata taskMetadata;
+  private final ParseExceptionMetadata taskMetadata;
 
 
   public TaskToolbox(
@@ -168,7 +168,7 @@ public class TaskToolbox
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       String attemptId,
-      TaskMetadata taskMetadata
+      ParseExceptionMetadata taskMetadata
   )
   {
     this.config = config;
@@ -469,7 +469,7 @@ public class TaskToolbox
     return attemptId;
   }
 
-  public TaskMetadata getTaskMetadata()
+  public ParseExceptionMetadata getTaskMetadata()
   {
     return taskMetadata;
   }
@@ -515,7 +515,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
-    private TaskMetadata taskMetadata;
+    private ParseExceptionMetadata taskMetadata;
 
     public Builder()
     {
@@ -796,7 +796,7 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder taskMetadata(final TaskMetadata taskMetadata)
+    public Builder taskMetadata(final ParseExceptionMetadata taskMetadata)
     {
       this.taskMetadata = taskMetadata;
       return this;

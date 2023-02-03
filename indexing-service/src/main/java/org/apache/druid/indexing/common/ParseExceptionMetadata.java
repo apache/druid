@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 
-public class TaskMetadata
+public class ParseExceptionMetadata
 {
   private final String taskId;
   private final String groupId;
   private final String dataSource;
 
-  public TaskMetadata(String taskId, String groupId, String dataSource)
+  public ParseExceptionMetadata(String taskId, String groupId, String dataSource)
   {
     this.taskId = taskId;
     this.groupId = groupId;
