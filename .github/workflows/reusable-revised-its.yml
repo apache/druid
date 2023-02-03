@@ -54,7 +54,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.build_jdk }}
-          cache: maven
+
+      - name: Restore Maven repository
+        id: maven-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Retrieve cached docker image
         uses: actions/cache/restore@v3
@@ -63,6 +70,7 @@ jobs:
           path: |
             ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
+          fail-on-cache-miss: true
 
       - name: Load docker image
         run: |
