@@ -34,6 +34,7 @@ import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -142,6 +143,7 @@ public class ExportMetadata extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new ServiceLogEventModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
               binder,

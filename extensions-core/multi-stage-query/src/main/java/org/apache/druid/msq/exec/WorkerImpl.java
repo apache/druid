@@ -74,8 +74,8 @@ import org.apache.druid.msq.indexing.error.MSQCompositeWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFilteredEmitterWarningPublisher;
-import org.apache.druid.msq.indexing.error.MSQWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningLimiterPublisher;
+import org.apache.druid.msq.indexing.error.MSQWarningPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.input.InputSlice;
@@ -1030,7 +1030,7 @@ public class WorkerImpl implements Worker
       final CounterTracker counters,
       final MSQWarningPublisher warningPublisher,
       final ParseExceptionHandler parseExceptionHandler
-      ) throws IOException
+  ) throws IOException
   {
     final ProcessorsAndChannels<WorkerClass, T> processors =
         processorFactory.makeProcessors(

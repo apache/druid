@@ -30,6 +30,7 @@ import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.HadoopTask;
@@ -84,6 +85,7 @@ public class ResetCluster extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new ServiceLogEventModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
               binder,

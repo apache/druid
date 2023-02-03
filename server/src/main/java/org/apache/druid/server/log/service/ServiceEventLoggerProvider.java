@@ -17,42 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.server.log.service;
 
-import com.google.common.collect.ImmutableMap;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
-import java.util.Map;
-
-public class TaskMetadata
+/**
+ * A Marker interface for things that can provide a RequestLogger.  This can be combined with Jackson polymorphic serde
+ * to provide new RequestLogger implementations as plugins.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+public interface ServiceEventLoggerProvider extends Provider<ServiceEventLogger>
 {
-  private final String taskId;
-  private final String groupId;
-  private final String dataSource;
-
-  public TaskMetadata(String taskId, String groupId, String dataSource)
-  {
-    this.taskId = taskId;
-    this.groupId = groupId;
-    this.dataSource = dataSource;
-  }
-
-  public String getTaskId()
-  {
-    return taskId;
-  }
-
-  public String getGroupId()
-  {
-    return groupId;
-  }
-
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  public Map<String, Object> toMap()
-  {
-    return ImmutableMap.of("taskId", taskId, "groupId", groupId, "dataSource", dataSource);
-  }
 }

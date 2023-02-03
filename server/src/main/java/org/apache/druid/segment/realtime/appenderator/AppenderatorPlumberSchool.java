@@ -62,7 +62,7 @@ public class AppenderatorPlumberSchool implements PlumberSchool
       final FireDepartmentMetrics metrics,
       final ServiceEmitter emitter,
       final Map<String, Object> taskMetadata
-      )
+  )
   {
     final Appenderator appenderator = appenderatorFactory.build(
         schema,

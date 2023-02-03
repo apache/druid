@@ -17,42 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.server.log.service;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.emitter.service.ServiceLogEvent;
 
-import java.util.Map;
-
-public class TaskMetadata
+/**
+ */
+public class NoopServiceEventLogger implements ServiceEventLogger
 {
-  private final String taskId;
-  private final String groupId;
-  private final String dataSource;
-
-  public TaskMetadata(String taskId, String groupId, String dataSource)
+  @Override
+  public void logServiceEvent(ServiceLogEvent requestLogLine)
   {
-    this.taskId = taskId;
-    this.groupId = groupId;
-    this.dataSource = dataSource;
+    // This is a no op!
   }
 
-  public String getTaskId()
-  {
-    return taskId;
-  }
-
-  public String getGroupId()
-  {
-    return groupId;
-  }
-
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  public Map<String, Object> toMap()
-  {
-    return ImmutableMap.of("taskId", taskId, "groupId", groupId, "dataSource", dataSource);
-  }
 }

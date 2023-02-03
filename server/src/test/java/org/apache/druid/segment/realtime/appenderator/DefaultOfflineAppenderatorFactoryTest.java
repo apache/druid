@@ -42,6 +42,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -49,6 +50,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 public class DefaultOfflineAppenderatorFactoryTest
@@ -157,7 +159,8 @@ public class DefaultOfflineAppenderatorFactoryTest
     Appenderator appenderator = defaultOfflineAppenderatorFactory.build(
         schema,
         tuningConfig,
-        new FireDepartmentMetrics()
+        new FireDepartmentMetrics(), new NoopServiceEmitter(),
+        Collections.emptyMap()
     );
     try {
       Assert.assertEquals("dataSourceName", appenderator.getDataSource());

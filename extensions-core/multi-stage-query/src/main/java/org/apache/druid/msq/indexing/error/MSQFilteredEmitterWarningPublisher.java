@@ -63,7 +63,7 @@ public class MSQFilteredEmitterWarningPublisher implements MSQWarningPublisher
     if (acceptableErrorCode.contains(errorCode)) {
       MSQErrorReport errorReport = MSQErrorReport.fromException(workerId, host, stageNumber, e);
       String errorMessage = errorReport.getFault().getErrorMessage();
-      ServiceLogEvent.Builder serviceEventBuilder =  ServiceLogEvent.builder();
+      ServiceLogEvent.Builder serviceEventBuilder = ServiceLogEvent.builder();
       serviceEventBuilder.setFeed("serviceEvent");
       serviceEventBuilder.setDimension("taskId", taskId);
       serviceEventBuilder.setDimension("groupId", controllerTaskId);

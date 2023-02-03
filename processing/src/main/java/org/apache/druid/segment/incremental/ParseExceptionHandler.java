@@ -64,7 +64,7 @@ public class ParseExceptionHandler
       ServiceEmitter emitter
   )
   {
-    this(rowIngestionMeters, logParseExceptions, maxAllowedParseExceptions,maxSavedParseExceptions, emitter, null);
+    this(rowIngestionMeters, logParseExceptions, maxAllowedParseExceptions, maxSavedParseExceptions, emitter, null);
   }
 
   public ParseExceptionHandler(RowIngestionMeters rowIngestionMeters,
@@ -73,7 +73,8 @@ public class ParseExceptionHandler
                                int maxSavedParseExceptions,
                                ServiceEmitter emitter,
                                @Nullable Map<String, Object> taskMetadata
-  ) {
+  )
+  {
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.logParseExceptions = logParseExceptions;
     this.maxAllowedParseExceptions = maxAllowedParseExceptions;
@@ -90,7 +91,8 @@ public class ParseExceptionHandler
     }
   }
 
-  public void handle(@Nullable ParseException e, @Nullable Map<String, Object> taskMetadata) {
+  public void handle(@Nullable ParseException e, @Nullable Map<String, Object> taskMetadata)
+  {
     if (e == null) {
       return;
     }

@@ -51,6 +51,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
@@ -125,6 +126,7 @@ public class CliIndexer extends ServerRunnable
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
         new IndexerServiceModule(),
+        new ServiceLogEventModule(),
         new Module()
         {
           @Override

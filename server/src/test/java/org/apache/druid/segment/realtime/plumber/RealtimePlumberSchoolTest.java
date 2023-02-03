@@ -61,6 +61,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -77,6 +78,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -246,7 +248,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     );
 
     metrics = new FireDepartmentMetrics();
-    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics, new NoopServiceEmitter(),
+                                                                  Collections.emptyMap()
+    );
   }
 
   @After
@@ -274,7 +278,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     final Object commitMetadata = "dummyCommitMetadata";
     testPersist(commitMetadata);
 
-    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics);
+    plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema, tuningConfig, metrics, new NoopServiceEmitter(),
+                                                                  Collections.emptyMap());
     Assert.assertEquals(commitMetadata, plumber.startJob());
   }
 
@@ -378,7 +383,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
   {
     Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
-    RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics, new NoopServiceEmitter(),
+                                                                                   Collections.emptyMap());
     Sink sink = new Sink(
         testInterval,
         schema2,
@@ -432,7 +438,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
         schema2,
         tuningConfig,
-        metrics
+        metrics,
+        new NoopServiceEmitter(),
+        Collections.emptyMap()
     );
     restoredPlumber.bootstrapSinksFromDisk();
 
@@ -466,7 +474,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(
         schema2,
         tuningConfig,
-        metrics
+        metrics,
+        new NoopServiceEmitter(),
+        Collections.emptyMap()
     );
     restoredPlumber2.bootstrapSinksFromDisk();
 
@@ -495,7 +505,8 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     FireHydrant hydrant;
     Map<Long, Sink> sinks;
 
-    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics, new NoopServiceEmitter(),
+                                                                                  Collections.emptyMap());
     Assert.assertNull(plumber.startJob());
 
     final CountDownLatch doneSignal = new CountDownLatch(1);
@@ -574,7 +585,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
         schema2,
         tuningConfig,
-        metrics
+        metrics,
+        new NoopServiceEmitter(),
+        Collections.emptyMap()
     );
     restoredPlumber.bootstrapSinksFromDisk();
 

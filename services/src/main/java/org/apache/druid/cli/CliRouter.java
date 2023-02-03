@@ -36,6 +36,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -92,6 +93,7 @@ public class CliRouter extends ServerRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
+        new ServiceLogEventModule(),
         JettyHttpClientModule.global(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");

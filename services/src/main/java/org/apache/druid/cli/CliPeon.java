@@ -59,6 +59,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
@@ -193,6 +194,7 @@ public class CliPeon extends GuiceRunnable
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
         new IndexingServiceTaskLogsModule(),
+        new ServiceLogEventModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")

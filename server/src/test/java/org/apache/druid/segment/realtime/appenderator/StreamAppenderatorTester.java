@@ -66,6 +66,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
@@ -248,7 +249,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CacheConfig(),
         new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, new NoopServiceEmitter()),
         true
     );
   }

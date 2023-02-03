@@ -46,6 +46,7 @@ import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServiceLogEventModule;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.IndexingHadoopModule;
 import org.apache.druid.indexing.common.task.Task;
@@ -105,6 +106,7 @@ public class DruidJsonValidator extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new ServiceLogEventModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/validator");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);

@@ -17,42 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.server.log.service;
 
-import com.google.common.collect.ImmutableMap;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.logger.Logger;
 
-import java.util.Map;
-
-public class TaskMetadata
+/**
+ */
+@JsonTypeName("noop")
+public class NoopServiceEventLoggerProvider implements ServiceEventLoggerProvider
 {
-  private final String taskId;
-  private final String groupId;
-  private final String dataSource;
+  private static final Logger log = new Logger(NoopServiceEventLoggerProvider.class);
 
-  public TaskMetadata(String taskId, String groupId, String dataSource)
+  @Override
+  public ServiceEventLogger get()
   {
-    this.taskId = taskId;
-    this.groupId = groupId;
-    this.dataSource = dataSource;
-  }
-
-  public String getTaskId()
-  {
-    return taskId;
-  }
-
-  public String getGroupId()
-  {
-    return groupId;
-  }
-
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  public Map<String, Object> toMap()
-  {
-    return ImmutableMap.of("taskId", taskId, "groupId", groupId, "dataSource", dataSource);
+    log.debug(new Exception("Stack trace"), "Creating NoopServiceEventLoggerProvider at");
+    return new NoopServiceEventLogger();
   }
 }

@@ -17,42 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.server.log.service;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceLogEvent;
 
-import java.util.Map;
+import java.io.IOException;
 
-public class TaskMetadata
+public class EmittingServiceEventLogger implements ServiceEventLogger
 {
-  private final String taskId;
-  private final String groupId;
-  private final String dataSource;
+  private final ServiceEmitter emitter;
 
-  public TaskMetadata(String taskId, String groupId, String dataSource)
+  EmittingServiceEventLogger(
+      ServiceEmitter emitter
+  )
   {
-    this.taskId = taskId;
-    this.groupId = groupId;
-    this.dataSource = dataSource;
+    this.emitter = emitter;
   }
 
-  public String getTaskId()
+  @Override
+  public String toString()
   {
-    return taskId;
+    return "EmittingServiceEventLogger{" +
+           "emitter=" + emitter +
+           '}';
   }
 
-  public String getGroupId()
+  @Override
+  public void logServiceEvent(ServiceLogEvent requestLogLine) throws IOException
   {
-    return groupId;
-  }
-
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  public Map<String, Object> toMap()
-  {
-    return ImmutableMap.of("taskId", taskId, "groupId", groupId, "dataSource", dataSource);
+    emitter.emit(requestLogLine);
   }
 }

@@ -49,6 +49,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Period;
@@ -57,6 +58,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -246,7 +248,8 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0, new NoopServiceEmitter(),
+                                  Collections.emptyMap()),
         true
     );
   }
