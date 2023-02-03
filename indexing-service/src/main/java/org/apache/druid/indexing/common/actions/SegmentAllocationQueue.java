@@ -262,16 +262,14 @@ public class SegmentAllocationQueue
   {
     clearQueueIfNotLeader();
 
-    // Process all batches which are due
-    log.debug("Processing batches which are due. Queue size [%d].", processingQueue.size());
     int numProcessedBatches = 0;
-
     AllocateRequestKey nextKey = processingQueue.peekFirst();
     while (nextKey != null && nextKey.isDue()) {
       processingQueue.pollFirst();
-      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
 
+      // Process the next batch in the queue
       boolean processed;
+      AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
       try {
         processed = processBatch(nextBatch);
       }
@@ -301,7 +299,7 @@ public class SegmentAllocationQueue
       nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
     }
     scheduleQueuePoll(nextScheduleDelay);
-    log.info("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
+    log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
   }
 
   /**
@@ -358,7 +356,6 @@ public class SegmentAllocationQueue
     log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
-      log.debug("All requests in batch [%s] have been processed.", requestKey);
       return true;
     }
 

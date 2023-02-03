@@ -114,6 +114,7 @@ function generateInputFormatFields(streaming: boolean) {
     streaming
       ? {
           name: 'useJsonNodeReader',
+          title: 'Use JSON node reader',
           type: 'boolean',
           defined: typeIs('json'),
           disabled: (inputFormat: InputFormat) => inputFormat.assumeNewlineDelimited,

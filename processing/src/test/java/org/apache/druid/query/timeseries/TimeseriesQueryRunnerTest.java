@@ -651,7 +651,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             QueryRunnerTestHelper.EMPTY_INTERVAL.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
-                TestHelper.createExpectedMap(
+                TestHelper.makeMap(
                     "rows",
                     0L,
                     "index",
