@@ -25,13 +25,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
@@ -72,7 +70,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
@@ -132,39 +129,38 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "iso", null),
-          DimensionsSpec.builder().setDimensions(
-              ImmutableList.<DimensionSchema>builder()
-                           .add(new NestedDataDimensionSchema("string"))
-                           .add(new NestedDataDimensionSchema("nest"))
-                           .add(new NestedDataDimensionSchema("nester"))
-                           .add(new NestedDataDimensionSchema("long"))
-                           .add(new NestedDataDimensionSchema("string_sparse"))
-                           .build()
-          ).build()
-      )
+  private static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
+      new TimestampSpec("t", "iso", null),
+      DimensionsSpec.builder().setDimensions(
+          ImmutableList.<DimensionSchema>builder()
+                       .add(new NestedDataDimensionSchema("string"))
+                       .add(new NestedDataDimensionSchema("nest"))
+                       .add(new NestedDataDimensionSchema("nester"))
+                       .add(new NestedDataDimensionSchema("long"))
+                       .add(new NestedDataDimensionSchema("string_sparse"))
+                       .build()
+      ).build(),
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_MIX = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "iso", null),
-          DimensionsSpec.builder().setDimensions(
-              ImmutableList.<DimensionSchema>builder()
-                           .add(new StringDimensionSchema("string"))
-                           .add(new NestedDataDimensionSchema("nest"))
-                           .add(new NestedDataDimensionSchema("nester"))
-                           .add(new LongDimensionSchema("long"))
-                           .add(new StringDimensionSchema("string_sparse"))
-                           .build()
-          ).build()
-      )
+  private static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
+      new TimestampSpec("t", "iso", null),
+      DimensionsSpec.builder().setDimensions(
+          ImmutableList.<DimensionSchema>builder()
+                       .add(new StringDimensionSchema("string"))
+                       .add(new NestedDataDimensionSchema("nest"))
+                       .add(new NestedDataDimensionSchema("nester"))
+                       .add(new LongDimensionSchema("long"))
+                       .add(new StringDimensionSchema("string_sparse"))
+                       .build()
+      ).build(),
+      null
   );
-
   private static final List<InputRow> ROWS =
-      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, PARSER)).collect(Collectors.toList());
+      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
+
+  private static final List<InputRow> ROWS_MIX =
+      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
@@ -191,7 +187,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER)
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )
@@ -207,7 +203,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER)
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )
@@ -223,11 +219,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER_MIX)
+                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )
-                    .rows(ROWS)
+                    .rows(ROWS_MIX)
                     .buildMMappedIndex();
 
     final QueryableIndex indexMix21 =
@@ -239,11 +235,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER_MIX)
+                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )
-                    .rows(ROWS)
+                    .rows(ROWS_MIX)
                     .buildMMappedIndex();
 
     final QueryableIndex indexMix22 =
@@ -255,7 +251,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER)
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )

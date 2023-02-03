@@ -251,6 +251,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return dimensionSpec.decorate(DimensionSelector.constant(null, dimensionSpec.getExtractionFn()));
     }
     if (hasNegativeArrayIndex) {
+      // negative array elements in a path expression mean that values should be fetched 'from the end' of the array
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
       // created with the column selector factory instead of using the optimized nested field column, return null
       // to fall through
@@ -272,22 +273,25 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeDimensionSelector(parts, offset, extractionFn);
     }
 
-    // ok, so not a nested column, but we can still do stuff
-    if (!parts.isEmpty()) {
-      // we are being asked for a path that will never exist, so we are null selector
-      return DimensionSelector.constant(null, extractionFn);
+    // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
+    if (parts.isEmpty()) {
+      // dictionary encoded columns do not typically implement the value selector methods (getLong, getDouble, getFloat)
+      // nothing *should* be using a dimension selector to call the numeric getters, but just in case... wrap their
+      // selector in a "best effort" casting selector to implement them
+      if (theColumn instanceof DictionaryEncodedColumn) {
+        final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
+        return new BestEffortCastingValueSelector(column.makeDimensionSelector(offset, extractionFn));
+      }
+      // for non-dictionary encoded columns, wrap a value selector to make it appear as a dimension selector
+      return ValueTypes.makeNumericWrappingDimensionSelector(
+          holder.getCapabilities().getType(),
+          theColumn.makeColumnValueSelector(offset),
+          extractionFn
+      );
     }
 
-    // the path was the 'root', we're in luck, spit out a selector that behaves the same way as a nested column
-    if (theColumn instanceof DictionaryEncodedColumn) {
-      final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
-      return new AutoCastingValueSelector(column.makeDimensionSelector(offset, extractionFn));
-    }
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        holder.getCapabilities().getType(),
-        theColumn.makeColumnValueSelector(offset),
-        extractionFn
-    );
+    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
+    return DimensionSelector.constant(null, extractionFn);
   }
 
 
@@ -318,18 +322,21 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeColumnValueSelector(parts, offset);
     }
 
-    // ok, so not a nested column, but we can still do stuff
-    if (!parts.isEmpty()) {
-      // we are being asked for a path that will never exist, so we are null selector
-      return NilColumnValueSelector.instance();
+    // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
+    if (parts.isEmpty()) {
+      // dictionary encoded columns do not typically implement the value selector methods (getLong, getDouble, getFloat)
+      // so we want to wrap their selector in a "best effort" casting selector to implement them
+      if (theColumn instanceof DictionaryEncodedColumn) {
+        final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
+        return new BestEffortCastingValueSelector(column.makeDimensionSelector(offset, null));
+      }
+      // otherwise it is probably cool to pass through the value selector directly, if numbers make sense the selector
+      // very likely implemented them, and everyone implements getObject if not
+      return theColumn.makeColumnValueSelector(offset);
     }
 
-    // the path was the 'root', we're in luck, spit out a selector that behaves the same way as a nested column
-    if (theColumn instanceof DictionaryEncodedColumn) {
-      final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
-      return new AutoCastingValueSelector(column.makeDimensionSelector(offset, null));
-    }
-    return theColumn.makeColumnValueSelector(offset);
+    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
+    return NilColumnValueSelector.instance();
   }
 
   @Override
@@ -365,15 +372,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeSingleValueDimensionVectorSelector(parts, offset);
     }
 
-    // not a nested column
-    if (!parts.isEmpty()) {
-      // we are being asked for a path that will never exist, so we are null selector
-      return NilVectorSelector.create(offset);
+    // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
+    if (parts.isEmpty()) {
+      // we will not end up here unless underlying column capabilities lied about something being dictionary encoded...
+      // so no need for magic casting like nonvectorized engine
+      return ((DictionaryEncodedColumn) theColumn).makeSingleValueDimensionVectorSelector(offset);
     }
 
-    // we will not end up here unless underlying column capabilities lied about something being dictionary encoded...
-    // so no need for magic casting like nonvectorized engine
-    return ((DictionaryEncodedColumn) theColumn).makeSingleValueDimensionVectorSelector(offset);
+    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
+    return NilVectorSelector.create(offset);
   }
 
 
@@ -391,7 +398,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     BaseColumn theColumn = holder.getColumn();
 
-
     // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
     // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
     if (theColumn instanceof NestedDataComplexColumn) {
@@ -401,20 +407,23 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       }
       return column.makeVectorObjectSelector(parts, offset);
     }
-    if (!parts.isEmpty()) {
-      return NilVectorSelector.create(offset);
+    // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
+    if (parts.isEmpty()) {
+      ColumnCapabilities capabilities = holder.getCapabilities();
+      if (capabilities.isNumeric()) {
+        return ExpressionVectorSelectors.castValueSelectorToObject(
+            offset,
+            this.columnName,
+            theColumn.makeVectorValueSelector(offset),
+            capabilities.toColumnType(),
+            expectedType
+        );
+      }
+      return theColumn.makeVectorObjectSelector(offset);
     }
-    ColumnCapabilities capabilities = holder.getCapabilities();
-    if (capabilities.isNumeric()) {
-      return ExpressionVectorSelectors.castValueSelectorToObject(
-          offset,
-          this.columnName,
-          theColumn.makeVectorValueSelector(offset),
-          capabilities.toColumnType(),
-          expectedType
-      );
-    }
-    return theColumn.makeVectorObjectSelector(offset);
+
+    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
+    return NilVectorSelector.create(offset);
   }
 
   @Nullable
@@ -915,11 +924,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
    * This is used as a fall-back when making a selector and the underlying column is NOT a
    * {@link NestedDataComplexColumn}, whose field {@link DimensionSelector} natively implement this behavior.
    */
-  private static class AutoCastingValueSelector implements DimensionSelector
+  private static class BestEffortCastingValueSelector implements DimensionSelector
   {
     private final DimensionSelector baseSelector;
 
-    public AutoCastingValueSelector(DimensionSelector baseSelector)
+    public BestEffortCastingValueSelector(DimensionSelector baseSelector)
     {
       this.baseSelector = baseSelector;
     }

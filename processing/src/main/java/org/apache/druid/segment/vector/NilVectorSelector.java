@@ -82,7 +82,9 @@ public class NilVectorSelector
       );
     } else {
       final boolean[] nulls = new boolean[vectorSizeInspector.getMaxVectorSize()];
-      Arrays.fill(nulls, NullHandling.sqlCompatible());
+      if (NullHandling.sqlCompatible()) {
+        Arrays.fill(nulls, true);
+      }
       return new NilVectorSelector(
           vectorSizeInspector,
           nulls,
