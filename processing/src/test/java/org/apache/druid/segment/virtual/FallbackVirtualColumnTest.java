@@ -49,6 +49,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+@SuppressWarnings("ALL")
 public class FallbackVirtualColumnTest
 {
   static {
@@ -541,7 +542,8 @@ public class FallbackVirtualColumnTest
 
     public HolderForIndexSupplier(
         ColumnIndexSupplier indexSupplier
-    ) {
+    )
+    {
       this.indexSupplier = indexSupplier;
     }
 
@@ -571,7 +573,7 @@ public class FallbackVirtualColumnTest
     }
 
     @Override
-    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    public SettableColumnValueSelector<?> makeNewSettableColumnValueSelector()
     {
       throw new UnsupportedOperationException();
     }

@@ -105,7 +105,8 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Override
   public DimensionSelector makeDimensionSelector(
-      DimensionSpec dimensionSpec, ColumnSelectorFactory factory
+      DimensionSpec dimensionSpec,
+      ColumnSelectorFactory factory
   )
   {
     return factory.makeDimensionSelector(columnToUse(factory));
@@ -113,7 +114,8 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      String columnName, ColumnSelectorFactory factory
+      String columnName,
+      ColumnSelectorFactory factory
   )
   {
     return factory.makeColumnValueSelector(columnToUse(factory).getDimension());
@@ -127,7 +129,8 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
-      DimensionSpec dimensionSpec, VectorColumnSelectorFactory factory
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
   )
   {
     return factory.makeSingleValueDimensionSelector(columnToUse(factory));
@@ -135,24 +138,21 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
-      DimensionSpec dimensionSpec, VectorColumnSelectorFactory factory
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
   )
   {
     return factory.makeMultiValueDimensionSelector(columnToUse(factory));
   }
 
   @Override
-  public VectorValueSelector makeVectorValueSelector(
-      String columnName, VectorColumnSelectorFactory factory
-  )
+  public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     return factory.makeValueSelector(columnToUse(factory).getDimension());
   }
 
   @Override
-  public VectorObjectSelector makeVectorObjectSelector(
-      String columnName, VectorColumnSelectorFactory factory
-  )
+  public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     return factory.makeObjectSelector(columnToUse(factory).getDimension());
   }
@@ -188,9 +188,7 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Nullable
   @Override
-  public ColumnIndexSupplier getIndexSupplier(
-      String columnName, ColumnSelector columnSelector
-  )
+  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
     final ColumnHolder columnHolder = columnSelector.getColumnHolder(columnToUse(columnSelector).getDimension());
     if (columnHolder == null) {

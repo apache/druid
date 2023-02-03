@@ -37,27 +37,32 @@ public class TestVectorColumnSelectorFactory implements VectorColumnSelectorFact
   private final Map<String, VectorObjectSelector> vectorObjectSelectors = new LinkedHashMap<>();
   private final Map<String, ColumnCapabilities> capabilitiesMap = new LinkedHashMap<>();
 
-  public TestVectorColumnSelectorFactory addSVDVS(String col, SingleValueDimensionVectorSelector selector) {
+  public TestVectorColumnSelectorFactory addSVDVS(String col, SingleValueDimensionVectorSelector selector)
+  {
     singleValDimSelectors.put(col, selector);
     return this;
   }
 
-  public TestVectorColumnSelectorFactory addMVDVS(String col, MultiValueDimensionVectorSelector selector) {
+  public TestVectorColumnSelectorFactory addMVDVS(String col, MultiValueDimensionVectorSelector selector)
+  {
     multiValDimSelectors.put(col, selector);
     return this;
   }
 
-  public TestVectorColumnSelectorFactory addVVS(String col, VectorValueSelector selector) {
+  public TestVectorColumnSelectorFactory addVVS(String col, VectorValueSelector selector)
+  {
     vectorValueSelectors.put(col, selector);
     return this;
   }
 
-  public TestVectorColumnSelectorFactory addVOS(String col, VectorObjectSelector selector) {
+  public TestVectorColumnSelectorFactory addVOS(String col, VectorObjectSelector selector)
+  {
     vectorObjectSelectors.put(col, selector);
     return this;
   }
 
-  public TestVectorColumnSelectorFactory addCapabilities(String col, ColumnCapabilities capabilities) {
+  public TestVectorColumnSelectorFactory addCapabilities(String col, ColumnCapabilities capabilities)
+  {
     capabilitiesMap.put(col, capabilities);
     return this;
   }

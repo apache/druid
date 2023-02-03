@@ -30,7 +30,7 @@ import java.util.Map;
 public class TestColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final Map<String, DimensionSelector> dimSelectors = new LinkedHashMap<>();
-  private final Map<String, ColumnValueSelector> columnSelectors = new LinkedHashMap<>();
+  private final Map<String, ColumnValueSelector<?>> columnSelectors = new LinkedHashMap<>();
   private final Map<String, ColumnCapabilities> capabilitiesMap = new LinkedHashMap<>();
 
   public TestColumnSelectorFactory addDimSelector(String name, @Nullable DimensionSelector selector)
@@ -39,7 +39,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
     return this;
   }
 
-  public <T> TestColumnSelectorFactory addColumnSelector(String name, @Nullable  ColumnValueSelector<T> selector)
+  public <T> TestColumnSelectorFactory addColumnSelector(String name, @Nullable ColumnValueSelector<T> selector)
   {
     columnSelectors.put(name, selector);
     return this;
@@ -58,7 +58,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(String columnName)
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
     return getFromMap(columnSelectors, columnName, "column");
   }
