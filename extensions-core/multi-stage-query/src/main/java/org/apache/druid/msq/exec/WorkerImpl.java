@@ -711,16 +711,6 @@ public class WorkerImpl implements Worker
       } else {
         return fileOutputChannelFactory;
       }
-    } else if (durableStageStorageEnabled) {
-      return DurableStorageOutputChannelFactory.createStandardImplementation(
-          task.getControllerTaskId(),
-          task().getWorkerNumber(),
-          stageNumber,
-          task().getId(),
-          frameSize,
-          MSQTasks.makeStorageConnector(context.injector()),
-          tmpDir
-      );
     } else {
       return fileOutputChannelFactory;
     }
