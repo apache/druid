@@ -96,10 +96,16 @@ The following table lists the configurable parameters of the Druid chart and the
 | `configVars`                              | druid configuration variables for all components         | ``                                         |
 | `gCloudStorage.enabled`                  | look for secret to set google cloud credentials         | `false`                                    |
 | `gCloudStorage.secretName`               | secretName to be mounted as google cloud credentials    | `false`                                    |
+| `rbac.create`                            | Create roles and roleBindings for service Accounts      | `true`                                     |
 | `broker.enabled`                         | enable broker                                           | `true`                                     |
 | `broker.name`                            | broker component name                                   | `broker`                                   |
 | `broker.replicaCount`                    | broker node replicas (deployment)                       | `1`                                        |
 | `broker.port`                            | port of broker component                                | `8082`                                     |
+| `broker.serviceAccount.create`           | Create a service account for broker service             | `true`                                     |
+| `broker.serviceAccount.name`             | Service account name                                    | `true`                                     |
+| `broker.serviceAccount.annotations`      | Annotations applied to created service account          | `true`                                     |
+| `broker.serviceAccount.labels`           | Labels applied to created service account               | `true`                                     |
+| `broker.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                               |
 | `broker.serviceType`                     | service type for service                                | `ClusterIP`                                |
 | `broker.resources`                       | broker node resources requests & limits                 | `{}`                                       |
 | `broker.podAnnotations`                  | broker deployment annotations                           | `{}`                                       |
@@ -117,6 +123,11 @@ The following table lists the configurable parameters of the Druid chart and the
 | `coordinator.replicaCount`               | coordinator node replicas (deployment)                  | `1`                                        |
 | `coordinator.port`                       | port of coordinator component                           | `8081`                                     |
 | `coordinator.serviceType`                | service type for service                                | `ClusterIP`                                |
+| `coordinator.serviceAccount.create`      | Create a service account for coordinator service        | `true`                                     |
+| `coordinator.serviceAccount.name`        | Service account name                                    | `true`                                     |
+| `coordinator.serviceAccount.annotations` | Annotations applied to created service account          | `true`                                     |
+| `coordinator.serviceAccount.labels`      | Labels applied to created service account               | `true`                                     |
+| `coordinator.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                          |
 | `coordinator.resources`                  | coordinator node resources requests & limits            | `{}`                                       |
 | `coordinator.podAnnotations`             | coordinator Deployment annotations                      | `{}`                                       |
 | `coordinator.nodeSelector`               | node labels for coordinator pod assignment              | `{}`                                       |
@@ -133,6 +144,11 @@ The following table lists the configurable parameters of the Druid chart and the
 | `overlord.replicaCount`                  | overlord node replicas (deployment)                     | `1`                                        |
 | `overlord.port`                          | port of overlord component                              | `8081`                                     |
 | `overlord.serviceType`                   | service type for service                                | `ClusterIP`                                |
+| `overlord.serviceAccount.create`         | Create a service account for overlord service           | `true`                                     |
+| `overlord.serviceAccount.name`           | Service account name                                    | `true`                                     |
+| `overlord.serviceAccount.annotations`    | Annotations applied to created service account          | `true`                                     |
+| `overlord.serviceAccount.labels`         | Labels applied to created service account               | `true`                                     |
+| `overlord.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                             |
 | `overlord.resources`                     | overlord node resources requests & limits               | `{}`                                       |
 | `overlord.podAnnotations`                | overlord Deployment annotations                         | `{}`                                       |
 | `overlord.nodeSelector`                  | node labels for overlord pod assignment                 | `{}`                                       |
@@ -149,6 +165,11 @@ The following table lists the configurable parameters of the Druid chart and the
 | `historical.replicaCount`                | historical node replicas (statefulset)                  | `1`                                        |
 | `historical.port`                        | port of historical component                            | `8083`                                     |
 | `historical.serviceType`                 | service type for service                                | `ClusterIP`                                |
+| `historical.serviceAccount.create`       | Create a service account for historical service           | `true`                                     |
+| `historical.serviceAccount.name`         | Service account name                                    | `true`                                     |
+| `historical.serviceAccount.annotations`  | Annotations applied to created service account          | `true`                                     |
+| `historical.serviceAccount.labels`       | Labels applied to created service account               | `true`                                     |
+| `historical.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                           |
 | `historical.resources`                   | historical node resources requests & limits             | `{}`                                       |
 | `historical.livenessProbeInitialDelaySeconds`  | historical node liveness probe initial delay in seconds  | `60`                                |
 | `historical.readinessProbeInitialDelaySeconds` | historical node readiness probe initial delay in seconds | `60`                                |
@@ -173,6 +194,11 @@ The following table lists the configurable parameters of the Druid chart and the
 | `middleManager.replicaCount`             | middleManager node replicas (statefulset)               | `1`                                        |
 | `middleManager.port`                     | port of middleManager component                         | `8091`                                     |
 | `middleManager.serviceType`              | service type for service                                | `ClusterIP`                                |
+| `middleManager.serviceAccount.create`    | Create a service account for middleManager service      | `true`                                     |
+| `middleManager.serviceAccount.name`      | Service account name                                    | `true`                                     |
+| `middleManager.serviceAccount.annotations` | Annotations applied to created service account        | `true`                                     |
+| `middleManager.serviceAccount.labels`    | Labels applied to created service account               | `true`                                     |
+| `middleManager.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                        |
 | `middleManager.resources`                | middleManager node resources requests & limits          | `{}`                                       |
 | `middleManager.podAnnotations`           | middleManager Deployment annotations                    | `{}`                                       |
 | `middleManager.nodeSelector`             | Node labels for middleManager pod assignment            | `{}`                                       |
@@ -199,6 +225,11 @@ The following table lists the configurable parameters of the Druid chart and the
 | `router.replicaCount`                    | router node replicas (deployment)                       | `1`                                        |
 | `router.port`                            | port of router component                                | `8888`                                     |
 | `router.serviceType`                     | service type for service                                | `ClusterIP`                                |
+| `router.serviceAccount.create`           | Create a service account for router service             | `true`                                     |
+| `router.serviceAccount.name`             | Service account name                                    | `true`                                     |
+| `router.serviceAccount.annotations`      | Annotations applied to created service account          | `true`                                     |
+| `router.serviceAccount.labels`           | Labels applied to created service account               | `true`                                     |
+| `router.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                               |
 | `router.resources`                       | router node resources requests & limits                 | `{}`                                       |
 | `router.podAnnotations`                  | router Deployment annotations                           | `{}`                                       |
 | `router.nodeSelector`                    | node labels for router pod assignment                   | `{}`                                       |
