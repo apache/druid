@@ -19,17 +19,11 @@
 
 package org.apache.druid.msq.indexing;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
-import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.timeline.DataSegment;
@@ -37,8 +31,6 @@ import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

@@ -35,7 +35,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
