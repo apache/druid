@@ -73,38 +73,15 @@ public class MSQTombstoneHelper
     this.replaceGranularity = replaceGranularity;
   }
 
-  private Set<Interval> computeTombstoneIntervals() throws IOException
-  {
-    Set<Interval> retVal = new HashSet<>();
-    List<Interval> usedIntervals = TombstoneHelper.getCondensedUsedIntervals(intervalsToReplace, dataSource, taskActionClient);
-
-    for (Interval intervalToDrop : intervalsToDrop) {
-      for (Interval usedInterval : usedIntervals) {
-        Interval overlap = intervalToDrop.overlap(usedInterval);
-        if (overlap == null) {
-          continue;
-        }
-        // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
-        // However when fetching from the iterator, the first interval is found using the bucketStart, which
-        // ensures that the interval is "rounded down" to the first timestamp that aligns with the granularity
-        // Also, the interval would always be contained inside the "intervalToDrop" because the original REPLACE
-        // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
-        // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
-        // the right-hand side is always aligned)
-        IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
-            ImmutableList.of(overlap),
-            replaceGranularity
-        );
-        // Helps in deduplication if required
-        retVal.addAll(Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator()));
-      }
-    }
-    return retVal;
-  }
-
   public Set<DataSegment> computeTombstones() throws IOException
   {
-    Set<Interval> tombstoneIntervals = computeTombstoneIntervals();
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        intervalsToReplace,
+        intervalsToDrop,
+        dataSource,
+        replaceGranularity
+    );
     Set<DataSegment> tombstones = new HashSet<>();
     for (Interval tombstoneInterval : tombstoneIntervals) {
 

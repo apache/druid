@@ -1128,12 +1128,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
-      TombstoneHelper tombstoneHelper = new TombstoneHelper(
-          newSegments,
-          ingestionSchema.getDataSchema(),
-          toolbox.getTaskActionClient()
-      );
-      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(newSegments, ingestionSchema.getDataSchema());
       if (!tombstoneIntervals.isEmpty()) {
 
         Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
@@ -1146,7 +1142,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
 
-        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAnShards);
         // add tombstones
         newSegments.addAll(tombStones);
 
