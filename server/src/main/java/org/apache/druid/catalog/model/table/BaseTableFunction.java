@@ -61,6 +61,15 @@ public abstract class BaseTableFunction implements TableFunction
     {
       return optional;
     }
+
+    @Override
+    public String toString()
+    {
+      return "Parameter{name=" + name
+          + ", type=" + type
+          + ", optional=" + optional
+          + "}";
+    }
   }
 
   private final List<ParameterDefn> parameters;

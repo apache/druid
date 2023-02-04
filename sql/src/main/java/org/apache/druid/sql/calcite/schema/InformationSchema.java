@@ -36,24 +36,28 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.Statistics;
 import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.TableFunction;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.curator.shaded.com.google.common.collect.Iterators;
+import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -64,6 +68,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class InformationSchema extends AbstractSchema
 {
@@ -73,44 +78,86 @@ public class InformationSchema extends AbstractSchema
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
-  private static final RowSignature SCHEMATA_SIGNATURE = RowSignature
-      .builder()
-      .add("CATALOG_NAME", ColumnType.STRING)
-      .add("SCHEMA_NAME", ColumnType.STRING)
-      .add("SCHEMA_OWNER", ColumnType.STRING)
-      .add("DEFAULT_CHARACTER_SET_CATALOG", ColumnType.STRING)
-      .add("DEFAULT_CHARACTER_SET_SCHEMA", ColumnType.STRING)
-      .add("DEFAULT_CHARACTER_SET_NAME", ColumnType.STRING)
-      .add("SQL_PATH", ColumnType.STRING)
+  private static final String PARAMETERS_TABLE = "PARAMETERS";
+
+  private static class RowTypeBuilder
+  {
+    final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
+    final RelDataTypeFactory.Builder builder = typeFactory.builder();
+
+    public RowTypeBuilder add(String name, SqlTypeName type)
+    {
+      builder.add(name, Calcites.createSqlTypeWithNullability(typeFactory, type, false));
+      return this;
+    }
+
+    public RowTypeBuilder add(String name, SqlTypeName type, boolean nullable)
+    {
+      builder.add(name, Calcites.createSqlTypeWithNullability(typeFactory, type, nullable));
+      return this;
+    }
+
+    public RelDataType build()
+    {
+      return builder.build();
+    }
+  }
+
+  private static final RelDataType SCHEMATA_SIGNATURE = new RowTypeBuilder()
+      .add("CATALOG_NAME", SqlTypeName.VARCHAR)
+      .add("SCHEMA_NAME", SqlTypeName.VARCHAR)
+      .add("SCHEMA_OWNER", SqlTypeName.VARCHAR)
+      .add("DEFAULT_CHARACTER_SET_CATALOG", SqlTypeName.VARCHAR)
+      .add("DEFAULT_CHARACTER_SET_SCHEMA", SqlTypeName.VARCHAR)
+      .add("DEFAULT_CHARACTER_SET_NAME", SqlTypeName.VARCHAR)
+      .add("SQL_PATH", SqlTypeName.VARCHAR)
       .build();
-  private static final RowSignature TABLES_SIGNATURE = RowSignature
-      .builder()
-      .add("TABLE_CATALOG", ColumnType.STRING)
-      .add("TABLE_SCHEMA", ColumnType.STRING)
-      .add("TABLE_NAME", ColumnType.STRING)
-      .add("TABLE_TYPE", ColumnType.STRING)
-      .add("IS_JOINABLE", ColumnType.STRING)
-      .add("IS_BROADCAST", ColumnType.STRING)
+  private static final RelDataType TABLES_SIGNATURE = new RowTypeBuilder()
+      .add("TABLE_CATALOG", SqlTypeName.VARCHAR)
+      .add("TABLE_SCHEMA", SqlTypeName.VARCHAR)
+      .add("TABLE_NAME", SqlTypeName.VARCHAR)
+      .add("TABLE_TYPE", SqlTypeName.VARCHAR)
+      .add("IS_JOINABLE", SqlTypeName.VARCHAR)
+      .add("IS_BROADCAST", SqlTypeName.VARCHAR)
       .build();
-  private static final RowSignature COLUMNS_SIGNATURE = RowSignature
-      .builder()
-      .add("TABLE_CATALOG", ColumnType.STRING)
-      .add("TABLE_SCHEMA", ColumnType.STRING)
-      .add("TABLE_NAME", ColumnType.STRING)
-      .add("COLUMN_NAME", ColumnType.STRING)
-      .add("ORDINAL_POSITION", ColumnType.STRING)
-      .add("COLUMN_DEFAULT", ColumnType.STRING)
-      .add("IS_NULLABLE", ColumnType.STRING)
-      .add("DATA_TYPE", ColumnType.STRING)
-      .add("CHARACTER_MAXIMUM_LENGTH", ColumnType.STRING)
-      .add("CHARACTER_OCTET_LENGTH", ColumnType.STRING)
-      .add("NUMERIC_PRECISION", ColumnType.STRING)
-      .add("NUMERIC_PRECISION_RADIX", ColumnType.STRING)
-      .add("NUMERIC_SCALE", ColumnType.STRING)
-      .add("DATETIME_PRECISION", ColumnType.STRING)
-      .add("CHARACTER_SET_NAME", ColumnType.STRING)
-      .add("COLLATION_NAME", ColumnType.STRING)
-      .add("JDBC_TYPE", ColumnType.LONG)
+  private static final RelDataType COLUMNS_SIGNATURE = new RowTypeBuilder()
+      .add("TABLE_CATALOG", SqlTypeName.VARCHAR)
+      .add("TABLE_SCHEMA", SqlTypeName.VARCHAR)
+      .add("TABLE_NAME", SqlTypeName.VARCHAR)
+      .add("COLUMN_NAME", SqlTypeName.VARCHAR)
+      .add("ORDINAL_POSITION", SqlTypeName.BIGINT)
+      .add("COLUMN_DEFAULT", SqlTypeName.VARCHAR)
+      .add("IS_NULLABLE", SqlTypeName.VARCHAR)
+      .add("DATA_TYPE", SqlTypeName.VARCHAR)
+      .add("CHARACTER_MAXIMUM_LENGTH", SqlTypeName.VARCHAR, true)
+      .add("CHARACTER_OCTET_LENGTH", SqlTypeName.VARCHAR, true)
+      .add("NUMERIC_PRECISION", SqlTypeName.BIGINT, true)
+      .add("NUMERIC_PRECISION_RADIX", SqlTypeName.BIGINT, true)
+      .add("NUMERIC_SCALE", SqlTypeName.BIGINT, true)
+      .add("DATETIME_PRECISION", SqlTypeName.BIGINT, true)
+      .add("CHARACTER_SET_NAME", SqlTypeName.VARCHAR, true)
+      .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
+      .add("JDBC_TYPE", SqlTypeName.BIGINT)
+      .build();
+  // MySQL Reference: https://dev.mysql.com/doc/mysql-infoschema-excerpt/5.7/en/information-schema-parameters-table.html
+  // Adapted for Druid
+  private static final RelDataType PARAMETERS_SIGNATURE = new RowTypeBuilder()
+      .add("FUNCTION_CATALOG", SqlTypeName.VARCHAR)
+      .add("FUNCTION_SCHEMA", SqlTypeName.VARCHAR)
+      .add("FUNCTION_NAME", SqlTypeName.VARCHAR)
+      .add("PARAMETER_NAME", SqlTypeName.VARCHAR)
+      .add("ORDINAL_POSITION", SqlTypeName.BIGINT)
+      .add("IS_OPTIONAL", SqlTypeName.VARCHAR)
+      .add("DATA_TYPE", SqlTypeName.VARCHAR)
+      .add("CHARACTER_MAXIMUM_LENGTH", SqlTypeName.VARCHAR, true)
+      .add("CHARACTER_OCTET_LENGTH", SqlTypeName.VARCHAR, true)
+      .add("NUMERIC_PRECISION", SqlTypeName.BIGINT, true)
+      .add("NUMERIC_PRECISION_RADIX", SqlTypeName.BIGINT, true)
+      .add("NUMERIC_SCALE", SqlTypeName.BIGINT, true)
+      .add("DATETIME_PRECISION", SqlTypeName.BIGINT, true)
+      .add("CHARACTER_SET_NAME", SqlTypeName.VARCHAR, true)
+      .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
+      .add("JDBC_TYPE", SqlTypeName.BIGINT)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
 
@@ -131,7 +178,8 @@ public class InformationSchema extends AbstractSchema
     this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
-        COLUMNS_TABLE, new ColumnsTable()
+        COLUMNS_TABLE, new ColumnsTable(),
+        PARAMETERS_TABLE, new ParametersTable()
     );
     this.authorizerMapper = authorizerMapper;
   }
@@ -175,7 +223,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return RowSignatures.toRelDataType(SCHEMATA_SIGNATURE, typeFactory);
+      return SCHEMATA_SIGNATURE;
     }
 
     @Override
@@ -260,6 +308,15 @@ public class InformationSchema extends AbstractSchema
                                         INFO_FALSE, // IS_JOINABLE
                                         INFO_FALSE // IS_BROADCAST
                                     };
+                                  } else if (TableId.EXTERNAL_SCHEMA.equals(schemaName)) {
+                                    return new Object[]{
+                                        CATALOG_NAME, // TABLE_CATALOG
+                                        schemaName, // TABLE_SCHEMA
+                                        functionName, // TABLE_NAME
+                                        "EXTERNAL", // TABLE_TYPE
+                                        INFO_FALSE, // IS_JOINABLE
+                                        INFO_FALSE // IS_BROADCAST
+                                    };
                                   } else {
                                     return null;
                                   }
@@ -279,7 +336,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return RowSignatures.toRelDataType(TABLES_SIGNATURE, typeFactory);
+      return TABLES_SIGNATURE;
     }
 
     @Override
@@ -333,10 +390,15 @@ public class InformationSchema extends AbstractSchema
                                     @Override
                                     public Iterable<Object[]> apply(final String tableName)
                                     {
+                                      Table table = subSchema.getTable(tableName);
+                                      if (table == null) {
+                                        // Table just disappeared.
+                                        return null;
+                                      }
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                          subSchema.getTable(tableName),
+                                           table.getRowType(typeFactory),
                                           typeFactory
                                       );
                                     }
@@ -349,20 +411,38 @@ public class InformationSchema extends AbstractSchema
                                     public Iterable<Object[]> apply(final String functionName)
                                     {
                                       final TableMacro viewMacro = getView(subSchema, functionName);
-                                      if (viewMacro == null) {
-                                        return null;
-                                      }
-
-                                      try {
+                                      if (viewMacro != null) {
+                                        try {
+                                          return generateColumnMetadata(
+                                              schemaName,
+                                              functionName,
+                                              viewMacro.apply(Collections.emptyList()).getRowType(typeFactory),
+                                              typeFactory
+                                          );
+                                        }
+                                        catch (Exception e) {
+                                          log.error(e, "Encountered exception while handling view[%s].", functionName);
+                                          return null;
+                                        }
+                                      } else if (TableId.EXTERNAL_SCHEMA.equals(schemaName)) {
+                                        Collection<org.apache.calcite.schema.Function> fns = subSchema.getFunctions(functionName);
+                                        if (fns.size() != 1) {
+                                          // Don't know what to do: our functions should have only one overload.
+                                          // If zero, the function just disappeared.
+                                          return null;
+                                        }
+                                        org.apache.calcite.schema.Function fn = Iterators.getOnlyElement(fns.iterator());
+                                        if (!(fn instanceof TableFunction)) {
+                                          // Don't know what to do: our functions should be table functions.
+                                          return null;
+                                        }
                                         return generateColumnMetadata(
                                             schemaName,
                                             functionName,
-                                            viewMacro.apply(Collections.emptyList()),
+                                            ((TableFunction) fn).getRowType(typeFactory, Collections.emptyList()),
                                             typeFactory
                                         );
-                                      }
-                                      catch (Exception e) {
-                                        log.error(e, "Encountered exception while handling view[%s].", functionName);
+                                      } else {
                                         return null;
                                       }
                                     }
@@ -382,7 +462,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return RowSignatures.toRelDataType(COLUMNS_SIGNATURE, typeFactory);
+      return COLUMNS_SIGNATURE;
     }
 
     @Override
@@ -401,16 +481,12 @@ public class InformationSchema extends AbstractSchema
     private Iterable<Object[]> generateColumnMetadata(
         final String schemaName,
         final String tableName,
-        final Table table,
+        final RelDataType tableSchema,
         final RelDataTypeFactory typeFactory
     )
     {
-      if (table == null) {
-        return null;
-      }
-
       return FluentIterable
-          .from(table.getRowType(typeFactory).getFieldList())
+          .from(tableSchema.getFieldList())
           .transform(
               new Function<RelDataTypeField, Object[]>()
               {
@@ -418,29 +494,159 @@ public class InformationSchema extends AbstractSchema
                 public Object[] apply(final RelDataTypeField field)
                 {
                   final RelDataType type = field.getType();
-                  boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(type.getSqlTypeName());
-                  boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
-                  boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
+                  SqlTypeName sqlTypeName = type.getSqlTypeName();
+                  boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName);
+                  boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(sqlTypeName);
+                  boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
 
-                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : type.getSqlTypeName().toString();
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : sqlTypeName.toString();
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA
                       tableName, // TABLE_NAME
                       field.getName(), // COLUMN_NAME
-                      String.valueOf(field.getIndex()), // ORDINAL_POSITION
+                      (long) (field.getIndex() + 1), // ORDINAL_POSITION
                       "", // COLUMN_DEFAULT
                       type.isNullable() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
                       typeName, // DATA_TYPE
                       null, // CHARACTER_MAXIMUM_LENGTH
                       null, // CHARACTER_OCTET_LENGTH
-                      isNumeric ? String.valueOf(type.getPrecision()) : null, // NUMERIC_PRECISION
-                      isNumeric ? "10" : null, // NUMERIC_PRECISION_RADIX
-                      isNumeric ? String.valueOf(type.getScale()) : null, // NUMERIC_SCALE
-                      isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
+                      isNumeric ? (long) type.getPrecision() : null, // NUMERIC_PRECISION
+                      isNumeric ? 10L : null, // NUMERIC_PRECISION_RADIX
+                      isNumeric ? (long) type.getScale() : null, // NUMERIC_SCALE
+                      isDateTime ? (long) type.getPrecision() : null, // DATETIME_PRECISION
                       isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
                       isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                      Long.valueOf(type.getSqlTypeName().getJdbcOrdinal()) // JDBC_TYPE (Druid extension)
+                      (long) type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                  };
+                }
+              }
+          );
+    }
+  }
+
+  class ParametersTable extends AbstractTable implements ScannableTable
+  {
+    @Override
+    public Enumerable<Object[]> scan(final DataContext root)
+    {
+      final FluentIterable<Object[]> results = FluentIterable
+          .from(rootSchema.getSubSchemaNames())
+          .transformAndConcat(
+              new Function<String, Iterable<Object[]>>()
+              {
+                @Override
+                public Iterable<Object[]> apply(final String schemaName)
+                {
+                  final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
+                  final JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl(TYPE_SYSTEM);
+
+                  final AuthenticationResult authenticationResult =
+                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+                  final Set<String> authorizedFunctionNames = getAuthorizedFunctionNamesFromSubSchema(
+                      subSchema,
+                      authenticationResult
+                  );
+
+                  return Iterables.concat(
+                          FluentIterable.from(authorizedFunctionNames).transform(
+                              new Function<String, Iterable<Object[]>>()
+                              {
+                                @Override
+                                public Iterable<Object[]> apply(final String functionName)
+                                {
+                                  if (!TableId.EXTERNAL_SCHEMA.equals(schemaName)) {
+                                    // Functions only occur in the external schema
+                                    return null;
+                                  }
+                                  Collection<org.apache.calcite.schema.Function> fns = subSchema.getFunctions(functionName);
+                                  if (fns.size() != 1) {
+                                    // Don't know what to do: our functions should have only one overload.
+                                    // If zero, the function just disappeared.
+                                    return null;
+                                  }
+                                  org.apache.calcite.schema.Function fn = Iterators.getOnlyElement(fns.iterator());
+                                  if (!(fn instanceof TableMacro)) {
+                                    // Don't know what to do: our functions should be table functions.
+                                    return null;
+                                  }
+                                  return generateParameterMetadata(
+                                      schemaName,
+                                      functionName,
+                                      (TableMacro) fn,
+                                      typeFactory
+                                  );
+                                }
+                              }
+                        )
+                  );
+                }
+              }
+          );
+
+      return Linq4j.asEnumerable(results);
+    }
+
+    @Override
+    public RelDataType getRowType(final RelDataTypeFactory typeFactory)
+    {
+      return PARAMETERS_SIGNATURE;
+    }
+
+    @Override
+    public Statistic getStatistic()
+    {
+      return Statistics.UNKNOWN;
+    }
+
+    @Override
+    public TableType getJdbcTableType()
+    {
+      return TableType.SYSTEM_TABLE;
+    }
+
+    @Nullable
+    private Iterable<Object[]> generateParameterMetadata(
+        final String schemaName,
+        final String tableName,
+        final TableMacro fn,
+        final RelDataTypeFactory typeFactory
+    )
+    {
+      AtomicInteger posn = new AtomicInteger(0);
+      return FluentIterable
+          .from(fn.getParameters())
+          .transform(
+              new Function<FunctionParameter, Object[]>()
+              {
+                @Override
+                public Object[] apply(final FunctionParameter param)
+                {
+                  final RelDataType type = param.getType(typeFactory);
+                  SqlTypeName sqlTypeName = type.getSqlTypeName();
+                  boolean isNumeric = SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName);
+                  boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(sqlTypeName);
+                  boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
+
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : sqlTypeName.toString();
+                  return new Object[]{
+                      CATALOG_NAME, // FUNCTION_CATALOG
+                      schemaName, // FUNCTION_SCHEMA
+                      tableName, // FUNCTION_NAME
+                      param.getName(), // PARAMETER_NAME
+                      (long) (posn.incrementAndGet()), // ORDINAL_POSITION
+                      param.isOptional() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
+                      typeName, // DATA_TYPE
+                      null, // CHARACTER_MAXIMUM_LENGTH
+                      null, // CHARACTER_OCTET_LENGTH
+                      isNumeric ? (long) type.getPrecision() : null, // NUMERIC_PRECISION
+                      isNumeric ? 10L : null, // NUMERIC_PRECISION_RADIX
+                      isNumeric ? (long) type.getScale() : null, // NUMERIC_SCALE
+                      isDateTime ? (long) type.getPrecision() : null, // DATETIME_PRECISION
+                      isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
+                      isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
+                      (long) type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
                   };
                 }
               }

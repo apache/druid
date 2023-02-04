@@ -2,9 +2,7 @@
   {
     "description": "Verify that the ext schema is visible",
     "query": {
-      "query": "SELECT CATALOG_NAME, SCHEMA_NAME
-                FROM INFORMATION_SCHEMA.SCHEMATA
-                ORDER BY CATALOG_NAME, SCHEMA_NAME"
+      "query": "SELECT CATALOG_NAME, SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA ORDER BY CATALOG_NAME, SCHEMA_NAME"
     },
     "expectedResults": [
         {"CATALOG_NAME": "druid", "SCHEMA_NAME": "INFORMATION_SCHEMA"},
@@ -14,13 +12,471 @@
         {"CATALOG_NAME": "druid", "SCHEMA_NAME": "sys"},
         {"CATALOG_NAME": "druid", "SCHEMA_NAME": "view"}
     ]
-   }
+  },
   {
-    "description": "Verify the target datasource schema",
+    "description": "Verify the external table",
     "query": {
-      "query": "SELECT host, server_type, is_leader FROM sys.servers ORDER BY host"
+      "query": "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ext'"
     },
     "expectedResults": [
+        {"TABLE_CATALOG": "druid",
+         "TABLE_SCHEMA": "ext",
+         "TABLE_NAME": "sampleWiki",
+         "TABLE_TYPE": "EXTERNAL",
+         "IS_JOINABLE": "NO",
+         "IS_BROADCAST": "NO"}
     ]
-   }
- ]
+   },
+      {
+    "description": "Verify the datasource",
+    "query": {
+      "query": "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid'"
+    },
+    "expectedResults": [
+        {"TABLE_CATALOG": "druid",
+         "TABLE_SCHEMA": "druid",
+         "TABLE_NAME": "testWiki",
+         "TABLE_TYPE": "TABLE",
+         "IS_JOINABLE": "YES",
+         "IS_BROADCAST": "NO"}
+    ]
+  },
+  {
+    "description": "Verify external table columns",
+    "query": {
+      "query": "SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ext' ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
+    },
+    "expectedResults": [
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "timestamp",
+        "ORDINAL_POSITION": 1,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "isRobot",
+        "ORDINAL_POSITION": 2,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "diffUrl",
+        "ORDINAL_POSITION": 3,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "added",
+        "ORDINAL_POSITION": 4,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "countryIsoCode",
+        "ORDINAL_POSITION": 5,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "regionName",
+        "ORDINAL_POSITION": 6,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "channel",
+        "ORDINAL_POSITION": 7,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "flags",
+        "ORDINAL_POSITION": 8,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "delta",
+        "ORDINAL_POSITION": 9,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "isUnpatrolled",
+        "ORDINAL_POSITION": 10,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "isNew",
+        "ORDINAL_POSITION": 11,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "deltaBucket",
+        "ORDINAL_POSITION": 12,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "DOUBLE"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "isMinor",
+        "ORDINAL_POSITION": 13,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "isAnonymous",
+        "ORDINAL_POSITION": 14,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "deleted",
+        "ORDINAL_POSITION": 15,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "cityName",
+        "ORDINAL_POSITION": 16,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "metroCode",
+        "ORDINAL_POSITION": 17,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "namespace",
+        "ORDINAL_POSITION": 18,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "comment",
+        "ORDINAL_POSITION": 19,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "page",
+        "ORDINAL_POSITION": 20,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "commentLength",
+        "ORDINAL_POSITION": 21,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "countryName",
+        "ORDINAL_POSITION": 22,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "user",
+        "ORDINAL_POSITION": 23,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "ext",
+        "TABLE_NAME": "sampleWiki",
+        "COLUMN_NAME": "regionIsoCode",
+        "ORDINAL_POSITION": 24,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      }
+    ]
+  },
+  {
+    "description": "Verify datasource table columns",
+    "query": {
+      "query": "SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'testWiki' ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION"
+    },
+    "expectedResults": [
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "__time",
+        "ORDINAL_POSITION": 1,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "TIMESTAMP"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "namespace",
+        "ORDINAL_POSITION": 2,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "page",
+        "ORDINAL_POSITION": 3,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "channel",
+        "ORDINAL_POSITION": 4,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "isUnpatrolled",
+        "ORDINAL_POSITION": 5,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "isAnonymous",
+        "ORDINAL_POSITION": 6,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "user",
+        "ORDINAL_POSITION": 7,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "countryName",
+        "ORDINAL_POSITION": 8,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "isRobot",
+        "ORDINAL_POSITION": 9,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "diffUrl",
+        "ORDINAL_POSITION": 10,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "added",
+        "ORDINAL_POSITION": 11,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "delta",
+        "ORDINAL_POSITION": 12,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "DOUBLE"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "isNew",
+        "ORDINAL_POSITION": 13,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "deltaBucket",
+        "ORDINAL_POSITION": 14,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "DOUBLE"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "isMinor",
+        "ORDINAL_POSITION": 15,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "deleted",
+        "ORDINAL_POSITION": 16,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "comment",
+        "ORDINAL_POSITION": 17,
+        "IS_NULLABLE": "YES",
+        "DATA_TYPE": "VARCHAR"
+      },
+      {
+        "TABLE_CATALOG": "druid",
+        "TABLE_SCHEMA": "druid",
+        "TABLE_NAME": "testWiki",
+        "COLUMN_NAME": "commentLength",
+        "ORDINAL_POSITION": 18,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
+      }
+    ]
+  },
+  {
+    "description": "Verify external table parameters",
+    "query": {
+      "query": "SELECT * FROM INFORMATION_SCHEMA.PARAMETERS"
+    },
+    "expectedResults": [
+      {
+        "FUNCTION_CATALOG": "druid",
+        "FUNCTION_SCHEMA": "ext",
+        "FUNCTION_NAME": "sampleWiki",
+        "PARAMETER_NAME": "files",
+        "ORDINAL_POSITION": 1,
+        "IS_OPTIONAL": "YES",
+        "DATA_TYPE": "ARRAY",
+        "CHARACTER_MAXIMUM_LENGTH": null,
+        "CHARACTER_OCTET_LENGTH": null,
+        "NUMERIC_PRECISION": null,
+        "NUMERIC_PRECISION_RADIX": null,
+        "NUMERIC_SCALE": null,
+        "DATETIME_PRECISION": null,
+        "CHARACTER_SET_NAME": null,
+        "COLLATION_NAME": null,
+        "JDBC_TYPE": 2003
+      },
+      {
+        "FUNCTION_CATALOG": "druid",
+        "FUNCTION_SCHEMA": "ext",
+        "FUNCTION_NAME": "sampleWiki",
+        "PARAMETER_NAME": "filter",
+        "ORDINAL_POSITION": 2,
+        "IS_OPTIONAL": "YES",
+        "DATA_TYPE": "VARCHAR",
+        "CHARACTER_MAXIMUM_LENGTH": null,
+        "CHARACTER_OCTET_LENGTH": null,
+        "NUMERIC_PRECISION": null,
+        "NUMERIC_PRECISION_RADIX": null,
+        "NUMERIC_SCALE": null,
+        "DATETIME_PRECISION": null,
+        "CHARACTER_SET_NAME": "UTF-16LE",
+        "COLLATION_NAME": "UTF-16LE$en_US$primary",
+        "JDBC_TYPE": 12
+      }
+    ]
+  }
+]

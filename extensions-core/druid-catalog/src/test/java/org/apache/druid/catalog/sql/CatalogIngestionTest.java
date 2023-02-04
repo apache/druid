@@ -21,6 +21,7 @@ package org.apache.druid.catalog.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.model.Columns;
@@ -36,6 +37,7 @@ import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
@@ -56,7 +58,9 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -563,6 +567,73 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
+  @Test
+  public void testInsertPartialTableAsTable()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst\n"
+            + "SELECT TIME_PARSE(x), y\n"
+            + "FROM ext.localBaseDirNoSchema\n"
+            + "PARTITIONED BY DAY"
+         )
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Table localBaseDirNoSchema is a function: use " +
+            "TABLE(ext.localBaseDirNoSchema(...)) and provide values for the parameters"
+         )
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalTableWithoutSchema()
+  {
+    RowSignature targetRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("x", ColumnType.STRING)
+        .build();
+    ExternalDataSource expectedDatasource = new ExternalDataSource(
+        new LocalInputSource(
+            null,
+            null,
+            Collections.singletonList(new File("/tmp/foo.csv"))
+        ),
+        new CsvInputFormat(ImmutableList.of("x", "y"), null, false, false, 0),
+        RowSignature.builder()
+                    .add("x", ColumnType.STRING)
+                    .add("y", ColumnType.STRING)
+                    .build()
+    );
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst\n"
+            + "SELECT TIME_PARSE(x), y\n"
+            + "FROM TABLE(ext.localBaseDirNoSchema(\n"
+            + "    files => ARRAY['foo.csv'],\n"
+            + "    format => 'csv'))\n"
+            + "  (x VARCHAR, y VARCHAR)\n"
+            + "PARTITIONED BY DAY"
+         )
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(Externals.externalRead("localBaseDirNoSchema"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(expectedDatasource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "y", "v0")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"x\")", ColumnType.DOUBLE)
+                 )
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+         )
+        .verify();
+  }
+
+  // Test a partial table with schema with a query schema
+  // Test a complete table as a table function
+  // Test a partial table as a FROM table
+
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
@@ -592,6 +663,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
       buildInlineTable(sqlTestFramework.queryJsonMapper());
       buildTargetDatasources();
       buildFooDatasource();
+      buildLocalTables();
     }
     catch (CatalogException e) {
       throw new ISE(e, e.getMessage());
@@ -667,6 +739,22 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .column("extra3", Columns.VARCHAR)
         .hiddenColumns(Arrays.asList("dim3", "unique_dim1"))
         .sealed(true)
+        .build();
+    createTableMetadata(spec);
+  }
+
+  private void buildLocalTables()
+  {
+    TableMetadata spec = TableBuilder.external("localBaseDirNoSchema")
+        .inputSource(ImmutableMap.of("type", LocalInputSource.TYPE_KEY, "baseDir", "/tmp"))
+        .build();
+    createTableMetadata(spec);
+
+    spec = TableBuilder.external("localBaseDirWithSchema")
+        .inputSource(ImmutableMap.of("type", LocalInputSource.TYPE_KEY, "baseDir", "/tmp"))
+        .inputFormat(ImmutableMap.of("type", CsvInputFormat.TYPE_KEY))
+        .column("x", Columns.VARCHAR)
+        .column("y", Columns.BIGINT)
         .build();
     createTableMetadata(spec);
   }

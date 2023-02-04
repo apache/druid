@@ -95,7 +95,10 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   )
   {
     final List<ParameterDefn> toAdd = new ArrayList<>();
-    final ParameterDefn formatProp = new Parameter(FORMAT_PARAMETER, ParameterType.VARCHAR, false);
+    // While the format parameter is required, we mark it as optional. Else
+    // if the source defines optional parameters, they will still be ignored
+    // as Calcite treats (optional, optional, required) as (required, required, required)
+    final ParameterDefn formatProp = new Parameter(FORMAT_PARAMETER, ParameterType.VARCHAR, true);
     toAdd.add(formatProp);
     final Map<String, ParameterDefn> formatProps = new HashMap<>();
     for (InputFormatDefn format : formats.values()) {

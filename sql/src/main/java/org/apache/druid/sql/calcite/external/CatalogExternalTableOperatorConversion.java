@@ -30,7 +30,9 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
+import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
+import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.catalog.model.table.InputSourceDefn;
 import org.apache.druid.catalog.model.table.TableFunction;
@@ -128,9 +130,18 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
     }
   }
 
+  /**
+   * Table macro which wraps a catalog table function and which accepts
+   * a schema from an EXTENDS clause. This macro is wrapped by the
+   * {@link CatalogExternalTableOperator} operator that itself extends
+   * {@link UserDefinedTableMacroFunction} which interfaces with the
+   * extend operator to pass the schema via a "back channel." The plumbing
+   * is complex because we're adding functionality a bit outside the SQL
+   * standard, and we have to fit our logic into the Calcite stack.
+   */
   public static class CatalogTableMacro implements ExtendedTableMacro
   {
-    private final String name;
+    protected final String name;
     private final List<FunctionParameter> parameters;
     private final TableFunction fn;
     private final ObjectMapper jsonMapper;
@@ -145,6 +156,18 @@ public abstract class CatalogExternalTableOperatorConversion implements SqlOpera
       this.jsonMapper = jsonMapper;
       this.fn = fn;
       this.parameters = Externals.convertParameters(fn);
+    }
+
+    public CatalogTableMacro(
+        final String tableName,
+        final ResolvedTable externalTable
+    )
+    {
+      this.name = tableName;
+      ExternalTableDefn tableDefn = (ExternalTableDefn) externalTable.defn();
+      this.fn = tableDefn.tableFn(externalTable);
+      this.parameters = Externals.convertParameters(fn);
+      this.jsonMapper = externalTable.jsonMapper();
     }
 
     /**

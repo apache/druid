@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.fun.SqlCollectionTableOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 /**
@@ -63,7 +64,10 @@ public class ExtendOperator extends SqlInternalOperator
     SqlBasicCall tableFnCall = (SqlBasicCall) tableOpCall.operand(0);
     if (!(tableFnCall.getOperator() instanceof UserDefinedTableMacroFunction)) {
       // May be an unresolved function.
-      return call;
+      throw new IAE(
+          "Function %s does not accept an EXTEND clause (or a schema list)",
+          tableFnCall.getOperator().getName()
+      );
     }
     UserDefinedTableMacroFunction macro = (UserDefinedTableMacroFunction) tableFnCall.getOperator();
 

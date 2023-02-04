@@ -63,14 +63,12 @@ import java.util.Set;
  * SELECT ..
  * FROM myTable EXTEND (x VARCHAR, ...)
  * </pre></code>
- * Though, oddly, a search of Apache Phoenix itself does not find a hit for
- * EXTEND, so perhaps the feature was never completed?
  * <p>
  * For Druid, we want the above form: extend a table function, not a
  * literal table. Since we can't change the Calcite parser, we instead use
  * tricks within the constraints of the parser.
  * <ul>
- * <li>First, use use a Python script to modify the parser to add the
+ * <li>The Calcite parser is revised to add the
  * EXTEND rule for a table function.</li>
  * <li>Calcite expects the EXTEND operator to have two arguments: an identifier
  * and the column list. Since our case has a function call as the first argument,
@@ -99,7 +97,8 @@ import java.util.Set;
  * </pre></code>
  * Since we seldom use unparse, we can perhaps live with this limitation for now.
  */
-public abstract class UserDefinedTableMacroFunction extends BaseUserDefinedTableMacro implements AuthorizableOperator
+public abstract class UserDefinedTableMacroFunction
+    extends BaseUserDefinedTableMacro implements AuthorizableOperator
 {
   public UserDefinedTableMacroFunction(
       SqlIdentifier opName,

@@ -20,6 +20,8 @@
 package org.apache.druid.catalog.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.Schema;
@@ -36,29 +38,31 @@ import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.external.CatalogExternalTableOperatorConversion.CatalogTableMacro;
 import org.apache.druid.sql.calcite.external.Externals;
+import org.apache.druid.sql.calcite.external.UserDefinedTableMacroFunction;
 import org.apache.druid.sql.calcite.schema.AbstractTableSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.inject.Inject;
 
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Custom input-focused implementation of the cached metadata catalog.
- * Caches the {@link DatasourceTable} objects which Calcite uses. This works
- * because a @{code DruidTable} is immutable.
- * <p>
- * Uses the same update mechanism as the general cache, but ignores
- * updates for all but the input schema.
+ * Represents the "ext" schema which holds the catalog external table
+ * specifications which can be a "complete" table (the spec defines a
+ * specific input), or, more likely, a "partial" table which is actually
+ * a table function that requires parameters at query time.
  */
 public class ExternalSchema extends AbstractTableSchema implements NamedSchema
 {
@@ -100,6 +104,16 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
   @Override
   public Set<String> getTableNames()
   {
+    // There are no tables here: only functions. This could be refined
+    // to check if an external table is complete, but doing so is not
+    // really needed since this method, in Druid, is only ever called
+    // from the information schema, where we also ask for function names.
+    return Collections.emptySet();
+  }
+
+  @Override
+  public Set<String> getFunctionNames()
+  {
     return catalog.tableNames(schemaName);
   }
 
@@ -109,11 +123,20 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
   @Override
   public final Table getTable(String name)
   {
-    ResolvedTable inputTable = getExternalTable(name);
-    if (inputTable == null) {
+    ResolvedTable externalTable = getExternalTable(name);
+    if (externalTable == null) {
       return null;
     }
-    return toDruidTable(inputTable);
+    ExternalTableDefn defn = (ExternalTableDefn) externalTable.defn();
+    TableFunction fn = defn.tableFn(externalTable);
+    if (!fn.parameters().isEmpty()) {
+      throw new IAE(
+          "Table %s is a function: use TABLE(ext.%s(...)) and provide values for the parameters",
+          name,
+          name
+      );
+    }
+    return toDruidTable(externalTable);
   }
 
   private ResolvedTable getExternalTable(String name)
@@ -124,8 +147,7 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
       return null;
     }
     if (!ExternalTableDefn.isExternalTable(table)) {
-      throw new IAE(
-          StringUtils.format("Table [%s] is not an external table", id.sqlName()));
+      throw new IAE("Table %s is not an external table", id.sqlName());
     }
     return table;
   }
@@ -172,11 +194,11 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
    * macro. Calcite will create an instance of {@code SqlUserDefinedTableMacro}
    * automatically, based on the fact that this function implements {@code TableMacro}.
    */
-  public static class ParameterizedTableMacro implements TableMacro, AuthorizableOperator
+  public static class ParameterizedTableMacro
+      extends CatalogTableMacro // Catalog-based table macro
+      implements org.apache.calcite.schema.TableFunction, // For information schema metadata
+      AuthorizableOperator // For Druid authorization
   {
-    private final String tableName;
-    private final TableFunction fn;
-    private final List<FunctionParameter> parameters;
     private final ResolvedTable externalTable;
 
     public ParameterizedTableMacro(
@@ -184,36 +206,31 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
         final ResolvedTable externalTable
     )
     {
-      this.tableName = tableName;
+      super(tableName, externalTable);
       this.externalTable = externalTable;
-      ExternalTableDefn tableDefn = (ExternalTableDefn) externalTable.defn();
-      this.fn = tableDefn.tableFn(externalTable);
-      this.parameters = Externals.convertParameters(fn);
-    }
-
-    @Override
-    public TranslatableTable apply(List<Object> arguments)
-    {
-      final ObjectMapper jsonMapper = externalTable.jsonMapper();
-      final ExternalTableSpec externSpec = fn.apply(
-          tableName,
-          Externals.convertArguments(fn, arguments),
-          null,
-          jsonMapper
-      );
-      return Externals.buildExternalTable(externSpec, jsonMapper);
-    }
-
-    @Override
-    public List<FunctionParameter> getParameters()
-    {
-      return parameters;
     }
 
     @Override
     public Set<ResourceAction> computeResources(final SqlCall call)
     {
-      return Collections.singleton(Externals.externalRead(tableName));
+      return Collections.singleton(Externals.externalRead(name));
+    }
+
+    @Override
+    public RelDataType getRowType(RelDataTypeFactory typeFactory, List<Object> arguments)
+    {
+      // For a catalog external table, we only call this function for the information
+      // schema, and only with an empty list of arguments. We return the defined schema;
+      // we are not in a position to know the schema that might be given in an
+      // individual query.
+      return Externals.toRelDataType(externalTable);
+    }
+
+    @Override
+    public Type getElementType(List<Object> arguments)
+    {
+      // Not used at present.
+      throw new UOE("Not supported");
     }
   }
 }

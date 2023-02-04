@@ -141,7 +141,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.operatorTable = new ChainedSqlOperatorTable(
         Arrays.asList(
             config.getOperatorTable(),
-            new CalciteCatalogReader(
+            new DruidCatalogReader(
                 CalciteSchema.from(rootSchema(defaultSchema)),
                 CalciteSchema.from(defaultSchema).path(null),
                 DruidTypeSystem.TYPE_FACTORY,

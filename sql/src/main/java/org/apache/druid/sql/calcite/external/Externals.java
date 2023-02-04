@@ -36,6 +36,8 @@ import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.java.util.common.IAE;
@@ -47,8 +49,10 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.table.ExternalTable;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,6 +67,10 @@ import java.util.stream.Collectors;
  */
 public class Externals
 {
+  // Resource that allows reading external data via SQL.
+  public static final ResourceAction EXTERNAL_RESOURCE_ACTION =
+      new ResourceAction(new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL), Action.READ);
+
   /**
    * Convert parameters from Catalog external table definition form to the SQL form
    * used for a table macro and its function.
@@ -311,7 +319,42 @@ public class Externals
     );
   }
 
-  // Resource that allows reading external data via SQL.
-  public static final ResourceAction EXTERNAL_RESOURCE_ACTION =
-      new ResourceAction(new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL), Action.READ);
+  public static RelDataType toSqlType(String columnType)
+  {
+    final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
+    if (columnType == null) {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.ANY, true);
+    }
+    // Nullability here is of an input source: we assume all input source columns
+    // are nullable independent of Druid's null-vs-defaults setting.
+    switch (StringUtils.toUpperCase(columnType)) {
+      case Columns.TIMESTAMP:
+        return Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
+      case Columns.VARCHAR:
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+      case Columns.BIGINT:
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, true);
+      case Columns.FLOAT:
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, true);
+      case Columns.DOUBLE:
+        return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, true);
+      default:
+        // This is a bit of a punt for now since the catalog only understands simple types
+        // at present.
+        return RowSignatures.makeComplexType(typeFactory, ColumnType.UNKNOWN_COMPLEX, true);
+    }
+  }
+
+  public static RelDataType toRelDataType(ResolvedTable externalTable)
+  {
+    final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
+    final RelDataTypeFactory.Builder builder = typeFactory.builder();
+    for (ColumnSpec col : externalTable.spec().columns()) {
+      // No special handling of __time: this is an external table and such tables
+      // cannot have the same naming restrictions as Druid datasources.
+      builder.add(col.name(), toSqlType(col.sqlType()));
+    }
+
+    return builder.build();
+  }
 }

@@ -73,13 +73,13 @@ public class ITCatalogIngestTest
   @Test
   public void testIngestSanity() throws IOException, Exception
   {
-    cleanUp();
+    //cleanUp();
 
-    defineExternalTable();
-    defineTargetTable();
-    //    verifyTargetTableSchema();
+    //defineExternalTable();
+    //defineTargetTable();
+    verifySchema();
     //    loadDataViaMsq();
-    //    verifyTargetTableSchema();
+    //    verifySchema();
     //    verifyTargetTableData();
   }
 
@@ -151,18 +151,17 @@ public class ITCatalogIngestTest
         .column("diffUrl", Columns.VARCHAR)
         .column("added", Columns.BIGINT)
         .column("delta", Columns.DOUBLE) // Silly, just to test
-        .column("isNew", Columns.VARCHAR)
+        .column("isNew", Columns.BIGINT) // 0 = false, 1 = true
         .column("deltaBucket", Columns.DOUBLE)
-        .column("isMinor", Columns.VARCHAR)
+        .column("isMinor", Columns.BIGINT) // 0 = false, 1 = true
         .column("deleted", Columns.BIGINT)
-        .column("metroCode", Columns.BIGINT)
         .column("comment", Columns.VARCHAR)
         .column("commentLength", Columns.BIGINT)
         .build();
     client.createTable(table, true);
   }
 
-  private void verifyTargetTableSchema() throws IOException, Exception
+  private void verifySchema() throws IOException, Exception
   {
     queryHelper.testQueriesFromString(AbstractIndexerTest.getResourceAsString(SCHEMA_QUERY_RESOURCE));
   }
