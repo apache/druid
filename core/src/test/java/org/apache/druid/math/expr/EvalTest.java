@@ -935,7 +935,12 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {"1", "2", "3"}, (Object[]) eval.value());
 
-    // arrays end up as the least restrictice type
+    // arrays end up as the least restrictive type
+    eval = ExprEval.bestEffortOf(new Object[] {1.0, 2L});
+    Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
+    Assert.assertArrayEquals(new Object[] {1.0, 2.0}, (Object[]) eval.value());
+
+    // arrays end up as the least restrictive type
     eval = ExprEval.bestEffortOf(new Object[] {1.0, 2L, "3", true, false});
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
     Assert.assertArrayEquals(new Object[] {"1.0", "2", "3", "true", "false"}, (Object[]) eval.value());
