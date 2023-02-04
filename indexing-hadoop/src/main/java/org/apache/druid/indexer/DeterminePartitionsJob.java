@@ -31,8 +31,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
 import com.google.common.io.Closeables;
 import org.apache.druid.collections.CombiningIterable;
 import org.apache.druid.data.input.InputRow;
@@ -336,7 +334,6 @@ public class DeterminePartitionsJob implements Jobby
 
   public static class DeterminePartitionsGroupByMapper extends HadoopDruidIndexerMapper<BytesWritable, NullWritable>
   {
-    private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
     @Nullable
     private Granularity rollupGranularity = null;
 
@@ -346,7 +343,6 @@ public class DeterminePartitionsJob implements Jobby
     {
       super.setup(context);
       rollupGranularity = getConfig().getGranularitySpec().getQueryGranularity();
-      HadoopTuningConfig tuningConfig = getConfig().getSchema().getTuningConfig();
     }
 
     @Override
