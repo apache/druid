@@ -421,7 +421,6 @@ public class DeterminePartitionsJob implements Jobby
       super.setup(context);
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       helper = new DeterminePartitionsDimSelectionMapperHelper(config);
-      final HadoopTuningConfig tuningConfig = getConfig().getSchema().getTuningConfig();
     }
 
     @Override
