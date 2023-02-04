@@ -102,7 +102,7 @@ jobs:
       matrix:
         sql_compatibility: [ false, true ]
     name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/unit-tests.yml@master
+    uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 8
@@ -115,7 +115,7 @@ jobs:
         jdk: [11, 17]
         sql_compatibility: [ false, true ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/unit-tests.yml@master
+    uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
@@ -123,8 +123,8 @@ jobs:
 
   standard-its:
     needs: unit-tests
-    uses: apache/druid/.github/workflows/standard-its.yml@master
+    uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
-    uses: apache/druid/.github/workflows/revised-its.yml@master
+    uses: ./.github/workflows/revised-its.yml
