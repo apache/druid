@@ -257,8 +257,7 @@ public class HadoopDruidIndexerConfigTest
           null,
           null,
           null,
-          null,
-          1
+          null
       );
 
       return new HadoopIngestionSpec(

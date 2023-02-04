@@ -74,8 +74,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null,
-        1
+        null
     );
   }
   @Nullable
@@ -103,15 +102,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
-  // The sample parameter is only used for range partition spec now. When using range
-  // partition spec, we need launch many mapper and one reducer to do global sorting and
-  // find the upper and lower bound for every segment. This mr job may cost a lot of time
-  // if the input data is large. So we can sample the input data and make the mr job run
-  // faster. After all, we don't need a segment size which exactly equals targetRowsPerSegment.
-  // For example, if we ingest 10,000,000,000 rows and the targetRowsPerSegment is 5,000,000,
-  // we can sample by 500, so the mr job need only process 20,000,000 rows, this helps save
-  // a lot of time.
-  private final int sampleForDeterminePartitionJob;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -140,8 +130,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
-      final @JsonProperty("sampleForDeterminePartitionJob") int sampleForDeterminePartitionJob
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
   )
   {
     this.workingPath = workingPath;
@@ -193,7 +182,6 @@ public class HadoopTuningConfig implements TuningConfig
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
     }
-    this.sampleForDeterminePartitionJob = sampleForDeterminePartitionJob < 1 ? 1 : sampleForDeterminePartitionJob;
   }
 
   @Nullable
@@ -348,12 +336,6 @@ public class HadoopTuningConfig implements TuningConfig
     return awaitSegmentAvailabilityTimeoutMillis;
   }
 
-  @JsonProperty
-  public int getSampleForDeterminePartitionJob()
-  {
-    return sampleForDeterminePartitionJob;
-  }
-
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -381,8 +363,7 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis,
-        sampleForDeterminePartitionJob
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -413,8 +394,7 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis,
-        sampleForDeterminePartitionJob
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 
@@ -445,8 +425,7 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis,
-        sampleForDeterminePartitionJob
+        awaitSegmentAvailabilityTimeoutMillis
     );
   }
 }

@@ -87,7 +87,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
@@ -340,7 +339,6 @@ public class DeterminePartitionsJob implements Jobby
     private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
     @Nullable
     private Granularity rollupGranularity = null;
-    private int sample;
 
     @Override
     protected void setup(Context context)
@@ -349,7 +347,6 @@ public class DeterminePartitionsJob implements Jobby
       super.setup(context);
       rollupGranularity = getConfig().getGranularitySpec().getQueryGranularity();
       HadoopTuningConfig tuningConfig = getConfig().getSchema().getTuningConfig();
-      sample = tuningConfig.getSampleForDeterminePartitionJob();
     }
 
     @Override
@@ -362,14 +359,10 @@ public class DeterminePartitionsJob implements Jobby
           rollupGranularity.bucketStart(inputRow.getTimestamp()).getMillis(),
           inputRow
       );
-
-      final byte[] bytes = HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey);
-      if (sample <= 1 || Math.abs(HASH_FUNCTION.hashBytes(bytes).asInt()) % sample == 0) {
-        context.write(
-            new BytesWritable(bytes),
-            NullWritable.get()
-        );
-      }
+      context.write(
+          new BytesWritable(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)),
+          NullWritable.get()
+      );
 
       context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).increment(1);
     }
@@ -424,7 +417,6 @@ public class DeterminePartitionsJob implements Jobby
       extends HadoopDruidIndexerMapper<BytesWritable, Text>
   {
     private DeterminePartitionsDimSelectionMapperHelper helper;
-    private int sample;
 
     @Override
     protected void setup(Context context)
@@ -434,7 +426,6 @@ public class DeterminePartitionsJob implements Jobby
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       helper = new DeterminePartitionsDimSelectionMapperHelper(config);
       final HadoopTuningConfig tuningConfig = getConfig().getSchema().getTuningConfig();
-      sample = tuningConfig.getSampleForDeterminePartitionJob();
     }
 
     @Override
@@ -443,13 +434,11 @@ public class DeterminePartitionsJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
-      if (sample <= 1 || ThreadLocalRandom.current().nextInt(sample) == 0) {
-        final Map<String, Iterable<String>> dims = new HashMap<>();
-        for (final String dim : inputRow.getDimensions()) {
-          dims.put(dim, inputRow.getDimension(dim));
-        }
-        helper.emitDimValueCounts(context, DateTimes.utc(inputRow.getTimestampFromEpoch()), dims);
+      final Map<String, Iterable<String>> dims = new HashMap<>();
+      for (final String dim : inputRow.getDimensions()) {
+        dims.put(dim, inputRow.getDimension(dim));
       }
+      helper.emitDimValueCounts(context, DateTimes.utc(inputRow.getTimestampFromEpoch()), dims);
     }
   }
 
@@ -720,12 +709,7 @@ public class DeterminePartitionsJob implements Jobby
 
       // We'll store possible partitions in here
       final Map<List<String>, DimPartitions> dimPartitionss = new HashMap<>();
-
       final DimensionRangePartitionsSpec partitionsSpec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
-      final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
-      final int sample = tuningConfig.getSampleForDeterminePartitionJob();
-      final int sampledTargetPartitionSize = config.getTargetPartitionSize() / sample;
-      final int sampledMaxSegmentSize = partitionsSpec.getMaxRowsPerSegment() / sample;
 
       while (iterator.hasNext()) {
         final DimValueCount dvc = iterator.next();
@@ -749,7 +733,7 @@ public class DeterminePartitionsJob implements Jobby
         }
 
         // See if we need to cut a new partition ending immediately before this dimension value
-        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows > sampledTargetPartitionSize) {
+        if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows > config.getTargetPartitionSize()) {
           final ShardSpec shardSpec = createShardSpec(
               partitionsSpec instanceof SingleDimensionPartitionsSpec,
               currentDimPartitions.dims,
@@ -785,7 +769,7 @@ public class DeterminePartitionsJob implements Jobby
             // One more shard to go
             final ShardSpec shardSpec;
 
-            if (currentDimPartition.rows < sampledTargetPartitionSize * SHARD_COMBINE_THRESHOLD &&
+            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD &&
                 !currentDimPartitions.partitions.isEmpty()) {
               // Combine with previous shard if it exists and the current shard is small enough
               final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
@@ -871,7 +855,7 @@ public class DeterminePartitionsJob implements Jobby
         // Make sure none of these shards are oversized
         boolean oversized = false;
         for (final DimPartition partition : dimPartitions.partitions) {
-          if (partition.rows > sampledMaxSegmentSize) {
+          if (partition.rows > partitionsSpec.getMaxRowsPerSegment()) {
             log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dims, partition.shardSpec);
             oversized = true;
           }
@@ -882,7 +866,7 @@ public class DeterminePartitionsJob implements Jobby
         }
 
         final int cardinality = dimPartitions.getCardinality();
-        final long distance = dimPartitions.getDistanceSquaredFromTarget(sampledTargetPartitionSize);
+        final long distance = dimPartitions.getDistanceSquaredFromTarget(config.getTargetPartitionSize());
 
         if (cardinality > maxCardinality) {
           maxCardinality = cardinality;

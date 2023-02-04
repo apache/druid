@@ -185,8 +185,7 @@ public class JobHelperTest
                 null,
                 null,
                 null,
-                null,
-                1
+                null
             )
         )
     );

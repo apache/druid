@@ -199,8 +199,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.isUseYarnRMJobStatusFallback(),
-        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
-        tuningConfig.getSampleForDeterminePartitionJob()
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
     );
 
     // generate granularity
