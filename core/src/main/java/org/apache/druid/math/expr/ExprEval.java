@@ -410,6 +410,22 @@ public abstract class ExprEval<T>
       }
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
+    if (val instanceof Integer[]) {
+      final Integer[] inputArray = (Integer[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i] == null ? null : inputArray[i].longValue();
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
+    }
+    if (val instanceof int[]) {
+      final int[] longArray = (int[]) val;
+      final Object[] array = new Object[longArray.length];
+      for (int i = 0; i < longArray.length; i++) {
+        array[i] = (long)longArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
+    }
     if (val instanceof Double[]) {
       final Double[] inputArray = (Double[]) val;
       final Object[] array = new Object[inputArray.length];
@@ -438,7 +454,7 @@ public abstract class ExprEval<T>
       final float[] inputArray = (float[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i];
+        array[i] = (double) inputArray[i];
       }
       return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
@@ -461,6 +477,13 @@ public abstract class ExprEval<T>
         return bestEffortOf(null);
       }
       return ofArray(coerced.lhs, coerced.rhs);
+    }
+
+    // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
+    // knowledge, so lets turn it into a base64 encoded string so at least something downstream can use it by decoding
+    // back into bytes
+    if (val instanceof byte[]) {
+      return new StringExprEval(StringUtils.encodeBase64String((byte[]) val));
     }
 
     if (val != null) {
