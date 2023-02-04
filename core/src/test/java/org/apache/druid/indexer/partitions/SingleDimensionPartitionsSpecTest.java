@@ -21,8 +21,6 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -275,17 +273,6 @@ public class SingleDimensionPartitionsSpecTest
         .build();
     Assert.assertEquals(Collections.singletonList(partitionDimension), spec.getPartitionDimensions());
 
-  }
-
-  @Test
-  public void testCreateShardSpec()
-  {
-    String dimemsion = "d1";
-    SingleDimensionPartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(5000000, null, dimemsion, false);
-    Assert.assertEquals(
-        new SingleDimensionShardSpec(dimemsion, null, "v1", 1, 1),
-        partitionsSpec.createShardSpec(Collections.singletonList(dimemsion), null, StringTuple.create("v1"), 1, 1)
-    );
   }
 
   private static String serialize(SingleDimensionPartitionsSpec spec)

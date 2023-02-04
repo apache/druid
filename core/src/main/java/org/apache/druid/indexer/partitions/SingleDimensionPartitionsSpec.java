@@ -24,17 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
-import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
-import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -149,24 +144,6 @@ public class SingleDimensionPartitionsSpec extends DimensionRangePartitionsSpec
     }
 
     return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
-  }
-
-  @Override
-  public DimensionRangeShardSpec createShardSpec(
-      List<String> dimensions,
-      @Nullable StringTuple start,
-      @Nullable StringTuple end,
-      int partitionNum,
-      @Nullable Integer numCorePartitions
-  )
-  {
-    return new SingleDimensionShardSpec(
-        Iterables.getOnlyElement(dimensions),
-        start == null ? null : start.get(0),
-        end == null ? null : end.get(0),
-        partitionNum,
-        numCorePartitions
-    );
   }
 
   @Override

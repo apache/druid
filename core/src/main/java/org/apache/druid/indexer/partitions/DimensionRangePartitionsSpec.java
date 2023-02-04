@@ -24,9 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.Property;
-import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -144,17 +142,6 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
-  }
-
-  public DimensionRangeShardSpec createShardSpec(
-      List<String> dimensions,
-      @Nullable StringTuple start,
-      @Nullable StringTuple end,
-      int partitionNum,
-      @Nullable Integer numCorePartitions
-  )
-  {
-    return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, numCorePartitions);
   }
 
   @Override

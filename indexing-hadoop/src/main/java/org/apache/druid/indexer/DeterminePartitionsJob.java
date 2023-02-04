@@ -41,6 +41,7 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -662,6 +663,28 @@ public class DeterminePartitionsJob implements Jobby
     }
   }
 
+  static DimensionRangeShardSpec createShardSpec(
+      boolean isSingleDim,
+      List<String> dimensions,
+      @Nullable StringTuple start,
+      @Nullable StringTuple end,
+      int partitionNum,
+      @Nullable Integer numCorePartitions
+  )
+  {
+    if (isSingleDim) {
+      return new SingleDimensionShardSpec(
+          Iterables.getOnlyElement(dimensions),
+          start == null ? null : start.get(0),
+          end == null ? null : end.get(0),
+          partitionNum,
+          numCorePartitions
+      );
+    } else {
+      return new DimensionRangeShardSpec(dimensions, start, end, partitionNum, numCorePartitions);
+    }
+  }
+
   public static class DeterminePartitionsDimSelectionReducer extends DeterminePartitionsDimSelectionBaseReducer
   {
     private static final double SHARD_COMBINE_THRESHOLD = 0.25;
@@ -727,7 +750,8 @@ public class DeterminePartitionsJob implements Jobby
 
         // See if we need to cut a new partition ending immediately before this dimension value
         if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows > sampledTargetPartitionSize) {
-          final ShardSpec shardSpec = partitionsSpec.createShardSpec(
+          final ShardSpec shardSpec = createShardSpec(
+              partitionsSpec instanceof SingleDimensionPartitionsSpec,
               currentDimPartitions.dims,
               currentDimPartitionStart,
               dvc.values,
@@ -770,7 +794,8 @@ public class DeterminePartitionsJob implements Jobby
 
               final DimensionRangeShardSpec previousShardSpec = (DimensionRangeShardSpec) previousDimPartition.shardSpec;
 
-              shardSpec = partitionsSpec.createShardSpec(
+              shardSpec = createShardSpec(
+                  partitionsSpec instanceof SingleDimensionPartitionsSpec,
                   currentDimPartitions.dims,
                   previousShardSpec.getStartTuple(),
                   null,
@@ -786,7 +811,8 @@ public class DeterminePartitionsJob implements Jobby
               currentDimPartition.cardinality += previousDimPartition.cardinality;
             } else {
               // Create new shard
-              shardSpec = partitionsSpec.createShardSpec(
+              shardSpec = createShardSpec(
+                  partitionsSpec instanceof SingleDimensionPartitionsSpec,
                   currentDimPartitions.dims,
                   currentDimPartitionStart,
                   null,
