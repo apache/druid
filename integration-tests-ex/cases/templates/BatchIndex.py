@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,14 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
 
-set -e
-#set -x
+from template import BaseTemplate, generate
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
-export CATEGORY=$(basename $MODULE_DIR)
-
-. $MODULE_DIR/../Common/gen-docker.sh
-
-gen_compose_file $CATEGORY
+generate(__file__, BaseTemplate())

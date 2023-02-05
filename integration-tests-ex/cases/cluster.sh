@@ -102,12 +102,6 @@ function category {
   esac
 
   export CLUSTER_DIR=$MODULE_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
-  if [ ! -d $CLUSTER_DIR ]; then
-    echo "Cluster directory $CLUSTER_DIR does not exist." 1>&2
-    echo "$USAGE" 1>&2
-    exit 1
-  fi
-
   export TARGET_DIR=$MODULE_DIR/target
   export SHARED_DIR=$TARGET_DIR/$CATEGORY
   export ENV_FILE="$TARGET_DIR/${CATEGORY}.env"
@@ -150,12 +144,21 @@ function docker_file {
 
   # If a template exists, generate the docker-compose.yaml file. Copy over the Common
   # folder.
-  if [ -f "$CLUSTER_DIR/docker-compose.sh" ]; then
+  TEMPLATE_DIR=$MODULE_DIR/templates
+  TEMPLATE_FILE=${DRUID_INTEGRATION_TEST_GROUP}.py
+  if [ -f "$TEMPLATE_DIR/$TEMPLATE_FILE" ]; then
+    pushd $TEMPLATE_DIR > /dev/null
+    python3 $TEMPLATE_FILE
+    popd > /dev/null
     export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
-    $CLUSTER_DIR/docker-compose.sh
     cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
   else
     # Else, use the existing non-template file in place.
+    if [ ! -d $CLUSTER_DIR ]; then
+      echo "Cluster directory $CLUSTER_DIR does not exist." 1>&2
+      echo "$USAGE" 1>&2
+      exit 1
+    fi
     export COMPOSE_DIR=$CLUSTER_DIR
     choose_static_file
   fi
@@ -193,20 +196,26 @@ function verify_docker_file {
     return 0
   fi
 
-    # The docker compose file must have been generated via up
+  # The docker compose file must have been generated via up
   export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
   if [ ! -f "$COMPOSE_DIR/docker-compose.yaml" ]; then
     echo "$COMPOSE_DIR/docker-compose.yaml is missing. Is cluster up? Did you do a 'clean' after 'up'?" 1>&2
   fi
 }
 
+# Determine if docker-compose is available. If not, assume Docker supports
+# the compose subcommand
+set +e
+if which docker-compose > /dev/null
+then
+  DOCKER_COMPOSE='docker-compose'
+else
+  DOCKER_COMPOSE='docker compose'
+fi
+set -e
+
 # Print environment for debugging
 #env
-
-DOCKER_COMPOSE=docker-compose
-
-# Change to the following once all builds run on a suitable Docker version
-#DOCKER_COMPOSE="docker compose"
 
 case $CMD in
   "-h" )

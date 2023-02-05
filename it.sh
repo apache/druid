@@ -147,7 +147,6 @@ function prepare_category {
 function prepare_docker {
     cd $DRUID_DEV/integration-tests-ex/cases
     build_override
-	verify_env_vars
 }
 
 function require_env_var {
@@ -228,6 +227,7 @@ case $CMD in
   "up" )
     prepare_category $1
     prepare_docker
+    verify_env_vars
     ./cluster.sh up $CATEGORY
     ;;
   "down" )

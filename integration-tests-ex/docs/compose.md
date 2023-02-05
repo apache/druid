@@ -245,33 +245,29 @@ if we create files by hand, is a great amount of copy/paste redundancy, with all
 the problems that copy/paste implies.
 
 As an alternative, the framework provides a simple-minded way to generate the
-`docker-compose.yaml` file using a simple Bash-based template mechanism. To use
+`docker-compose.yaml` file using a simple Python-based template mechanism. To use
 this:
 
-* Create your test cluster directory: `cluster/<category>`.
-* Create a file in that directory called `docker-compose.sh`.
+* Omit the test cluster directory: `cluster/<category>`.
+* Instead, create a template file: `templates/<category>.py`.
 * The minimal file appears below:
 
-```bash
-set -e
+```python
+from template import BaseTemplate, generate
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
-export CATEGORY=$(basename $MODULE_DIR)
-
-. $MODULE_DIR/../Common/gen-docker.sh
-
-gen_compose_file $CATEGORY
-
-# Custom functions go here
+generate(__file__, BaseTemplate())
 ```
 
 The above will generate a "generic" cluster: one of each kind of service, with
 either a Middle Manager or Indexer depending on the `USE_INDEXER`
 env var.
 
-You customize your specific cluster by "overriding" (really, just replacing) the
-various Bash functions that do the generation. See any of the existing files for
-examples.
+You customize your specific cluster by creating a test-specific template class
+which overrides the various methods that build up the cluster. By using Python,
+we first build the cluster as a set of Python dictionaries and arrays, then
+we let [PyYAML](https://pyyaml.org/wiki/PyYAMLDocumentation) convert the objects
+to a YAML file. Many methods exist to help you populate the configuration tree.
+See any of the existing files for examples.
 
 For example, you can:
 

@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,26 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
 
-set -e
+from template import BaseTemplate, generate
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
-export CATEGORY=$(basename $MODULE_DIR)
+class Template(BaseTemplate):
 
-# MSQ uses the indexer by default. This should be fixed: it should be MM
-# by default, and indexer only if the following variable is set.
-USE_INDEXER=indexer
+    def define_indexer(self):
+        service = super().define_indexer()
+        self.add_property(service, 'druid.msq.intermediate.storage.enable', 'true')
+        self.add_property(service, 'druid.msq.intermediate.storage.type', 'local')
+        self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
 
-. $MODULE_DIR/../Common/gen-docker.sh
-
-
-# Override
-function gen_indexer_env {
-	gen_common_env \
-        "druid_msq_intermediate_storage_enable=true" \
-        "druid_msq_intermediate_storage_type=local" \
-        "druid_msq_intermediate_storage_basePath=/shared/durablestorage/"
-}
-
-gen_compose_file $CATEGORY
+generate(__file__, Template())

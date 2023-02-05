@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,21 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
 
-set -e
+from template import BaseTemplate, generate
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
-export CATEGORY=$(basename $MODULE_DIR)
+class Template(BaseTemplate):
 
-# This test seems to prefer the indexer.
-export USE_INDEXER="indexer"
-
-. $MODULE_DIR/../Common/gen-docker.sh
-
-# Override
-function gen_header_comment {
-	cat << EOF
+    def gen_header_comment(self):
+        self.emit('''
 # Cluster for the S3 deep storage test.
 #
 # Required env vars:
@@ -39,27 +29,18 @@ function gen_header_comment {
 # AWS_ACCESS_KEY_ID
 # AWS_SECRET_ACCESS_KEY
 
-EOF
-}
+''')
 
-# Override
-function gen_common_env {
-	gen_env \
-        "AWS_REGION=\${AWS_REGION}" \
-        "druid_s3_accessKey=\${AWS_ACCESS_KEY_ID}" \
-        "druid_s3_secretKey=\${AWS_SECRET_ACCESS_KEY}" \
-        "druid_storage_type=s3" \
-        "druid_storage_bucket=\${DRUID_CLOUD_BUCKET}" \
-        "druid_storage_baseKey=\${DRUID_CLOUD_PATH}" \
-        $*
-}
+    def extend_druid_service(self, service):
+        self.add_property(service, 'druid.storage.type', 's3')
+        self.add_property(service, 'druid.s3.accessKey', '${AWS_ACCESS_KEY_ID}')
+        self.add_property(service, 'druid.s3.secretKey', '${AWS_SECRET_ACCESS_KEY}')
+        self.add_property(service, 'druid.storage.bucket', '${DRUID_CLOUD_BUCKET}')
+        self.add_property(service, 'druid.storage.baseKey', '${DRUID_CLOUD_PATH}')
+        self.add_env(service, 'AWS_REGION', '${AWS_REGION}')
 
-# This test mounts its data from a different location than other tests.
-# Override
-function gen_indexer_volumes {
-    # Test data
-	gen_common_volumes \
-        "../data:/resources"
-}
+    # This test uses different data than the default.
+    def define_data_dir(self, service):
+        self.add_volume(service, '../data', '/resources')
 
-gen_compose_file $CATEGORY
+generate(__file__, Template())

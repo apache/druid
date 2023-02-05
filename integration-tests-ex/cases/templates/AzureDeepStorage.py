@@ -1,5 +1,3 @@
-#! /bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,21 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
 
-set -e
+from template import BaseTemplate, generate
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
-export CATEGORY=$(basename $MODULE_DIR)
+class Template(BaseTemplate):
 
-# This test seems to prefer the indexer.
-export USE_INDEXER="indexer"
-
-. $MODULE_DIR/../Common/gen-docker.sh
-
-# Override
-function gen_header_comment {
-	cat << EOF
+    def gen_header_comment(self):
+        self.emit('''
 # Cluster for the Azure deep storage test.
 #
 # Required env vars:
@@ -37,26 +27,17 @@ function gen_header_comment {
 # AZURE_KEY
 # AZURE_CONTAINER
 
-EOF
-}
+''')
 
-# Override
-function gen_common_env {
-	gen_env \
-        "druid_test_loadList=druid-azure-extensions" \
-        "druid_storage_type=azure" \
-        "druid_azure_account=\${AZURE_ACCOUNT}" \
-        "druid_azure_key=\${AZURE_KEY}" \
-        "druid_azure_container=\${AZURE_CONTAINER}" \
-        $*
-}
+    def extend_druid_service(self, service):
+        self.add_env(service, 'druid_test_loadList', 'druid-azure-extensions')
+        self.add_property(service, 'druid.storage.type', 'azure')
+        self.add_property(service, 'druid.azure.account', '${AZURE_ACCOUNT}')
+        self.add_property(service, 'druid.azure.key', '${AZURE_KEY}')
+        self.add_property(service, 'druid.azure.container', '${AZURE_CONTAINER}')
 
-# This test mounts its data from a different location than other tests.
-# Override
-function gen_indexer_volumes {
-    # Test data
-	gen_common_volumes \
-        "../data:/resources"
-}
+    # This test uses different data than the default.
+    def define_data_dir(self, service):
+        self.add_volume(service, '../data', '/resources')
 
-gen_compose_file $CATEGORY
+generate(__file__, Template())
