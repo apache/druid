@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -28,6 +29,7 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -64,9 +66,11 @@ public class TaskReportSerdeTest
             ),
             "an error message",
             true,
-            1000L
-        )
-    );
+            1000L,
+            ImmutableList.of(
+                Intervals.of("2020-01-01T00:00:00.000Z/2021-01-01T00:00:00.000Z"),
+                Intervals.of("2019-01-01T00:00:00.000Z/2019-02-01T00:00:00.000Z"))
+    ));
     String report1serialized = jsonMapper.writeValueAsString(report1);
     IngestionStatsAndErrorsTaskReport report2 = (IngestionStatsAndErrorsTaskReport) jsonMapper.readValue(
         report1serialized,

@@ -86,6 +86,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -96,6 +97,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
@@ -271,7 +273,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .transform(PartitionChunk::getObject)
                                                          .toSet();
 
-      Map<String, TaskReport> taskReport = getTaskCompletionReports();
+      List<Interval> pushedIntervals =
+          pushedSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+      Map<String, TaskReport> taskReport = getTaskCompletionReports(pushedIntervals);
       taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
@@ -281,7 +285,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     catch (Exception e) {
       LOG.error(e, "Encountered exception in parallel sub task.");
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports(Collections.emptyList()));
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -617,7 +621,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    **
    * @return
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(List<Interval> ingestedIntervals)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -628,7 +632,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                 getTaskCompletionRowStats(),
                 errorMsg,
                 false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                ingestedIntervals
             )
         )
     );

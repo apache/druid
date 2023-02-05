@@ -1746,6 +1746,7 @@
 
                     <!-- required for NativeIO#getfd -->
                     --add-opens=java.base/java.io=ALL-UNNAMED
+                    --add-exports java.base/sun.nio.ch=ALL-UNNAMED
 
                     <!-- required for Guice -->
                     --add-opens=java.base/java.lang=ALL-UNNAMED

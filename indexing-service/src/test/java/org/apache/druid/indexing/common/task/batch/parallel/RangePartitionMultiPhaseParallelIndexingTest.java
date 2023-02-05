@@ -56,6 +56,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -86,6 +87,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static final int NUM_PARTITION = 2;
   private static final int YEAR = 2017;
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("%s-12/P1M", YEAR);
+  private static final String EXPECTED_INTERVAL = "2017-12-01/2017-12-12";
   private static final String TIME = "ts";
   private static final String DIM1 = "dim1";
   private static final String DIM2 = "dim2";
@@ -264,7 +266,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
 
     // verify dropExisting false
-    final Set<DataSegment> publishedSegments = runTask(runTestTask(
+    final Set<DataSegment> publishedSegments = runTask(buildTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
@@ -275,6 +277,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         false,
         false
     ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
+    if (publishedSegments.size() > 0) {
+      checkReportInterval(EXPECTED_INTERVAL);
+    }
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
@@ -289,7 +294,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     File inputDirectory = temporaryFolder.newFolder("dataReplace");
     createInputFilesForReplace(inputDirectory, useMultivalueDim);
 
-    final Set<DataSegment> publishedSegmentsAfterReplace = runTask(runTestTask(
+    final Set<DataSegment> publishedSegmentsAfterReplace = runTask(buildTestTask(
         new DimensionRangePartitionsSpec(
             targetRowsPerSegment,
             null,
@@ -300,6 +305,9 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         false,
         true
     ), useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS);
+    if (publishedSegmentsAfterReplace.size() > 0) {
+      checkReportInterval("2017-12-12/2017-12-22");
+    }
 
     int tombstones = 0;
     for (DataSegment ds : publishedSegmentsAfterReplace) {
@@ -321,38 +329,40 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       return;
     }
     final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = new HashSet<>();
-    publishedSegments.addAll(
-        runTask(runTestTask(
-            new SingleDimensionPartitionsSpec(
-                targetRowsPerSegment,
-                null,
-                DIM1,
-                false
-            ),
-            inputDir,
-            false,
+    final Set<DataSegment> publishedSegments = new HashSet<>(runTask(buildTestTask(
+        new SingleDimensionPartitionsSpec(
+            targetRowsPerSegment,
+            null,
+            DIM1,
             false
-        ), TaskState.SUCCESS)
-    );
+        ),
+        inputDir,
+        false,
+        false
+    ), TaskState.SUCCESS));
+    checkReportInterval(EXPECTED_INTERVAL);
+
     // Append
     publishedSegments.addAll(
-        runTask(runTestTask(
+        runTask(buildTestTask(
             new DynamicPartitionsSpec(5, null),
             inputDir,
             true,
             false
         ), TaskState.SUCCESS)
     );
+    checkReportInterval(EXPECTED_INTERVAL);
+
     // And append again
     publishedSegments.addAll(
-        runTask(runTestTask(
+        runTask(buildTestTask(
             new DynamicPartitionsSpec(10, null),
             inputDir,
             true,
             false
         ), TaskState.SUCCESS)
     );
+    checkReportInterval(EXPECTED_INTERVAL);
 
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
@@ -382,7 +392,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     }
   }
 
-  private ParallelIndexSupervisorTask runTestTask(
+  private ParallelIndexSupervisorTask buildTestTask(
       PartitionsSpec partitionsSpec,
       File inputDirectory,
       boolean appendToExisting,

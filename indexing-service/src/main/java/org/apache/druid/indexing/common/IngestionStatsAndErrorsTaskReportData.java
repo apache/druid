@@ -21,8 +21,11 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.IngestionState;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -47,13 +50,17 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private long segmentAvailabilityWaitTimeMs;
 
+  @JsonProperty
+  private List<Interval> ingestedIntervals;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
-      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
+      @JsonProperty("ingestedIntervals") List<Interval> ingestedIntervals
   )
   {
     this.ingestionState = ingestionState;
@@ -62,6 +69,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
+    this.ingestedIntervals = ingestedIntervals;
   }
 
   @JsonProperty
@@ -101,6 +109,11 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentAvailabilityWaitTimeMs;
   }
 
+  public List<Interval> getIngestedIntervals()
+  {
+    return ingestedIntervals;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -124,7 +137,8 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getRowStats(), that.getRowStats()) &&
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
            Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
-           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs());
+           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
+           Objects.equals(getIngestedIntervals(), that.getIngestedIntervals());
   }
 
   @Override
@@ -136,7 +150,8 @@ public class IngestionStatsAndErrorsTaskReportData
         getRowStats(),
         getErrorMsg(),
         isSegmentAvailabilityConfirmed(),
-        getSegmentAvailabilityWaitTimeMs()
+        getSegmentAvailabilityWaitTimeMs(),
+        getIngestedIntervals()
     );
   }
 
@@ -150,6 +165,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", errorMsg='" + errorMsg + '\'' +
            ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
+           ", ingestedIntervals=" + ingestedIntervals +
            '}';
   }
 }

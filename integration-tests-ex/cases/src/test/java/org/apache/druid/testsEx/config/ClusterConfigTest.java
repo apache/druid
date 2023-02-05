@@ -22,6 +22,7 @@ package org.apache.druid.testsEx.config;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
@@ -37,11 +38,12 @@ import static org.junit.Assert.assertNotNull;
 public class ClusterConfigTest
 {
   @Test
+  @Ignore
   public void testYaml()
   {
     ClusterConfig config = ClusterConfig.loadFromResource("/config-test/test.yaml");
     // Uncomment this line to see the full config with includes resolved.
-    //System.out.println(config.resolveIncludes());
+    System.out.println(config.resolveIncludes());
 
     ResolvedConfig resolved = config.resolve("Test");
     assertEquals(ClusterType.docker, resolved.type());

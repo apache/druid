@@ -115,6 +115,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -130,6 +131,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
@@ -528,7 +530,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
       errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+      toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports(Collections.emptyList()));
       return TaskStatus.failure(
           getId(),
           errorMsg
@@ -540,7 +542,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(List<Interval> intervals)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -551,7 +553,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 getTaskCompletionRowStats(),
                 errorMsg,
                 segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                JodaUtils.condenseIntervals(intervals)
             )
         )
     );
@@ -996,7 +999,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
         errorMsg = "Failed to publish segments.";
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports(Collections.emptyList()));
         return TaskStatus.failure(
             getId(),
             errorMsg
@@ -1018,8 +1021,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         );
 
         log.debugSegments(published.getSegments(), "Published segments");
-
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        List<Interval> ingestedIntervals = published.getSegments()
+                                                    .stream()
+                                                    .map(DataSegment::getInterval)
+                                                    .collect(Collectors.toList());
+        toolbox.getTaskReportFileWriter().write(
+            getId(), getTaskCompletionReports(ingestedIntervals));
         return TaskStatus.success(getId());
       }
     }

@@ -53,6 +53,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Base class for parallel indexing perfect rollup worker partial segment generate tasks.
@@ -124,7 +126,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox.getIndexingTmpDir()
     );
 
-    Map<String, TaskReport> taskReport = getTaskCompletionReports();
+    List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+    Map<String, TaskReport> taskReport = getTaskCompletionReports(intervals);
 
     taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
@@ -235,7 +238,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private Map<String, TaskReport> getTaskCompletionReports(List<Interval> intervals)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -246,7 +249,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 getTaskCompletionRowStats(),
                 "",
                 false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                intervals
             )
         )
     );

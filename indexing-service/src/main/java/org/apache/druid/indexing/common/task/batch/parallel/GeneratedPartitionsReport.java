@@ -31,7 +31,7 @@ import java.util.Objects;
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialSegmentMergeIOConfig}.
  */
-public class GeneratedPartitionsReport implements SubTaskReport
+public class GeneratedPartitionsReport implements TaskReportContainer
 {
   private final String taskId;
   private final List<PartitionStat> partitionStats;
@@ -51,6 +51,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
     return taskId;
   }
 
+  @Override
   @JsonProperty
   public Map<String, TaskReport> getTaskReport()
   {

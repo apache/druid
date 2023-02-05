@@ -49,6 +49,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -87,6 +88,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       0
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+  private static final String EXPECTED_INTERVAL = "2017-12-01/2017-12-12";
   private static final String INPUT_FILTER = "test_*";
 
   @Parameterized.Parameters(
@@ -179,6 +181,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         false,
         false
     ), TaskState.SUCCESS);
+    checkReportInterval(EXPECTED_INTERVAL);
 
     final Map<Interval, Integer> expectedIntervalToNumSegments = computeExpectedIntervalToNumSegments(
         maxRowsPerSegment,
@@ -201,6 +204,10 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         false,
         true
     ), TaskState.SUCCESS);
+    checkReportIntervals(ImmutableList.of(
+        Intervals.of("2017-12-04T00:00:00.000Z/2017-12-06T00:00:00.000Z"),
+        Intervals.of("2017-12-08T00:00:00.000Z/2017-12-12T00:00:00.000Z")
+    ));
 
     final Map<Interval, Integer> expectedIntervalToNumSegmentsAfterReplace = computeExpectedIntervalToNumSegments(
         maxRowsPerSegment,
@@ -248,6 +255,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         numShards
     );
     assertHashedPartition(publishedSegments, expectedIntervalToNumSegments);
+    checkReportInterval(EXPECTED_INTERVAL);
   }
 
   private Map<Interval, Integer> computeExpectedIntervalToNumSegments(

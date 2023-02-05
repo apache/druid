@@ -34,7 +34,7 @@ import java.util.Set;
  * and sends a report to the supervisorTask. Once the supervisorTask collects all reports,
  * it publishes all the pushed segments at once.
  */
-public class PushedSegmentsReport implements SubTaskReport
+public class PushedSegmentsReport implements TaskReportContainer
 {
   public static final String TYPE = "pushed_segments";
 
@@ -76,6 +76,7 @@ public class PushedSegmentsReport implements SubTaskReport
     return newSegments;
   }
 
+  @Override
   @JsonProperty("taskReport")
   public Map<String, TaskReport> getTaskReport()
   {
