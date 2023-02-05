@@ -422,7 +422,7 @@ public abstract class ExprEval<T>
       final int[] longArray = (int[]) val;
       final Object[] array = new Object[longArray.length];
       for (int i = 0; i < longArray.length; i++) {
-        array[i] = (long)longArray[i];
+        array[i] = (long) longArray[i];
       }
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
