@@ -901,7 +901,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-contrib/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 5.12.2
+version: 6.4.1
 libraries:
   - io.fabric8: kubernetes-client
 
