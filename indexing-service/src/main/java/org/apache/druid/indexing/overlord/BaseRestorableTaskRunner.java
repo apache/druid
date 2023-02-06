@@ -223,9 +223,8 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
       if (restoreFile.exists()) {
         try {
           TaskRestoreInfo taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
-          for (final String taskId : taskRestoreInfo.getRunningTasks()) {
-            LOG.info("Saving task[%s] at path[%s] for restore", taskId, baseDir);
-          }
+          LOG.info("Path[%s] contains restore data for tasks[%s] on restart",
+                   baseDir, taskRestoreInfo.getRunningTasks());
         }
         catch (Exception e) {
           LOG.error(e, "Failed to read task restore info from file[%s].", restoreFile);

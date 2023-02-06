@@ -52,11 +52,6 @@ public class TaskStorageDirTracker
     }
   }
 
-  public File getBaseTaskDir(String taskId)
-  {
-    return getOrSelectTaskDir(taskId);
-  }
-
   public File getTaskDir(String taskId)
   {
     return new File(getBaseTaskDir(taskId), taskId);
@@ -77,7 +72,7 @@ public class TaskStorageDirTracker
     return baseTaskDirs;
   }
 
-  public synchronized File getOrSelectTaskDir(final String taskId)
+  public synchronized File getBaseTaskDir(final String taskId)
   {
     if (!taskToTempDirMap.containsKey(taskId)) {
       addTask(taskId, baseTaskDirs.get(taskDirIndex));
