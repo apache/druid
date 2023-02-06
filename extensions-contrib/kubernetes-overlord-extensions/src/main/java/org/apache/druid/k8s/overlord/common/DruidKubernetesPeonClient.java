@@ -78,7 +78,7 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
     long start = System.currentTimeMillis();
     // launch job
     return clientApi.executeRequest(client -> {
-      client.batch().v1().jobs().inNamespace(namespace).create(job);
+      client.batch().v1().jobs().inNamespace(namespace).withName(job.getMetadata().getName()).create();
       K8sTaskId taskId = new K8sTaskId(job.getMetadata().getName());
       log.info("Successfully submitted job: %s ... waiting for job to launch", taskId);
       // wait until the pod is running or complete or failed, any of those is fine
@@ -121,12 +121,12 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
   public boolean cleanUpJob(K8sTaskId taskId)
   {
     if (!debugJobs) {
-      Boolean result = clientApi.executeRequest(client -> client.batch()
+      Boolean result = clientApi.executeRequest(client -> !client.batch()
                                                                 .v1()
                                                                 .jobs()
                                                                 .inNamespace(namespace)
                                                                 .withName(taskId.getK8sTaskId())
-                                                                .delete());
+                                                                .delete().isEmpty());
       if (result) {
         log.info("Cleaned up k8s task: %s", taskId);
       } else {
@@ -216,7 +216,12 @@ public class DruidKubernetesPeonClient implements KubernetesPeonClient
     return clientApi.executeRequest(client -> {
       List<Job> jobs = getJobsToCleanup(listAllPeonJobs(), howFarBack, timeUnit);
       jobs.forEach(x -> {
-        if (client.batch().v1().jobs().inNamespace(namespace).withName(x.getMetadata().getName()).delete()) {
+        if (!client.batch()
+                   .v1()
+                   .jobs()
+                   .inNamespace(namespace)
+                   .withName(x.getMetadata().getName())
+                   .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         }
       });

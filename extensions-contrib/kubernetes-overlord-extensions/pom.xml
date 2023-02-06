@@ -104,7 +104,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
     </dependency>
     <dependency>
       <groupId>javax.validation</groupId>
@@ -114,12 +114,12 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-batch</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
     </dependency>
 
     <!-- Tests -->
@@ -136,7 +136,7 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-server-mock</artifactId>
-      <version>5.12.2</version>
+      <version>6.4.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -225,6 +225,12 @@
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.kubernetes</groupId>
+      <artifactId>client-java-proto</artifactId>
+      <version>11.0.1</version>
+      <scope>compile</scope>
     </dependency>
 
   </dependencies>

@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.commons.text.CharacterPredicates;
 import org.apache.commons.text.RandomStringGenerator;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -142,4 +143,11 @@ public class K8sTestUtils
     );
   }
 
+  public static <T> T fileToResource(String contents, Class<T> type)
+  {
+    return Serialization.unmarshal(
+        MultiContainerTaskAdapter.class.getClassLoader().getResourceAsStream(contents),
+        type
+    );
+  }
 }
