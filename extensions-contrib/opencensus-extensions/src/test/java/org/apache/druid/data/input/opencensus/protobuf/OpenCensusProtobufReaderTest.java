@@ -63,8 +63,8 @@ public class OpenCensusProtobufReaderTest
   public static final String RESOURCE_ATTRIBUTE_ENV = "env";
   public static final String RESOURCE_ATTRIBUTE_VALUE_DEVEL = "devel";
 
-  public static final String INSTRUMENTATION_LIBRARY_NAME = "mock-instr-lib";
-  public static final String INSTRUMENTATION_LIBRARY_VERSION = "1.0";
+  public static final String INSTRUMENTATION_SCOPE_NAME = "mock-instr-lib";
+  public static final String INSTRUMENTATION_SCOPE_VERSION = "1.0";
 
   public static final String METRIC_ATTRIBUTE_COLOR = "color";
   public static final String METRIC_ATTRIBUTE_VALUE_RED = "red";
@@ -75,7 +75,7 @@ public class OpenCensusProtobufReaderTest
   private final MetricsData.Builder metricsDataBuilder = MetricsData.newBuilder();
 
   private final Metric.Builder metricBuilder = metricsDataBuilder.addResourceMetricsBuilder()
-      .addInstrumentationLibraryMetricsBuilder()
+      .addScopeMetricsBuilder()
       .addMetricsBuilder();
 
   private final DimensionsSpec dimensionsSpec = new DimensionsSpec(ImmutableList.of(
@@ -109,10 +109,10 @@ public class OpenCensusProtobufReaderTest
 
     metricsDataBuilder
       .getResourceMetricsBuilder(0)
-      .getInstrumentationLibraryMetricsBuilder(0)
-      .getInstrumentationLibraryBuilder()
-      .setName(INSTRUMENTATION_LIBRARY_NAME)
-      .setVersion(INSTRUMENTATION_LIBRARY_VERSION);
+      .getScopeMetricsBuilder(0)
+      .getScopeBuilder()
+      .setName(INSTRUMENTATION_SCOPE_NAME)
+      .setVersion(INSTRUMENTATION_SCOPE_VERSION);
 
   }
 
@@ -215,7 +215,7 @@ public class OpenCensusProtobufReaderTest
 
     // Create Second Metric
     Metric.Builder gaugeMetricBuilder = metricsDataBuilder.addResourceMetricsBuilder()
-        .addInstrumentationLibraryMetricsBuilder()
+        .addScopeMetricsBuilder()
         .addMetricsBuilder();
 
     metricsDataBuilder.getResourceMetricsBuilder(1)
@@ -226,10 +226,10 @@ public class OpenCensusProtobufReaderTest
           .build());
 
     metricsDataBuilder.getResourceMetricsBuilder(1)
-      .getInstrumentationLibraryMetricsBuilder(0)
-      .getInstrumentationLibraryBuilder()
-      .setName(INSTRUMENTATION_LIBRARY_NAME)
-      .setVersion(INSTRUMENTATION_LIBRARY_VERSION);
+      .getScopeMetricsBuilder(0)
+      .getScopeBuilder()
+      .setName(INSTRUMENTATION_SCOPE_NAME)
+      .setVersion(INSTRUMENTATION_SCOPE_VERSION);
 
     gaugeMetricBuilder.setName("example_gauge")
       .getGaugeBuilder()
