@@ -25,12 +25,14 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
@@ -44,7 +46,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.SequenceInputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -67,13 +68,16 @@ public class S3StorageConnector implements StorageConnector
   {
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
-    if (config.getTempDir() != null) {
-      try {
-        FileUtils.mkdirp(config.getTempDir());
-      }
-      catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
+    Preconditions.checkNotNull(config, "config is null");
+    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
+    try {
+      FileUtils.mkdirp(config.getTempDir());
+    }
+    catch (IOException e) {
+      throw new RE(
+          e,
+          StringUtils.format("Cannot create tempDir : [%s] for s3 storage connector", config.getTempDir())
+      );
     }
   }
 
@@ -171,7 +175,7 @@ public class S3StorageConnector implements StorageConnector
                     }
                   },
                   S3Utils.S3RETRY,
-                  config.getMaxRetry()
+                  3
               ),
               outFile,
               new byte[8 * 1024],
@@ -181,7 +185,7 @@ public class S3StorageConnector implements StorageConnector
           );
         }
         catch (IOException e) {
-          throw new UncheckedIOException(e);
+          throw new RE(e, StringUtils.format("Unable to copy [%s] to [%s]", objectPath(path), outFile));
         }
         try {
           AtomicBoolean isClosed = new AtomicBoolean(false);
@@ -195,19 +199,17 @@ public class S3StorageConnector implements StorageConnector
                 return;
               }
               isClosed.set(true);
-              try {
-                super.close();
-              }
-              finally {
-                // since endPoint is inclusive in s3's get request API, the next currReadStart is endpoint + 1
-                currReadStart.set(endPoint + 1);
-                outFile.delete();
+              super.close();
+              // since endPoint is inclusive in s3's get request API, the next currReadStart is endpoint + 1
+              currReadStart.set(endPoint + 1);
+              if (outFile.delete()) {
+                throw new RE("Cannot delete temp file [%s]", outFile);
               }
             }
           };
         }
         catch (FileNotFoundException e) {
-          throw new UncheckedIOException(e);
+          throw new RE(e, StringUtils.format("Unable to find temp file [%s]", outFile));
         }
       }
     });
