@@ -6,13 +6,13 @@ set -e
 mysql()
 {
   cd ${DRUID_ROOT}
-  java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"mysql-metadata-storage\"]" -Ddruid.metadata.storage.type=mysql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI=$database --user $username --password $password --base druid
+  java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"mysql-metadata-storage\"]" -Ddruid.metadata.storage.type=mysql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI=$connectURI --user $username --password $password --base druid
 }
 
 postgresql()
 {
   cd ${DRUID_ROOT}
-  java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"postgresql-metadata-storage\"]" -Ddruid.metadata.storage.type=postgresql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI=$database --user $username --password $password --base druid
+  java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"postgresql-metadata-storage\"]" -Ddruid.metadata.storage.type=postgresql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI=$connectURI --user $username --password $password --base druid
 }
 
 help()
