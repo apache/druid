@@ -64,7 +64,8 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ hashFiles('**/pom.xml') }}
+          key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: setup node
         uses: actions/setup-node@v3
@@ -91,5 +92,5 @@ jobs:
       - name: test & coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
-          MVN: ${{ format('{0} {1}', env.MVN, (steps.maven-restore.outputs.cache-hit && 'dependency:go-offline' || '-U')) }}
+          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
         run: ./.github/scripts/unit_tests_script.sh

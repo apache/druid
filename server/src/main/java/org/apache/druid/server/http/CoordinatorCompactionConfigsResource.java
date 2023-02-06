@@ -223,9 +223,6 @@ public class CoordinatorCompactionConfigsResource
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
-      if (history.getHistory().isEmpty()) {
-        return Response.status(Response.Status.NOT_FOUND).build();
-      }
       return Response.ok(history.getHistory()).build();
     }
     catch (IllegalArgumentException e) {

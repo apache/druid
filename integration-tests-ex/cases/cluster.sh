@@ -217,6 +217,17 @@ set -e
 # Print environment for debugging
 #env
 
+# Determine if docker-compose is available. If not, assume Docker supports
+# the compose subcommand
+set +e
+if which docker-compose > /dev/null
+then
+  DOCKER_COMPOSE='docker-compose'
+else
+  DOCKER_COMPOSE='docker compose'
+fi
+set -e
+
 case $CMD in
   "-h" )
     usage

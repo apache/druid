@@ -72,13 +72,14 @@ jobs:
         id: maven-restore
         uses: actions/cache/restore@v3
         with:
-         path: ~/.m2/repository
-         key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ hashFiles('**/pom.xml') }}
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ format('{0} {1}', env.MVN, (steps.maven-restore.outputs.cache-hit && 'dependency:go-offline' || '-U')) }}
+          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"

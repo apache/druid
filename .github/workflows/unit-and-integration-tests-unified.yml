@@ -43,25 +43,20 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Cache Maven m2 repository
-        id: maven
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}-${{ matrix.jdk }}
-
       - name: Setup java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
 
-      - name: Maven build
-        id: maven_build
-        run: |
-          ./it.sh ci
+      - name: Cache Maven m2 repository
+        id: maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
+          restore-keys: |
+            maven-${{ runner.os }}-${{ matrix.jdk }}
 
       - name: Cache targets
         id: target
@@ -69,9 +64,25 @@ jobs:
         with:
           path: |
             ./**/target
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ hashFiles('**/pom.xml') }}
+          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
           restore-keys: |
             maven-${{ runner.os }}-${{ matrix.jdk }}-targets
+
+      - name: Cache image
+        id: docker_container
+        uses: actions/cache@v3
+        with:
+          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+          restore-keys: |
+            druid-container-jdk${{ matrix.jdk }}.tar.gz-
+
+      - name: Maven build
+        id: maven_build
+        run: |
+          ./it.sh ci
 
       - name: Container build
         run: |
@@ -85,24 +96,13 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
-      - name: Cache image
-        id: docker_container
-        uses: actions/cache@v3
-        with:
-          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ hashFiles('**/pom.xml') }}
-          path: |
-            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
-          restore-keys: |
-            druid-container-jdk${{ matrix.jdk }}.tar.gz-
-
   unit-tests:
     strategy:
       fail-fast: false
       matrix:
         sql_compatibility: [ false, true ]
     name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/unit-tests.yml@master
+    uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 8
@@ -115,7 +115,7 @@ jobs:
         jdk: [11, 17]
         sql_compatibility: [ false, true ]
     name: unit tests (jdk${{ matrix.jdk }}, sql-compat=${{ matrix.sql_compatibility }})
-    uses: apache/druid/.github/workflows/unit-tests.yml@master
+    uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     with:
       jdk: ${{ matrix.jdk }}
@@ -123,8 +123,8 @@ jobs:
 
   standard-its:
     needs: unit-tests
-    uses: apache/druid/.github/workflows/standard-its.yml@master
+    uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
-    uses: apache/druid/.github/workflows/revised-its.yml@master
+    uses: ./.github/workflows/revised-its.yml
