@@ -128,9 +128,9 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
                     }
                   },
                   HashMap::putAll);
-          return resourceMetrics.getInstrumentationLibraryMetricsList()
+          return resourceMetrics.getScopeMetricsList()
               .stream()
-              .flatMap(libraryMetrics -> libraryMetrics.getMetricsList()
+              .flatMap(scopeMetrics -> scopeMetrics.getMetricsList()
                   .stream()
                   .flatMap(metric -> parseMetric(metric, resourceAttributes).stream()));
         })

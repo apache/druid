@@ -22,11 +22,11 @@ package org.apache.druid.data.input.opentelemetry.protobuf;
 import com.google.common.collect.ImmutableList;
 import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.KeyValue;
-import io.opentelemetry.proto.metrics.v1.InstrumentationLibraryMetrics;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
 import io.opentelemetry.proto.metrics.v1.NumberDataPoint;
 import io.opentelemetry.proto.metrics.v1.ResourceMetrics;
+import io.opentelemetry.proto.metrics.v1.ScopeMetrics;
 import io.opentelemetry.proto.resource.v1.Resource;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -58,7 +58,7 @@ public class OpenTelemetryBenchmark
   private int resourceMetricCount = 1;
 
   @Param(value = {"1"})
-  private int instrumentationLibraryCount = 1;
+  private int instrumentationScopeCount = 1;
 
   @Param(value = {"1", "2", "4", "8" })
   private int metricsCount = 1;
@@ -94,12 +94,12 @@ public class OpenTelemetryBenchmark
         resourceAttributeBuilder.setValue(AnyValue.newBuilder().setStringValue("resource.label_value"));
       }
 
-      for (int j = 0; j < instrumentationLibraryCount; j++) {
-        InstrumentationLibraryMetrics.Builder instrumentationLibraryMetricsBuilder =
-            resourceMetricsBuilder.addInstrumentationLibraryMetricsBuilder();
+      for (int j = 0; j < instrumentationScopeCount; j++) {
+        ScopeMetrics.Builder scopeMetricsBuilder =
+            resourceMetricsBuilder.addScopeMetricsBuilder();
 
         for (int k = 0; k < metricsCount; k++) {
-          Metric.Builder metricBuilder = instrumentationLibraryMetricsBuilder.addMetricsBuilder();
+          Metric.Builder metricBuilder = scopeMetricsBuilder.addMetricsBuilder();
           metricBuilder.setName("io.confluent.domain/such/good/metric/wow");
 
           for (int l = 0; l < dataPointCount; l++) {
