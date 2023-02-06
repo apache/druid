@@ -23,7 +23,7 @@ internally as a Python data structure made up of maps, arrays and scalars.
 PyYaml does the grunt work of converting the data structure to the YAML file.
 '''
 
-import yaml, os, sys, os.path
+import yaml, os, os.path
 from pathlib import Path
 
 DRUID_NETWORK = 'druid-it-net'
@@ -228,7 +228,6 @@ class BaseTemplate:
             return
         depends = service.setdefault('depends_on', [])
         depends += items
-        return depends
 
     def define_master_service(self, name, base):
         service = self.define_druid_service(name, base)
@@ -240,7 +239,6 @@ class BaseTemplate:
 
     def define_coordinator(self):
         return self.define_std_master_service(COORDINATOR)
-        return service
 
     def define_overlord(self):
         return self.define_std_master_service(OVERLORD)
