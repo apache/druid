@@ -28,6 +28,8 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 
+import java.util.Objects;
+
 public class UpdateStatusAction implements TaskAction<Void>
 {
   @JsonIgnore
@@ -81,5 +83,24 @@ public class UpdateStatusAction implements TaskAction<Void>
     return "UpdateStatusAction{" +
            "status=" + status +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UpdateStatusAction that = (UpdateStatusAction) o;
+    return Objects.equals(status, that.status);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(status);
   }
 }

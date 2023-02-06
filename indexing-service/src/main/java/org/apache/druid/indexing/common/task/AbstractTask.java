@@ -166,7 +166,11 @@ public abstract class AbstractTask implements Task
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
         return TaskStatus.failure(getId(), errorMessage);
       }
-      return runTask(taskToolbox);
+      TaskStatus taskStatus = runTask(taskToolbox);
+      if (taskStatus.isFailure()) {
+        failure = true;
+      }
+      return taskStatus;
     }
     catch (Exception e) {
       failure = true;

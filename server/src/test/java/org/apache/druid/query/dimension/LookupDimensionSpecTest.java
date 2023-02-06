@@ -140,11 +140,11 @@ public class LookupDimensionSpecTest
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
-            TestHelper.createExpectedMap("not there", null)
+            TestHelper.makeMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", true, LOOKUP_REF_MANAGER),
-            TestHelper.createExpectedMap("not there", null)
+            TestHelper.makeMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null,
