@@ -19,10 +19,12 @@
 
 package org.apache.druid.grpc;
 
+import org.apache.druid.grpc.client.GrpcResponseHandler;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
+import org.apache.druid.grpc.proto.Results;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
@@ -32,6 +34,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -93,7 +96,22 @@ public class GrpcQueryTest
         .setQuery("SELECT * FROM foo")
         .setResultFormat(QueryResultFormat.CSV)
         .build();
+
     QueryResponse response = client.client.submitQuery(request);
+    assertEquals(QueryStatus.OK, response.getStatus());
+  }
+
+  @Test
+  public void testGRPCBasics()
+  {
+    QueryRequest request = QueryRequest.newBuilder()
+            .setQuery("SELECT dim1, dim2, dim3, cnt, m1, m2, unique_dim1, __time AS \"date\" FROM foo")
+            .setProtobufMessageName(Results.QueryResult.class.getName())
+            .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
+            .build();
+    QueryResponse response = client.client.submitQuery(request);
+    GrpcResponseHandler<Results.QueryResult> handler = GrpcResponseHandler.of(Results.QueryResult.class);
+    List<Results.QueryResult> queryResults = handler.get(response.getData());
     assertEquals(QueryStatus.OK, response.getStatus());
   }
 }

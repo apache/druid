@@ -60,9 +60,9 @@ public class QueryServer
   public void start() throws IOException
   {
     server = Grpc.newServerBuilderForPort(port, InsecureServerCredentials.create())
-        .addService(new QueryService(driver))
-        .build()
-        .start();
+            .addService(new QueryService(driver))
+            .build()
+            .start();
     log.info("Server started, listening on " + port);
   }
 
