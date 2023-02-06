@@ -31,6 +31,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -46,6 +47,8 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   private final FireDepartment fireDepartment;
   private final RowIngestionMeters rowIngestionMeters;
   private final Map<String, String[]> dimensions;
+  @Nullable
+  private final Map<String, Object> metricMetadata;
 
   private FireDepartmentMetrics previousFireDepartmentMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
@@ -53,12 +56,14 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   public TaskRealtimeMetricsMonitor(
       FireDepartment fireDepartment,
       RowIngestionMeters rowIngestionMeters,
-      Map<String, String[]> dimensions
+      Map<String, String[]> dimensions,
+      @Nullable Map<String, Object> metricMetadata
   )
   {
     this.fireDepartment = fireDepartment;
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.metricMetadata = metricMetadata;
     previousFireDepartmentMetrics = new FireDepartmentMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
@@ -80,6 +85,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
           thrownAway
       );
     }
+    builder.setDimensionIfNotNull(DruidMetrics.INGEST_METADATA, metricMetadata);
     emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()

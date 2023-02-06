@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -130,6 +131,13 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  @JsonIgnore
+  @Nullable
+  public <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return context == null ? null : (ContextValueType) context.get(key);
   }
 
   public ServiceEmitter getEmitter()

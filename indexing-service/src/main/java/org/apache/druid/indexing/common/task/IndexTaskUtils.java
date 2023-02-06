@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class IndexTaskUtils
 {
@@ -119,7 +120,11 @@ public class IndexTaskUtils
     metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_TYPE, task.getType());
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
-    metricBuilder.setDimension(DruidMetrics.TASK_INGESTION_MODE, ((AbstractTask) task).getIngestionMode());
+    metricBuilder.setDimension(DruidMetrics.TASK_INGESTION_MODE, task.getIngestionMode());
+    metricBuilder.setDimensionIfNotNull(
+        DruidMetrics.INGEST_METADATA,
+        task.<Map<String, Object>>getContextValue("metricMetadata")
+    );
   }
 
   public static void setTaskStatusDimensions(
