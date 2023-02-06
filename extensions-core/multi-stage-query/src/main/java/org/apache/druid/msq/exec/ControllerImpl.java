@@ -64,6 +64,7 @@ import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -89,7 +90,6 @@ import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
-import org.apache.druid.msq.indexing.MSQTombstoneHelper;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
@@ -1255,15 +1255,19 @@ public class ControllerImpl implements Controller
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
 
       if (!intervalsToDrop.isEmpty()) {
-        MSQTombstoneHelper msqTombstoneHelper = new MSQTombstoneHelper(
-            intervalsToDrop,
-            destination.getReplaceTimeChunks(),
-            task.getDataSource(),
-            context.taskActionClient(),
-            destination.getSegmentGranularity()
-        );
-        Set<DataSegment> tombstones = msqTombstoneHelper.computeTombstones();
-        segmentsWithTombstones.addAll(tombstones);
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
+        try {
+          Set<DataSegment> tombstones = tombstoneHelper.computeTombstonesForReplace(
+              intervalsToDrop,
+              destination.getReplaceTimeChunks(),
+              task.getDataSource(),
+              destination.getSegmentGranularity()
+          );
+          segmentsWithTombstones.addAll(tombstones);
+        }
+        catch (IllegalStateException e) {
+          throw new MSQException(e, InsertLockPreemptedFault.instance());
+        }
       }
 
       if (segmentsWithTombstones.isEmpty()) {

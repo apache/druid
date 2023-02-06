@@ -22,9 +22,12 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
@@ -33,6 +36,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -121,6 +125,55 @@ public class TombstoneHelper
     return retVal;
   }
 
+  public Set<DataSegment> computeTombstonesForReplace(
+      List<Interval> intervalsToDrop,
+      List<Interval> intervalsToReplace,
+      String dataSource,
+      Granularity replaceGranularity
+  ) throws IOException
+  {
+    Set<Interval> tombstoneIntervals = computeTombstoneIntervalsForReplace(
+        intervalsToReplace,
+        intervalsToDrop,
+        dataSource,
+        replaceGranularity
+    );
+    Set<DataSegment> tombstones = new HashSet<>();
+    for (Interval tombstoneInterval : tombstoneIntervals) {
+
+      final List<TaskLock> locks = taskActionClient.submit(new LockListAction());
+      String version = null;
+      for (final TaskLock lock : locks) {
+        if (lock.getInterval().contains(tombstoneInterval)) {
+          version = lock.getVersion();
+        }
+      }
+
+      if (version == null) {
+        // Unable to fetch the version number of the segment
+        throw new ISE("Unable to fetch the version of the segments in use. The lock for the task might"
+                      + "have been revoked");
+      }
+
+      DataSegment tombstone = createTombstoneForTimeChunkInterval(
+          dataSource,
+          version,
+          new TombstoneShardSpec(),
+          tombstoneInterval
+      );
+      tombstones.add(tombstone);
+    }
+    return tombstones;
+  }
+
+  /**
+   * @param intervalsToDrop Empty intervals in the query that need to be dropped
+   * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data
+   * @param dataSource Datasource on which the replace is to be performed
+   * @param replaceGranularity Granularity of the replace query
+   * @return
+   * @throws IOException
+   */
   public Set<Interval> computeTombstoneIntervalsForReplace(
       List<Interval> intervalsToReplace,
       List<Interval> intervalsToDrop,
@@ -167,15 +220,13 @@ public class TombstoneHelper
     return retVal;
   }
 
-  public static DataSegment createTombstoneForTimeChunkInterval(
+  public DataSegment createTombstoneForTimeChunkInterval(
       String dataSource,
       String version,
       ShardSpec shardSpec,
       Interval timeChunkInterval
   )
   {
-
-
     // and the loadSpec is different too:
     Map<String, Object> tombstoneLoadSpec = new HashMap<>();
     // since loadspec comes from prototype it is guaranteed to be non-null
