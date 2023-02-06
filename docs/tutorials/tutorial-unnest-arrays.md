@@ -149,7 +149,7 @@ In the results, notice that the column named `dim3` has nested values like `["a"
 The following is the general syntax for UNNEST:
 
 ```sql
-SELECT target_column FROM datasource, UNNEST(source) as UNNESTED(target_column)
+SELECT target_column FROM datasource, UNNEST(source) AS table_alias_name(column_alias_name)
 ```
 
 For more information about the syntax, see [UNNEST](../querying/sql.md#unnest).
@@ -178,7 +178,7 @@ SELECT d3 FROM "nested_data", UNNEST(MV_TO_ARRAY(dim3)) as UNNESTED (d3)
 
 Notice the `MV_TO_ARRAY` helper function, which converts the multi-value records in `dim3` to arrays. It is required since `dim3` is a multi-value string dimension. 
 
-If the column you are unnesting is not a string dimension, then you do not need to use the helper function, such as when you unnest an inline array of numbers.
+If the column you are unnesting is not a string dimension, then you do not need to use the MV_TO_ARRAY helper function.
 
 ### Unnest a virtual column
 
@@ -195,6 +195,8 @@ Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 ```sql
 select d45 from nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS UNNESTED (d45)
 ```
+
+Decide which method to use based on what your goals are. 
 
 ### Unnest a column from a subset of a table
 
