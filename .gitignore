@@ -30,3 +30,6 @@ integration-tests/gen-scripts/
 **/.ipynb_checkpoints/
 website/.yarn/
 website/node_modules
+
+# Local Netlify folder
+.netlify
