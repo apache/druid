@@ -31,6 +31,10 @@ public class HllSketchHolder
 {
   public static HllSketchHolder fromObj(Object obj)
   {
+    if (obj == null) {
+      throw new NullPointerException("HllSketchHolder.fromObj cannot take a null argument");
+    }
+
     if (obj instanceof HllSketchHolder) {
       return (HllSketchHolder) obj;
     } else if (obj instanceof HllSketch) {
@@ -68,14 +72,13 @@ public class HllSketchHolder
   {
     this.union = union;
     this.sketch = sketch;
+
+    if (this.union == null && this.sketch == null) {
+      throw new ISE("Both union and sketch were null!");
+    }
   }
 
   @JsonValue
-  public HllSketch getInternalSketch()
-  {
-    return sketch;
-  }
-
   public HllSketch getSketch()
   {
     if (sketch == null) {

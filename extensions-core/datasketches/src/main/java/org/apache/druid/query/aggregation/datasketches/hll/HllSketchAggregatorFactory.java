@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
 import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
@@ -134,6 +135,9 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public HllSketchHolder deserialize(final Object object)
   {
+    if (object == null) {
+      return HllSketchHolder.of(new HllSketch(lgK, tgtHllType));
+    }
     return HllSketchHolder.fromObj(object);
   }
 
