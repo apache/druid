@@ -622,8 +622,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     // from here
     return ColumnCapabilitiesImpl.createDefault()
                                  .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                 .setHasNulls(expectedType == null || (expectedType.isNumeric()
-                                                                       && NullHandling.sqlCompatible()));
+                                 .setHasNulls(expectedType == null || !expectedType.isNumeric() || (expectedType.isNumeric() && NullHandling.sqlCompatible()));
   }
 
   @Override
