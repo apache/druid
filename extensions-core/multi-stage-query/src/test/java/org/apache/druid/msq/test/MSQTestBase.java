@@ -529,6 +529,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
+  /**
+   * Creates an array of length and containing values decided by the parameters.
+   */
+  protected long[] createExpectedFrameArray(int length, int value) {
+    long[] array = new long[length];
+    Arrays.fill(array, value);
+    return array;
+  }
+
   @Nonnull
   private Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
   {

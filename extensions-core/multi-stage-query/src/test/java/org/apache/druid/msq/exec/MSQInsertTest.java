@@ -87,6 +87,10 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnFoo1()
   {
+    List<Object[]> expectedRows = expectedFooRows();
+    int expectedCounterRows = expectedRows.size();
+    long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -98,7 +102,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRows())
+                     .setExpectedResultRows(expectedRows)
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -106,22 +110,22 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
                      .verifyResults();
@@ -210,6 +214,10 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertOnFoo1WithTimeFunctionWithSequential()
   {
+    List<Object[]> expectedRows = expectedFooRows();
+    int expectedCounterRows = expectedRows.size();
+    long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -229,7 +237,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(MSQInsertTest.this.context)
                      .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRows())
+                     .setExpectedResultRows(expectedRows)
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -237,22 +245,22 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
                      .verifyResults();
@@ -353,6 +361,10 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testRollUpOnFoo1UpOnFoo1()
   {
+    List<Object[]> expectedRows = expectedFooRows();
+    int expectedCounterRows = expectedRows.size();
+    long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -368,7 +380,7 @@ public class MSQInsertTest extends MSQTestBase
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRows())
+                     .setExpectedResultRows(expectedRows)
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -376,22 +388,22 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
                      .verifyResults();
@@ -401,6 +413,10 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testRollUpOnFoo1WithTimeFunction()
   {
+    List<Object[]> expectedRows = expectedFooRows();
+    int expectedCounterRows = expectedRows.size();
+    long[] expectedArray = createExpectedFrameArray(expectedCounterRows, 1);
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -416,7 +432,7 @@ public class MSQInsertTest extends MSQTestBase
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(expectedFooSegments())
-                     .setExpectedResultRows(expectedFooRows())
+                     .setExpectedResultRows(expectedRows)
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -424,22 +440,22 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          0, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(5).frames(1),
+                             .with().rows(expectedCounterRows).frames(1),
                          1, 0, "input0"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          1, 0, "shuffle"
                      )
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
-                             .with().rows(1, 1, 1, 1, 1).frames(1, 1, 1, 1, 1),
+                             .with().rows(expectedArray).frames(expectedArray),
                          2, 0, "input0"
                      )
                      .verifyResults();
