@@ -590,7 +590,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
   {
     RowSignature targetRowSignature = RowSignature.builder()
         .add("__time", ColumnType.LONG)
-        .add("x", ColumnType.STRING)
+        .add("y", ColumnType.STRING)
         .build();
     ExternalDataSource expectedDatasource = new ExternalDataSource(
         new LocalInputSource(
@@ -607,7 +607,7 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql(
             "INSERT INTO dst\n"
-            + "SELECT TIME_PARSE(x), y\n"
+            + "SELECT TIME_PARSE(x) AS __time, y\n"
             + "FROM TABLE(ext.localBaseDirNoSchema(\n"
             + "    files => ARRAY['foo.csv'],\n"
             + "    format => 'csv'))\n"
@@ -620,9 +620,9 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
             newScanQueryBuilder()
                 .dataSource(expectedDatasource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "y", "v0")
+                .columns("v0", "y")
                 .virtualColumns(
-                    expressionVirtualColumn("v0", "floor(\"x\")", ColumnType.DOUBLE)
+                    expressionVirtualColumn("v0", "timestamp_parse(\"x\",null,'UTC')", ColumnType.LONG)
                  )
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()

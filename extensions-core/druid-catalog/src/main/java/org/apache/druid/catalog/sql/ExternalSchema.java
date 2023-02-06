@@ -23,12 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
-import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.TableMacro;
-import org.apache.calcite.schema.TranslatableTable;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
@@ -37,14 +33,10 @@ import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.catalog.sync.MetadataCatalog;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
-import org.apache.druid.sql.calcite.external.CatalogExternalTableOperatorConversion.CatalogTableMacro;
+import org.apache.druid.sql.calcite.external.DruidTableMacro;
 import org.apache.druid.sql.calcite.external.Externals;
-import org.apache.druid.sql.calcite.external.UserDefinedTableMacroFunction;
 import org.apache.druid.sql.calcite.schema.AbstractTableSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -56,7 +48,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Represents the "ext" schema which holds the catalog external table
@@ -176,12 +167,12 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
   @Override
   public Collection<Function> getFunctions(String name)
   {
-    ResolvedTable inputTable = getExternalTable(name);
-    if (inputTable == null) {
+    ResolvedTable externalTable = getExternalTable(name);
+    if (externalTable == null) {
       return Collections.emptyList();
     }
     return Collections.singletonList(
-      new ParameterizedTableMacro(name, inputTable)
+      new ExternalTableMacro(name, externalTable)
     );
   }
 
@@ -194,26 +185,19 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
    * macro. Calcite will create an instance of {@code SqlUserDefinedTableMacro}
    * automatically, based on the fact that this function implements {@code TableMacro}.
    */
-  public static class ParameterizedTableMacro
-      extends CatalogTableMacro // Catalog-based table macro
-      implements org.apache.calcite.schema.TableFunction, // For information schema metadata
-      AuthorizableOperator // For Druid authorization
+  public static class ExternalTableMacro
+      extends DruidTableMacro
+      implements org.apache.calcite.schema.TableFunction // For information schema metadata
   {
     private final ResolvedTable externalTable;
 
-    public ParameterizedTableMacro(
+    public ExternalTableMacro(
         final String tableName,
         final ResolvedTable externalTable
     )
     {
       super(tableName, externalTable);
       this.externalTable = externalTable;
-    }
-
-    @Override
-    public Set<ResourceAction> computeResources(final SqlCall call)
-    {
-      return Collections.singleton(Externals.externalRead(name));
     }
 
     @Override

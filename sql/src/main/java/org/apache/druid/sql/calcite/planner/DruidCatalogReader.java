@@ -24,6 +24,7 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Function;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlOperator;
@@ -33,11 +34,15 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.curator.shaded.com.google.common.collect.Iterators;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.sql.calcite.external.CatalogExternalTableOperatorConversion.CatalogExternalTableOperator;
-import org.apache.druid.sql.calcite.external.CatalogExternalTableOperatorConversion.CatalogTableMacro;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.external.DruidTableMacro;
+import org.apache.druid.sql.calcite.external.DruidUserDefinedTableMacro;
+import org.apache.druid.sql.calcite.external.Externals;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Druid-specific catalog reader which provides the special processing needed for
@@ -93,7 +98,7 @@ public class DruidCatalogReader extends CalciteCatalogReader
   }
 
   /**
-   * Resolve an external table as a function. The table may be "complete" which mean it
+   * Resolve an external table as a function. The table may be "complete" which means it
    * takes zero arguments. We allow this, it is OK, if verbose, to say
    * {@code FROM(TABLE(ext.foo())} instead of the simpler {@code FROM ext.foo}. Most
    * external tables are partial, meaning that they need extra parameters a query time,
@@ -116,9 +121,47 @@ public class DruidCatalogReader extends CalciteCatalogReader
       throw new ISE("Found multiple table functions for %s", opName.toString());
     }
     Function fn = Iterators.getOnlyElement(fns.iterator());
-    if (!(fn instanceof CatalogTableMacro)) {
-      throw new ISE("Table function %s is not a CatalogTableMacro", opName.toString());
+    if (!(fn instanceof DruidTableMacro)) {
+      throw new ISE("Table function %s is not a DruidTableMacro", opName.toString());
     }
-    operatorList.add(new CatalogExternalTableOperator((CatalogTableMacro) fn));
+    operatorList.add(new ExternalUserDefinedTableMacro(opName, (DruidTableMacro) fn));
+  }
+
+  /**
+   * Druid user defined table macro that preserves the full function name so that
+   * later re-resolutions of this function will search only in the ext schema
+   * rather than also searching in all schemas. (By default, Calcite preserves only
+   * the tail of the name, not the prefix.)
+   * <p>
+   * Also, we want the auth resource to use the actual table name, not just the
+   * generic `EXTERNAL`.
+   */
+  public static class ExternalUserDefinedTableMacro extends DruidUserDefinedTableMacro
+  {
+    private final SqlIdentifier fullName;
+
+    public ExternalUserDefinedTableMacro(SqlIdentifier name, DruidTableMacro macro)
+    {
+      super(macro);
+      this.fullName = name;
+    }
+
+    @Override
+    public SqlIdentifier getNameAsId()
+    {
+      return fullName;
+    }
+
+    @Override
+    public String toString()
+    {
+      return fullName.toString();
+    }
+
+    @Override
+    public Set<ResourceAction> computeResources(final SqlCall call)
+    {
+      return Collections.singleton(Externals.externalRead(fullName.names.get(fullName.names.size() - 1)));
+    }
   }
 }

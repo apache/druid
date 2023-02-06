@@ -54,7 +54,7 @@ import java.util.Map;
  * a Druid JSON signature, or an SQL {@code EXTEND} list of columns.
  * As with all table functions, the {@code EXTEND} is optional.
  */
-public class ExternalOperatorConversion extends CatalogExternalTableOperatorConversion
+public class ExternalOperatorConversion extends DruidUserDefinedTableMacroConversion
 {
   public static final String FUNCTION_NAME = "EXTERN";
 
