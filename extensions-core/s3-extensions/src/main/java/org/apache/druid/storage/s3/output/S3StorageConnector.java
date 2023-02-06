@@ -202,7 +202,7 @@ public class S3StorageConnector implements StorageConnector
               super.close();
               // since endPoint is inclusive in s3's get request API, the next currReadStart is endpoint + 1
               currReadStart.set(endPoint + 1);
-              if (outFile.delete()) {
+              if (!outFile.delete()) {
                 throw new RE("Cannot delete temp file [%s]", outFile);
               }
             }
