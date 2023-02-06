@@ -691,26 +691,23 @@ public class WorkerImpl implements Worker
     final FileOutputChannelFactory fileOutputChannelFactory =
         new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
-    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext()))) {
-      if (durableStageStorageEnabled) {
-        return new ComposingOutputChannelFactory(
-            ImmutableList.of(
-                fileOutputChannelFactory,
-                DurableStorageOutputChannelFactory.createStandardImplementation(
-                    task.getControllerTaskId(),
-                    task().getWorkerNumber(),
-                    stageNumber,
-                    task().getId(),
-                    frameSize,
-                    MSQTasks.makeStorageConnector(context.injector()),
-                    tmpDir
-                )
-            ),
-            frameSize
-        );
-      } else {
-        return fileOutputChannelFactory;
-      }
+    if (MultiStageQueryContext.isComposedIntermediateSuperSorterStorageEnabled(QueryContext.of(task.getContext())) &&
+        durableStageStorageEnabled) {
+      return new ComposingOutputChannelFactory(
+          ImmutableList.of(
+              fileOutputChannelFactory,
+              DurableStorageOutputChannelFactory.createStandardImplementation(
+                  task.getControllerTaskId(),
+                  task().getWorkerNumber(),
+                  stageNumber,
+                  task().getId(),
+                  frameSize,
+                  MSQTasks.makeStorageConnector(context.injector()),
+                  tmpDir
+              )
+          ),
+          frameSize
+      );
     } else {
       return fileOutputChannelFactory;
     }
