@@ -138,10 +138,11 @@ public class TombstoneHelper
         dataSource,
         replaceGranularity
     );
+
+    final List<TaskLock> locks = taskActionClient.submit(new LockListAction());
+
     Set<DataSegment> tombstones = new HashSet<>();
     for (Interval tombstoneInterval : tombstoneIntervals) {
-
-      final List<TaskLock> locks = taskActionClient.submit(new LockListAction());
       String version = null;
       for (final TaskLock lock : locks) {
         if (lock.getInterval().contains(tombstoneInterval)) {
@@ -182,11 +183,7 @@ public class TombstoneHelper
   ) throws IOException
   {
     Set<Interval> retVal = new HashSet<>();
-    List<Interval> usedIntervals = TombstoneHelper.getCondensedUsedIntervals(
-        intervalsToReplace,
-        dataSource,
-        taskActionClient
-    );
+    List<Interval> usedIntervals = getCondensedUsedIntervals(intervalsToReplace, dataSource, taskActionClient);
 
     for (Interval intervalToDrop : intervalsToDrop) {
       for (Interval usedInterval : usedIntervals) {
@@ -258,7 +255,7 @@ public class TombstoneHelper
    * @return Intervals corresponding to used segments that overlap with any of the spec's input intervals
    * @throws IOException If used segments cannot be retrieved
    */
-  public static List<Interval> getCondensedUsedIntervals(
+  private List<Interval> getCondensedUsedIntervals(
       List<Interval> inputIntervals,
       String dataSource,
       TaskActionClient taskActionClient

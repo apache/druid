@@ -2569,7 +2569,6 @@ public class ControllerImpl implements Controller
   }
 
 
-
   /**
    * Interface used by {@link #contactWorkersForStage}.
    */

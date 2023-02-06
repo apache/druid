@@ -1146,20 +1146,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
           tombstoneLoadSpec.put("path", null); // tombstones do not have any backing file
 
           if (expectedTombstoneIntervals != null) {
-            expectedPublishedSegmentIds.addAll(expectedTombstoneIntervals.stream()
-                                                                         .map(interval ->
-                                                                                  DataSegment.builder()
-                                                                                             .dataSource(
-                                                                                                 expectedDataSource)
-                                                                                             .interval(interval)
-                                                                                             .version(
-                                                                                                 MSQTestTaskActionClient.VERSION)
-                                                                                             .shardSpec(new TombstoneShardSpec())
-                                                                                             .loadSpec(tombstoneLoadSpec)
-                                                                                             .size(1)
-                                                                                             .build())
-                                                                         .map(DataSegment::getId)
-                                                                         .collect(Collectors.toSet()));
+            expectedPublishedSegmentIds.addAll(
+                expectedTombstoneIntervals.stream()
+                                          .map(interval -> DataSegment.builder()
+                                                                      .dataSource(expectedDataSource)
+                                                                      .interval(interval)
+                                                                      .version(MSQTestTaskActionClient.VERSION)
+                                                                      .shardSpec(new TombstoneShardSpec())
+                                                                      .loadSpec(tombstoneLoadSpec)
+                                                                      .size(1)
+                                                                      .build())
+                                          .map(DataSegment::getId)
+                                          .collect(Collectors.toSet())
+            );
           }
           Assert.assertEquals(
               expectedPublishedSegmentIds,
