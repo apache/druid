@@ -19,6 +19,8 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
+import { nonEmptyString } from '../utils';
+
 export class Api {
   static instance: AxiosInstance;
 
@@ -32,11 +34,11 @@ export class Api {
       (error: AxiosError) => {
         const responseData = error.response?.data;
         const message = responseData?.message;
-        if (typeof message === 'string') {
+        if (nonEmptyString(message)) {
           return Promise.reject(new Error(message));
         }
 
-        if (error.config.method?.toLowerCase() === 'get' && typeof responseData === 'string') {
+        if (error.config.method?.toLowerCase() === 'get' && nonEmptyString(responseData)) {
           return Promise.reject(new Error(responseData));
         }
 

@@ -1965,7 +1965,6 @@ GiB
 1_000_000
 2012-01-01T00
 2GB
-30_000
 524288000L
 5MiB
 8u60
@@ -2316,3 +2315,6 @@ MacOS
 RHEL
 psutil
 pathlib
+- ../docs/tutorials/tutorial-sql-query-view.md
+kttm_simple
+dist_country
