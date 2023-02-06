@@ -151,7 +151,7 @@ public class TombstoneHelper
 
       if (version == null) {
         // Unable to fetch the version number of the segment
-        throw new ISE("Unable to fetch the version of the segments in use. The lock for the task might"
+        throw new ISE("Unable to fetch the version of the segments in use. The lock for the task might "
                       + "have been revoked");
       }
 
