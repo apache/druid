@@ -394,8 +394,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  @VisibleForTesting
-  void serverRemoved(DruidServer server)
+  private void serverRemoved(DruidServer server)
   {
     synchronized (servers) {
       DruidServerHolder holder = servers.remove(server.getName());

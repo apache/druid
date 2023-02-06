@@ -638,8 +638,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return new WorkerHolder(smileMapper, httpClient, config, workersSyncExec, listener, worker, knownAnnouncements);
   }
 
-  @VisibleForTesting
-  void removeWorker(final Worker worker)
+  private void removeWorker(final Worker worker)
   {
     synchronized (workers) {
       log.info("Kaboom! Worker[%s] removed!", worker.getHost());

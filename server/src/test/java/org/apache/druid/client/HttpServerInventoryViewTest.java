@@ -274,7 +274,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test
-  public void testSyncMonitoring()
+  public void testSyncMonitoring() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -315,6 +315,11 @@ public class HttpServerInventoryViewTest
     EasyMock.expect(server.getName()).andReturn(host).anyTimes();
     EasyMock.expect(server.getHost()).andReturn(host).anyTimes();
     EasyMock.expect(server.getScheme()).andReturn("http").anyTimes();
+    EasyMock.expect(server.getHostAndPort()).andReturn(host).anyTimes();
+    EasyMock.expect(server.getHostAndTlsPort()).andReturn(host).anyTimes();
+    EasyMock.expect(server.getTier()).andReturn("__default_tier").anyTimes();
+    EasyMock.expect(server.getMaxSize()).andReturn(100000000L).anyTimes();
+    EasyMock.expect(server.getPriority()).andReturn(50).anyTimes();
     EasyMock.replay(server);
     return server;
   }
