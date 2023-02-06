@@ -171,7 +171,7 @@ public class TombstoneHelper
    * @param intervalsToReplace Intervals in the query which are eligible for replacement with new data
    * @param dataSource Datasource on which the replace is to be performed
    * @param replaceGranularity Granularity of the replace query
-   * @return
+   * @return Intervals computed for the tombstones
    * @throws IOException
    */
   public Set<Interval> computeTombstoneIntervalsForReplace(

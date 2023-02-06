@@ -413,12 +413,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
-                         "foo",
-                         Intervals.of("2000-01-01T/P1M"),
-                         "test",
-                         0
-                     )))
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01/2001-02-01")))
                      .verifyResults();
   }
 
@@ -524,6 +519,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01/P1M")))
                      .verifyResults();
   }
 

@@ -214,4 +214,33 @@ public class TombstoneHelperTest
     );
     Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-02-02")), tombstoneIntervals);
   }
+
+  @Test
+  public void tombstonesCreatedForReplaceWhenUsedIntervalsAreCompletelyDisjoint() throws Exception
+  {
+    Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
+    Interval replaceInterval = Intervals.of("2023-01-30/2023-03-31");
+    Interval intervalToDrop = Intervals.of("2023-01-30/2023-03-31");
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        ImmutableList.of(replaceInterval),
+        ImmutableList.of(intervalToDrop),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(ImmutableSet.of(), tombstoneIntervals);
+  }
 }

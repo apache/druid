@@ -161,6 +161,7 @@ import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -783,6 +784,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
     protected Set<SegmentId> expectedSegments = null;
+    protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
@@ -816,6 +818,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
       this.expectedSegments = expectedSegments;
+      return asBuilder();
+    }
+
+    public Builder setExpectedTombstoneIntervals(Set<Interval> tombstoneIntervals)
+    {
+      Preconditions.checkArgument(!tombstoneIntervals.isEmpty(), "Segments cannot be empty");
+      this.expectedTombstoneIntervals = tombstoneIntervals;
       return asBuilder();
     }
 
@@ -1126,6 +1135,36 @@ public class MSQTestBase extends BaseCalciteQueryTest
             // Checking if the row belongs to the correct segment interval
             Assert.assertTrue(segmentIdVsOutputRowsMap.get(diskSegment).contains(Arrays.asList(row)));
           }
+        }
+        if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
+          Set<SegmentId> expectedPublishedSegmentIds = segmentManager.getAllDataSegments()
+                                                                     .stream()
+                                                                     .map(DataSegment::getId)
+                                                                     .collect(Collectors.toSet());
+          Map<String, Object> tombstoneLoadSpec = new HashMap<>();
+          tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
+          tombstoneLoadSpec.put("path", null); // tombstones do not have any backing file
+
+          if (expectedTombstoneIntervals != null) {
+            expectedPublishedSegmentIds.addAll(expectedTombstoneIntervals.stream()
+                                                                         .map(interval ->
+                                                                                  DataSegment.builder()
+                                                                                             .dataSource(
+                                                                                                 expectedDataSource)
+                                                                                             .interval(interval)
+                                                                                             .version(
+                                                                                                 MSQTestTaskActionClient.VERSION)
+                                                                                             .shardSpec(new TombstoneShardSpec())
+                                                                                             .loadSpec(tombstoneLoadSpec)
+                                                                                             .size(1)
+                                                                                             .build())
+                                                                         .map(DataSegment::getId)
+                                                                         .collect(Collectors.toSet()));
+          }
+          Assert.assertEquals(
+              expectedPublishedSegmentIds,
+              testTaskActionClient.getPublishedSegments().stream().map(DataSegment::getId).collect(Collectors.toSet())
+          );
         }
         // assert results
         assertResultsEquals(sql, expectedResultRows, transformedOutputRows);
