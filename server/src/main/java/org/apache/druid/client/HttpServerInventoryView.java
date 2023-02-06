@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -377,7 +378,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     );
   }
 
-  private void serverAdded(DruidServer server)
+  @VisibleForTesting
+  void serverAdded(DruidServer server)
   {
     synchronized (servers) {
       DruidServerHolder holder = servers.get(server.getName());
@@ -392,7 +394,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  private void serverRemoved(DruidServer server)
+  @VisibleForTesting
+  void serverRemoved(DruidServer server)
   {
     synchronized (servers) {
       DruidServerHolder holder = servers.remove(server.getName());
@@ -432,33 +435,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           log.debug("Running the Sync Monitoring.");
 
           try {
-            // Ensure that the collection is not being modified during iteration. Iterate over a copy
-            final Set<Map.Entry<String, DruidServerHolder>> serverEntrySet = ImmutableSet.copyOf(servers.entrySet());
-            for (Map.Entry<String, DruidServerHolder> e : serverEntrySet) {
-              DruidServerHolder serverHolder = e.getValue();
-              if (!serverHolder.syncer.isOK()) {
-                synchronized (servers) {
-                  // check again that server is still there and only then reset.
-                  if (servers.containsKey(e.getKey())) {
-                    log.makeAlert(
-                        "Server[%s] is not syncing properly. Current state is [%s]. Resetting it.",
-                        serverHolder.druidServer.getName(),
-                        serverHolder.syncer.getDebugInfo()
-                    ).emit();
-                    serverRemoved(serverHolder.druidServer);
-                    serverAdded(new DruidServer(
-                        serverHolder.druidServer.getName(),
-                        serverHolder.druidServer.getHostAndPort(),
-                        serverHolder.druidServer.getHostAndTlsPort(),
-                        serverHolder.druidServer.getMaxSize(),
-                        serverHolder.druidServer.getType(),
-                        serverHolder.druidServer.getTier(),
-                        serverHolder.druidServer.getPriority()
-                    ));
-                  }
-                }
-              }
-            }
+            syncMonitoring();
           }
           catch (Exception ex) {
             if (ex instanceof InterruptedException) {
@@ -472,6 +449,38 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         5,
         TimeUnit.MINUTES
     );
+  }
+
+  @VisibleForTesting
+  void syncMonitoring()
+  {
+    // Ensure that the collection is not being modified during iteration. Iterate over a copy
+    final Set<Map.Entry<String, DruidServerHolder>> serverEntrySet = ImmutableSet.copyOf(servers.entrySet());
+    for (Map.Entry<String, DruidServerHolder> e : serverEntrySet) {
+      DruidServerHolder serverHolder = e.getValue();
+      if (!serverHolder.syncer.isOK()) {
+        synchronized (servers) {
+          // check again that server is still there and only then reset.
+          if (servers.containsKey(e.getKey())) {
+            log.makeAlert(
+                "Server[%s] is not syncing properly. Current state is [%s]. Resetting it.",
+                serverHolder.druidServer.getName(),
+                serverHolder.syncer.getDebugInfo()
+            ).emit();
+            serverRemoved(serverHolder.druidServer);
+            serverAdded(new DruidServer(
+                serverHolder.druidServer.getName(),
+                serverHolder.druidServer.getHostAndPort(),
+                serverHolder.druidServer.getHostAndTlsPort(),
+                serverHolder.druidServer.getMaxSize(),
+                serverHolder.druidServer.getType(),
+                serverHolder.druidServer.getTier(),
+                serverHolder.druidServer.getPriority()
+            ));
+          }
+        }
+      }
+    }
   }
 
   @Override

@@ -273,6 +273,52 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
+  @Test
+  public void testSyncMonitoring()
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    TestHttpClient httpClient = new TestHttpClient(ImmutableList.of());
+    DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
+        new DruidNode("service", "host", false, 8080, null, true, false),
+        NodeRole.HISTORICAL,
+        ImmutableMap.of(
+            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
+        )
+    );
+
+    HttpServerInventoryView httpServerInventoryView = new HttpServerInventoryView(
+        jsonMapper,
+        httpClient,
+        druidNodeDiscoveryProvider,
+        (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
+        new HttpServerInventoryViewConfig(null, null, null),
+        "test"
+    );
+
+    httpServerInventoryView.start();
+    httpServerInventoryView.serverAdded(makeServer("abc.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("xyz.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("lol.com:8080"));
+    httpServerInventoryView.syncMonitoring();
+  }
+
+  private DruidServer makeServer(String host)
+  {
+    DruidServer server = EasyMock.mock(DruidServer.class);
+    EasyMock.expect(server.getName()).andReturn(host).anyTimes();
+    EasyMock.expect(server.getHost()).andReturn(host).anyTimes();
+    EasyMock.expect(server.getScheme()).andReturn("http").anyTimes();
+    EasyMock.replay(server);
+    return server;
+  }
+
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
     Listener listener;
