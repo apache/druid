@@ -71,15 +71,13 @@ In the example commands below:
 #### MySQL
 
 ```bash
-cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"mysql-metadata-storage\"]" -Ddruid.metadata.storage.type=mysql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI="<mysql-uri>" --user <user> --password <pass> --base druid
+./_bin/init-metadata.sh -d mysql -u <username> -p <password> -c <mysql-uri>
 ```
 
 #### PostgreSQL
 
 ```bash
-cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList="[\"postgresql-metadata-storage\"]" -Ddruid.metadata.storage.type=postgresql -Ddruid.node.type=metadata-init org.apache.druid.cli.Main tools metadata-init --connectURI="<postgresql-uri>" --user <user> --password <pass> --base druid
+./_bin/init-metadata.sh -d postgresql -u <username> -p <password> -c <postgresql-uri>
 ```
 
 ### Import metadata
