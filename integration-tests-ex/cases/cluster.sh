@@ -147,10 +147,11 @@ function docker_file {
   TEMPLATE_DIR=$MODULE_DIR/templates
   TEMPLATE_FILE=${DRUID_INTEGRATION_TEST_GROUP}.py
   if [ -f "$TEMPLATE_DIR/$TEMPLATE_FILE" ]; then
+    export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
+    mkdir -p $COMPOSE_DIR
     pushd $TEMPLATE_DIR > /dev/null
     python3 $TEMPLATE_FILE
     popd > /dev/null
-    export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
     cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
   else
     # Else, use the existing non-template file in place.
