@@ -40,6 +40,9 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
@@ -63,7 +66,7 @@ public class TestHelper
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
-    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory);
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
   public static IndexIO getTestIndexIO()
@@ -93,14 +96,32 @@ public class TestHelper
   public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
-    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    final AnnotationIntrospector introspector = makeAnnotationIntrospector();
     DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
 
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
+    );
+    return mapper;
+  }
+
+  public static ObjectMapper makeJsonMapperForJoinable(JoinableFactoryWrapper joinableFactoryWrapper)
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    AnnotationIntrospector introspector = makeAnnotationIntrospector();
+    DruidSecondaryModule.setupAnnotationIntrospector(mapper, introspector);
+
+
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
+            .addValue(JoinableFactoryWrapper.class, joinableFactoryWrapper)
     );
     return mapper;
   }
@@ -372,7 +393,7 @@ public class TestHelper
     }
   }
 
-  private static void assertRow(String msg, ResultRow expected, ResultRow actual)
+  public static void assertRow(String msg, ResultRow expected, ResultRow actual)
   {
     Assert.assertEquals(
         StringUtils.format("%s: row length", msg),
@@ -408,6 +429,16 @@ public class TestHelper
             ((Number) actualValue).doubleValue(),
             Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
         );
+      } else if (expectedValue instanceof ComparableStringArray && actualValue instanceof List) {
+        Assert.assertArrayEquals(
+            ((ComparableStringArray) expectedValue).getDelegate(),
+            ExprEval.coerceListToArray((List) actualValue, true).rhs
+        );
+      } else if (expectedValue instanceof ComparableList && actualValue instanceof List) {
+        Assert.assertArrayEquals(
+            ((ComparableList) expectedValue).getDelegate().toArray(new Object[0]),
+            ExprEval.coerceListToArray((List) actualValue, true).rhs
+        );
       } else {
         Assert.assertEquals(
             message,
@@ -418,13 +449,20 @@ public class TestHelper
     }
   }
 
-  public static Map<String, Object> createExpectedMap(Object... vals)
+  public static Map<String, Object> makeMap(Object... vals)
+  {
+    return makeMap(true, vals);
+  }
+
+  public static Map<String, Object> makeMap(boolean explicitNulls, Object... vals)
   {
     Preconditions.checkArgument(vals.length % 2 == 0);
 
     Map<String, Object> theVals = new HashMap<>();
     for (int i = 0; i < vals.length; i += 2) {
-      theVals.put(vals[i].toString(), vals[i + 1]);
+      if (explicitNulls || vals[i + 1] != null) {
+        theVals.put(vals[i].toString(), vals[i + 1]);
+      }
     }
     return theVals;
   }

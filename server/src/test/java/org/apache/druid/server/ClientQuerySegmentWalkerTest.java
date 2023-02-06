@@ -59,7 +59,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -71,11 +70,14 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -124,6 +126,7 @@ public class ClientQuerySegmentWalkerTest
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
   private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
+
 
   private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
@@ -500,7 +503,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -568,7 +575,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -636,11 +647,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -691,11 +698,7 @@ public class ClientQuerySegmentWalkerTest
   {
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
-                                                      .intervals(
-                                                          new MultipleIntervalSegmentSpec(
-                                                              ImmutableList.of(Intervals.ETERNITY)
-                                                          )
-                                                      )
+                                                      .eternityInterval()
                                                       .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
@@ -755,7 +758,8 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           null
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -836,19 +840,48 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .setDimensions(
+                                       new DefaultDimensionSpec(
+                                           "ad",
+                                           "ad",
+                                           ColumnType.DOUBLE_ARRAY
+                                       ))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
-
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0))},
+            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0))},
+            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0))},
+            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysDoublesAsString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1.0, 2.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(2.0, 4.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(3.0, 6.0)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(4.0, 8.0)).toString()}
+        )
     );
   }
 
@@ -894,18 +927,49 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .setDimensions(new DefaultDimensionSpec(
+                                       "al",
+                                       "al",
+                                       ColumnType.LONG_ARRAY
+                                   ))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
 
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<LONG>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L))},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L))},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L))},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L))}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysLongsAsString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    // when we donot define an outputType, convert {@link ComparableList} to a string
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{new ComparableList(ImmutableList.of(1L, 2L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(2L, 4L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(3L, 6L)).toString()},
+            new Object[]{new ComparableList(ImmutableList.of(4L, 8L)).toString()}
+        )
     );
   }
 
@@ -951,19 +1015,43 @@ public class ClientQuerySegmentWalkerTest
                                    .setDataSource(ARRAY)
                                    .setGranularity(Granularities.ALL)
                                    .setInterval(Collections.singletonList(INTERVAL))
-                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .setDimensions(new DefaultDimensionSpec("as", "as", ColumnType.STRING_ARRAY))
                                    .build()
                                    .withId(DUMMY_QUERY_ID);
-
-
-    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot create query type helper from invalid type [ARRAY<STRING>]");
 
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of()
+        ImmutableList.of(
+            new Object[]{ComparableStringArray.of("1.0", "2.0")},
+            new Object[]{ComparableStringArray.of("2.0", "4.0")},
+            new Object[]{ComparableStringArray.of("3.0", "6.0")},
+            new Object[]{ComparableStringArray.of("4.0", "8.0")}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysStringsasString()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .build()
+                                   .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{ComparableStringArray.of("1.0", "2.0").toString()},
+            new Object[]{ComparableStringArray.of("2.0", "4.0").toString()},
+            new Object[]{ComparableStringArray.of("3.0", "6.0").toString()},
+            new Object[]{ComparableStringArray.of("4.0", "8.0").toString()}
+        )
     );
   }
 
@@ -1283,6 +1371,7 @@ public class ClientQuerySegmentWalkerTest
             .put(globalFactory.getClass(), GlobalTableDataSource.class)
             .build()
     );
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     class CapturingWalker implements QuerySegmentWalker
     {
@@ -1331,7 +1420,6 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
-                joinableFactory,
                 conglomerate,
                 schedulerForTest
             ),
@@ -1341,7 +1429,7 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory,
+                joinableFactoryWrapper,
                 schedulerForTest
                 ),
             ClusterOrLocal.LOCAL
@@ -1411,12 +1499,12 @@ public class ClientQuerySegmentWalkerTest
       this.how = how;
     }
 
-    static ExpectedQuery local(final Query query)
+    static ExpectedQuery local(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.LOCAL);
     }
 
-    static ExpectedQuery cluster(final Query query)
+    static ExpectedQuery cluster(final Query<?> query)
     {
       return new ExpectedQuery(query, ClusterOrLocal.CLUSTER);
     }

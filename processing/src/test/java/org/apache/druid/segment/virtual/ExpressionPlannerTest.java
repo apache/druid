@@ -23,12 +23,14 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -369,7 +371,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertFalse(inferred.hasMultipleValues().isMaybeTrue());
-    Assert.assertTrue(inferred.hasBitmapIndexes());
+    Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     // multiple input columns
@@ -463,7 +465,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
     Assert.assertTrue(inferred.hasMultipleValues().isTrue());
-    Assert.assertTrue(inferred.hasBitmapIndexes());
+    Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
     thePlan = plan("concat(scalar_string, multi_dictionary_string_nonunique)");
@@ -644,7 +646,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
-    Assert.assertTrue(inferred.hasMultipleValues().isTrue());
+    Assert.assertFalse(inferred.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(inferred.hasBitmapIndexes());
     Assert.assertFalse(inferred.hasSpatialIndexes());
 
@@ -805,6 +807,36 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, thePlan.getOutputType());
     thePlan = plan("array(long1, double1, scalar_string)");
     Assert.assertEquals(ExpressionType.STRING_ARRAY, thePlan.getOutputType());
+  }
+
+  @Test
+  public void testNestedColumnExpression()
+  {
+    ExpressionPlan thePlan = plan("json_object('long1', long1, 'long2', long2)");
+    Assert.assertFalse(
+        thePlan.is(
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
+            ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
+            ExpressionPlan.Trait.UNKNOWN_INPUTS,
+            ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+            ExpressionPlan.Trait.NEEDS_APPLIED,
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
+            ExpressionPlan.Trait.VECTORIZABLE
+        )
+    );
+    Assert.assertEquals(NestedDataExpressions.TYPE, thePlan.getOutputType());
+    ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
+        ExpressionType.toColumnType(thePlan.getOutputType())
+    );
+    Assert.assertEquals(
+        NestedDataComplexTypeSerde.TYPE.getType(),
+        inferred.getType()
+    );
+    Assert.assertEquals(
+        NestedDataExpressions.TYPE.getComplexTypeName(),
+        inferred.getComplexTypeName()
+    );
   }
 
   private static ExpressionPlan plan(String expression)

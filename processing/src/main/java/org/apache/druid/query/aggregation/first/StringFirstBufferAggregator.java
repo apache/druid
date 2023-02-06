@@ -63,6 +63,9 @@ public class StringFirstBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     if (needsFoldCheck) {
       // Less efficient code path when folding is a possibility (we must read the value selector first just in case
       // it's a foldable object).

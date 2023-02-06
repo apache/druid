@@ -81,7 +81,8 @@ public interface AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   );
 
   /**
@@ -97,7 +98,8 @@ public interface AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   );
 
   Appenderator createClosedSegmentsOfflineAppenderatorForTask(
@@ -110,7 +112,8 @@ public interface AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   );
 
   Appenderator createOfflineAppenderatorForTask(
@@ -123,7 +126,8 @@ public interface AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   );
 
   /**

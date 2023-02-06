@@ -67,10 +67,13 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -269,6 +272,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -276,6 +280,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @Nullable
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimFilter()
   {
     return dimFilter;
@@ -288,18 +293,21 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @JsonProperty("aggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregatorFactory> getAggregatorSpecs()
   {
     return aggregatorSpecs;
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
   }
 
   @JsonProperty("having")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public HavingSpec getHavingSpec()
   {
     return havingSpec;
@@ -311,9 +319,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return limitSpec;
   }
 
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @JsonProperty("subtotalsSpec")
+  /**
+   * Subtotals spec may be empty which has a distinct meaning from {@code null}.
+   */
   @Nullable
+  @JsonProperty("subtotalsSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<List<String>> getSubtotalsSpec()
   {
     return subtotalsSpec;
@@ -439,7 +450,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
   @JsonIgnore
@@ -454,7 +465,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getApplyLimitPushDownFromContext()
   {
-    return getContextBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+    return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
   }
 
   @Override
@@ -476,7 +487,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   private boolean validateAndGetForceLimitPushDown()
   {
-    final boolean forcePushDown = getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
+    final boolean forcePushDown = context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
     if (forcePushDown) {
       if (!(limitSpec instanceof DefaultLimitSpec)) {
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
@@ -590,7 +601,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         needsReverseList.add(false);
         final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        comparators.add(StringComparators.LEXICOGRAPHIC);
+        if (type.isNumeric()) {
+          comparators.add(StringComparators.NUMERIC);
+        } else {
+          comparators.add(StringComparators.LEXICOGRAPHIC);
+        }
       }
     }
 
@@ -733,7 +748,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private DateTime computeUniversalTimestamp()
   {
-    final String timestampStringFromContext = getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
+    final String timestampStringFromContext = context().getString(CTX_KEY_FUDGE_TIMESTAMP, "");
     final Granularity granularity = getGranularity();
 
     if (!timestampStringFromContext.isEmpty()) {
@@ -775,6 +790,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
+      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
+        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
+        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
+                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
+        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj, dimensionType.getElementType().getType());
+        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj, dimensionType.getElementType().getType());
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

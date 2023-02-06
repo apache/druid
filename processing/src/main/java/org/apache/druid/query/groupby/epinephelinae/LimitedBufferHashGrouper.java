@@ -294,6 +294,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
     return new CloseableIterator<Entry<KeyType>>()
     {
+      final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
       int curr = 0;
 
       @Override
@@ -305,7 +306,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       @Override
       public Grouper.Entry<KeyType> next()
       {
-        return bucketEntryForOffset(wrappedOffsets.get(curr++));
+        return populateBucketEntryForOffset(reusableEntry, wrappedOffsets.get(curr++));
       }
 
       @Override
@@ -332,6 +333,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       offsetHeapIterableSize = initialHeapSize;
       return new CloseableIterator<Entry<KeyType>>()
       {
+        final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
         int curr = 0;
 
         @Override
@@ -347,7 +349,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
             throw new NoSuchElementException();
           }
           final int offset = offsetHeap.removeMin();
-          final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
+          final Grouper.Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry, offset);
           curr++;
           // write out offset to end of heap, which is no longer used after removing min
           offsetHeap.setAt(initialHeapSize - curr, offset);
@@ -371,6 +373,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       // subsequent iterations just walk the buffer backwards
       return new CloseableIterator<Entry<KeyType>>()
       {
+        final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
         int curr = offsetHeapIterableSize - 1;
 
         @Override
@@ -386,7 +389,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
             throw new NoSuchElementException();
           }
           final int offset = offsetHeap.getAt(curr);
-          final Grouper.Entry<KeyType> entry = bucketEntryForOffset(offset);
+          final Grouper.Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry, offset);
           curr--;
 
           return entry;

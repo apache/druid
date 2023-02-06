@@ -28,6 +28,9 @@ import org.joda.time.chrono.ISOChronology;
 /**
  * Only to create a mapping of the granularity and all the supported file patterns
  * namely: default, lowerDefault and hive.
+ *
+ * NOTE:
+ * When a new granularity type is added to following type, DO remember document it here: docs/querying/granularities.md#simple-granularities
  */
 public enum GranularityType
 {
@@ -57,6 +60,7 @@ public enum GranularityType
       "PT1H"
   ),
   SIX_HOUR(HOUR, "PT6H"),
+  EIGHT_HOUR(HOUR, "PT8H"),
   DAY(
       "'dt'=yyyy-MM-dd",
       "'y'=yyyy/'m'=MM/'d'=dd",
@@ -214,7 +218,9 @@ public enum GranularityType
       case 3:
         return GranularityType.DAY;
       case 4:
-        if (vals[index] == 6) {
+        if (vals[index] == 8) {
+          return GranularityType.EIGHT_HOUR;
+        } else if (vals[index] == 6) {
           return GranularityType.SIX_HOUR;
         } else if (vals[index] == 1) {
           return GranularityType.HOUR;

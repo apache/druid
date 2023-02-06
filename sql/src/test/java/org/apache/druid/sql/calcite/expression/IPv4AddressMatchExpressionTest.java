@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
@@ -64,7 +65,7 @@ public class IPv4AddressMatchExpressionTest extends ExpressionTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(IllegalArgumentException.class, "requires 2 arguments");
 
     testExpression(
         Collections.emptyList(),
@@ -76,7 +77,7 @@ public class IPv4AddressMatchExpressionTest extends ExpressionTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(IllegalArgumentException.class, "requires 2 arguments");
 
     String address = IPV4;
     String subnet = SUBNET_192_168;
@@ -94,7 +95,7 @@ public class IPv4AddressMatchExpressionTest extends ExpressionTestBase
   @Test
   public void testSubnetArgNotLiteral()
   {
-    expectException(IllegalArgumentException.class, "subnet arg must be a literal");
+    expectException(ExpressionValidationException.class, "subnet argument must be a literal");
 
     String address = IPV4;
     String variableName = VAR;
@@ -259,7 +260,7 @@ public class IPv4AddressMatchExpressionTest extends ExpressionTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)

@@ -24,7 +24,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -61,6 +60,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -128,7 +128,7 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
     // task logs will appear in the main indexer log, streaming individual task logs is not supported
     return Optional.absent();

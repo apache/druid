@@ -35,6 +35,8 @@ import javax.annotation.Nullable;
  */
 public class TaskAnnouncement
 {
+  public static final String TASK_ID_KEY = "id";
+
   private final String taskType;
   private final TaskStatus taskStatus;
   private final TaskResource taskResource;
@@ -63,7 +65,7 @@ public class TaskAnnouncement
 
   @JsonCreator
   private TaskAnnouncement(
-      @JsonProperty("id") String taskId,
+      @JsonProperty(TASK_ID_KEY) String taskId,
       @JsonProperty("type") String taskType,
       @JsonProperty("status") TaskState status,
       @JsonProperty("taskStatus") TaskStatus taskStatus,

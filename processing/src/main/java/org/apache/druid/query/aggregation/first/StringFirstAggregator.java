@@ -56,6 +56,9 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public void aggregate()
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     if (needsFoldCheck) {
       // Less efficient code path when folding is a possibility (we must read the value selector first just in case
       // it's a foldable object).

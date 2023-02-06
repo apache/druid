@@ -39,7 +39,10 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -156,9 +159,7 @@ public final class DimensionHandlerUtils
    * @param strategyFactory A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpec   column to generate a ColumnSelectorPlus object for
    * @param cursor          Used to create value selectors for columns.
-   *
    * @return A ColumnSelectorPlus object
-   *
    * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy> createColumnSelectorPlus(
@@ -174,10 +175,10 @@ public final class DimensionHandlerUtils
    * Creates an array of ColumnSelectorPlus objects, selectors that handle type-specific operations within
    * query processing engines, using a strategy factory provided by the query engine. One ColumnSelectorPlus
    * will be created for each column specified in dimensionSpecs.
-   *
+   * <p>
    * The ColumnSelectorPlus provides access to a type strategy (e.g., how to group on a float column)
    * and a value selector for a single column.
-   *
+   * <p>
    * A caller should define a strategy factory that provides an interface for type-specific operations
    * in a query engine. See GroupByStrategyFactory for a reference.
    *
@@ -185,9 +186,7 @@ public final class DimensionHandlerUtils
    * @param strategyFactory       A factory provided by query engines that generates type-handling strategies
    * @param dimensionSpecs        The set of columns to generate ColumnSelectorPlus objects for
    * @param columnSelectorFactory Used to create value selectors for columns.
-   *
    * @return An array of ColumnSelectorPlus objects, in the order of the columns specified in dimensionSpecs
-   *
    * @see ColumnProcessors#makeProcessor which may replace this in the future
    */
   public static <Strategy extends ColumnSelectorStrategy> ColumnSelectorPlus<Strategy>[] createColumnSelectorPluses(
@@ -266,6 +265,9 @@ public final class DimensionHandlerUtils
                                                capabilities.isDictionaryEncoded().isTrue() &&
                                                fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
                                            )
+                                           .setHasMultipleValues(
+                                               capabilities.hasMultipleValues().isMaybeTrue() || capabilities.isArray()
+                                           )
                                            .setDictionaryValuesSorted(
                                                capabilities.isDictionaryEncoded().isTrue() && fn.preservesOrdering()
                                            );
@@ -325,8 +327,19 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to long", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as long. A long column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to long. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -353,8 +366,19 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to float", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as float. A float column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to float. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
@@ -376,9 +400,108 @@ public final class DimensionHandlerUtils
         return convertObjectToDouble(obj, reportParseExceptions);
       case STRING:
         return convertObjectToString(obj);
+      case ARRAY:
+        switch (type.getElementType().getType()) {
+          case STRING:
+            return convertToComparableStringArray(obj);
+          case LONG:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+          case FLOAT:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+          case DOUBLE:
+            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+        }
+
       default:
         throw new IAE("Type[%s] is not supported for dimensions!", type);
     }
+  }
+
+  @Nullable
+  public static ComparableList convertToList(Object obj, ValueType elementType)
+  {
+    switch (elementType) {
+      case LONG:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+      case FLOAT:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+      case DOUBLE:
+        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+    }
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableList.class.getName()
+    );
+  }
+
+
+  private static <T> ComparableList convertToListWithObjectFunction(Object obj, Function<Object, T> convertFunction)
+  {
+    if (obj == null) {
+      return null;
+    }
+    if (obj instanceof List) {
+      return convertToComparableList((List) obj, convertFunction);
+    }
+    if (obj instanceof ComparableList) {
+      return convertToComparableList(((ComparableList) obj).getDelegate(), convertFunction);
+    }
+    if (obj instanceof Object[]) {
+      final List<T> delegateList = new ArrayList<>();
+      for (Object eachObj : (Object[]) obj) {
+        delegateList.add(convertFunction.apply(eachObj));
+      }
+      return new ComparableList(delegateList);
+    }
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableList.class.getName()
+    );
+  }
+
+  @Nonnull
+  private static <T> ComparableList convertToComparableList(List obj, Function<Object, T> convertFunction)
+  {
+    final List<T> delegateList = new ArrayList<>();
+    for (Object eachObj : obj) {
+      delegateList.add(convertFunction.apply(eachObj));
+    }
+    return new ComparableList(delegateList);
+  }
+
+
+  @Nullable
+  public static ComparableStringArray convertToComparableStringArray(Object obj)
+  {
+    if (obj == null) {
+      return null;
+    }
+    if (obj instanceof ComparableStringArray) {
+      return (ComparableStringArray) obj;
+    }
+    // Jackson converts the serialized array into a list. Converting it back to a string array
+    if (obj instanceof List) {
+      String[] delegate = new String[((List) obj).size()];
+      for (int i = 0; i < delegate.length; i++) {
+        delegate[i] = convertObjectToString(((List) obj).get(i));
+      }
+      return ComparableStringArray.of(delegate);
+    }
+    if (obj instanceof Object[]) {
+      Object[] objects = (Object[]) obj;
+      String[] delegate = new String[objects.length];
+      for (int i = 0; i < objects.length; i++) {
+        delegate[i] = convertObjectToString(objects[i]);
+      }
+      return ComparableStringArray.of(delegate);
+    }
+    throw new ISE(
+        "Unable to convert object of type[%s] to [%s]",
+        obj.getClass().getName(),
+        ComparableStringArray.class.getName()
+    );
   }
 
   public static int compareObjectsAsType(
@@ -436,19 +559,29 @@ public final class DimensionHandlerUtils
         throw new ParseException((String) valObj, "could not convert value [%s] to double", valObj);
       }
       return ret;
+    } else if (valObj instanceof List) {
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not ingest value %s as double. A double column cannot have multiple values in the same row.",
+          valObj
+      );
     } else {
-      throw new ParseException(valObj.getClass().toString(), "Unknown type[%s]", valObj.getClass());
+      throw new ParseException(
+          valObj.getClass().toString(),
+          "Could not convert value [%s] to double. Invalid type: [%s]",
+          valObj,
+          valObj.getClass()
+      );
     }
   }
 
   /**
    * Convert a string representing a decimal value to a long.
-   *
+   * <p>
    * If the decimal value is not an exact integral value (e.g. 42.0), or if the decimal value
    * is too large to be contained within a long, this function returns null.
    *
    * @param decimalStr string representing a decimal value
-   *
    * @return long equivalent of decimalStr, returns null for non-integral decimals and integral decimal values outside
    * of the values representable by longs
    */

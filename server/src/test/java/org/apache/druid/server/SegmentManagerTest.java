@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -45,6 +45,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,7 +55,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -77,17 +77,26 @@ public class SegmentManagerTest
     {
 
     }
+
+    @Override
+    public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+    {
+
+    }
   };
 
   private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;
+    private final StorageAdapter storageAdapter;
 
     SegmentForTesting(String version, Interval interval)
     {
       this.version = version;
       this.interval = interval;
+      storageAdapter = Mockito.mock(StorageAdapter.class);
+      Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
     }
 
     public String getVersion()
@@ -121,7 +130,7 @@ public class SegmentManagerTest
     @Override
     public StorageAdapter asStorageAdapter()
     {
-      throw new UnsupportedOperationException();
+      return storageAdapter;
     }
 
     @Override
@@ -196,7 +205,7 @@ public class SegmentManagerTest
   public void setup()
   {
     segmentManager = new SegmentManager(SEGMENT_LOADER);
-    executor = Executors.newFixedThreadPool(SEGMENTS.size());
+    executor = Execs.multiThreaded(SEGMENTS.size(), "SegmentManagerTest-%d");
   }
 
   @After
@@ -376,7 +385,7 @@ public class SegmentManagerTest
   {
     Assert.assertEquals(
         Optional.empty(),
-        segmentManager.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource("nonExisting")))
+        segmentManager.getTimeline((new TableDataSource("nonExisting")).getAnalysis())
     );
   }
 

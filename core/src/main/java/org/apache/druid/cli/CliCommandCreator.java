@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Cli;
+import com.github.rvesse.airline.builder.CliBuilder;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 /**
@@ -32,5 +32,5 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 @ExtensionPoint
 public interface CliCommandCreator
 {
-  void addCommands(Cli.CliBuilder builder);
+  void addCommands(CliBuilder builder);
 }

@@ -16,28 +16,22 @@
  * limitations under the License.
  */
 
-import * as JSONBig from 'json-bigint-native';
 import { Dispatch, SetStateAction, useState } from 'react';
 
+import { localStorageGetJson, LocalStorageKeys, localStorageSetJson } from '../utils';
+
 export function useLocalStorageState<T>(
-  key: string,
+  key: LocalStorageKeys,
   initialValue?: T,
 ): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSONBig.parse(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
+    return localStorageGetJson(key) || initialValue;
   });
 
   const setValue: Dispatch<SetStateAction<T>> = (value: T | ((prevState: T) => T)) => {
     const valueToStore = value instanceof Function ? value(state) : value;
     setState(valueToStore);
-    try {
-      window.localStorage.setItem(key, JSONBig.stringify(valueToStore));
-    } catch {}
+    localStorageSetJson(key, valueToStore);
   };
   return [state, setValue];
 }

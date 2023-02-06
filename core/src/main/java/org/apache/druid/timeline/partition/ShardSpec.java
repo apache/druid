@@ -34,6 +34,7 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ShardSpec.Type.NONE, value = NoneShardSpec.class),
+    @JsonSubTypes.Type(name = ShardSpec.Type.TOMBSTONE, value = TombstoneShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.SINGLE, value = SingleDimensionShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.RANGE, value = DimensionRangeShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.LINEAR, value = LinearShardSpec.class),
@@ -168,5 +169,7 @@ public interface ShardSpec
     String BUCKET_HASH = "bucket_hash";
     String BUCKET_SINGLE_DIM = "bucket_single_dim";
     String BUCKET_RANGE = "bucket_range";
+
+    String TOMBSTONE = "tombstone";
   }
 }

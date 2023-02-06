@@ -19,18 +19,20 @@
 
 package org.apache.druid.query.groupby;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
@@ -40,12 +42,14 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -53,13 +57,14 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,25 +75,29 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
-  private static final Closer RESOURCE_CLOSER = Closer.create();
+  private static TestGroupByBuffers BUFFER_POOLS = null;
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    BUFFER_POOLS = TestGroupByBuffers.createDefault();
+  }
 
   @AfterClass
-  public static void teardown() throws IOException
+  public static void tearDownClass()
   {
-    RESOURCE_CLOSER.close();
+    BUFFER_POOLS.close();
+    BUFFER_POOLS = null;
   }
 
   @SuppressWarnings("unchecked")
   @Parameterized.Parameters(name = "{0}, vectorize = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
+    setUpClass();
     GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        config
-    );
-    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    RESOURCE_CLOSER.register(factoryAndCloser.rhs);
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
 
     final List<Object[]> constructors = new ArrayList<>();
 
@@ -98,6 +107,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         @Override
         public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
+          final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
           QueryRunner<ResultRow> newRunner = factory.mergeRunners(
               Execs.directExecutor(), ImmutableList.of(runner)
@@ -127,7 +137,15 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
             );
 
             theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timeDimension);
-            theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
+            try {
+              theContext.put(
+                  GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+                  jsonMapper.writeValueAsString(granularity)
+              );
+            }
+            catch (JsonProcessingException e) {
+              throw new RuntimeException(e);
+            }
             theContext.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
           }
 
@@ -310,5 +328,44 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.
+  }
+
+  @Override
+  public void testTimeseriesWithExpressionAggregatorTooBig()
+  {
+    cannotVectorize();
+    if (!vectorize) {
+      // size bytes when it overshoots varies slightly between algorithms
+      expectedException.expectMessage("Unable to serialize [ARRAY<STRING>]");
+    }
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.DAY)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .aggregators(
+                                      Collections.singletonList(
+                                          new ExpressionLambdaAggregatorFactory(
+                                              "array_agg_distinct",
+                                              ImmutableSet.of(QueryRunnerTestHelper.MARKET_DIMENSION),
+                                              "acc",
+                                              "[]",
+                                              null,
+                                              null,
+                                              true,
+                                              false,
+                                              "array_set_add(acc, market)",
+                                              "array_set_add_all(acc, array_agg_distinct)",
+                                              null,
+                                              null,
+                                              HumanReadableBytes.valueOf(10),
+                                              TestExprMacroTable.INSTANCE
+                                          )
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .context(makeContext())
+                                  .build();
+
+    runner.run(QueryPlus.wrap(query)).toList();
   }
 }

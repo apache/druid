@@ -88,7 +88,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testBinaryMathOperators()
   {
-    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null"};
+    final String[] columns = new String[]{"d1", "d2", "l1", "l2", "1", "1.0", "nonexistent", "null", "s1"};
     final String[] columns2 = new String[]{"d1", "d2", "l1", "l2", "1", "1.0"};
     final String[][] templateInputs = makeTemplateArgs(columns, columns2);
     final String[] templates =
@@ -294,7 +294,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     testExpressionWithBindings(expr, parsed, bindings);
   }
 
-  private static void testExpressionWithBindings(
+  public static void testExpressionWithBindings(
       String expr,
       Expr parsed,
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings
@@ -305,7 +305,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     ExprEvalVector<?> vectorEval = parsed.buildVectorized(bindings.rhs).evalVector(bindings.rhs);
     // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
     if (outputType != null) {
-      Assert.assertEquals(outputType, vectorEval.getType());
+      Assert.assertEquals(expr, outputType, vectorEval.getType());
     }
     for (int i = 0; i < VECTOR_SIZE; i++) {
       ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
@@ -321,7 +321,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     }
   }
 
-  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
+  public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeRandomizedBindings(
       int vectorSize,
       Map<String, ExpressionType> types
   )
@@ -338,7 +338,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     );
   }
 
-  static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeSequentialBinding(
+  public static NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> makeSequentialBinding(
       int vectorSize,
       Map<String, ExpressionType> types
   )

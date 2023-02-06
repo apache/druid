@@ -28,6 +28,7 @@ import org.apache.druid.query.groupby.epinephelinae.ConcurrentGrouperTest.TestKe
 import org.apache.druid.query.groupby.epinephelinae.ConcurrentGrouperTest.TestResourceHolder;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.KeySerdeFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,19 +39,19 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-public class ParallelCombinerTest
+public class ParallelCombinerTest extends InitializedNullHandlingTest
 {
   private static final int THREAD_NUM = 8;
   private static final ExecutorService SERVICE = Execs.multiThreaded(THREAD_NUM, "parallel-combiner-test-%d");
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(512);
-  private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
+  private static final KeySerdeFactory<ConcurrentGrouperTest.LongKey> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
 
-  private static final class TestIterator implements CloseableIterator<Entry<Long>>
+  private static final class TestIterator implements CloseableIterator<Entry<ConcurrentGrouperTest.LongKey>>
   {
-    private final Iterator<Entry<Long>> innerIterator;
+    private final Iterator<Entry<ConcurrentGrouperTest.LongKey>> innerIterator;
     private boolean closed;
 
-    TestIterator(Iterator<Entry<Long>> innerIterator)
+    TestIterator(Iterator<Entry<ConcurrentGrouperTest.LongKey>> innerIterator)
     {
       this.innerIterator = innerIterator;
     }
@@ -62,7 +63,7 @@ public class ParallelCombinerTest
     }
 
     @Override
-    public Entry<Long> next()
+    public Entry<ConcurrentGrouperTest.LongKey> next()
     {
       return innerIterator.next();
     }
@@ -90,7 +91,7 @@ public class ParallelCombinerTest
   @Test
   public void testCombine() throws IOException
   {
-    final ParallelCombiner<Long> combiner = new ParallelCombiner<>(
+    final ParallelCombiner<ConcurrentGrouperTest.LongKey> combiner = new ParallelCombiner<>(
         TEST_RESOURCE_HOLDER,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt").getCombiningFactory()},
         KEY_SERDE_FACTORY,
@@ -103,9 +104,9 @@ public class ParallelCombinerTest
     );
 
     final int numRows = 1000;
-    final List<Entry<Long>> baseIterator = new ArrayList<>(numRows);
+    final List<Entry<ConcurrentGrouperTest.LongKey>> baseIterator = new ArrayList<>(numRows);
     for (long i = 0; i < numRows; i++) {
-      baseIterator.add(new Entry<>(i, new Object[]{i * 10}));
+      baseIterator.add(new ReusableEntry<>(new ConcurrentGrouperTest.LongKey(i), new Object[]{i * 10}));
     }
 
     final int leafNum = 8;
@@ -114,10 +115,19 @@ public class ParallelCombinerTest
       iterators.add(new TestIterator(baseIterator.iterator()));
     }
 
-    try (final CloseableIterator<Entry<Long>> iterator = combiner.combine(iterators, new ArrayList<>())) {
+    try (final CloseableIterator<Entry<ConcurrentGrouperTest.LongKey>> iterator =
+             combiner.combine(iterators, new ArrayList<>())) {
       long expectedKey = 0;
       while (iterator.hasNext()) {
-        Assert.assertEquals(new Entry<>(expectedKey, new Object[]{expectedKey++ * leafNum * 10}), iterator.next());
+        final Entry<ConcurrentGrouperTest.LongKey> expectedEntry = new ReusableEntry<>(
+            new ConcurrentGrouperTest.LongKey(expectedKey),
+            new Object[]{expectedKey * leafNum * 10}
+        );
+
+        final Entry<ConcurrentGrouperTest.LongKey> actualEntry = iterator.next();
+
+        GrouperTestUtil.assertEntriesEqual(expectedEntry, actualEntry);
+        expectedKey++;
       }
     }
 

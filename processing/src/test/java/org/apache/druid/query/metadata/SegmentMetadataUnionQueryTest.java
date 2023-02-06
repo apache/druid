@@ -44,6 +44,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -80,7 +81,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                 null
             ),
             true,
-        },
+            },
         new Object[]{
             QueryRunnerTestHelper.makeUnionQueryRunner(
                 FACTORY,
@@ -99,21 +100,23 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis expected = new SegmentAnalysis(
         QueryRunnerTestHelper.SEGMENT_ID.toString(),
         Collections.singletonList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                mmap ? 43524 : 43056,
-                1,
-                "preferred",
-                "preferred",
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    mmap ? 43524 : 43056,
+                    1,
+                    "preferred",
+                    "preferred",
+                    null
+                )
             )
         ),
-        mmap ? 800544 : 803324,
+        mmap ? 805380 : 803324,
         4836,
         null,
         null,

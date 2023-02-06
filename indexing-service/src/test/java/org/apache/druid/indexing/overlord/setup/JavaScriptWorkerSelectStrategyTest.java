@@ -57,10 +57,11 @@ public class JavaScriptWorkerSelectStrategyTest
       + "}\n"
       + "Array.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\n"
       + "var minWorkerVer = config.getMinWorkerVersion();\n"
+      + "var parallelIndexTaskSlotRatio = config.getParallelIndexTaskSlotRatio();\n"
       + "for (var i = 0; i < sortedWorkers.length; i++) {\n"
       + " var worker = sortedWorkers[i];\n"
       + "  var zkWorker = zkWorkers.get(worker);\n"
-      + "  if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {\n"
+      + "  if (zkWorker.canRunTask(task, parallelIndexTaskSlotRatio) && zkWorker.isValidVersion(minWorkerVer)) {\n"
       + "    if (task.getType() == 'index_hadoop' && batch_workers.contains(worker)) {\n"
       + "      return worker;\n"
       + "    } else {\n"
@@ -238,8 +239,9 @@ public class JavaScriptWorkerSelectStrategyTest
   private ImmutableWorkerInfo createMockWorker(int currCapacityUsed, boolean canRunTask, boolean isValidVersion)
   {
     ImmutableWorkerInfo worker = EasyMock.createMock(ImmutableWorkerInfo.class);
-    EasyMock.expect(worker.canRunTask(EasyMock.anyObject(Task.class))).andReturn(canRunTask).anyTimes();
+    EasyMock.expect(worker.canRunTask(EasyMock.anyObject(Task.class), EasyMock.anyDouble())).andReturn(canRunTask).anyTimes();
     EasyMock.expect(worker.getCurrCapacityUsed()).andReturn(currCapacityUsed).anyTimes();
+    EasyMock.expect(worker.getCurrParallelIndexCapacityUsed()).andReturn(0).anyTimes();
     EasyMock.expect(worker.isValidVersion(EasyMock.anyString())).andReturn(isValidVersion).anyTimes();
     EasyMock.replay(worker);
     return worker;

@@ -23,17 +23,17 @@ import ReactTable from 'react-table';
 import { TableCell } from '../../../components';
 import { DruidFilter, getFilterDimension } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
 export function filterTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   selectedFilter: Partial<DruidFilter> | undefined,
 ): string | undefined {
   if (!selectedFilter) return;
@@ -43,7 +43,7 @@ export function filterTableSelectedColumnName(
 }
 
 export interface FilterTableProps {
-  sampleData: HeaderAndRows;
+  sampleData: SampleHeaderAndRows;
   columnFilter: string;
   dimensionFilters: DruidFilter[];
   selectedFilterName: string | undefined;
@@ -55,7 +55,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
 
   return (
     <ReactTable
-      className="filter-table -striped -highlight"
+      className={classNames('filter-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleData.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -96,6 +96,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           className: columnClassName,
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
+          width: 140,
           Cell: function FilterTableCell(row) {
             return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
           },

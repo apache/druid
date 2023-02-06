@@ -71,7 +71,7 @@ public class CloudObjectLocation
 
   public CloudObjectLocation(URI uri)
   {
-    this(uri.getHost(), uri.getPath());
+    this(uri.getHost() != null ? uri.getHost() : uri.getAuthority(), uri.getPath());
   }
 
   /**

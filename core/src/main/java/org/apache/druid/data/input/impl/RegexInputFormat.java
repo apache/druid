@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -36,6 +37,8 @@ import java.util.regex.Pattern;
 
 public class RegexInputFormat implements InputFormat
 {
+  public static final String TYPE_KEY = "regex";
+
   private final String pattern;
   private final String listDelimiter;
   private final List<String> columns;
@@ -63,6 +66,7 @@ public class RegexInputFormat implements InputFormat
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getListDelimiter()
   {
     return listDelimiter;
@@ -70,6 +74,7 @@ public class RegexInputFormat implements InputFormat
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<String> getColumns()
   {
     return columns;

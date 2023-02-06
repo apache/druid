@@ -36,9 +36,11 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -197,7 +199,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return Druids.newScanQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
-                 .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                 .eternityInterval()
                  .limit(3)
                  .legacy(legacy);
   }
@@ -211,7 +213,16 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .virtualColumns(EXPR_COLUMN)
         .build();
 
-    Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<ScanResultValue> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ScanResultValue>(
+            stubServiceEmitter,
+            TOOL_CHEST,
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     List<ScanResultValue> expectedResults = toExpected(
         toFullEvents(V_0112_0114),
@@ -219,6 +230,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         0,
         3
     );
+    stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", false), 1);
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
   }
 
@@ -272,6 +284,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
+        legacy,
         V_0112_0114
     );
 
@@ -322,6 +335,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
+            legacy,
             V_0112_0114
         ),
         legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
@@ -359,6 +373,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
+            legacy,
             V_0112_0114
         ),
         legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
@@ -391,6 +406,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           // filtered values with day granularity
           new String[]{
               "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
@@ -454,6 +470,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
+        legacy,
         // filtered values with day granularity
         new String[]{
             "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\tpreferred\tmpreferred\t1000.000000",
@@ -517,6 +534,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
     final List<List<Map<String, Object>>> events = toEvents(
         legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
+        legacy,
         V_0112_0114
     );
 
@@ -580,6 +598,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
 
@@ -669,6 +688,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           expectedRet
       );
       if (legacy) {
@@ -757,6 +777,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
       if (legacy) {
@@ -849,6 +870,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
+          legacy,
           expectedRet //segments in reverse order from above
       );
       if (legacy) {
@@ -896,7 +918,8 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
     ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    responseContext.putTimeoutTime(System.currentTimeMillis());
+    final long timeoutAt = System.currentTimeMillis();
+    responseContext.putTimeoutTime(timeoutAt);
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
       Assert.fail("didn't timeout");
@@ -904,6 +927,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     catch (RuntimeException e) {
       Assert.assertTrue(e instanceof QueryTimeoutException);
       Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
     }
   }
 
@@ -994,11 +1018,12 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             "indexMaxFloat",
             "quality_uniques"
         },
+        legacy,
         valueSet
     );
   }
 
-  private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
+  public static List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, boolean legacy, final String[]... valueSet)
   {
     List<String> values = new ArrayList<>();
     for (String[] vSet : valueSet) {
@@ -1060,13 +1085,30 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     if (specs.length == 1 || specs[1].equals("STRING")) {
                       eventVal = values1[i];
                     } else if (specs[1].equals("TIME")) {
-                      eventVal = toTimestamp(values1[i]);
+                      eventVal = toTimestamp(values1[i], legacy);
                     } else if (specs[1].equals("FLOAT")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Float!");
+                      }
                     } else if (specs[1].equals("DOUBLE")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultDoubleValue() : Double.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty()
+                                   ? NullHandling.defaultDoubleValue()
+                                   : Double.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Double!");
+                      }
                     } else if (specs[1].equals("LONG")) {
-                      eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                      try {
+                        eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                      }
+                      catch (NumberFormatException nfe) {
+                        throw new ISE("This object cannot be converted to a Long!");
+                      }
                     } else if (specs[1].equals(("NULL"))) {
                       eventVal = null;
                     } else if (specs[1].equals("STRINGS")) {
@@ -1085,7 +1127,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     return events;
   }
 
-  private Object toTimestamp(final String value)
+  private static Object toTimestamp(final String value, boolean legacy)
   {
     if (legacy) {
       return DateTimes.of(value);
@@ -1153,6 +1195,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
+            Assert.assertNotNull(
+                StringUtils.format(
+                    "invalid null value for %s (expected %f)",
+                    ex.getKey(),
+                    expectedDoubleValue
+                ),
+                actVal
+            );
             Assert.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,

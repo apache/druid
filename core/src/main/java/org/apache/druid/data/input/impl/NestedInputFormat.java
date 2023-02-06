@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -37,11 +38,12 @@ public abstract class NestedInputFormat implements InputFormat
 
   protected NestedInputFormat(@Nullable JSONPathSpec flattenSpec)
   {
-    this.flattenSpec = flattenSpec == null ? JSONPathSpec.DEFAULT : flattenSpec;
+    this.flattenSpec = flattenSpec;
   }
 
   @Nullable
   @JsonProperty("flattenSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public JSONPathSpec getFlattenSpec()
   {
     return flattenSpec;

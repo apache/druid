@@ -19,13 +19,13 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
@@ -66,8 +66,8 @@ import java.util.Set;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers, "
-                  + "see https://druid.apache.org/docs/latest/development/router.html for a description"
+    description = "Understands tiers and routes requests to Druid nodes. "
+                  + "See https://druid.apache.org/docs/latest/design/router.html"
 )
 public class CliRouter extends ServerRunnable
 {

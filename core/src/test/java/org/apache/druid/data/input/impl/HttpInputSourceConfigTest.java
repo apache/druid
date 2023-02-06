@@ -26,7 +26,6 @@ import org.junit.Test;
 
 public class HttpInputSourceConfigTest
 {
-
   @Test
   public void testEquals()
   {

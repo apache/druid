@@ -216,6 +216,26 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
+  public long estimateHeapFootprint()
+  {
+    PollingCache<?, ?> cache = null;
+
+    while (cache == null) {
+      final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
+
+      if (cacheRefKeeper == null) {
+        // Closed.
+        return 0;
+      }
+
+      // If null, we'll do another run through the while loop.
+      cache = cacheRefKeeper.getAndIncrementRef();
+    }
+
+    return cache.estimateHeapFootprint();
+  }
+
+  @Override
   public int hashCode()
   {
     int result = (int) (pollPeriodMs ^ (pollPeriodMs >>> 32));

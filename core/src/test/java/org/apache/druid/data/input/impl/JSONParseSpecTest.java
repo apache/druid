@@ -46,7 +46,7 @@ public class JSONParseSpecTest
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         new JSONPathSpec(
             true,
             ImmutableList.of(
@@ -88,7 +88,7 @@ public class JSONParseSpecTest
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
         new JSONPathSpec(
             true,
             ImmutableList.of(
@@ -102,12 +102,49 @@ public class JSONParseSpecTest
     );
 
     final Map<String, Object> expected = new HashMap<>();
-    expected.put("foo", new ArrayList());
+    expected.put("foo", Collections.singletonList(null));
     expected.put("baz", null);
     expected.put("bar", Collections.singletonList("test"));
 
     final Parser<String, Object> parser = parseSpec.makeParser();
     final Map<String, Object> parsedRow = parser.parseToMap("{\"something_else\": {\"foo\": \"test\"}}");
+
+    Assert.assertNotNull(parsedRow);
+    Assert.assertEquals(expected, parsedRow);
+  }
+
+  @Test
+  public void testParseRowWithNullsInArrays()
+  {
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                // https://github.com/apache/druid/issues/6653 $.x.y.z where y is missing
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.baz.[?(@.maybe_object)].maybe_object"),
+                // https://github.com/apache/druid/issues/6653 $.x.y.z where y is from an array and is null
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "nullFoo", "$.nullFoo.[?(@.value)][0].foo"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.baz"),
+                // $.x.y.z where x is from an array and is null
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "nullBaz", "$.baz[1].foo.maybe_object"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
+            )
+        ),
+        null,
+        false
+    );
+
+    final Map<String, Object> expected = new HashMap<>();
+    expected.put("foo", new ArrayList<>());
+    expected.put("baz", Arrays.asList("1", null, "2", null));
+    expected.put("bar", Collections.singletonList("test"));
+    expected.put("nullFoo", new ArrayList<>());
+    expected.put("nullBaz", null);
+
+    final Parser<String, Object> parser = parseSpec.makeParser();
+    final Map<String, Object> parsedRow = parser.parseToMap("{\"baz\":[\"1\",null,\"2\",null],\"nullFoo\":{\"value\":[null,null]},\"something_else\": {\"foo\": \"test\"}}");
 
     Assert.assertNotNull(parsedRow);
     Assert.assertEquals(expected, parsedRow);
@@ -120,7 +157,7 @@ public class JSONParseSpecTest
     feature.put("ALLOW_UNQUOTED_CONTROL_CHARS", true);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         null,
         feature,
         false
@@ -144,8 +181,8 @@ public class JSONParseSpecTest
               .usingGetClass()
               .withPrefabValues(
                 DimensionsSpec.class,
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")), null, null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")))
               )
               .withPrefabValues(
               ObjectMapper.class,

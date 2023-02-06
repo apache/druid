@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
@@ -60,6 +61,7 @@ public class Transformer
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
                                           RowSignature.empty(), // sad
+                                          false,
                                           false
                                       )
                                   );
@@ -113,7 +115,12 @@ public class Transformer
       final List<InputRow> originalRows = row.getInputRows();
       final List<InputRow> transformedRows = new ArrayList<>(originalRows.size());
       for (InputRow originalRow : originalRows) {
-        transformedRows.add(new TransformedInputRow(originalRow, transforms));
+        try {
+          transformedRows.add(new TransformedInputRow(originalRow, transforms));
+        }
+        catch (ParseException pe) {
+          return InputRowListPlusRawValues.of(row.getRawValues(), pe);
+        }
       }
       inputRowListPlusRawValues = InputRowListPlusRawValues.ofList(row.getRawValuesList(), transformedRows);
     }
@@ -146,10 +153,15 @@ public class Transformer
     private final InputRow row;
     private final Map<String, RowFunction> transforms;
 
+    // cached column, because it will be read frequently
+    private final DateTime timestamp;
+
     public TransformedInputRow(final InputRow row, final Map<String, RowFunction> transforms)
     {
       this.row = row;
       this.transforms = transforms;
+
+      this.timestamp = readTimestampFromRow(row, transforms);
     }
 
     @Override
@@ -158,27 +170,33 @@ public class Transformer
       return row.getDimensions();
     }
 
+    static DateTime readTimestampFromRow(final InputRow row, final Map<String, RowFunction> transforms)
+    {
+      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
+      final long ts;
+      if (transform != null) {
+        //noinspection ConstantConditions time column is never null
+        final Number transformedVal = Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true);
+        if (transformedVal == null) {
+          throw new ParseException(row.toString(), "Could not transform value for __time.");
+        }
+        ts = transformedVal.longValue();
+      } else {
+        ts = row.getTimestampFromEpoch();
+      }
+      return DateTimes.utc(ts);
+    }
+
     @Override
     public long getTimestampFromEpoch()
     {
-      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
-      if (transform != null) {
-        //noinspection ConstantConditions time column is never null
-        return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
-      } else {
-        return row.getTimestampFromEpoch();
-      }
+      return timestamp.getMillis();
     }
 
     @Override
     public DateTime getTimestamp()
     {
-      final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
-      if (transform != null) {
-        return DateTimes.utc(getTimestampFromEpoch());
-      } else {
-        return row.getTimestamp();
-      }
+      return timestamp;
     }
 
     @Override

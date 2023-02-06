@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -46,15 +45,13 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() != 2) {
-      throw new IAE("Function[%s] must have 2 arguments", name());
-    }
+    validationHelperCheckArgumentCount(args, 2);
 
     final Expr arg = args.get(0);
     final Expr patternExpr = args.get(1);
 
     if (!ExprUtils.isStringLiteral(patternExpr)) {
-      throw new IAE("Function[%s] pattern must be a string literal", name());
+      throw validationFailed("pattern must be a STRING literal");
     }
 
     // Precompile the pattern.
@@ -87,8 +84,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new RegexpLikeExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

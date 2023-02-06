@@ -36,10 +36,11 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * InputFormat for customized Delimitor Separate Value format of input data(default is TSV).
+ * InputFormat for customized Delimiter Separate Value format of input data (default is TSV).
  */
 public class DelimitedInputFormat extends FlatTextInputFormat
 {
+  public static final String TYPE_KEY = "tsv";
   private static final String DEFAULT_DELIMITER = "\t";
 
   @JsonCreator

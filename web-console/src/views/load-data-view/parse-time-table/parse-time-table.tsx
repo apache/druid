@@ -20,8 +20,7 @@ import classNames from 'classnames';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { TableCell } from '../../../components';
-import { TableCellUnparseable } from '../../../components/table-cell-unparseable/table-cell-unparseable';
+import { TableCell, TableCellUnparseable } from '../../../components';
 import {
   getTimestampDetailFromSpec,
   getTimestampSpecColumnFromSpec,
@@ -30,17 +29,17 @@ import {
   TimestampSpec,
 } from '../../../druid-models';
 import {
-  caseInsensitiveContains,
-  filterMap,
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../utils';
-import { HeaderAndRows, SampleEntry } from '../../../utils/sampler';
+} from '../../../react-table';
+import { caseInsensitiveContains, filterMap } from '../../../utils';
+import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './parse-time-table.scss';
 
 export function parseTimeTableSelectedColumnName(
-  sampleData: HeaderAndRows,
+  sampleData: SampleHeaderAndRows,
   timestampSpec: TimestampSpec | undefined,
 ): string | undefined {
   if (!timestampSpec) return;
@@ -51,7 +50,7 @@ export function parseTimeTableSelectedColumnName(
 
 export interface ParseTimeTableProps {
   sampleBundle: {
-    headerAndRows: HeaderAndRows;
+    headerAndRows: SampleHeaderAndRows;
     spec: Partial<IngestionSpec>;
   };
   columnFilter: string;
@@ -74,7 +73,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
 
   return (
     <ReactTable
-      className="parse-time-table -striped -highlight"
+      className={classNames('parse-time-table', DEFAULT_TABLE_CLASS_NAME)}
       data={headerAndRows.rows}
       sortable={false}
       defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -133,7 +132,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
               }
               return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
             },
-            minWidth: isTimestamp ? 200 : 100,
+            width: isTimestamp ? 200 : 140,
             resizable: !isTimestamp,
           };
         },

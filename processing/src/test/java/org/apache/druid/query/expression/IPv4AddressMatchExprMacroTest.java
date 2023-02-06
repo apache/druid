@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(ExpressionValidationException.class, "requires 2 arguments");
 
     apply(Collections.emptyList());
   }
@@ -58,7 +59,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 2 arguments");
+    expectException(ExpressionValidationException.class, "requires 2 arguments");
 
     apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
   }
@@ -66,7 +67,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testSubnetArgNotLiteral()
   {
-    expectException(IllegalArgumentException.class, "subnet arg must be a literal");
+    expectException(ExpressionValidationException.class, "subnet argument must be a literal");
 
     apply(Arrays.asList(IPV4, NOT_LITERAL));
   }
@@ -175,6 +176,32 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
     Assert.assertTrue(eval(IPV4_NETWORK, subnet));
     Assert.assertTrue(eval(IPV4, subnet));
     Assert.assertTrue(eval(IPV4_BROADCAST, subnet));
+  }
+
+  @Test
+  public void testMatchesPrefix()
+  {
+    Assert.assertTrue(eval(ExprEval.of("192.168.1.250").toExpr(), ExprEval.of("192.168.1.251/31").toExpr()));
+    Assert.assertFalse(eval(ExprEval.of("192.168.1.240").toExpr(), ExprEval.of("192.168.1.251/31").toExpr()));
+    Assert.assertFalse(eval(ExprEval.of("192.168.1.250").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
+    Assert.assertTrue(eval(ExprEval.of("192.168.1.251").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
+
+    Assert.assertTrue(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/31").toExpr()
+    ));
+    Assert.assertFalse(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.240").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/31").toExpr()
+    ));
+    Assert.assertFalse(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/32").toExpr()
+    ));
+    Assert.assertTrue(eval(
+        ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.251").longValue()).toExpr(),
+        ExprEval.of("192.168.1.251/32").toExpr()
+    ));
   }
 
   private boolean eval(Expr... args)

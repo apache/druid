@@ -64,6 +64,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
             .addValue(ServerConfig.class, new ServerConfig())
             .addValue("java.lang.String", "dummy")
             .addValue("java.lang.Integer", 1234)
+            .addValue(ObjectMapper.class, objectMapper)
     );
 
     curator.start();

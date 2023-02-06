@@ -27,10 +27,13 @@ import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
 import com.google.inject.spi.Message;
+import org.apache.commons.text.StringSubstitutor;
+import org.apache.commons.text.lookup.StringLookupFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -58,6 +61,15 @@ public class JsonConfigurator
 
   private final ObjectMapper jsonMapper;
   private final Validator validator;
+  private final StringSubstitutor stringSubstitutor = new StringSubstitutor(StringLookupFactory.INSTANCE.interpolatorStringLookup(
+      ImmutableMap.of(
+          StringLookupFactory.KEY_SYS, StringLookupFactory.INSTANCE.systemPropertyStringLookup(),
+          StringLookupFactory.KEY_ENV, StringLookupFactory.INSTANCE.environmentVariableStringLookup(),
+          StringLookupFactory.KEY_FILE, StringLookupFactory.INSTANCE.fileStringLookup()
+      ),
+      null,
+      false
+  )).setEnableSubstitutionInVariables(true).setEnableUndefinedVariableException(true);
 
   @Inject
   public JsonConfigurator(
@@ -89,7 +101,7 @@ public class JsonConfigurator
     Map<String, Object> jsonMap = new HashMap<>();
     for (String prop : props.stringPropertyNames()) {
       if (prop.startsWith(propertyBase)) {
-        final String propValue = props.getProperty(prop);
+        final String propValue = stringSubstitutor.replace(props.getProperty(prop));
         Object value;
         try {
           // If it's a String Jackson wants it to be quoted, so check if it's not an object or array and quote.
@@ -235,6 +247,7 @@ public class JsonConfigurator
   }
 
   @VisibleForTesting
+  @SuppressWarnings("ReturnValueIgnored")
   public static <T> void verifyClazzIsConfigurable(
       ObjectMapper mapper,
       Class<T> clazz,

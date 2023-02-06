@@ -20,27 +20,25 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
@@ -48,6 +46,7 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
+import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -60,6 +59,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
@@ -76,12 +76,11 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.DeepStorageShuffleClient;
 import org.apache.druid.indexing.common.task.batch.parallel.HttpShuffleClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClientFactory;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProviderImpl;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -126,8 +125,8 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -143,17 +142,15 @@ import java.util.Set;
 public class CliPeon extends GuiceRunnable
 {
   @SuppressWarnings("WeakerAccess")
-  @Arguments(description = "task.json status.json report.json", required = true)
+  @Required
+  @Arguments(description = "taskDirPath attemptId")
   public List<String> taskAndStatusFile;
 
-  // path to store the task's stdout log
-  private String taskLogPath;
+  // path to the task Directory
+  private String taskDirPath;
 
-  // path to store the task's TaskStatus
-  private String taskStatusPath;
-
-  // path to store the task's TaskReport objects
-  private String taskReportPath;
+  // the attemptId
+  private String attemptId;
 
   /**
    * Still using --nodeType as the flag for backward compatibility, although the concept is now more precisely called
@@ -195,20 +192,21 @@ public class CliPeon extends GuiceRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JoinableFactoryModule(),
+        new IndexingServiceTaskLogsModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
           @Override
           public void configure(Binder binder)
           {
-            taskLogPath = taskAndStatusFile.get(0);
-            taskStatusPath = taskAndStatusFile.get(1);
-            taskReportPath = taskAndStatusFile.get(2);
+            taskDirPath = taskAndStatusFile.get(0);
+            attemptId = taskAndStatusFile.get(1);
 
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
             binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+            binder.bindConstant().annotatedWith(AttemptId.class).to(attemptId);
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
@@ -220,14 +218,22 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
-            binder.bind(ExecutorLifecycleConfig.class).toInstance(
-                new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskLogPath))
-                    .setStatusFile(new File(taskStatusPath))
-            );
+            ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
+                .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
+                .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
+
+            if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
+              log.info("Running peon in k8s mode");
+              executorLifecycleConfig.setParentStreamDefined(false);
+            }
+
+            binder.bind(ExecutorLifecycleConfig.class).toInstance(executorLifecycleConfig);
 
             binder.bind(TaskReportFileWriter.class)
-                  .toInstance(new SingleFileTaskReportFileWriter(new File(taskReportPath)));
+                  .toInstance(
+                      new SingleFileTaskReportFileWriter(
+                          Paths.get(taskDirPath, "attempt", attemptId, "report.json").toFile()
+                      ));
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
@@ -299,7 +305,7 @@ public class CliPeon extends GuiceRunnable
   public void run()
   {
     try {
-      Injector injector = makeInjector();
+      Injector injector = makeInjector(ImmutableSet.of(NodeRole.PEON));
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
         final Thread hook = new Thread(
@@ -417,7 +423,6 @@ public class CliPeon extends GuiceRunnable
         .in(LazySingleton.class);
 
     binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.PEON);
-    Multibinder.newSetBinder(binder, NodeRole.class, Self.class).addBinding().toInstance(NodeRole.PEON);
   }
 
   static void bindTaskConfigAndClients(Binder binder)
@@ -429,10 +434,9 @@ public class CliPeon extends GuiceRunnable
     JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
     configureTaskActionClient(binder);
-    binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
 
-    binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>(){})
-          .to(ParallelIndexTaskClientFactory.class)
+    binder.bind(ParallelIndexSupervisorTaskClientProvider.class)
+          .to(ParallelIndexSupervisorTaskClientProviderImpl.class)
           .in(LazySingleton.class);
 
     binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);

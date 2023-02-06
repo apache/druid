@@ -176,6 +176,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
+          spec.getSpec().getTuningConfig().isUseListShards(),
           awsCredentialsConfig
       ));
     }
@@ -200,12 +201,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getFetchDelayMillis(),
         0, // skip starting background fetch, it is not used
         ioConfig.isDeaggregate(),
-        taskTuningConfig.getRecordBufferSize(),
+        taskTuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory(), ioConfig.isDeaggregate()),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
-        taskTuningConfig.getFetchSequenceNumberTimeout(),
-        taskTuningConfig.getMaxRecordsPerPoll(),
-        ioConfig.isUseEarliestSequenceNumber()
+        taskTuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate()),
+        ioConfig.isUseEarliestSequenceNumber(),
+        spec.getSpec().getTuningConfig().isUseListShards()
     );
   }
 

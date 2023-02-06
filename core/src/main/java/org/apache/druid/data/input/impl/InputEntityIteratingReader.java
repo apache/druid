@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -26,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
@@ -69,16 +71,19 @@ public class InputEntityIteratingReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read()
+  public CloseableIterator<InputRow> read(InputStats inputStats)
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
       try {
-        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
+        final InputEntity entityToRead = inputStats == null ? entity : new BytesCountingInputEntity(entity, inputStats);
+        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entityToRead, temporaryDirectory);
         return reader.read();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw new RuntimeException(entity.getUri() != null ?
+                                   "Error occurred while trying to read uri: " + entity.getUri() :
+                                   "Error occurred while reading input", e);
       }
     });
   }

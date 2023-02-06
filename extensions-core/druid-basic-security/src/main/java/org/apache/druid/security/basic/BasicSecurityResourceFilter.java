@@ -31,6 +31,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
@@ -62,6 +63,7 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
     if (!authResult.isAllowed()) {
       throw new WebApplicationException(
           Response.status(Response.Status.FORBIDDEN)
+                  .type(MediaType.TEXT_PLAIN)
                   .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
                   .build()
       );

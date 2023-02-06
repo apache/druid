@@ -34,8 +34,8 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DoublesSketchObjectSqlAggregator implements SqlAggregator
@@ -114,19 +115,20 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
           ColumnType.FLOAT
       );
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
-          virtualColumn.getOutputName(),
+          virtualColumnName,
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     }
 
@@ -138,7 +140,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 
   private static class DoublesSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column)'\n";
     private static final String SIGNATURE2 = "'" + NAME + "(column, k)'\n";
 
     DoublesSketchSqlAggFunction()

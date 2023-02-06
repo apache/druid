@@ -34,6 +34,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
@@ -41,8 +42,10 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -52,6 +55,7 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -70,6 +74,7 @@ import java.util.stream.Collectors;
 
 class ExpressionTestHelper
 {
+  private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = CalciteTests.createJoinableFactoryWrapper();
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
@@ -83,7 +88,9 @@ class ExpressionTestHelper
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      null, /* Don't need engine */
+      Collections.emptyMap(),
+      JOINABLE_FACTORY_WRAPPER
   );
 
   private final RowSignature rowSignature;
@@ -135,7 +142,12 @@ class ExpressionTestHelper
 
   RexNode makeLiteral(DateTime timestamp)
   {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
+    return Calcites.jodaToCalciteTimestampLiteral(
+        rexBuilder,
+        timestamp,
+        DateTimeZone.UTC,
+        DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION
+    );
   }
 
   RexNode makeLiteral(Integer integer)
@@ -205,7 +217,7 @@ class ExpressionTestHelper
                               .map(ExpressionTestHelper::quoteIfNeeded)
                               .collect(Collectors.joining(","));
     List<String> elements = Arrays.asList(functionName, "(", argsString, ")");
-    return DruidExpression.fromExpression(String.join(noDelimiter, elements));
+    return CalciteTestBase.makeExpression(String.join(noDelimiter, elements));
   }
 
   private static String quoteIfNeeded(@Nullable Object arg)
@@ -253,14 +265,45 @@ class ExpressionTestHelper
     testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult);
   }
 
+  /**
+   * @deprecated use {@link #testExpression(SqlOperator, RexNode, DruidExpression, Object)} instead which does a
+   * deep comparison of {@link DruidExpression} instead of just comparing the output of
+   * {@link DruidExpression#getExpression()}
+   */
+  @Deprecated
+  void testExpressionString(
+      final SqlOperator op,
+      final List<? extends RexNode> exprs,
+      final DruidExpression expectedExpression,
+      final Object expectedResult
+  )
+  {
+    testExpression(rexBuilder.makeCall(op, exprs), expectedExpression, expectedResult, false);
+  }
+
   void testExpression(
       final RexNode rexNode,
       final DruidExpression expectedExpression,
       final Object expectedResult
   )
   {
+    testExpression(rexNode, expectedExpression, expectedResult, true);
+  }
+
+  void testExpression(
+      final RexNode rexNode,
+      final DruidExpression expectedExpression,
+      final Object expectedResult,
+      final boolean deepCompare
+  )
+  {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    Assert.assertNotNull(expression);
+    if (deepCompare) {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
+    } else {
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
+    }
 
     ExprEval<?> result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
                                .eval(InputBindings.withMap(bindings));
@@ -277,7 +320,7 @@ class ExpressionTestHelper
   )
   {
     final RexNode rexNode = rexBuilder.makeCall(op, exprs);
-    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature);
+    final VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(rowSignature, TestExprMacroTable.INSTANCE, false);
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
     Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);
@@ -304,6 +347,7 @@ class ExpressionTestHelper
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
                 rowSignature,
+                false,
                 false
             ),
             VirtualColumns.create(virtualColumns)

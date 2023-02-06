@@ -34,41 +34,28 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
-  public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
+  public static final Comparator<Long> LONG_COMPARATOR = Comparators.naturalNullsFirst();
 
   private volatile boolean hasNulls = false;
 
-
-  @Nullable
   @Override
-  public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
-    }
-
     Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return l;
+    return new EncodedKeyComponent<>(l, Long.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
     hasNulls = NullHandling.sqlCompatible();
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Long key)
-  {
-    return Long.BYTES;
   }
 
   @Override

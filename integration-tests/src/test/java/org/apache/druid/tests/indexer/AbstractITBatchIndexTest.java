@@ -42,8 +42,8 @@ import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.testng.Assert;
 
 import java.io.IOException;
@@ -91,7 +91,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
+  public static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
   protected IntegrationTestingConfig config;
@@ -134,6 +134,31 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
   ) throws IOException
   {
+    doIndexTest(
+        dataSource,
+        indexTaskFilePath,
+        taskSpecTransform,
+        queryFilePath,
+        Function.identity(),
+        waitForNewVersion,
+        runTestQueries,
+        waitForSegmentsToLoad,
+        segmentAvailabilityConfirmationPair
+    );
+  }
+
+  protected void doIndexTest(
+      String dataSource,
+      String indexTaskFilePath,
+      Function<String, String> taskSpecTransform,
+      String queryFilePath,
+      Function<String, String> queryTransform,
+      boolean waitForNewVersion,
+      boolean runTestQueries,
+      boolean waitForSegmentsToLoad,
+      Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair
+  ) throws IOException
+  {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
     final String taskSpec = taskSpecTransform.apply(
         StringUtils.replace(
@@ -151,11 +176,16 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         segmentAvailabilityConfirmationPair
     );
     if (runTestQueries) {
-      doTestQuery(dataSource, queryFilePath);
+      doTestQuery(dataSource, queryFilePath, queryTransform);
     }
   }
 
   protected void doTestQuery(String dataSource, String queryFilePath)
+  {
+    doTestQuery(dataSource, queryFilePath, Function.identity());
+  }
+
+  protected void doTestQuery(String dataSource, String queryFilePath, Function<String, String> queryTransform)
   {
     try {
       String queryResponseTemplate;
@@ -166,14 +196,14 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", queryFilePath);
       }
-
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          dataSource + config.getExtraDatasourceNameSuffix()
+      queryResponseTemplate = queryTransform.apply(
+          StringUtils.replace(
+              queryResponseTemplate,
+              "%%DATASOURCE%%",
+              dataSource + config.getExtraDatasourceNameSuffix()
+          )
       );
       queryHelper.testQueriesFromString(queryResponseTemplate);
-
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -359,7 +389,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (waitForNewVersion) {
       ITRetryUtil.retryUntilTrue(
           () -> {
-            final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+            final SegmentTimeline timeline = SegmentTimeline.forSegments(
                 coordinator.getAvailableSegments(dataSourceName)
             );
 
@@ -409,11 +439,42 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int segmentCount = coordinator.getAvailableSegments(
+          List<DataSegment> segments = coordinator.getAvailableSegments(
               dataSource + config.getExtraDatasourceNameSuffix()
-          ).size();
+          );
+          int segmentCount = segments.size();
           LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+
           return segmentCount == numExpectedSegments;
+        },
+        "Segment count check"
+    );
+  }
+
+  void verifySegmentsCountAndLoaded(String dataSource, int numExpectedSegments, int numExpectedTombstones)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
+        "Segment load check"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          List<DataSegment> segments = coordinator.getAvailableSegments(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          );
+          int segmentCount = segments.size();
+          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+
+          int tombstoneCount = 0;
+          for (DataSegment segment : segments) {
+            if (segment.isTombstone()) {
+              tombstoneCount++;
+            }
+          }
+
+          LOG.info("Current tombstone count: %d, expected: %d", tombstoneCount, numExpectedTombstones);
+
+          return segmentCount == numExpectedSegments && tombstoneCount == numExpectedTombstones;
         },
         "Segment count check"
     );

@@ -40,6 +40,7 @@ export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
   debounceLoading?: number;
   backgroundStatusCheckInitDelay?: number;
   backgroundStatusCheckDelay?: number;
+  swallowBackgroundError?: (e: Error) => boolean;
 }
 
 export class QueryManager<Q, R, I = never, E extends Error = Error> {
@@ -60,6 +61,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private readonly onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
   private readonly backgroundStatusCheckInitDelay: number;
   private readonly backgroundStatusCheckDelay: number;
+  private readonly swallowBackgroundError?: (e: Error) => boolean;
 
   private terminated = false;
   private nextQuery: Q | undefined;
@@ -78,6 +80,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     this.onStateChange = options.onStateChange;
     this.backgroundStatusCheckInitDelay = options.backgroundStatusCheckInitDelay || 500;
     this.backgroundStatusCheckDelay = options.backgroundStatusCheckDelay || 1000;
+    this.swallowBackgroundError = options.swallowBackgroundError;
     if (options.debounceIdle !== 0) {
       this.runWhenIdle = debounce(this.run, options.debounceIdle || 100);
     } else {
@@ -130,6 +133,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     }
 
     let backgroundChecks = 0;
+    let intermediateError: Error | undefined;
     while (data instanceof IntermediateQueryState) {
       try {
         if (!this.backgroundStatusCheck) {
@@ -143,6 +147,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
           new QueryState<R, E, I>({
             loading: true,
             intermediate: data.state,
+            intermediateError,
             lastData: this.state.getSomeData(),
           }),
         );
@@ -159,16 +164,21 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
         }
 
         data = await this.backgroundStatusCheck(data.state, query, cancelToken);
+        intermediateError = undefined; // Clear the intermediate error if there was one
       } catch (e) {
         if (this.currentQueryId !== myQueryId) return;
-        this.currentRunCancelFn = undefined;
-        this.setState(
-          new QueryState<R, E>({
-            error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
-            lastData: this.state.getSomeData(),
-          }),
-        );
-        return;
+        if (this.swallowBackgroundError?.(e)) {
+          intermediateError = e;
+        } else {
+          this.currentRunCancelFn = undefined;
+          this.setState(
+            new QueryState<R, E>({
+              error: axios.isCancel(e) ? new Error(`canceled.`) : e, // remap cancellation into a simple error to hide away the axios implementation specifics
+              lastData: this.state.getSomeData(),
+            }),
+          );
+          return;
+        }
       }
 
       backgroundChecks++;
@@ -185,18 +195,17 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   }
 
   private trigger() {
-    const currentlyLoading = Boolean(this.currentRunCancelFn);
-
-    this.setState(
-      new QueryState<R, E>({
-        loading: true,
-        lastData: this.state.getSomeData(),
-      }),
-    );
-
-    if (currentlyLoading) {
+    if (this.currentRunCancelFn) {
+      // Currently loading
       this.runWhenLoading();
     } else {
+      this.setState(
+        new QueryState<R, E>({
+          loading: true,
+          lastData: this.state.getSomeData(),
+        }),
+      );
+
       this.runWhenIdle();
     }
   }
@@ -245,5 +254,9 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     if (this.currentRunCancelFn) {
       this.currentRunCancelFn(QueryManager.TERMINATION_MESSAGE);
     }
+  }
+
+  public isTerminated(): boolean {
+    return this.terminated;
   }
 }

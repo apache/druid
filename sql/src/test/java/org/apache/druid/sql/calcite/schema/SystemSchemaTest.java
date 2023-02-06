@@ -36,10 +36,9 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
-import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -87,12 +86,13 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -127,23 +127,23 @@ import java.util.Set;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
-  private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  private static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1")),
-      CalciteTests.createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2"))
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "dim1", "")),
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "dim1", "10.1")),
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "dim1", "2"))
   );
 
   private static final List<InputRow> ROWS2 = ImmutableList.of(
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim2", ImmutableList.of("a"))),
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim2", ImmutableList.of("abc"))),
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "dim2", ImmutableList.of("a"))),
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "dim2", ImmutableList.of("abc"))),
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
   );
 
   private static final List<InputRow> ROWS3 = ImmutableList.of(
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "7.0", "dim3", ImmutableList.of("x"))),
-      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "8.0", "dim3", ImmutableList.of("xyz")))
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "7.0", "dim3", ImmutableList.of("x"))),
+      TestDataBuilder.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "8.0", "dim3", ImmutableList.of("xyz")))
   );
 
   private SystemSchema schema;
@@ -162,7 +162,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private static Closer resourceCloser;
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -246,21 +246,21 @@ public class SystemSchemaTest extends CalciteTestBase
         .add(segment2, index2)
         .add(segment3, index3);
 
-    druidSchema = new DruidSchema(
+    SegmentMetadataCache cache = new SegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments(), realtimeSegments),
         new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-        PLANNER_CONFIG_DEFAULT,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
-        null
+        new BrokerInternalQueryConfig()
     );
-    druidSchema.start();
-    druidSchema.awaitInitialization();
+    cache.start();
+    cache.awaitInitialization();
+    druidSchema = new DruidSchema(cache, null);
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
+    serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,
@@ -276,6 +276,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final CompactionState expectedCompactionState = new CompactionState(
       new DynamicPartitionsSpec(null, null),
+      null,
       null,
       null,
       Collections.singletonMap("test", "map"),
@@ -520,7 +521,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(17, fields.size());
+    Assert.assertEquals(18, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -708,14 +709,15 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(partitionNum, row[6]);
     Assert.assertEquals(numReplicas, row[7]);
     Assert.assertEquals(numRows, row[8]);
-    Assert.assertEquals(isPublished, row[9]);
-    Assert.assertEquals(isAvailable, row[10]);
-    Assert.assertEquals(isRealtime, row[11]);
-    Assert.assertEquals(isOvershadowed, row[12]);
+    Assert.assertEquals((((isPublished == 1) && (isOvershadowed == 0)) || (isRealtime == 1)) ? 1L : 0L, row[9]);
+    Assert.assertEquals(isPublished, row[10]);
+    Assert.assertEquals(isAvailable, row[11]);
+    Assert.assertEquals(isRealtime, row[12]);
+    Assert.assertEquals(isOvershadowed, row[13]);
     if (compactionState == null) {
-      Assert.assertNull(row[16]);
+      Assert.assertNull(row[17]);
     } else {
-      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[16]);
+      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
     }
   }
 

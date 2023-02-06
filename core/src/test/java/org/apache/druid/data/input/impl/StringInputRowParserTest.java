@@ -42,9 +42,7 @@ public class StringInputRowParserTest
                     "dim1",
                     "dim2"
                 )
-            ),
-            null,
-            null
+            )
         ),
         "func",
         new JavaScriptConfig(false)
@@ -68,9 +66,7 @@ public class StringInputRowParserTest
                     "dim1",
                     "dim2"
                 )
-            ),
-            null,
-            null
+            )
         ),
         "func",
         new JavaScriptConfig(false)

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { InputGroup, InputGroupProps2, Intent } from '@blueprintjs/core';
+import { InputGroup, InputGroupProps2, Intent, TextArea } from '@blueprintjs/core';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
@@ -30,6 +30,7 @@ export interface FormattedInputProps extends InputGroupProps2 {
   onValueChange: (newValue: undefined | string) => void;
   sanitizer?: (rawValue: string) => string;
   issueWithValue?: (value: any) => string | undefined;
+  multiline?: boolean;
 }
 
 export const FormattedInput = React.memo(function FormattedInput(props: FormattedInputProps) {
@@ -44,6 +45,8 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
     onFocus,
     onBlur,
     intent,
+    placeholder,
+    multiline,
     ...rest
   } = props;
 
@@ -53,44 +56,67 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
   const issue: string | undefined = issueWithValue?.(value);
   const showIssue = Boolean(!isFocused && issue);
 
+  const myValue =
+    typeof intermediateValue !== 'undefined'
+      ? intermediateValue
+      : typeof value !== 'undefined'
+      ? formatter.stringify(value)
+      : undefined;
+
+  const myDefaultValue =
+    typeof defaultValue !== 'undefined' ? formatter.stringify(defaultValue) : undefined;
+
+  const myOnChange = (e: any) => {
+    let rawValue = e.target.value;
+    if (sanitizer) rawValue = sanitizer(rawValue);
+    setIntermediateValue(rawValue);
+
+    let parsedValue: string | undefined;
+    try {
+      parsedValue = formatter.parse(rawValue);
+    } catch {
+      return;
+    }
+    onValueChange(parsedValue);
+  };
+
+  const myOnFocus = (e: any) => {
+    setIsFocused(true);
+    onFocus?.(e);
+  };
+
+  const myOnBlur = (e: any) => {
+    setIntermediateValue(undefined);
+    setIsFocused(false);
+    onBlur?.(e);
+  };
+
+  const myIntent = showIssue ? Intent.DANGER : intent;
+
   return (
     <div className={classNames('formatted-input', className)}>
-      <InputGroup
-        value={
-          typeof intermediateValue !== 'undefined'
-            ? intermediateValue
-            : typeof value !== 'undefined'
-            ? formatter.stringify(value)
-            : undefined
-        }
-        defaultValue={
-          typeof defaultValue !== 'undefined' ? formatter.stringify(defaultValue) : undefined
-        }
-        onChange={e => {
-          let rawValue = e.target.value;
-          if (sanitizer) rawValue = sanitizer(rawValue);
-          setIntermediateValue(rawValue);
-
-          let parsedValue: string | undefined;
-          try {
-            parsedValue = formatter.parse(rawValue);
-          } catch {
-            return;
-          }
-          onValueChange(parsedValue);
-        }}
-        onFocus={e => {
-          setIsFocused(true);
-          onFocus?.(e);
-        }}
-        onBlur={e => {
-          setIntermediateValue(undefined);
-          setIsFocused(false);
-          onBlur?.(e);
-        }}
-        intent={showIssue ? Intent.DANGER : intent}
-        {...rest}
-      />
+      {multiline ? (
+        <TextArea
+          value={myValue}
+          defaultValue={myDefaultValue}
+          onChange={myOnChange}
+          onFocus={myOnFocus}
+          onBlur={myOnBlur}
+          intent={myIntent}
+          placeholder={placeholder}
+        />
+      ) : (
+        <InputGroup
+          value={myValue}
+          defaultValue={myDefaultValue}
+          onChange={myOnChange}
+          onFocus={myOnFocus}
+          onBlur={myOnBlur}
+          intent={myIntent}
+          placeholder={placeholder}
+          {...rest}
+        />
+      )}
       {showIssue && (
         <Tooltip2
           isOpen

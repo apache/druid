@@ -56,7 +56,7 @@ class LambdaExpr implements Expr
   @Nullable
   public String getIdentifier()
   {
-    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments");
+    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments, use getIdentifiers");
     if (args.size() == 1) {
       return args.get(0).toString();
     }
@@ -204,8 +204,7 @@ class FunctionExpr implements Expr
   @Override
   public Expr visit(Shuttle shuttle)
   {
-    List<Expr> newArgs = args.stream().map(shuttle::visit).collect(Collectors.toList());
-    return shuttle.visit(new FunctionExpr(function, name, newArgs));
+    return shuttle.visit(new FunctionExpr(function, name, shuttle.visitAll(args)));
   }
 
   @Override
@@ -334,8 +333,7 @@ class ApplyFunctionExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     LambdaExpr newLambda = (LambdaExpr) lambdaExpr.visit(shuttle);
-    List<Expr> newArgs = argsExpr.stream().map(shuttle::visit).collect(Collectors.toList());
-    return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, newArgs));
+    return shuttle.visit(new ApplyFunctionExpr(function, name, newLambda, shuttle.visitAll(argsExpr)));
   }
 
   @Override

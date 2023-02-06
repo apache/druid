@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -52,7 +53,6 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -88,56 +88,9 @@ public class StreamAppenderatorTester implements AutoCloseable
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
   private final ExecutorService queryExecutor;
-  private final IndexIO indexIO;
-  private final IndexMerger indexMerger;
   private final ServiceEmitter emitter;
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
-
-  public StreamAppenderatorTester(
-      final int maxRowsInMemory
-  )
-  {
-    this(maxRowsInMemory, -1, null, false);
-  }
-
-  public StreamAppenderatorTester(
-      final int maxRowsInMemory,
-      final boolean enablePushFailure
-  )
-  {
-    this(maxRowsInMemory, -1, null, enablePushFailure);
-  }
-
-  public StreamAppenderatorTester(
-      final int maxRowsInMemory,
-      final long maxSizeInBytes,
-      final boolean enablePushFailure
-  )
-  {
-    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
-  }
-
-  public StreamAppenderatorTester(
-      final int maxRowsInMemory,
-      final long maxSizeInBytes,
-      final File basePersistDirectory,
-      final boolean enablePushFailure
-  )
-  {
-    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters(), false);
-  }
-
-  public StreamAppenderatorTester(
-      final int maxRowsInMemory,
-      final long maxSizeInBytes,
-      final File basePersistDirectory,
-      final boolean enablePushFailure,
-      final RowIngestionMeters rowIngestionMeters
-  )
-  {
-    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters, false);
-  }
 
   public StreamAppenderatorTester(
       final int maxRowsInMemory,
@@ -155,7 +108,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 null,
                 null,
                 null
@@ -200,7 +153,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     metrics = new FireDepartmentMetrics();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
-    indexIO = new IndexIO(
+    IndexIO indexIO = new IndexIO(
         objectMapper,
         new ColumnConfig()
         {
@@ -211,7 +164,12 @@ public class StreamAppenderatorTester implements AutoCloseable
           }
         }
     );
-    indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+
+    IndexMergerV9 indexMerger = new IndexMergerV9(
+        objectMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
 
     emitter = new ServiceEmitter(
         "test",
@@ -290,7 +248,8 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CacheConfig(),
         new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        true
     );
   }
 
@@ -341,5 +300,63 @@ public class StreamAppenderatorTester implements AutoCloseable
     queryExecutor.shutdownNow();
     emitter.close();
     FileUtils.deleteDirectory(tuningConfig.getBasePersistDirectory());
+  }
+
+  public static class Builder
+  {
+    private int maxRowsInMemory;
+    private long maxSizeInBytes = -1;
+    private File basePersistDirectory;
+    private boolean enablePushFailure;
+    private RowIngestionMeters rowIngestionMeters;
+    private boolean skipBytesInMemoryOverheadCheck;
+
+    public Builder maxRowsInMemory(final int maxRowsInMemory)
+    {
+      this.maxRowsInMemory = maxRowsInMemory;
+      return this;
+    }
+
+    public Builder maxSizeInBytes(final long maxSizeInBytes)
+    {
+      this.maxSizeInBytes = maxSizeInBytes;
+      return this;
+    }
+
+    public Builder basePersistDirectory(final File basePersistDirectory)
+    {
+      this.basePersistDirectory = basePersistDirectory;
+      return this;
+    }
+
+    public Builder enablePushFailure(final boolean enablePushFailure)
+    {
+      this.enablePushFailure = enablePushFailure;
+      return this;
+    }
+
+    public Builder rowIngestionMeters(final RowIngestionMeters rowIngestionMeters)
+    {
+      this.rowIngestionMeters = rowIngestionMeters;
+      return this;
+    }
+
+    public Builder skipBytesInMemoryOverheadCheck(final boolean skipBytesInMemoryOverheadCheck)
+    {
+      this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck;
+      return this;
+    }
+
+    public StreamAppenderatorTester build()
+    {
+      return new StreamAppenderatorTester(
+          maxRowsInMemory,
+          maxSizeInBytes,
+          Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
+          enablePushFailure,
+          rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
+          skipBytesInMemoryOverheadCheck
+      );
+    }
   }
 }

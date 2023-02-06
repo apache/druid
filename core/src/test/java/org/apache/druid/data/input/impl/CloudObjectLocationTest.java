@@ -115,13 +115,27 @@ public class CloudObjectLocationTest
   }
 
   @Test
-  public void testInvalidBucketName()
+  public void testBucketNameWithoutUnderscores()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("bucket name cannot be null. Please verify if bucket name adheres to naming rules");
-    // Underscore(_) character is not valid for bucket names
-    CloudObjectLocation invalidBucket1 = new CloudObjectLocation("test_bucket", "path/to/path");
-    CloudObjectLocation invalidBucket2 = new CloudObjectLocation(invalidBucket1.toUri(SCHEME));
-    Assert.assertEquals("test_bucket", new CloudObjectLocation(invalidBucket2.toUri(SCHEME)));
+    CloudObjectLocation gsValidBucket = new CloudObjectLocation(URI.create("gs://1test.bucket-value/path/to/path"));
+    Assert.assertEquals("1test.bucket-value", gsValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", gsValidBucket.getPath());
+
+    CloudObjectLocation s3ValidBucket = new CloudObjectLocation(URI.create("s3://2test.bucket-value/path/to/path"));
+    Assert.assertEquals("2test.bucket-value", s3ValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", s3ValidBucket.getPath());
+  }
+
+  @Test
+  public void testBucketNameWithUnderscores()
+  {
+    // Underscore(_) character is allowed for bucket names by GCP
+    CloudObjectLocation gsValidBucket = new CloudObjectLocation(URI.create("gs://test_bucket/path/to/path"));
+    Assert.assertEquals("test_bucket", gsValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", gsValidBucket.getPath());
+
+    CloudObjectLocation s3ValidBucket = new CloudObjectLocation(URI.create("s3://test_bucket/path/to/path"));
+    Assert.assertEquals("test_bucket", s3ValidBucket.getBucket());
+    Assert.assertEquals("path/to/path", s3ValidBucket.getPath());
   }
 }

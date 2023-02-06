@@ -33,13 +33,10 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,9 +56,6 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   public DoublesSketchAggregatorTest(final GroupByQueryConfig config, final String vectorize)
   {
@@ -544,12 +538,9 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFailureWhenMaxStreamLengthHit() throws Exception
+  public void testSuccessWhenMaxStreamLengthHit() throws Exception
   {
     if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-      expectedException.expect(new RecursiveExceptionMatcher(IllegalStateException.class));
-      expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
-
       helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
           String.join(
@@ -633,39 +624,8 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
               "}"
           )
       );
-
-      expectedException.expect(new RecursiveExceptionMatcher(IllegalStateException.class));
-      expectedException.expectMessage("NullPointerException was thrown while updating Doubles sketch");
       seq.toList();
     }
   }
 
-  private static class RecursiveExceptionMatcher extends BaseMatcher<Object>
-  {
-    private final Class<? extends Throwable> expected;
-
-    private RecursiveExceptionMatcher(Class<? extends Throwable> expected)
-    {
-      this.expected = expected;
-    }
-
-    @Override
-    public boolean matches(Object item)
-    {
-      if (expected.isInstance(item)) {
-        return true;
-      } else if (item instanceof Throwable) {
-        if (((Throwable) item).getCause() != null) {
-          return matches(((Throwable) item).getCause());
-        }
-      }
-      return false;
-    }
-
-    @Override
-    public void describeTo(Description description)
-    {
-      description.appendText("a recursive instance of ").appendText(expected.getName());
-    }
-  }
 }

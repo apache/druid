@@ -20,20 +20,27 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -45,10 +52,12 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -62,6 +71,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
+
+  @MonotonicNonNull
+  private RowIngestionMeters buildSegmentsMeters;
+
+  @MonotonicNonNull
+  private ParseExceptionHandler parseExceptionHandler;
 
   PartialSegmentGenerateTask(
       String id,
@@ -98,10 +113,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+        supervisorTaskId,
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
@@ -112,7 +125,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         inputSource,
         toolbox.getIndexingTmpDir()
     );
-    taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
+
+    Map<String, TaskReport> taskReport = getTaskCompletionReports();
+
+    taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
     return TaskStatus.success(getId());
   }
@@ -130,7 +146,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
    */
   abstract T createGeneratedPartitionsReport(
       TaskToolbox toolbox,
-      List<DataSegment> segments
+      List<DataSegment> segments,
+      Map<String, TaskReport> taskReport
   );
 
   private List<DataSegment> generateSegments(
@@ -147,14 +164,13 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         null
     );
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    final RowIngestionMeters buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+    buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
 
-    toolbox.addMonitor(
-        new RealtimeMetricsMonitor(
-            Collections.singletonList(fireDepartmentForMetrics),
-            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
+    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        Collections.singletonList(fireDepartmentForMetrics),
+        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
     );
+    toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
@@ -163,11 +179,15 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final SegmentAllocatorForBatch segmentAllocator = createSegmentAllocator(toolbox, taskClient);
     final SequenceNameFunction sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
 
-    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+    parseExceptionHandler = new ParseExceptionHandler(
         buildSegmentsMeters,
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions()
+    );
+    final boolean useMaxMemoryEstimates = getContextValue(
+        Tasks.USE_MAX_MEMORY_ESTIMATES,
+        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
     );
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
@@ -178,7 +198,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         tuningConfig,
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
         buildSegmentsMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -197,7 +218,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           parseExceptionHandler,
           pushTimeout
       );
-
       return pushed.getSegments();
     }
     catch (Exception e) {
@@ -210,6 +230,53 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
+  }
+
+  /**
+   * Generate an IngestionStatsAndErrorsTaskReport for the task.
+   */
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                IngestionState.COMPLETED,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats(),
+                "",
+                false, // not applicable for parallel subtask
+                segmentAvailabilityWaitTimeMs
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
+    List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
+    );
+
+    if (parseExceptionMessages != null) {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, parseExceptionMessages);
+    } else {
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, ImmutableList.of());
+    }
+
+    return unparseableEventsMap;
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
+  {
+    Map<String, Object> metrics = new HashMap<>();
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        buildSegmentsMeters.getTotals()
+    );
+    return metrics;
   }
 }

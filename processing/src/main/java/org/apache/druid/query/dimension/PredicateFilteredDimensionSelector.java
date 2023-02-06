@@ -97,7 +97,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
   @Override
   public ValueMatcher makeValueMatcher(final Predicate<String> matcherPredicate)
   {
-    final boolean matchNull = predicate.apply(null);
+    final boolean matchNull = matcherPredicate.apply(null);
     return new ValueMatcher()
     {
       @Override

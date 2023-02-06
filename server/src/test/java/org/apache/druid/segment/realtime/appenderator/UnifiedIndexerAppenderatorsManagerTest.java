@@ -46,7 +46,7 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -72,10 +72,11 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
+  private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
-      NoopJoinableFactory.INSTANCE,
-      new WorkerConfig(),
+      JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
+      workerConfig,
       MapCache.create(10),
       new CacheConfig(),
       new CachePopulatorStats(),
@@ -111,15 +112,14 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         TestHelper.getTestIndexIO(),
         TestHelper.getTestIndexMergerV9(OnHeapMemorySegmentWriteOutMediumFactory.instance()),
         new NoopRowIngestionMeters(),
-        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0)
+        new ParseExceptionHandler(new NoopRowIngestionMeters(), false, 0, 0),
+        true
     );
   }
 
   @Test
   public void test_getBundle_knownDataSource()
   {
-
-
     final UnifiedIndexerAppenderatorsManager.DatasourceBundle bundle = manager.getBundle(
         Druids.newScanQueryBuilder()
               .dataSource(appenderator.getDataSource())
@@ -277,7 +277,13 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
 
     // "merge" is neither necessary nor implemented
     expectedException.expect(UnsupportedOperationException.class);
-    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, -1));
+    Assert.assertEquals(file, limitedPoolIndexMerger.merge(null, false, null, file, null, null, -1));
+  }
+
+  @Test
+  public void test_getWorkerConfig()
+  {
+    Assert.assertSame(workerConfig, manager.getWorkerConfig());
   }
 
   /**
@@ -341,6 +347,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
         boolean rollup,
         AggregatorFactory[] metricAggs,
         File outDir,
+        DimensionsSpec dimensionsSpec,
         IndexSpec indexSpec,
         int maxColumnsToMerge
     ) throws IOException

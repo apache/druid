@@ -45,8 +45,8 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -123,6 +123,8 @@ public class SystemSchema extends AbstractSchema
    * where 1 = true and 0 = false to make it easy to count number of segments
    * which are published, available etc.
    */
+  private static final long IS_ACTIVE_FALSE = 0L;
+  private static final long IS_ACTIVE_TRUE = 1L;
   private static final long IS_PUBLISHED_FALSE = 0L;
   private static final long IS_PUBLISHED_TRUE = 1L;
   private static final long IS_AVAILABLE_TRUE = 1L;
@@ -140,6 +142,7 @@ public class SystemSchema extends AbstractSchema
       .add("partition_num", ColumnType.LONG)
       .add("num_replicas", ColumnType.LONG)
       .add("num_rows", ColumnType.LONG)
+      .add("is_active", ColumnType.LONG)
       .add("is_published", ColumnType.LONG)
       .add("is_available", ColumnType.LONG)
       .add("is_realtime", ColumnType.LONG)
@@ -206,7 +209,7 @@ public class SystemSchema extends AbstractSchema
       final DruidSchema druidSchema,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
-      final InventoryView serverInventoryView,
+      final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
       final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
@@ -270,13 +273,13 @@ public class SystemSchema extends AbstractSchema
     {
       //get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.getSegmentMetadataSnapshot();
+          druidSchema.cache().getSegmentMetadataSnapshot();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
       final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
+          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
             new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
@@ -287,7 +290,7 @@ public class SystemSchema extends AbstractSchema
       // Coordinator.
       final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
 
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.getTotalSegments());
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
@@ -313,7 +316,10 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
+                  //is_active is true for published segments that are not overshadowed
+                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
+                  //is_published is true for published segments
+                  IS_PUBLISHED_TRUE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
@@ -350,8 +356,10 @@ public class SystemSchema extends AbstractSchema
                   (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE,
+                  // is_active is true for unpublished segments iff they are realtime
+                  val.getValue().isRealtime() /* is_active */,
                   // is_published is false for unpublished segments
+                  IS_PUBLISHED_FALSE,
                   // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),
@@ -480,13 +488,13 @@ public class SystemSchema extends AbstractSchema
 
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
-    private final InventoryView serverInventoryView;
+    private final FilteredServerInventoryView serverInventoryView;
     private final DruidLeaderClient overlordLeaderClient;
     private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-        InventoryView serverInventoryView,
+        FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         DruidLeaderClient overlordLeaderClient,
         DruidLeaderClient coordinatorLeaderClient
@@ -665,7 +673,7 @@ public class SystemSchema extends AbstractSchema
             druidNode.getHostAndPort(),
             druidNode.getHostAndTlsPort(),
             dataNodeService.getMaxSize(),
-            dataNodeService.getType(),
+            dataNodeService.getServerType(),
             dataNodeService.getTier(),
             dataNodeService.getPriority()
         );
@@ -1066,7 +1074,7 @@ public class SystemSchema extends AbstractSchema
 
       if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
             query,
             responseHolder.getStatus().getCode(),
             responseHolder.getStatus().getReasonPhrase()
@@ -1145,7 +1153,7 @@ public class SystemSchema extends AbstractSchema
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+      throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
     }
   }
 }

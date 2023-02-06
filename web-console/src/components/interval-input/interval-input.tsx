@@ -60,7 +60,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
         </div>
       }
       onChange={(e: any) => {
-        const value = e.target.value.replace(/[^\-0-9T:/]/g, '').substring(0, 39);
+        const value = e.target.value.replace(/[^\-\dT:/]/g, '').substring(0, 39);
         onValueChange(value);
       }}
       intent={intent}

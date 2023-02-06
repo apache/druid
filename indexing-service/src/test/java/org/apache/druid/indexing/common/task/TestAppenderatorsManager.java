@@ -67,7 +67,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -88,7 +89,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         cacheConfig,
         cachePopulatorStats,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
     return realtimeAppenderator;
   }
@@ -104,7 +106,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     return Appenderators.createOpenSegmentsOffline(
@@ -117,7 +120,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
   }
 
@@ -132,7 +136,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     return Appenderators.createClosedSegmentsOffline(
@@ -145,7 +150,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
   }
 
@@ -160,7 +166,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      boolean useMaxMemoryEstimates
   )
   {
     return Appenderators.createOffline(
@@ -173,7 +180,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        useMaxMemoryEstimates
     );
   }
 

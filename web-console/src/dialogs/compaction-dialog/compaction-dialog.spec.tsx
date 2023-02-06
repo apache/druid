@@ -67,7 +67,7 @@ describe('CompactionDialog', () => {
     expect(compactionDialog).toMatchSnapshot();
   });
 
-  it('matches snapshot with compactionConfig (single_dim partitionsSpec)', () => {
+  it('matches snapshot with compactionConfig (range partitionsSpec)', () => {
     const compactionDialog = shallow(
       <CompactionDialog
         onClose={() => {}}
@@ -76,7 +76,7 @@ describe('CompactionDialog', () => {
         datasource="test1"
         compactionConfig={{
           dataSource: 'test1',
-          tuningConfig: { partitionsSpec: { type: 'single_dim' } },
+          tuningConfig: { partitionsSpec: { type: 'range' } },
         }}
       />,
     );

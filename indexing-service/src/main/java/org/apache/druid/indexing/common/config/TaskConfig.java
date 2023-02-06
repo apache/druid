@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.StorageLocationConfig;
@@ -76,6 +77,7 @@ public class TaskConfig
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
+  private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
 
   @JsonProperty
   private final String baseDir;
@@ -113,6 +115,12 @@ public class TaskConfig
   @JsonProperty
   private final BatchProcessingMode batchProcessingMode;
 
+  @JsonProperty
+  private final boolean storeEmptyColumns;
+
+  @JsonProperty
+  private final boolean encapsulatedTask;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -126,7 +134,9 @@ public class TaskConfig
       @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations,
       @JsonProperty("ignoreTimestampSpecForDruidInputSource") boolean ignoreTimestampSpecForDruidInputSource,
       @JsonProperty("batchMemoryMappedIndex") boolean batchMemoryMappedIndex, // deprecated, only set to true to fall back to older behavior
-      @JsonProperty("batchProcessingMode") String batchProcessingMode
+      @JsonProperty("batchProcessingMode") String batchProcessingMode,
+      @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
+      @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -154,6 +164,8 @@ public class TaskConfig
     this.ignoreTimestampSpecForDruidInputSource = ignoreTimestampSpecForDruidInputSource;
 
     this.batchMemoryMappedIndex = batchMemoryMappedIndex;
+
+    this.encapsulatedTask = enableTaskLevelLogPush;
     // Conflict resolution. Assume that if batchMemoryMappedIndex is set (since false is the default) that
     // the user changed it intentionally to use legacy, in this case oveeride batchProcessingMode and also
     // set it to legacy else just use batchProcessingMode and don't pay attention to batchMemoryMappedIndexMode:
@@ -168,7 +180,8 @@ public class TaskConfig
                batchProcessingMode, this.batchProcessingMode
       );
     }
-    log.info("Batch processing mode:[%s]", this.batchProcessingMode);
+    log.debug("Batch processing mode:[%s]", this.batchProcessingMode);
+    this.storeEmptyColumns = storeEmptyColumns == null ? DEFAULT_STORE_EMPTY_COLUMNS : storeEmptyColumns;
   }
 
   @JsonProperty
@@ -185,7 +198,7 @@ public class TaskConfig
 
   public File getTaskDir(String taskId)
   {
-    return new File(baseTaskDir, taskId);
+    return new File(baseTaskDir, IdUtils.validateId("task ID", taskId));
   }
 
   public File getTaskWorkDir(String taskId)
@@ -267,6 +280,17 @@ public class TaskConfig
     return batchMemoryMappedIndex;
   }
 
+  @JsonProperty
+  public boolean isStoreEmptyColumns()
+  {
+    return storeEmptyColumns;
+  }
+
+  @JsonProperty
+  public boolean isEncapsulatedTask()
+  {
+    return encapsulatedTask;
+  }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {

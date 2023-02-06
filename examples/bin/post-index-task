@@ -21,7 +21,10 @@ PWD="$(pwd)"
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
-if [ -x "$(command -v python2)" ]
+if [ -x "$(command -v python3)" ]
+then
+  exec python3 "$WHEREAMI/post-index-task-main3" "$@"
+elif [ -x "$(command -v python2)" ]
 then
   exec python2 "$WHEREAMI/post-index-task-main" "$@"
 else

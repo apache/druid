@@ -10,37 +10,39 @@ exports[`ServicesView renders data 1`] = `
     <Component>
       Group by
     </Component>
-    <Blueprint3.ButtonGroup>
-      <Blueprint3.Button
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
         active={true}
         onClick={[Function]}
       >
         None
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         onClick={[Function]}
       >
         Type
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         onClick={[Function]}
       >
         Tier
-      </Blueprint3.Button>
-    </Blueprint3.ButtonGroup>
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
     <Memo(RefreshButton)
       localStorageKey="services-refresh-rate"
       onRefresh={[Function]}
     />
     <Memo(MoreButton)>
-      <Blueprint3.MenuItem
+      <Blueprint4.MenuItem
+        active={false}
         disabled={false}
         icon="application"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
+        selected={false}
         shouldDismissPopover={true}
         text="View SQL query for table"
       />
@@ -53,7 +55,7 @@ exports[`ServicesView renders data 1`] = `
           "Tier",
           "Host",
           "Port",
-          "Curr size",
+          "Current size",
           "Max size",
           "Usage",
           "Detail",
@@ -123,6 +125,7 @@ exports[`ServicesView renders data 1`] = `
       Array [
         Object {
           "Aggregated": [Function],
+          "Cell": [Function],
           "Header": "Service",
           "accessor": "service",
           "show": true,
@@ -141,25 +144,31 @@ exports[`ServicesView renders data 1`] = `
           "accessor": [Function],
           "id": "tier",
           "show": true,
-        },
-        Object {
-          "Aggregated": [Function],
-          "Header": "Host",
-          "accessor": "host",
-          "show": true,
-        },
-        Object {
-          "Aggregated": [Function],
-          "Header": "Port",
-          "accessor": [Function],
-          "id": "port",
-          "show": true,
+          "width": 180,
         },
         Object {
           "Aggregated": [Function],
           "Cell": [Function],
-          "Header": "Curr size",
+          "Header": "Host",
+          "accessor": "host",
+          "show": true,
+          "width": 200,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Port",
+          "accessor": [Function],
+          "id": "port",
+          "show": true,
+          "width": 100,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Current size",
           "accessor": "curr_size",
+          "className": "padded",
           "filterable": false,
           "id": "curr_size",
           "show": true,
@@ -170,6 +179,7 @@ exports[`ServicesView renders data 1`] = `
           "Cell": [Function],
           "Header": "Max size",
           "accessor": "max_size",
+          "className": "padded",
           "filterable": false,
           "id": "max_size",
           "show": true,
@@ -180,6 +190,7 @@ exports[`ServicesView renders data 1`] = `
           "Cell": [Function],
           "Header": "Usage",
           "accessor": [Function],
+          "className": "padded",
           "filterable": false,
           "id": "usage",
           "show": true,
@@ -190,6 +201,7 @@ exports[`ServicesView renders data 1`] = `
           "Cell": [Function],
           "Header": "Detail",
           "accessor": [Function],
+          "className": "padded",
           "filterable": false,
           "id": "queue",
           "show": true,
@@ -216,7 +228,6 @@ exports[`ServicesView renders data 1`] = `
             "is_leader": 0,
             "max_size": 0,
             "plaintext_port": 8082,
-            "rank": 5,
             "service": "localhost:8082",
             "service_type": "broker",
             "tier": null,
@@ -228,7 +239,6 @@ exports[`ServicesView renders data 1`] = `
             "is_leader": 0,
             "max_size": 3000000000n,
             "plaintext_port": 8083,
-            "rank": 4,
             "segmentsToDrop": 0,
             "segmentsToDropSize": 0,
             "segmentsToLoad": 0,

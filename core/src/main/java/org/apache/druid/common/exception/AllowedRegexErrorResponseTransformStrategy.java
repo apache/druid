@@ -51,7 +51,8 @@ public class AllowedRegexErrorResponseTransformStrategy implements ErrorResponse
   public Function<String, String> getErrorMessageTransformFunction()
   {
     return (String errorMessage) -> {
-      if (allowedRegexPattern.stream().anyMatch(pattern -> pattern.matcher(errorMessage).matches())) {
+      if (errorMessage == null || allowedRegexPattern.stream()
+                                                     .anyMatch(pattern -> pattern.matcher(errorMessage).matches())) {
         return errorMessage;
       } else {
         return null;

@@ -21,12 +21,15 @@ package org.apache.druid.java.util.common.parsers;
 
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 
+import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,12 +47,12 @@ public class ObjectFlatteners
   }
 
   public static <T> ObjectFlattener<T> create(
-      final JSONPathSpec flattenSpec,
+      @Nullable final JSONPathSpec flattenSpecInput,
       final FlattenerMaker<T> flattenerMaker
   )
   {
     final Map<String, Function<T, Object>> extractors = new LinkedHashMap<>();
-
+    final JSONPathSpec flattenSpec = flattenSpecInput == null ? JSONPathSpec.DEFAULT : flattenSpecInput;
     for (final JSONPathFieldSpec fieldSpec : flattenSpec.getFields()) {
       final Function<T, Object> extractor;
 
@@ -62,6 +65,9 @@ public class ObjectFlatteners
           break;
         case JQ:
           extractor = flattenerMaker.makeJsonQueryExtractor(fieldSpec.getExpr());
+          break;
+        case TREE:
+          extractor = flattenerMaker.makeJsonTreeExtractor(fieldSpec.getNodes());
           break;
         default:
           throw new UOE("Unsupported field type[%s]", fieldSpec.getType());
@@ -88,7 +94,7 @@ public class ObjectFlatteners
           @Override
           public boolean isEmpty()
           {
-            throw new UnsupportedOperationException();
+            return keySet().isEmpty();
           }
 
           @Override
@@ -207,11 +213,14 @@ public class ObjectFlatteners
     };
   }
 
+  @ExtensionPoint
   public interface FlattenerMaker<T>
   {
     JsonProvider getJsonProvider();
     /**
-     * List all "root" primitive properties and primitive lists (no nested objects, no lists of objects)
+     * List all "root" fields. If
+     * {@link org.apache.druid.data.input.impl.DimensionsSpec#useNestedColumnIndexerForSchemaDiscovery} is false, this
+     * method should filter fields to include only fields that contain primitive and lists of primitive values
      */
     Iterable<String> discoverRootFields(T obj);
 
@@ -231,27 +240,45 @@ public class ObjectFlatteners
     Function<T, Object> makeJsonQueryExtractor(String expr);
 
     /**
+     * Create a "field" extractor for nested json expressions
+     */
+    default Function<T, Object> makeJsonTreeExtractor(List<String> nodes)
+    {
+      throw new UOE("makeJsonTreeExtractor has not been implemented.");
+    }
+
+    /**
      * Convert object to Java {@link Map} using {@link #getJsonProvider()} and {@link #finalizeConversionForMap} to
      * extract and convert data
      */
     default Map<String, Object> toMap(T obj)
     {
-      return (Map<String, Object>) toMapHelper(obj);
+      final Object mapOrNull = toPlainJavaType(obj);
+      if (mapOrNull == null) {
+        return Collections.emptyMap();
+      }
+      return (Map<String, Object>) mapOrNull;
     }
 
     /**
      * Recursively traverse "json" object using a {@link JsonProvider}, converting to Java {@link Map} and {@link List},
      * potentially transforming via {@link #finalizeConversionForMap} as we go
      */
-    default Object toMapHelper(Object o)
+    @Nullable
+    default Object toPlainJavaType(Object o)
     {
+      if (o == null) {
+        return null;
+      }
       final JsonProvider jsonProvider = getJsonProvider();
       if (jsonProvider.isMap(o)) {
         Map<String, Object> actualMap = new HashMap<>();
         for (String key : jsonProvider.getPropertyKeys(o)) {
           Object field = jsonProvider.getMapValue(o, key);
-          if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
-            actualMap.put(key, toMapHelper(finalizeConversionForMap(field)));
+          if (field == null) {
+            actualMap.put(key, null);
+          } else if (jsonProvider.isMap(field) || jsonProvider.isArray(field)) {
+            actualMap.put(key, toPlainJavaType(finalizeConversionForMap(field)));
           } else {
             actualMap.put(key, finalizeConversionForMap(field));
           }
@@ -263,7 +290,7 @@ public class ObjectFlatteners
         for (int i = 0; i < length; i++) {
           Object element = jsonProvider.getArrayIndex(o, i);
           if (jsonProvider.isMap(element) || jsonProvider.isArray(element)) {
-            actualList.add(toMapHelper(finalizeConversionForMap(element)));
+            actualList.add(toPlainJavaType(finalizeConversionForMap(element)));
           } else {
             actualList.add(finalizeConversionForMap(element));
           }
@@ -271,7 +298,7 @@ public class ObjectFlatteners
         return finalizeConversionForMap(actualList);
       }
       // unknown, just pass it through
-      return o;
+      return finalizeConversionForMap(o);
     }
 
     /**

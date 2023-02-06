@@ -24,11 +24,8 @@ import com.google.common.base.Predicates;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -38,17 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class RetryUtilsTest
 {
-  private static final Predicate<Throwable> IS_TRANSIENT = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable e)
-    {
-      return e instanceof IOException && e.getMessage().equals("what");
-    }
-  };
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  private static final Predicate<Throwable> IS_TRANSIENT =
+      e -> e instanceof IOException && e.getMessage().equals("what");
 
   @Test
   public void testImmediateSuccess() throws Exception
@@ -108,11 +96,10 @@ public class RetryUtilsTest
   }
 
   @Test
-  public void testExceptionPredicateNotMatching() throws Exception
+  public void testExceptionPredicateNotMatching()
   {
     final AtomicInteger count = new AtomicInteger();
-    boolean threwExpectedException = false;
-    try {
+    Assert.assertThrows("uhh", IOException.class, () -> {
       RetryUtils.retry(
           () -> {
             if (count.incrementAndGet() >= 2) {
@@ -124,16 +111,12 @@ public class RetryUtilsTest
           IS_TRANSIENT,
           3
       );
-    }
-    catch (IOException e) {
-      threwExpectedException = e.getMessage().equals("uhh");
-    }
-    Assert.assertTrue("threw expected exception", threwExpectedException);
+    });
     Assert.assertEquals("count", 1, count.get());
   }
 
   @Test(timeout = 5000L)
-  public void testInterruptWhileSleepingBetweenTries() throws ExecutionException, InterruptedException
+  public void testInterruptWhileSleepingBetweenTries()
   {
     ExecutorService exec = Execs.singleThreaded("test-interrupt");
     try {
@@ -150,10 +133,7 @@ public class RetryUtilsTest
           Integer.MAX_VALUE
       ));
 
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectCause(CoreMatchers.instanceOf(InterruptedException.class));
-      expectedException.expectMessage("sleep interrupted");
-      future.get();
+      Assert.assertThrows("sleep interrupted", ExecutionException.class, future::get);
     }
     finally {
       exec.shutdownNow();
@@ -161,7 +141,7 @@ public class RetryUtilsTest
   }
 
   @Test(timeout = 5000L)
-  public void testInterruptRetryLoop() throws ExecutionException, InterruptedException
+  public void testInterruptRetryLoop()
   {
     ExecutorService exec = Execs.singleThreaded("test-interrupt");
     try {
@@ -181,10 +161,7 @@ public class RetryUtilsTest
           true
       ));
 
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
-      expectedException.expectMessage("Current thread is interrupted after [2] tries");
-      future.get();
+      Assert.assertThrows("Current thread is interrupted after [2] tries", ExecutionException.class, future::get);
     }
     finally {
       exec.shutdownNow();

@@ -113,6 +113,27 @@ public class SmooshedFileMapperTest
   }
 
   @Test
+  public void testWhenWithPathyLookingFileNames() throws Exception
+  {
+    String prefix = "foo/bar/";
+    File baseDir = folder.newFolder("base");
+
+    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
+      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%s%d", prefix, 19), 4);
+      writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
+
+      for (int i = 0; i < 19; ++i) {
+        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
+        Files.write(Ints.toByteArray(i), tmpFile);
+        smoosher.add(StringUtils.format("%s%d", prefix, i), tmpFile);
+        tmpFile.delete();
+      }
+      writer.close();
+    }
+    validateOutput(baseDir, prefix);
+  }
+
+  @Test
   public void testBehaviorWhenReportedSizesLargeAndExceptionIgnored() throws Exception
   {
     File baseDir = folder.newFolder("base");
@@ -194,6 +215,11 @@ public class SmooshedFileMapperTest
 
   private void validateOutput(File baseDir) throws IOException
   {
+    validateOutput(baseDir, "");
+  }
+
+  private void validateOutput(File baseDir, String prefix) throws IOException
+  {
     File[] files = baseDir.listFiles();
     Arrays.sort(files);
 
@@ -205,7 +231,7 @@ public class SmooshedFileMapperTest
 
     try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        ByteBuffer buf = mapper.mapFile(StringUtils.format("%d", i));
+        ByteBuffer buf = mapper.mapFile(StringUtils.format("%s%d", prefix, i));
         Assert.assertEquals(0, buf.position());
         Assert.assertEquals(4, buf.remaining());
         Assert.assertEquals(4, buf.capacity());

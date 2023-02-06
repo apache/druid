@@ -61,14 +61,6 @@ public class RowSignatures
     for (int i = 0; i < rowOrder.size(); i++) {
       final RelDataType dataType = rowType.getFieldList().get(i).getType();
       final ColumnType valueType = Calcites.getColumnTypeForRelDataType(dataType);
-      if (valueType == null) {
-        throw new ISE(
-            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
-            dataType.getSqlTypeName(),
-            rowOrder.get(i)
-        );
-      }
-
       rowSignatureBuilder.add(rowOrder.get(i), valueType);
     }
 
@@ -95,16 +87,30 @@ public class RowSignatures
   }
 
   /**
-   * Returns a Calcite RelDataType corresponding to a row signature.
+   * Returns a Calcite RelDataType corresponding to a row signature. It will typecast __time column to TIMESTAMP
+   * irrespective of the type present in the row signature
    */
   public static RelDataType toRelDataType(final RowSignature rowSignature, final RelDataTypeFactory typeFactory)
+  {
+    return toRelDataType(rowSignature, typeFactory, true);
+  }
+
+  /**
+   * Returns a Calcite RelDataType corresponding to a row signature.
+   * For columns that are named "__time", it automatically casts it to TIMESTAMP if typecastTimeColumn is set to true
+   */
+  public static RelDataType toRelDataType(
+      final RowSignature rowSignature,
+      final RelDataTypeFactory typeFactory,
+      boolean typecastTimeColumn
+  )
   {
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
     final boolean nullNumeric = !NullHandling.replaceWithDefault();
     for (final String columnName : rowSignature.getColumnNames()) {
       final RelDataType type;
 
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+      if (typecastTimeColumn && ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
         type = Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
       } else {
         final ColumnType columnType =
@@ -141,10 +147,7 @@ public class RowSignatures
             }
             break;
           case COMPLEX:
-            type = typeFactory.createTypeWithNullability(
-                new ComplexSqlType(SqlTypeName.OTHER, columnType, true),
-                true
-            );
+            type = makeComplexType(typeFactory, columnType, true);
             break;
           default:
             throw new ISE("valueType[%s] not translatable", columnType);
@@ -158,7 +161,37 @@ public class RowSignatures
   }
 
   /**
-   * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information
+   * Creates a {@link ComplexSqlType} using the supplied {@link RelDataTypeFactory} to ensure that the
+   * {@link ComplexSqlType} is interned. This is important because Calcite checks that the references are equal
+   * instead of the objects being equivalent.
+   *
+   * This method uses {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) ensures that if the
+   * type factory is a {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
+   * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
+   */
+  public static RelDataType makeComplexType(RelDataTypeFactory typeFactory, ColumnType columnType, boolean isNullable)
+  {
+    return typeFactory.createTypeWithNullability(
+        new ComplexSqlType(SqlTypeName.OTHER, columnType, isNullable),
+        isNullable
+    );
+  }
+
+  /**
+   * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information.
+   *
+   * If using with other operations of a {@link RelDataTypeFactory}, consider wrapping the creation of this type in
+   * {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) to ensure that if the type factory is a
+   * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
+   * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
+   *
+   * If {@link SqlTypeName} is going to be {@link SqlTypeName#OTHER} and a {@link RelDataTypeFactory} is available,
+   * consider using {@link #makeComplexType(RelDataTypeFactory, ColumnType, boolean)}.
+   *
+   * This type does not work well with {@link org.apache.calcite.sql.type.ReturnTypes#explicit(RelDataType)}, which
+   * will create new {@link RelDataType} using {@link SqlTypeName} during return type inference, so implementors of
+   * {@link org.apache.druid.sql.calcite.expression.SqlOperatorConversion} should implement the
+   * {@link org.apache.calcite.sql.type.SqlReturnTypeInference} directly for best results.
    */
   public static final class ComplexSqlType extends AbstractSqlType
   {

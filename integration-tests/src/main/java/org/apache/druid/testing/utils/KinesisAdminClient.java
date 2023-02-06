@@ -29,22 +29,30 @@ import com.amazonaws.services.kinesis.model.AddTagsToStreamRequest;
 import com.amazonaws.services.kinesis.model.AddTagsToStreamResult;
 import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
+import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ScalingType;
+import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.FileInputStream;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KinesisAdminClient implements StreamAdminClient
 {
-  private AmazonKinesis amazonKinesis;
+  private final AmazonKinesis amazonKinesis;
 
   public KinesisAdminClient(String endpoint) throws Exception
   {
@@ -107,6 +115,9 @@ public class KinesisAdminClient implements StreamAdminClient
   public void updatePartitionCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
     int originalShardCount = getStreamPartitionCount(streamName);
+    if (originalShardCount == newShardCount) {
+      return;
+    }
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
     updateShardCountRequest.setTargetShardCount(newShardCount);
@@ -119,14 +130,16 @@ public class KinesisAdminClient implements StreamAdminClient
       // Wait until the resharding started (or finished)
       ITRetryUtil.retryUntil(
           () -> {
-            StreamDescription streamDescription = getStreamDescription(streamName);
-            int updatedShardCount = getStreamShardCount(streamDescription);
-            return verifyStreamStatus(streamDescription, StreamStatus.UPDATING) ||
-                (verifyStreamStatus(streamDescription, StreamStatus.ACTIVE) && updatedShardCount > originalShardCount);
-          },
-          true,
-          30,
-          30,
+            int updatedShardCount = getStreamPartitionCount(streamName);
+
+            // Retry until Kinesis records the operation is either in progress (UPDATING) or completed (ACTIVE)
+            // and the shard count has changed.
+
+            return verifyStreamStatus(streamName, StreamStatus.ACTIVE, StreamStatus.UPDATING)
+                   && updatedShardCount != originalShardCount;
+          }, true,
+          300, // higher value to avoid exceeding kinesis TPS limit
+          100,
           "Kinesis stream resharding to start (or finished)"
       );
     }
@@ -135,15 +148,29 @@ public class KinesisAdminClient implements StreamAdminClient
   @Override
   public boolean isStreamActive(String streamName)
   {
-    StreamDescription streamDescription = getStreamDescription(streamName);
-    return verifyStreamStatus(streamDescription, StreamStatus.ACTIVE);
+    return verifyStreamStatus(streamName, StreamStatus.ACTIVE);
   }
 
   @Override
   public int getStreamPartitionCount(String streamName)
   {
-    StreamDescription streamDescription = getStreamDescription(streamName);
-    return getStreamShardCount(streamDescription);
+    Set<String> shardIds = new HashSet<>();
+    DescribeStreamRequest request = new DescribeStreamRequest();
+    request.setStreamName(streamName);
+    while (request != null) {
+      StreamDescription description = amazonKinesis.describeStream(request).getStreamDescription();
+      List<String> shardIdResult = description.getShards()
+                                              .stream()
+                                              .map(Shard::getShardId)
+                                              .collect(Collectors.toList());
+      shardIds.addAll(shardIdResult);
+      if (description.isHasMoreShards()) {
+        request.setExclusiveStartShardId(Iterables.getLast(shardIdResult));
+      } else {
+        request = null;
+      }
+    }
+    return shardIds.size();
   }
 
   @Override
@@ -156,15 +183,16 @@ public class KinesisAdminClient implements StreamAdminClient
     return actualShardCount == oldShardCount + newShardCount;
   }
 
-
-  private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck)
+  private boolean verifyStreamStatus(String streamName, StreamStatus... streamStatuses)
   {
-    return streamStatusToCheck.toString().equals(streamDescription.getStreamStatus());
+    return Arrays.stream(streamStatuses)
+                 .map(StreamStatus::toString)
+                 .anyMatch(getStreamStatus(streamName)::equals);
   }
 
-  private int getStreamShardCount(StreamDescription streamDescription)
+  private String getStreamStatus(String streamName)
   {
-    return streamDescription.getShards().size();
+    return getStreamDescription(streamName).getStreamStatus();
   }
 
   private StreamDescription getStreamDescription(String streamName)

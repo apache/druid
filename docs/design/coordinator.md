@@ -27,6 +27,8 @@ title: "Coordinator Process"
 
 For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
+For basic tuning guidance for the Coordinator process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
+
 ### HTTP endpoints
 
 For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
@@ -79,35 +81,41 @@ If a Historical process restarts or becomes unavailable for any reason, the Drui
 
 To ensure an even distribution of segments across Historical processes in the cluster, the Coordinator process will find the total size of all segments being served by every Historical process each time the Coordinator runs. For every Historical process tier in the cluster, the Coordinator process will determine the Historical process with the highest utilization and the Historical process with the lowest utilization. The percent difference in utilization between the two processes is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized process to the lowest utilized process. There is a configurable limit on the number of segments that can be moved from one process to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
 
-### Compacting Segments
+### Automatic compaction
 
-Each run, the Druid Coordinator compacts segments by merging small segments or splitting a large one. This is useful when your segments are not optimized
-in terms of segment size which may degrade query performance. See [Segment Size Optimization](../operations/segment-optimization.md) for details.
+The Druid Coordinator manages the [automatic compaction system](../data-management/automatic-compaction.md).
+Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
+See [Segment size optimization](../operations/segment-optimization.md) for details.
 
-The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy).
+The Coordinator first finds the segments to compact based on the [segment search policy](#segment-search-policy-in-automatic-compaction).
 Once some segments are found, it issues a [compaction task](../ingestion/tasks.md#compact) to compact those segments.
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
-Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compaction task is always submitted
+Note that even if `min(sum of worker capacity * slotRatio, maxSlots) = 0`, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
-See [Compaction Configuration API](../operations/api-reference.md#compaction-configuration) and [Compaction Configuration](../configuration/index.md#compaction-dynamic-configuration) to enable the compaction.
+See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
 
-Compaction tasks might fail due to the following reasons.
+Compaction tasks might fail due to the following reasons:
 
 - If the input segments of a compaction task are removed or overshadowed before it starts, that compaction task fails immediately.
 - If a task of a higher priority acquires a [time chunk lock](../ingestion/tasks.md#locking) for an interval overlapping with the interval of a compaction task, the compaction task fails.
 
 Once a compaction task fails, the Coordinator simply checks the segments in the interval of the failed task again, and issues another compaction task in the next run.
 
-### Segment search policy
+Note that Compacting Segments Coordinator Duty is automatically enabled and run as part of the Indexing Service Duties group. However, Compacting Segments Coordinator Duty can be configured to run in isolation as a separate Coordinator duty group. This allows changing the period of Compacting Segments Coordinator Duty without impacting the period of other Indexing Service Duties. This can be done by setting the following properties. For more details, see [custom pluggable Coordinator Duty](../development/modules.md#adding-your-own-custom-pluggable-coordinator-duty).
+```
+druid.coordinator.dutyGroups=[<SOME_GROUP_NAME>]
+druid.coordinator.<SOME_GROUP_NAME>.duties=["compactSegments"]
+druid.coordinator.<SOME_GROUP_NAME>.period=<PERIOD_TO_RUN_COMPACTING_SEGMENTS_DUTY>
+```
 
-#### Recent segment first policy
+### Segment search policy in automatic compaction
 
-At every coordinator run, this policy looks up time chunks in order of newest-to-oldest and checks whether the segments in those time chunks
-need compaction or not.
-A set of segments need compaction if all conditions below are satisfied.
+At every Coordinator run, this policy looks up time chunks from newest to oldest and checks whether the segments in those time chunks
+need compaction.
+A set of segments needs compaction if all conditions below are satisfied:
 
 1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
-2) Segments have never been compacted yet or compaction spec has been updated since the last compaction, especially `maxRowsPerSegment`, `maxTotalRows`, and `indexSpec`.
+2) Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
 
 Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
 
@@ -123,22 +131,19 @@ Assuming that each segment is 10 MB and haven't been compacted yet, this policy 
 `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION` and `foo_2017-11-01T00:00:00.000Z_2017-12-01T00:00:00.000Z_VERSION_1` to compact together because
 `2017-11-01T00:00:00.000Z/2017-12-01T00:00:00.000Z` is the most recent time chunk.
 
-If the coordinator has enough task slots for compaction, this policy will continue searching for the next segments and return
+If the Coordinator has enough task slots for compaction, this policy will continue searching for the next segments and return
 `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION` and `bar_2017-10-01T00:00:00.000Z_2017-11-01T00:00:00.000Z_VERSION_1`.
 Finally, `foo_2017-09-01T00:00:00.000Z_2017-10-01T00:00:00.000Z_VERSION` will be picked up even though there is only one segment in the time chunk of `2017-09-01T00:00:00.000Z/2017-10-01T00:00:00.000Z`.
 
-The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.md#compaction-dynamic-configuration).
+The search start point can be changed by setting `skipOffsetFromLatest`.
 If this is set, this policy will ignore the segments falling into the time chunk of (the end time of the most recent segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
+For more information, see [Avoid conflicts with ingestion](../data-management/automatic-compaction.md#avoid-conflicts-with-ingestion).
 
 > This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
-> and their total size exceeds [inputSegmentSizeBytes](../configuration/index.md#compaction-dynamic-configuration).
+> and their total size exceeds [`inputSegmentSizeBytes`](../configuration/index.md#automatic-compaction-dynamic-configuration).
 > If it finds such segments, it simply skips them.
-
-### The Coordinator console
-
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [coordinator console](../operations/management-uis.md#coordinator-consoles).
 
 ### FAQ
 

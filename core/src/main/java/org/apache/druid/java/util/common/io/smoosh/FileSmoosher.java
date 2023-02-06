@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.io.smoosh;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -46,9 +47,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A class that concatenates files together into configurable sized chunks,
@@ -82,6 +85,10 @@ public class FileSmoosher implements Closeable
   private List<File> completedFiles = new ArrayList<>();
   // list of files in process writing content using delegated smooshedWriter.
   private List<File> filesInProcess = new ArrayList<>();
+  // delegated smooshedWriter creates a new temporary file per file added. we use a counter to name these temporary
+  // files, and map the file number to the file name so we don't have to escape the file names (e.g. names with '/')
+  private AtomicLong delegateFileCounter = new AtomicLong(0);
+  private Map<String, String> delegateFileNameMap;
 
   private Outer currOut = null;
   private boolean writerCurrentlyInUse = false;
@@ -100,6 +107,7 @@ public class FileSmoosher implements Closeable
   {
     this.baseDir = baseDir;
     this.maxChunkSize = maxChunkSize;
+    this.delegateFileNameMap = new HashMap<>();
 
     Preconditions.checkArgument(maxChunkSize > 0, "maxChunkSize must be a positive value.");
   }
@@ -223,18 +231,20 @@ public class FileSmoosher implements Closeable
       @Override
       public void close() throws IOException
       {
-        open = false;
-        internalFiles.put(name, new Metadata(currOut.getFileNum(), startOffset, currOut.getCurrOffset()));
-        writerCurrentlyInUse = false;
+        if (open) {
+          open = false;
+          internalFiles.put(name, new Metadata(currOut.getFileNum(), startOffset, currOut.getCurrOffset()));
+          writerCurrentlyInUse = false;
 
-        if (bytesWritten != currOut.getCurrOffset() - startOffset) {
-          throw new ISE("Perhaps there is some concurrent modification going on?");
+          if (bytesWritten != currOut.getCurrOffset() - startOffset) {
+            throw new ISE("Perhaps there is some concurrent modification going on?");
+          }
+          if (bytesWritten != size) {
+            throw new IOE("Expected [%,d] bytes, only saw [%,d], potential corruption?", size, bytesWritten);
+          }
+          // Merge temporary files on to the main smoosh file.
+          mergeWithSmoosher();
         }
-        if (bytesWritten != size) {
-          throw new IOE("Expected [%,d] bytes, only saw [%,d], potential corruption?", size, bytesWritten);
-        }
-        // Merge temporary files on to the main smoosh file.
-        mergeWithSmoosher();
       }
     };
   }
@@ -249,9 +259,11 @@ public class FileSmoosher implements Closeable
   {
     // Get processed elements from the stack and write.
     List<File> fileToProcess = new ArrayList<>(completedFiles);
+    Map<String, String> fileNameMap = ImmutableMap.copyOf(delegateFileNameMap);
     completedFiles = new ArrayList<>();
+    delegateFileNameMap = new HashMap<>();
     for (File file : fileToProcess) {
-      add(file);
+      add(fileNameMap.get(file.getName()), file);
       if (!file.delete()) {
         LOG.warn("Unable to delete file [%s]", file);
       }
@@ -272,7 +284,8 @@ public class FileSmoosher implements Closeable
    */
   private SmooshedWriter delegateSmooshedWriter(final String name, final long size) throws IOException
   {
-    final File tmpFile = new File(baseDir, name);
+    final String delegateName = getDelegateFileName(name);
+    final File tmpFile = new File(baseDir, delegateName);
     filesInProcess.add(tmpFile);
 
     return new SmooshedWriter()
@@ -340,6 +353,13 @@ public class FileSmoosher implements Closeable
 
     };
 
+  }
+
+  private String getDelegateFileName(String name)
+  {
+    final String delegateName = String.valueOf(delegateFileCounter.getAndIncrement());
+    delegateFileNameMap.put(delegateName, name);
+    return delegateName;
   }
 
   @Override

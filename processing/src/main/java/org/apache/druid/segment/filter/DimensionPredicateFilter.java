@@ -24,9 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -40,8 +39,10 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Set;
 
@@ -85,10 +86,14 @@ public class DimensionPredicateFilter implements Filter
     }
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return Filters.matchPredicate(dimension, selector, bitmapResultFactory, predicateFactory.makeStringPredicate());
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
+    }
+    return Filters.makePredicateIndex(dimension, selector, predicateFactory);
   }
 
   @Override
@@ -120,31 +125,9 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
-  {
-    return Filters.estimateSelectivity(
-        dimension,
-        indexSelector,
-        predicateFactory.makeStringPredicate()
-    );
   }
 
   @Override

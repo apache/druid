@@ -82,7 +82,19 @@ public class ExpressionTypeConversion
       return type;
     }
     if (type.isArray() || other.isArray()) {
-      if (!type.equals(other)) {
+      if (!Objects.equals(type, other)) {
+        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+      }
+      return type;
+    }
+    if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
+      if (type.getElementType() == null) {
+        return other;
+      }
+      if (other.getElementType() == null) {
+        return type;
+      }
+      if (!Objects.equals(type, other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
       return type;
@@ -108,13 +120,25 @@ public class ExpressionTypeConversion
   public static ExpressionType function(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
     if (type == null) {
-      type = other;
+      return other;
     }
     if (other == null) {
-      other = type;
+      return type;
     }
     // arrays cannot be auto converted
-    if ((type != null && type.isArray()) || (other != null && other.isArray())) {
+    if (type.isArray() || other.isArray()) {
+      if (!Objects.equals(type, other)) {
+        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+      }
+      return type;
+    }
+    if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
+      if (type.getComplexTypeName() == null) {
+        return other;
+      }
+      if (other.getComplexTypeName() == null) {
+        return type;
+      }
       if (!Objects.equals(type, other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }
@@ -126,6 +150,34 @@ public class ExpressionTypeConversion
     }
 
     return numeric(type, other);
+  }
+
+  @Nullable
+  public static ExpressionType coerceArrayTypes(@Nullable ExpressionType type, @Nullable ExpressionType other)
+  {
+    if (type == null) {
+      return other;
+    }
+    if (other == null) {
+      return type;
+    }
+
+    if (Objects.equals(type, other)) {
+      return type;
+    }
+
+    ExpressionType typeArrayType = type.isArray() ? type : ExpressionTypeFactory.getInstance().ofArray(type);
+    ExpressionType otherArrayType = other.isArray() ? other : ExpressionTypeFactory.getInstance().ofArray(other);
+
+    if (typeArrayType.getElementType().isPrimitive() && otherArrayType.getElementType().isPrimitive()) {
+      ExpressionType newElementType = function(
+          (ExpressionType) typeArrayType.getElementType(),
+          (ExpressionType) otherArrayType.getElementType()
+      );
+      return ExpressionTypeFactory.getInstance().ofArray(newElementType);
+    }
+
+    throw new IAE("Cannot implicitly cast %s to %s", type, other);
   }
 
 

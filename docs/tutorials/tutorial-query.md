@@ -34,16 +34,16 @@ by following one of them:
 * [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
 * [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
-There are various ways to run Druid SQL queries: from the Druid console, using a command line utility
+There are various ways to run Druid SQL queries: from the web console, using a command line utility
 and by posting the query by HTTP. We'll look at each of these. 
 
 
-## Query SQL from the Druid console
+## Query SQL from the web console
 
-The Druid console includes a view that makes it easier to build and test queries, and 
+The web console includes a view that makes it easier to build and test queries, and 
 view their results. 
 
-1. Start up the Druid cluster, if it's not already running, and open the Druid console in your web
+1. Start up the Druid cluster, if it's not already running, and open the web console in your web
 browser. 
 
 2. Click **Query** from the header to open the Query view:  
@@ -64,21 +64,17 @@ create a query for the page dimension.
    returns no data, since by default the query filters for data from the last day, while our data is considerably
    older than that. Let's remove the filter.  
 
-5. In the datasource tree, click `__time` and **Remove Filter**. 
-
-   ![Clear WHERE filter](../assets/tutorial-query-03.png "Clear WHERE filter")
-
-6. Click **Run** to run the query.   
+5. Click **Run** to run the query.
 
    You should now see two columns of data, a page name and the count:
 
-   ![Query results](../assets/tutorial-query-04.png "Query results")
+   ![Query results](../assets/tutorial-query-03.png "Query results")
 
    Notice that the results are limited in the console to about a hundred, by default, due to the **Smart query limit** 
    feature. This helps users avoid inadvertently running queries that return an excessive amount of data, possibly
    overwhelming their system. 
 
-7. Let's edit the query directly and take a look at a few more query building features in the editor. 
+6. Let's edit the query directly and take a look at a few more query building features in the editor.
    Click in the query edit pane and make the following changes: 
 
    1.  Add a line after the first column, `"page"` and Start typing the name of a new column, `"countryName"`. Notice that the autocomplete menu suggests column names, functions, keywords, and more. Choose "countryName" and 
@@ -90,7 +86,7 @@ returns the number of edits for the page. Make the same column name change in th
       The `COUNT()` function is one of many functions available for use in Druid SQL queries. You can mouse over a function name
       in the autocomplete menu to see a brief description of a function. Also, you can find more information in the Druid 
       documentation; for example, the `COUNT()` function is documented in 
-      [Aggregation functions](../querying/sql.md#aggregation-functions). 
+      [Aggregation functions](../querying/sql-aggregations.md). 
 
    The query should now be:
 
@@ -108,7 +104,7 @@ returns the number of edits for the page. Make the same column name change in th
    is null. Let's 
    show only rows with a `countryName` value.
 
-8. Click the countryName dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
+7. Click the `countryName` dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
 we'll edit it by hand. The new WHERE clause should appear in your query. 
 
 8. Modify the WHERE clause to exclude results that do not have a value for countryName: 
@@ -118,7 +114,7 @@ we'll edit it by hand. The new WHERE clause should appear in your query.
    ``` 
    Run the query again. You should now see the top edits by country:  
 
-   ![Finished query](../assets/tutorial-query-035.png "Finished query")
+   ![Finished query](../assets/tutorial-query-04.png "Finished query")
 
 9. Under the covers, every Druid SQL query is translated into a query in the JSON-based _Druid native query_ format before it runs
  on data nodes. You can view the native query for this query by clicking `...` and **Explain SQL Query**. 
@@ -126,7 +122,7 @@ we'll edit it by hand. The new WHERE clause should appear in your query.
    While you can use Druid SQL for most purposes, familiarity with native query is useful for composing complex queries and for troubleshooting 
 performance issues. For more information, see [Native queries](../querying/querying.md). 
 
-   ![Explain query](../assets/tutorial-query-06.png "Explain query")
+   ![Explain query](../assets/tutorial-query-05.png "Explain query")
 
     > Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
     >
@@ -147,7 +143,7 @@ performance issues. For more information, see [Native queries](../querying/query
 
 9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
 
-That's it! We've built a simple query using some of the query builder features built into the Druid Console. The following
+That's it! We've built a simple query using some of the query builder features built into the web console. The following
 sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
 to run Druid SQL from the command line or over HTTP. 
 
@@ -159,22 +155,22 @@ Here is a collection of queries to try out:
 
 ```sql
 SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
 GROUP BY 1
 ```
 
-![Query example](../assets/tutorial-query-07.png "Query example")
+![Query example](../assets/tutorial-query-06.png "Query example")
 
 ### General group by
 
 ```sql
 SELECT channel, page, SUM(added)
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
 GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
 
-![Query example](../assets/tutorial-query-08.png "Query example")
+![Query example](../assets/tutorial-query-07.png "Query example")
 
 
 ## Other ways to invoke SQL queries
@@ -194,7 +190,7 @@ dsql>
 To submit the query, paste it to the `dsql` prompt and press enter:
 
 ```bash
-dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;
+dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10;
 ┌──────────────────────────────────────────────────────────┬───────┐
 │ page                                                     │ Edits │
 ├──────────────────────────────────────────────────────────┼───────┤
@@ -216,11 +212,11 @@ Retrieved 10 rows in 0.06s.
 ### Query SQL over HTTP
 
 
-You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql.md#http-post). The request body should be a JSON object, with the value for the key `query` containing text of the query:
+You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
 
 ```json
 {
-  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE \"__time\" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10"
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10"
 }
 ```
 

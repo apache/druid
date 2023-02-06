@@ -50,34 +50,30 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
+  public int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
     values[columnIndex] = selector.getDouble();
+    return 0;
   }
 
   @Override
-  public Object getOnlyValue(ColumnValueSelector selector)
+  public int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer)
   {
-    return selector.getDouble();
-  }
-
-  @Override
-  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
-  {
-    keyBuffer.putDouble(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) obj));
+    keyBuffer.putDouble(keyBufferPosition, selector.getDouble());
+    return 0;
   }
 
   @Override
   public void initGroupingKeyColumnValue(
       int keyBufferPosition,
-      int columnIndex,
+      int dimensionIndex,
       Object rowObj,
       ByteBuffer keyBuffer,
       int[] stack
   )
   {
-    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
-    stack[columnIndex] = 1;
+    writeToKeyBuffer(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) rowObj), keyBuffer);
+    stack[dimensionIndex] = 1;
   }
 
   @Override
@@ -101,5 +97,16 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
         true,
         stringComparator
     );
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
+  }
+
+  private void writeToKeyBuffer(int keyBufferPosition, double value, ByteBuffer keyBuffer)
+  {
+    keyBuffer.putDouble(keyBufferPosition, value);
   }
 }

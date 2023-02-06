@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExecutionErrorPane matches snapshot 1`] = `
+<Blueprint4.Callout
+  className="execution-error-pane"
+  icon="error"
+>
+  <p
+    className="error-message-text"
+  >
+    <Memo(ExternalLink)
+      href="https://druid.apache.org/docs/latest/multi-stage-query/reference.html#error_TooManyWarnings"
+    >
+      TooManyWarnings
+    </Memo(ExternalLink)>
+    : 
+    Too many warnings of type CannotParseExternalData generated (max = 10)
+  </p>
+  <div>
+    Failed task ID: 
+    <Memo(ClickToCopy)
+      text="query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a"
+    />
+     (on host: 
+    <Memo(ClickToCopy)
+      text="localhost"
+    />
+    )
+  </div>
+  <div>
+    Debug: 
+    <a
+      onClick={[Function]}
+    >
+      get query detail archive
+    </a>
+  </div>
+</Blueprint4.Callout>
+`;

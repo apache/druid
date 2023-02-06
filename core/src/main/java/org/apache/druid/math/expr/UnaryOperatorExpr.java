@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.util.Objects;
 
 /**
@@ -122,6 +123,10 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
+    if (expr instanceof BigIntegerExpr) {
+      // Special case to handle unary minus for Long.MIN_VALUE: converting the literal to long directly is impossible
+      return ExprEval.of(((BigInteger) expr.getLiteralValue()).multiply(BigInteger.valueOf(-1)).longValueExact());
+    }
     ExprEval ret = expr.eval(bindings);
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);

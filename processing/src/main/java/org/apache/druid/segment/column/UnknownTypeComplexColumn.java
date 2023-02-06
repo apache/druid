@@ -59,7 +59,7 @@ public class UnknownTypeComplexColumn implements ComplexColumn
   @Override
   public int getLength()
   {
-    return 0;
+    return -1;
   }
 
   @Override

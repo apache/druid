@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
@@ -39,18 +40,26 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
-  private final ServerSideEncryptingAmazonS3 s3Client;
+  /**
+   * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
+   * even when the implementation of DataSegmentKiller is not used. As a result, if we have a s3 client instead
+   * of a supplier of it, it can cause unnecessary config validation for s3 even when it's not used at all.
+   * To perform the config validation only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
+  private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
   private final S3DataSegmentPusherConfig segmentPusherConfig;
   private final S3InputDataConfig inputDataConfig;
 
   @Inject
   public S3DataSegmentKiller(
-      ServerSideEncryptingAmazonS3 s3Client,
+      Supplier<ServerSideEncryptingAmazonS3> s3Client,
       S3DataSegmentPusherConfig segmentPusherConfig,
       S3InputDataConfig inputDataConfig
   )
   {
-    this.s3Client = s3Client;
+    this.s3ClientSupplier = s3Client;
     this.segmentPusherConfig = segmentPusherConfig;
     this.inputDataConfig = inputDataConfig;
   }
@@ -64,6 +73,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       String s3Path = MapUtils.getString(loadSpec, "key");
       String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
 
+      final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
       if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
         log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
         s3Client.deleteObject(s3Bucket, s3Path);
@@ -92,7 +102,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     );
     try {
       S3Utils.deleteObjectsInPath(
-          s3Client,
+          s3ClientSupplier.get(),
           inputDataConfig,
           segmentPusherConfig.getBucket(),
           segmentPusherConfig.getBaseKey(),

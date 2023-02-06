@@ -35,6 +35,8 @@ import javax.annotation.Nullable;
 
 public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
 {
+  private static final int DEFAULT_RECORDS_PER_FETCH = 100;
+
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -63,16 +65,16 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        ioConfig.getRecordsPerFetch(),
+        ioConfig.getRecordsPerFetch() != null ? ioConfig.getRecordsPerFetch() : DEFAULT_RECORDS_PER_FETCH,
         ioConfig.getFetchDelayMillis(),
         1,
         ioConfig.isDeaggregate(),
-        tuningConfig.getRecordBufferSize(),
+        tuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory(), ioConfig.isDeaggregate()),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout(),
-        tuningConfig.getMaxRecordsPerPoll(),
-        ioConfig.isUseEarliestSequenceNumber()
+        tuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate()),
+        ioConfig.isUseEarliestSequenceNumber(),
+        tuningConfig.isUseListShards()
     );
   }
 }

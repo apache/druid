@@ -79,9 +79,7 @@ public class LocalFirehoseFactoryTest extends InitializedNullHandlingTest
                 null
             ),
             new DimensionsSpec(
-                DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a")),
-                new ArrayList<>(),
-                new ArrayList<>()
+                DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a"))
             ),
             ",",
             Arrays.asList("timestamp", "a"),

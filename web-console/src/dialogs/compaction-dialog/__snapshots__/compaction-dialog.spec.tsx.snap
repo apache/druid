@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -40,9 +40,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -53,7 +53,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -272,20 +272,26 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {
@@ -345,21 +351,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -367,11 +373,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (dynamic partit
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
 exports[`CompactionDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -410,9 +416,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -423,7 +429,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -642,20 +648,26 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {
@@ -715,21 +727,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -737,11 +749,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (hashed partiti
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
-exports[`CompactionDialog matches snapshot with compactionConfig (single_dim partitionsSpec) 1`] = `
-<Blueprint3.Dialog
+exports[`CompactionDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -780,9 +792,9 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -793,7 +805,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -1012,20 +1024,26 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {
@@ -1076,7 +1094,7 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
           "dataSource": "test1",
           "tuningConfig": Object {
             "partitionsSpec": Object {
-              "type": "single_dim",
+              "type": "range",
             },
           },
         }
@@ -1085,21 +1103,21 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={true}
         intent="primary"
         onClick={[Function]}
@@ -1107,11 +1125,11 @@ exports[`CompactionDialog matches snapshot with compactionConfig (single_dim par
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;
 
 exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
-<Blueprint3.Dialog
+<Blueprint4.Dialog
   canOutsideClickClose={false}
   className="compaction-dialog"
   isOpen={true}
@@ -1150,9 +1168,9 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
               </Unknown>
                (partitioning based on the hash of dimensions in each row) or 
               <Unknown>
-                single_dim
+                range
               </Unknown>
-               (based on ranges of a single dimension). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use 
               <Unknown>
                 dynamic
               </Unknown>
@@ -1163,7 +1181,7 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "suggestions": Array [
               "dynamic",
               "hashed",
-              "single_dim",
+              "range",
             ],
             "type": "string",
           },
@@ -1382,20 +1400,26 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
             "type": "boolean",
           },
           Object {
-            "defaultValue": 419430400,
-            "info": <p>
-              Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.
-            </p>,
-            "name": "inputSegmentSizeBytes",
-            "type": "number",
-          },
-          Object {
             "defaultValue": 1,
             "info": <React.Fragment>
               Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
             </React.Fragment>,
             "min": 1,
             "name": "tuningConfig.maxNumConcurrentSubTasks",
+            "type": "number",
+          },
+          Object {
+            "defaultValue": -1,
+            "info": <React.Fragment>
+              <p>
+                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+              </p>
+              <p>
+                Default: -1 (unlimited)
+              </p>
+            </React.Fragment>,
+            "min": -1,
+            "name": "tuningConfig.maxColumnsToMerge",
             "type": "number",
           },
           Object {
@@ -1455,16 +1479,16 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
     />
   </div>
   <div
-    className="bp3-dialog-footer"
+    className="bp4-dialog-footer"
   >
     <div
-      className="bp3-dialog-footer-actions"
+      className="bp4-dialog-footer-actions"
     >
-      <Blueprint3.Button
+      <Blueprint4.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint3.Button
+      <Blueprint4.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -1472,5 +1496,5 @@ exports[`CompactionDialog matches snapshot without compactionConfig 1`] = `
       />
     </div>
   </div>
-</Blueprint3.Dialog>
+</Blueprint4.Dialog>
 `;

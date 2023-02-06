@@ -111,7 +111,7 @@ public class DefaultOfflineAppenderatorFactoryTest
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 null,
                 null,
                 null

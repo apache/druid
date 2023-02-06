@@ -22,8 +22,13 @@ import React from 'react';
 import { LoadDataView } from './load-data-view';
 
 describe('LoadDataView', () => {
-  it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToIngestion={() => {}} />);
+  it('matches snapshot streaming', () => {
+    const loadDataView = shallow(<LoadDataView mode="streaming" goToIngestion={() => {}} />);
+    expect(loadDataView).toMatchSnapshot();
+  });
+
+  it('matches snapshot batch', () => {
+    const loadDataView = shallow(<LoadDataView mode="batch" goToIngestion={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
   });
 });

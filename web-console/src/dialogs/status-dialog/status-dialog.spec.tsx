@@ -19,26 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { anywhereMatcher, StatusDialog } from './status-dialog';
+import { StatusDialog } from './status-dialog';
 
 describe('StatusDialog', () => {
   it('matches snapshot', () => {
     const statusDialog = <StatusDialog onClose={() => {}} />;
     render(statusDialog);
     expect(document.body.lastChild).toMatchSnapshot();
-  });
-
-  it('filters data that contains input', () => {
-    const data = [
-      'org.apache.druid.common.gcp.GcpModule',
-      'org.apache.druid.common.aws.AWSModule',
-      'io.imply.druid.UtilityBeltModule',
-    ];
-
-    expect(anywhereMatcher({ id: '0', value: 'common' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'common' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '0', value: 'org' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'org' }, data)).toEqual(true);
-    expect(anywhereMatcher({ id: '2', value: 'common' }, data)).toEqual(false);
   });
 });

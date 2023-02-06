@@ -44,7 +44,7 @@ export const ActionCell = React.memo(function ActionCell(props: ActionCellProps)
       {onDetail && <ActionIcon icon={IconNames.SEARCH_TEMPLATE} onClick={onDetail} />}
       {actionsMenu && (
         <Popover2 content={actionsMenu} position={Position.BOTTOM_RIGHT}>
-          <ActionIcon icon={IconNames.WRENCH} />
+          <ActionIcon icon={IconNames.MORE} />
         </Popover2>
       )}
     </div>

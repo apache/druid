@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.Cleaners;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.lang.ref.WeakReference;
@@ -39,6 +40,45 @@ import java.util.concurrent.atomic.AtomicReference;
 public class StupidPool<T> implements NonBlockingPool<T>
 {
   private static final Logger log = new Logger(StupidPool.class);
+
+
+  /**
+   * We add the ability to poison all StupidPools in order to catch resource leaks and fail them during tests.
+   * <p>
+   * StupidPool already has a mechanism by which it will log resource leaks (ResourceHolder objects that are not
+   * closed), over time, we've built up a test suite that contains lots of those logs and generally they get swept
+   * away to a perrenial Priority #2.  This is not a good state as the justification is usually that the logs are
+   * coming from test harness, the production code is obviously good.  Anyway, we need tests to actually fail if there
+   * are leaks like this so that the tests and the code can be improved.  Catching leaks is hard, though, because it
+   * either requires reference counting and all tests sites to check the counts, or it requires catching objects being
+   * GC'd, which is asynchronous.  We opt for this latter approach.
+   * <p>
+   * Specifically, when poisoned, the StupidPool will
+   * 1) Maintain an exception (i.e. stack trace) object from each time that a resource holder is checked out
+   * 2) If the ResourceHolder is GCd without being closed, the exception object will be registered back with the
+   * stupid pool
+   * 3) If an exception is registered with the StupidPool, then any attempt to take an object from that Pool will have
+   * the exception thrown instead.
+   * <p>
+   * This means that we have a delayed reaction to the leak, in that the object must first be GCd before we can
+   * identify the leak.  *Also* it means that the test that failed is not actually the test that leaked the object,
+   * instead, developers must look at the stacktrace thrown to see which test actually checked out the object and did
+   * not return it.  Additionally, it means that one test run can only discover a single leak (as once the pool is
+   * poisoned, it will return the same exception constantly).  So, if there is some leaky code, it will likely require
+   * multiple test runs to actually whack-a-mole all of the sources of the leaks.
+   */
+  private static final AtomicBoolean POISONED = new AtomicBoolean(false);
+
+  static {
+    if (Boolean.parseBoolean(System.getProperty("druid.test.stupidPool.poison"))) {
+      POISONED.set(true);
+    }
+  }
+
+  public static boolean isPoisoned()
+  {
+    return POISONED.get();
+  }
 
   /**
    * StupidPool Implementation Note
@@ -64,6 +104,8 @@ public class StupidPool<T> implements NonBlockingPool<T>
 
   private final AtomicLong createdObjectsCounter = new AtomicLong(0);
   private final AtomicLong leakedObjectsCounter = new AtomicLong(0);
+
+  private final AtomicReference<RuntimeException> capturedException = new AtomicReference<>(null);
 
   //note that this is just the max entries in the cache, pool can still create as many buffers as needed.
   private final int objectsCacheMaxCount;
@@ -106,9 +148,20 @@ public class StupidPool<T> implements NonBlockingPool<T>
   {
     ObjectResourceHolder resourceHolder = objects.poll();
     if (resourceHolder == null) {
+      if (POISONED.get() && capturedException.get() != null) {
+        throw capturedException.get();
+      }
       return makeObjectWithHandler();
     } else {
       poolSize.decrementAndGet();
+      if (POISONED.get()) {
+        final RuntimeException exception = capturedException.get();
+        if (exception == null) {
+          resourceHolder.notifier.except = new RE("Thread[%s]: leaky leak!", Thread.currentThread().getName());
+        } else {
+          throw exception;
+        }
+      }
       return resourceHolder;
     }
   }
@@ -118,7 +171,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     T object = generator.get();
     createdObjectsCounter.incrementAndGet();
     ObjectId objectId = new ObjectId();
-    ObjectLeakNotifier notifier = new ObjectLeakNotifier(this);
+    ObjectLeakNotifier notifier = new ObjectLeakNotifier(this, POISONED.get());
     // Using objectId as referent for Cleaner, because if the object itself (e. g. ByteBuffer) is leaked after taken
     // from the pool, and the ResourceHolder is not closed, Cleaner won't notify about the leak.
     return new ObjectResourceHolder(object, objectId, Cleaners.register(objectId, notifier), notifier);
@@ -189,7 +242,7 @@ public class StupidPool<T> implements NonBlockingPool<T>
     );
   }
 
-  private class ObjectResourceHolder implements ResourceHolder<T>
+  class ObjectResourceHolder implements ResourceHolder<T>
   {
     private final AtomicReference<T> objectRef;
     private ObjectId objectId;
@@ -241,6 +294,11 @@ public class StupidPool<T> implements NonBlockingPool<T>
         }
       }
     }
+
+    void forceClean()
+    {
+      cleanable.clean();
+    }
   }
 
   private static class ObjectLeakNotifier implements Runnable
@@ -252,10 +310,14 @@ public class StupidPool<T> implements NonBlockingPool<T>
     final AtomicLong leakedObjectsCounter;
     final AtomicBoolean disabled = new AtomicBoolean(false);
 
-    ObjectLeakNotifier(StupidPool<?> pool)
+    private RuntimeException except;
+
+    ObjectLeakNotifier(StupidPool<?> pool, boolean poisoned)
     {
       poolReference = new WeakReference<>(pool);
       leakedObjectsCounter = pool.leakedObjectsCounter;
+
+      except = poisoned ? new RE("Thread[%s]: drip drip", Thread.currentThread().getName()) : null;
     }
 
     @Override
@@ -264,7 +326,12 @@ public class StupidPool<T> implements NonBlockingPool<T>
       try {
         if (!disabled.getAndSet(true)) {
           leakedObjectsCounter.incrementAndGet();
-          log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", poolReference.get());
+          final StupidPool<?> pool = poolReference.get();
+          log.warn("Not closed! Object leaked from %s. Allowing gc to prevent leak.", pool);
+          if (except != null && pool != null) {
+            pool.capturedException.set(except);
+            log.error(except, "notifier[%s], dumping stack trace from object checkout and poisoning pool", this);
+          }
         }
       }
       // Exceptions must not be thrown in Cleaner.clean(), which calls this ObjectReclaimer.run() method

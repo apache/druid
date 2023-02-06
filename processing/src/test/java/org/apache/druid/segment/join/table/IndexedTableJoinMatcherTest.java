@@ -35,6 +35,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,22 +61,26 @@ public class IndexedTableJoinMatcherTest
   {
     public static class MakeLongProcessorTest extends InitializedNullHandlingTest
     {
-      @Rule
-      public ExpectedException expectedException = ExpectedException.none();
-
       @Mock
       private BaseLongColumnValueSelector selector;
+      private AutoCloseable mocks;
 
       @Before
       public void setUp()
       {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
 
         if (NullHandling.sqlCompatible()) {
           Mockito.doReturn(false).when(selector).isNull();
         }
 
         Mockito.doReturn(1L).when(selector).getLong();
+      }
+
+      @After
+      public void tearDown() throws Exception
+      {
+        mocks.close();
       }
 
       @Test
@@ -115,8 +120,7 @@ public class IndexedTableJoinMatcherTest
             new IndexedTableJoinMatcher.ConditionMatcherFactory(longAlwaysOneTwoThreeIndex());
         final IndexedTableJoinMatcher.ConditionMatcher processor = conditionMatcherFactory.makeLongProcessor(selector);
 
-        expectedException.expect(UnsupportedOperationException.class);
-        processor.matchSingleRow();
+        Assert.assertThrows(UnsupportedOperationException.class, processor::matchSingleRow);
       }
 
       @Test
@@ -147,11 +151,18 @@ public class IndexedTableJoinMatcherTest
 
       @Mock
       private BaseObjectColumnValueSelector<?> selector;
+      private AutoCloseable mocks;
 
       @Before
       public void setUp()
       {
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
+      }
+
+      @After
+      public void tearDown() throws Exception
+      {
+        mocks.close();
       }
 
       @Test
@@ -190,85 +201,93 @@ public class IndexedTableJoinMatcherTest
       private static final String KEY = "key";
 
       @Test
-      public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException()
+      public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException() throws Exception
       {
-        MockitoAnnotations.initMocks(this);
-        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
-        Mockito.doReturn(row).when(dimensionSelector).getRow();
-        Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
+        try (final AutoCloseable mocks = MockitoAnnotations.openMocks(this)) {
+          ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
+          Mockito.doReturn(row).when(dimensionSelector).getRow();
+          Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN)
+                 .when(dimensionSelector)
+                 .getValueCardinality();
 
-        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
-        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
-            dimensionSelector,
-            false
-        );
+          IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+              new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+          IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+              dimensionSelector,
+              false
+          );
 
-        // Test match should throw exception
-        expectedException.expect(QueryUnsupportedException.class);
-        dimensionProcessor.match();
+          // Test match should throw exception
+          expectedException.expect(QueryUnsupportedException.class);
+          dimensionProcessor.match();
+        }
       }
 
       @Test
-      public void testMatchMultiValuedRowCardinalityKnownShouldThrowException()
+      public void testMatchMultiValuedRowCardinalityKnownShouldThrowException() throws Exception
       {
-        MockitoAnnotations.initMocks(this);
-        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
-        Mockito.doReturn(row).when(dimensionSelector).getRow();
-        Mockito.doReturn(3).when(dimensionSelector).getValueCardinality();
+        try (final AutoCloseable mocks = MockitoAnnotations.openMocks(this)) {
+          ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
+          Mockito.doReturn(row).when(dimensionSelector).getRow();
+          Mockito.doReturn(3).when(dimensionSelector).getValueCardinality();
 
-        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
-        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
-            dimensionSelector,
-            false
-        );
+          IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+              new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+          IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+              dimensionSelector,
+              false
+          );
 
-        // Test match should throw exception
-        expectedException.expect(QueryUnsupportedException.class);
-        dimensionProcessor.match();
+          // Test match should throw exception
+          expectedException.expect(QueryUnsupportedException.class);
+          dimensionProcessor.match();
+        }
       }
 
       @Test
-      public void testMatchEmptyRowCardinalityUnknown()
+      public void testMatchEmptyRowCardinalityUnknown() throws Exception
       {
-        MockitoAnnotations.initMocks(this);
-        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
-        Mockito.doReturn(row).when(dimensionSelector).getRow();
-        Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
+        try (final AutoCloseable mocks = MockitoAnnotations.openMocks(this)) {
+          ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+          Mockito.doReturn(row).when(dimensionSelector).getRow();
+          Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN)
+                 .when(dimensionSelector)
+                 .getValueCardinality();
 
-        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
-        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
-            dimensionSelector,
-            false
-        );
+          IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+              new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+          IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+              dimensionSelector,
+              false
+          );
 
-        Assert.assertNotNull(dimensionProcessor.match());
-        Assert.assertFalse(dimensionProcessor.match().hasNext());
+          Assert.assertNotNull(dimensionProcessor.match());
+          Assert.assertFalse(dimensionProcessor.match().hasNext());
 
-        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
+          Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
+        }
       }
 
       @Test
-      public void testMatchEmptyRowCardinalityKnown()
+      public void testMatchEmptyRowCardinalityKnown() throws Exception
       {
-        MockitoAnnotations.initMocks(this);
-        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
-        Mockito.doReturn(row).when(dimensionSelector).getRow();
-        Mockito.doReturn(0).when(dimensionSelector).getValueCardinality();
+        try (final AutoCloseable mocks = MockitoAnnotations.openMocks(this)) {
+          ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+          Mockito.doReturn(row).when(dimensionSelector).getRow();
+          Mockito.doReturn(0).when(dimensionSelector).getValueCardinality();
 
-        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
-            new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
-        IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
-            dimensionSelector,
-            false
-        );
+          IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+              new IndexedTableJoinMatcher.ConditionMatcherFactory(stringToLengthIndex());
+          IndexedTableJoinMatcher.ConditionMatcher dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(
+              dimensionSelector,
+              false
+          );
 
-        Assert.assertNotNull(dimensionProcessor.match());
-        Assert.assertFalse(dimensionProcessor.match().hasNext());
+          Assert.assertNotNull(dimensionProcessor.match());
+          Assert.assertFalse(dimensionProcessor.match().hasNext());
 
-        Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
+          Assert.assertEquals(IndexedTableJoinMatcher.NO_CONDITION_MATCH, dimensionProcessor.matchSingleRow());
+        }
       }
 
       @Test

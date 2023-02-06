@@ -133,6 +133,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void queryId(String queryId)
+  {
+    setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(queryId));
+  }
+
+  @Override
   public void subQueryId(QueryType query)
   {
     // Emit nothing by default.
@@ -140,6 +146,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public void sqlQueryId(QueryType query)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void sqlQueryId(String sqlQueryId)
   {
     // Emit nothing by default.
   }
@@ -201,7 +213,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void vectorized(final boolean vectorized)
   {
-    // Emit nothing by default.
+    setDimension("vectorized", vectorized);
   }
 
   @Override
@@ -335,6 +347,27 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeTotalTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeFastestPartitionTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeSlowestPartitionTime(long timeNs)
   {
     // Don't emit by default.
     return this;

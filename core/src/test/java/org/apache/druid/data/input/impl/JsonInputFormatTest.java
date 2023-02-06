@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class JsonInputFormatTest
 {
@@ -41,17 +42,21 @@ public class JsonInputFormatTest
     final ObjectMapper mapper = new ObjectMapper();
     final JsonInputFormat format = new JsonInputFormat(
         new JSONPathSpec(
-            false,
+            true,
             ImmutableList.of(
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
             )
         ),
         ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false),
+        true,
+        false,
         false
     );
     final byte[] bytes = mapper.writeValueAsBytes(format);
@@ -71,5 +76,44 @@ public class JsonInputFormatTest
               )
               .withIgnoredFields("objectMapper")
               .verify();
+  }
+
+  @Test
+  public void test_unsetUseFieldDiscovery_unsetKeepNullColumnsByDefault()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(false, null),
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertFalse(format.isKeepNullColumns());
+  }
+
+  @Test
+  public void testUseFieldDiscovery_setKeepNullColumnsByDefault()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertTrue(format.isKeepNullColumns());
+  }
+
+  @Test
+  public void testUseFieldDiscovery_doNotChangeKeepNullColumnsUserSets()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        false,
+        null,
+        null
+    );
+    Assert.assertFalse(format.isKeepNullColumns());
   }
 }

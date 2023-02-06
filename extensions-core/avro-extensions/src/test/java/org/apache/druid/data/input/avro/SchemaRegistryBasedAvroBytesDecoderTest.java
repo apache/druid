@@ -33,9 +33,10 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.AvroStreamInputRowParserTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -148,7 +149,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  @Test(expected = RE.class)
+  @Test(expected = ParseException.class)
   public void testParseWrongSchemaType() throws Exception
   {
     // Given
@@ -159,7 +160,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
   }
 
-  @Test(expected = RE.class)
+  @Test
   public void testParseWrongId() throws Exception
   {
     // Given
@@ -167,7 +168,12 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
     ByteBuffer bb = ByteBuffer.allocate(5).put((byte) 0).putInt(1234);
     bb.rewind();
     // When
-    new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb);
+    final ParseException e = Assert.assertThrows(
+        ParseException.class,
+        () -> new SchemaRegistryBasedAvroBytesDecoder(registry).parse(bb)
+    );
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+    MatcherAssert.assertThat(e.getCause().getMessage(), CoreMatchers.containsString("no pasaran"));
   }
 
   private byte[] getAvroDatum(Schema schema, GenericRecord someAvroDatum) throws IOException

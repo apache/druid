@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -33,7 +34,6 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import io.airlift.airline.Command;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
@@ -186,7 +186,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", SegmentsMetadataManagerConfig.class);
+            JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
@@ -264,6 +264,7 @@ public class CliCoordinator extends ServerRunnable
             }
             conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
+                "false",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
@@ -283,21 +284,25 @@ public class CliCoordinator extends ServerRunnable
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.supervisor.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillSupervisors.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.audit.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillAuditLog.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.rule.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillRules.class
             );
             conditionalMetadataStoreManagementDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.datasource.on",
+                "true",
                 Predicates.equalTo("true"),
                 KillDatasourceMetadata.class
             );

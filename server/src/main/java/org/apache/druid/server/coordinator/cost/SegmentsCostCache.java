@@ -307,7 +307,7 @@ public class SegmentsCostCache
 
     private static double toLocalInterval(long millis, Interval interval)
     {
-      return (millis - interval.getStartMillis()) / MILLIS_FACTOR;
+      return millis / MILLIS_FACTOR - interval.getStartMillis() / MILLIS_FACTOR;
     }
 
     public static Builder builder(Interval interval)

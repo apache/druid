@@ -22,17 +22,13 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -114,24 +110,6 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
     return end;
   }
 
-  @Override
-  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
-  {
-    return createLookup(shardSpecs);
-  }
-
-  static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      for (ShardSpec spec : shardSpecs) {
-        if (((SingleDimensionShardSpec) spec).isInChunk(row)) {
-          return spec;
-        }
-      }
-      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-    };
-  }
-
   private Range<String> getRange()
   {
     Range<String> range;
@@ -164,42 +142,6 @@ public class SingleDimensionShardSpec extends DimensionRangeShardSpec
       return StringPartitionChunk.makeForSingleDimension(start, end, getPartitionNum(), obj);
     } else {
       return new NumberedPartitionChunk<>(getPartitionNum(), getNumCorePartitions(), obj);
-    }
-  }
-
-  @VisibleForTesting
-  boolean isInChunk(InputRow inputRow)
-  {
-    return isInChunk(dimension, start, end, inputRow);
-  }
-
-  private static boolean checkValue(@Nullable String start, @Nullable String end, String value)
-  {
-    if (value == null) {
-      return start == null;
-    }
-
-    if (start == null) {
-      return end == null || value.compareTo(end) < 0;
-    }
-
-    return value.compareTo(start) >= 0 &&
-           (end == null || value.compareTo(end) < 0);
-  }
-
-  public static boolean isInChunk(
-      String dimension,
-      @Nullable String start,
-      @Nullable String end,
-      InputRow inputRow
-  )
-  {
-    final List<String> values = inputRow.getDimension(dimension);
-
-    if (values == null || values.size() != 1) {
-      return checkValue(start, end, null);
-    } else {
-      return checkValue(start, end, values.get(0));
     }
   }
 

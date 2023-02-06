@@ -109,6 +109,12 @@ public class CountAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new CountAggregatorFactory(newName);
+  }
+
   @Nullable
   @Override
   public Object finalizeComputation(@Nullable Object object)

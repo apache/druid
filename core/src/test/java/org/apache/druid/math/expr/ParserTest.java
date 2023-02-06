@@ -25,16 +25,20 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.ObjectByteStrategy;
-import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.column.TypesTest;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -52,7 +56,10 @@ public class ParserTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setup()
   {
-    Types.registerStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(), new TypesTest.PairObjectByteStrategy());
+    TypeStrategies.registerComplex(
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        new TypeStrategiesTest.NullableLongPairTypeStrategy()
+    );
   }
 
   @Test
@@ -63,14 +70,14 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(expected, actual);
   }
 
-
   @Test
   public void testParseConstants()
   {
     validateLiteral("null", null, null);
     validateLiteral("'hello'", ExpressionType.STRING, "hello");
     validateLiteral("'hello \\uD83E\\uDD18'", ExpressionType.STRING, "hello \uD83E\uDD18");
-    validateLiteral("1", ExpressionType.LONG, 1L);
+    validateLiteral("1", ExpressionType.LONG, BigInteger.valueOf(1L));
+    validateLiteral(String.valueOf(Long.MAX_VALUE), ExpressionType.LONG, BigInteger.valueOf(Long.MAX_VALUE));
     validateLiteral("1.", ExpressionType.DOUBLE, 1.0, false);
     validateLiteral("1.234", ExpressionType.DOUBLE, 1.234);
     validateLiteral("1e10", ExpressionType.DOUBLE, 1.0E10, false);
@@ -90,6 +97,48 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testParseOutOfRangeLong()
+  {
+    // Two greater than Long.MAX_VALUE
+    final String s = "9223372036854775809";
+
+    // When not flattening, the "out of long range" error happens during eval.
+    final Expr expr = Parser.parse(s, ExprMacroTable.nil(), false);
+    final ArithmeticException e = Assert.assertThrows(
+        ArithmeticException.class,
+        () -> expr.eval(InputBindings.nilBindings())
+    );
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("BigInteger out of long range"));
+
+    // When flattening, the "out of long range" error happens during parse, not eval.
+    final ArithmeticException e2 = Assert.assertThrows(
+        ArithmeticException.class,
+        () -> Parser.parse(s, ExprMacroTable.nil(), true)
+    );
+    MatcherAssert.assertThat(e2.getMessage(), CoreMatchers.containsString("BigInteger out of long range"));
+  }
+
+  @Test
+  public void testFlattenBinaryOpConstantConstant()
+  {
+    final Expr expr = Parser.parse("(2 + -3)", ExprMacroTable.nil(), true);
+    Assert.assertTrue(expr.isLiteral());
+    Assert.assertEquals(-1L, expr.getLiteralValue());
+  }
+
+  @Test
+  public void testFlattenBinaryOpIdentifierConstant()
+  {
+    final Expr expr = Parser.parse("(s + -3)", ExprMacroTable.nil(), true);
+    Assert.assertFalse(expr.isLiteral());
+    MatcherAssert.assertThat(expr, CoreMatchers.instanceOf(BinPlusExpr.class));
+
+    final Expr right = ((BinPlusExpr) expr).right;
+    Assert.assertTrue(right.isLiteral());
+    Assert.assertEquals(-3L, right.getLiteralValue());
+  }
+
+  @Test
   public void testSimpleUnaryOps1()
   {
     String actual = Parser.parse("-x", ExprMacroTable.nil()).toString();
@@ -104,6 +153,7 @@ public class ParserTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleUnaryOps2()
   {
+    validateFlatten(String.valueOf(Long.MIN_VALUE), String.valueOf(Long.MIN_VALUE), String.valueOf(Long.MIN_VALUE));
     validateFlatten("-1", "-1", "-1");
     validateFlatten("--1", "--1", "1");
     validateFlatten("-1+2", "(+ -1 2)", "1");
@@ -266,27 +316,27 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testLiteralArraysExplicitTypedEmpties()
   {
     // legacy explicit array format
-    validateConstantExpression("<STRING>[]", new Object[0]);
-    validateConstantExpression("<DOUBLE>[]", new Object[0]);
-    validateConstantExpression("<LONG>[]", new Object[0]);
+    validateConstantExpression("ARRAY<STRING>[]", new Object[0]);
+    validateConstantExpression("ARRAY<DOUBLE>[]", new Object[0]);
+    validateConstantExpression("ARRAY<LONG>[]", new Object[0]);
   }
 
   @Test
   public void testLiteralArraysExplicitAllNull()
   {
     // legacy explicit array format
-    validateConstantExpression("<DOUBLE>[null, null, null]", new Object[]{null, null, null});
-    validateConstantExpression("<LONG>[null, null, null]", new Object[]{null, null, null});
-    validateConstantExpression("<STRING>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<DOUBLE>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<LONG>[null, null, null]", new Object[]{null, null, null});
+    validateConstantExpression("ARRAY<STRING>[null, null, null]", new Object[]{null, null, null});
   }
 
   @Test
   public void testLiteralArraysExplicitTypes()
   {
     // legacy explicit array format
-    validateConstantExpression("<DOUBLE>[1.0, null, 2000.0]", new Object[]{1.0, null, 2000.0});
-    validateConstantExpression("<LONG>[3, null, 4]", new Object[]{3L, null, 4L});
-    validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new Object[]{"foo", "bar", "baz"});
+    validateConstantExpression("ARRAY<DOUBLE>[1.0, null, 2000.0]", new Object[]{1.0, null, 2000.0});
+    validateConstantExpression("ARRAY<LONG>[3, null, 4]", new Object[]{3L, null, 4L});
+    validateConstantExpression("ARRAY<STRING>['foo', 'bar', 'baz']", new Object[]{"foo", "bar", "baz"});
   }
 
   @Test
@@ -294,35 +344,40 @@ public class ParserTest extends InitializedNullHandlingTest
   {
     // legacy explicit array format
     // explicit typed numeric arrays mixed numeric types should coerce to the correct explicit type
-    validateConstantExpression("<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-    validateConstantExpression("<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
     // explicit typed string arrays should accept any literal and convert to string
-    validateConstantExpression("<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
   }
 
   @Test
   public void testLiteralExplicitTypedArrays()
   {
     ExpressionProcessing.initializeForTests(true);
-    validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
-    validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
-    validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // mixed type tests
-    validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
-    validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
+    try {
+      validateConstantExpression("ARRAY<DOUBLE>[1.0, 2.0, null, 3.0]", new Object[]{1.0, 2.0, null, 3.0});
+      validateConstantExpression("ARRAY<LONG>[1, 2, null, 3]", new Object[]{1L, 2L, null, 3L});
+      validateConstantExpression("ARRAY<STRING>['1', '2', null, '3.0']", new Object[]{"1", "2", null, "3.0"});
 
-    // explicit typed string arrays should accept any literal and convert
-    validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
-    validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
-    validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+      // mixed type tests
+      validateConstantExpression("ARRAY<DOUBLE>[3, null, 4, 2.345]", new Object[]{3.0, null, 4.0, 2.345});
+      validateConstantExpression("ARRAY<LONG>[1.0, null, 2000.0]", new Object[]{1L, null, 2000L});
 
-    // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
-    // be defined...
-    validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
-    validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
-    ExpressionProcessing.initializeForTests(null);
+      // explicit typed string arrays should accept any literal and convert
+      validateConstantExpression("ARRAY<STRING>['1', null, 2000, 1.1]", new Object[]{"1", null, "2000", "1.1"});
+      validateConstantExpression("ARRAY<LONG>['1', null, 2000, 1.1]", new Object[]{1L, null, 2000L, 1L});
+      validateConstantExpression("ARRAY<DOUBLE>['1', null, 2000, 1.1]", new Object[]{1.0, null, 2000.0, 1.1});
+
+      // the gramar isn't cool enough yet to parse populated nested-arrays or complex arrays..., but empty ones can
+      // be defined...
+      validateConstantExpression("ARRAY<COMPLEX<nullableLongPair>>[]", new Object[]{});
+      validateConstantExpression("ARRAY<ARRAY<LONG>>[]", new Object[]{});
+    }
+    finally {
+      ExpressionProcessing.initializeForTests(null);
+    }
   }
 
   @Test
@@ -341,18 +396,27 @@ public class ParserTest extends InitializedNullHandlingTest
     );
 
     // complex types too
-    TypesTest.NullableLongPair l1 = new TypesTest.NullableLongPair(1L, 2L);
-    TypesTest.NullableLongPair l2 = new TypesTest.NullableLongPair(2L, 3L);
-    ObjectByteStrategy byteStrategy = Types.getStrategy(TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName());
+    TypeStrategiesTest.NullableLongPair l1 = new TypeStrategiesTest.NullableLongPair(1L, 2L);
+    TypeStrategiesTest.NullableLongPair l2 = new TypeStrategiesTest.NullableLongPair(2L, 3L);
+    TypeStrategy byteStrategy = TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getStrategy();
+    final byte[] b1 = new byte[byteStrategy.estimateSizeBytes(l1)];
+    final byte[] b2 = new byte[byteStrategy.estimateSizeBytes(l2)];
+    ByteBuffer bb1 = ByteBuffer.wrap(b1);
+    ByteBuffer bb2 = ByteBuffer.wrap(b2);
+    int w1 = byteStrategy.write(bb1, l1, b1.length);
+    int w2 = byteStrategy.write(bb2, l2, b2.length);
+
+    Assert.assertTrue(w1 > 0);
+    Assert.assertTrue(w2 > 0);
     String l1String = StringUtils.format(
         "complex_decode_base64('%s', '%s')",
-        TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
-        StringUtils.encodeBase64String(byteStrategy.toBytes(l1))
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        StringUtils.encodeBase64String(b1)
     );
     String l2String = StringUtils.format(
         "complex_decode_base64('%s', '%s')",
-        TypesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
-        StringUtils.encodeBase64String(byteStrategy.toBytes(l2))
+        TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+        StringUtils.encodeBase64String(b2)
     );
     validateConstantExpression(
         l1String,
@@ -461,8 +525,8 @@ public class ParserTest extends InitializedNullHandlingTest
   public void testApplyFunctions()
   {
     validateParser(
-        "map(() -> 1, x)",
-        "(map ([] -> 1), [x])",
+        "map((x) -> 1, x)",
+        "(map ([x] -> 1), [x])",
         ImmutableList.of("x"),
         ImmutableSet.of(),
         ImmutableSet.of("x")
@@ -713,10 +777,15 @@ public class ParserTest extends InitializedNullHandlingTest
     Expr parsedFlat = Parser.parse(expr, ExprMacroTable.nil(), true);
     Assert.assertTrue(parsed.isLiteral());
     Assert.assertTrue(parsedFlat.isLiteral());
+    Assert.assertFalse(parsed.isIdentifier());
     Assert.assertEquals(type, parsed.getOutputType(emptyBinding));
     Assert.assertEquals(type, parsedFlat.getOutputType(emptyBinding));
     Assert.assertEquals(expected, parsed.getLiteralValue());
-    Assert.assertEquals(expected, parsedFlat.getLiteralValue());
+    Assert.assertEquals(
+        // Special case comparison: literal integers start life as BigIntegerExpr; converted to LongExpr later.
+        expected instanceof BigInteger ? ((BigInteger) expected).longValueExact() : expected,
+        parsedFlat.getLiteralValue()
+    );
     if (roundTrip) {
       Assert.assertEquals(expr, parsed.stringify());
       Assert.assertEquals(expr, parsedFlat.stringify());
@@ -757,6 +826,11 @@ public class ParserTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    if (parsed instanceof IdentifierExpr) {
+      Assert.assertTrue(parsed.isIdentifier());
+    } else {
+      Assert.assertFalse(parsed.isIdentifier());
+    }
     final Expr.BindingAnalysis deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
     Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());

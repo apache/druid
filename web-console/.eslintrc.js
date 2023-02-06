@@ -35,5 +35,6 @@ module.exports = {
       'block',
       { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
     ],
+    'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
   },
 };

@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Cli.CliBuilder;
+import com.github.rvesse.airline.builder.CliBuilder;
 
 public class QueryRetryTestCommandCreator implements CliCommandCreator
 {

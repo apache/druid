@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -48,16 +46,14 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 1 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 1 to 3 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 1, 3);
 
     final Expr arg = args.get(0);
     final String formatString;
     final DateTimeZone timeZone;
 
     if (args.size() > 1) {
-      Preconditions.checkArgument(args.get(1).isLiteral(), "Function[%s] format arg must be a literal", name());
+      validationHelperCheckArgIsLiteral(args.get(1), "format");
       formatString = (String) args.get(1).getLiteralValue();
     } else {
       formatString = null;
@@ -95,8 +91,7 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampFormatExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

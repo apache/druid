@@ -22,16 +22,17 @@ package org.apache.druid.data.input.kafkainput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -41,6 +42,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +51,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class KafkaInputFormatTest
 {
@@ -88,7 +91,8 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         // Value Format
         new JsonInputFormat(
@@ -103,7 +107,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
     );
@@ -118,7 +123,8 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         // Value Format
         new JsonInputFormat(
@@ -133,7 +139,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
     );
@@ -180,7 +187,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -198,6 +205,7 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
@@ -253,7 +261,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -325,7 +333,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -335,7 +343,6 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        final MapBasedInputRow mrow = (MapBasedInputRow) row;
         // Payload verifications
         Assert.assertEquals(DateTimes.of("2021-06-24"), row.getTimestamp());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
@@ -343,6 +350,7 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
@@ -404,7 +412,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.", "kafka.newts."
     );
@@ -418,7 +427,7 @@ public class KafkaInputFormatTest
             ))),
             ColumnsFilter.all()
         ),
-        inputEntity,
+        newSettableByteEntity(inputEntity),
         null
     );
 
@@ -436,11 +445,119 @@ public class KafkaInputFormatTest
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
         numActualIterations++;
       }
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
 
+  }
+
+  @Test
+  public void testWithMultipleMixedRecords() throws IOException
+  {
+    final byte[][] keys = new byte[5][];
+    final byte[][] values = new byte[5][];
+
+    for (int i = 0; i < keys.length; i++) {
+      keys[i] = StringUtils.toUtf8(
+          "{\n"
+              + "    \"key\": \"sampleKey-" + i + "\"\n"
+              + "}");
+    }
+    keys[2] = null;
+
+    for (int i = 0; i < values.length; i++) {
+      values[i] = StringUtils.toUtf8(
+          "{\n"
+              + "    \"timestamp\": \"2021-06-2" + i + "\",\n"
+              + "    \"bar\": null,\n"
+              + "    \"foo\": \"x\",\n"
+              + "    \"baz\": 4,\n"
+              + "    \"index\": " + i + ",\n"
+              + "    \"o\": {\n"
+              + "        \"mg\": 1\n"
+              + "    }\n"
+              + "}");
+    }
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                "bar", "foo",
+                "kafka.newheader.encoding",
+                "kafka.newheader.kafkapkc",
+                "kafka.newts.timestamp"
+            ))),
+            ColumnsFilter.all()
+        ),
+        settableByteEntity,
+        null
+    );
+
+    for (int i = 0; i < keys.length; i++) {
+      headers = headers.add(new RecordHeader("indexH", String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
+
+      inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
+          "sample", 0, 0, timestamp,
+          null, null, 0, 0,
+          keys[i], values[i], headers));
+      settableByteEntity.setEntity(inputEntity);
+
+      final int numExpectedIterations = 1;
+      try (CloseableIterator<InputRow> iterator = reader.read()) {
+        int numActualIterations = 0;
+        while (iterator.hasNext()) {
+
+          final InputRow row = iterator.next();
+
+          // Payload verification
+          Assert.assertEquals(DateTimes.of("2021-06-2" + i), row.getTimestamp());
+          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+          Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
+
+
+          // Header verification
+          Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
+          Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
+          Assert.assertEquals(String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+              Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp")));
+          Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("kafka.newheader.indexH")));
+
+
+          // Key verification
+          if (i == 2) {
+            Assert.assertEquals(Collections.emptyList(), row.getDimension("kafka.newkey.key"));
+          } else {
+            Assert.assertEquals("sampleKey-" + i, Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+          }
+
+          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+
+          numActualIterations++;
+        }
+
+        Assert.assertEquals(numExpectedIterations, numActualIterations);
+      }
+    }
+  }
+
+  private SettableByteEntity<KafkaRecordEntity> newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
+  {
+    SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(kafkaRecordEntity);
+    return settableByteEntity;
   }
 }

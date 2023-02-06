@@ -98,6 +98,28 @@ public interface TypeSignature<Type extends TypeDescriptor>
   TypeSignature<Type> getElementType();
 
   /**
+   * A {@link TypeStrategy} provides facilities to reading and writing values to buffers, as well as basic value
+   * comparators and byte size estimation. Use {@link #getNullableStrategy()} if you need to read and write values
+   * which might possibly be null and aren't handling this in a different (probably better) way.
+   */
+  <T> TypeStrategy<T> getStrategy();
+
+  /**
+   * A {@link NullableTypeStrategy} is a {@link TypeStrategy} which can handle reading and writing null values, at the
+   * very high cost of an additional byte per value, of which a single bit is used to store
+   * {@link org.apache.druid.common.config.NullHandling#IS_NULL_BYTE} or
+   * {@link org.apache.druid.common.config.NullHandling#IS_NOT_NULL_BYTE} as appropriate.
+   *
+   * This pattern is common among buffer aggregators, which don't have access to an external memory location for more
+   * efficient tracking of null values and must store this information inline with the accumulated value.
+   */
+  default <T> NullableTypeStrategy<T> getNullableStrategy()
+  {
+    return new NullableTypeStrategy<>(getStrategy());
+  }
+
+
+  /**
    * Check if the value of {@link #getType()} is equal to the candidate {@link TypeDescriptor}.
    */
   default boolean is(Type candidate)

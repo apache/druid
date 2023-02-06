@@ -23,49 +23,69 @@ title: "Metadata storage"
   -->
 
 
-The Metadata Storage is an external dependency of Apache Druid. Druid uses it to store
-various metadata about the system, but not to store the actual data. There are
-a number of tables used for various purposes described below.
+Apache Druid relies on an external dependency for metadata storage.
+Druid uses the metadata store to house various metadata about the system, but not to store the actual data.
+The metadata store retains all metadata essential for a Druid cluster to work.
+
+The metadata store includes the following:
+- Segments records
+- Rule records
+- Configuration records
+- Task-related tables
+- Audit records
 
 Derby is the default metadata store for Druid, however, it is not suitable for production.
 [MySQL](../development/extensions-core/mysql.md) and [PostgreSQL](../development/extensions-core/postgresql.md) are more production suitable metadata stores.
+See [Metadata storage configuration](../configuration/index.md#metadata-storage) for the default configuration settings.
 
-> The Metadata Storage stores the entire metadata which is essential for a Druid cluster to work.
+> We also recommend you set up a high availability environment because there is no way to restore lost metadata.
+
+## Available metadata stores
+
+Druid supports Derby, MySQL, and PostgreSQL for storing metadata. 
+
+### Derby
+
 > For production clusters, consider using MySQL or PostgreSQL instead of Derby.
-> Also, it's highly recommended to set up a high availability environment
-> because there is no way to restore if you lose any metadata.
 
-## Using Derby
-
-Add the following to your Druid configuration.
+Configure metadata storage with Derby by setting the following properties in your Druid configuration.
 
 ```properties
 druid.metadata.storage.type=derby
 druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
 ```
 
-## MySQL
+### MySQL
 
 See [mysql-metadata-storage extension documentation](../development/extensions-core/mysql.md).
 
-## PostgreSQL
+### PostgreSQL
 
 See [postgresql-metadata-storage](../development/extensions-core/postgresql.md).
 
-## Adding custom dbcp properties
+## Adding custom DBCP properties
 
-NOTE: These properties are not settable through the `druid.metadata.storage.connector.dbcp properties`: `username`, `password`, `connectURI`, `validationQuery`, `testOnBorrow`. These must be set through `druid.metadata.storage.connector` properties.
-
-Example supported properties:
+You can add custom properties to customize the database connection pool (DBCP) for connecting to the metadata store.
+Define these properties with a `druid.metadata.storage.connector.dbcp.` prefix.
+For example:
 
 ```properties
 druid.metadata.storage.connector.dbcp.maxConnLifetimeMillis=1200000
 druid.metadata.storage.connector.dbcp.defaultQueryTimeout=30000
 ```
 
-See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration) for full list.
+Certain properties cannot be set through `druid.metadata.storage.connector.dbcp.` and must be set with the prefix `druid.metadata.storage.connector.`:
+* `username`
+* `password`
+* `connectURI`
+* `validationQuery`
+* `testOnBorrow`
+
+See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration) for a full list of configurable properties.
 
 ## Metadata storage tables
+
+This section describes the various tables in metadata storage.
 
 ### Segments table
 
@@ -81,7 +101,9 @@ available for requests). Value 0 means that the segment should not be loaded int
 unloading segments from the cluster without actually removing their metadata (which allows for simpler rolling back if
 that is ever an issue).
 
-The `payload` column stores a JSON blob that has all of the metadata for the segment (some of the data stored in this payload is redundant with some of the columns in the table, that is intentional). This looks something like
+The `payload` column stores a JSON blob that has all of the metadata for the segment.
+Some of the data in the `payload` column intentionally duplicates data from other columns in the segments table.
+As an example, the `payload` column may take the following form:
 
 ```json
 {
@@ -102,37 +124,42 @@ The `payload` column stores a JSON blob that has all of the metadata for the seg
 }
 ```
 
-Note that the format of this blob can and will change from time-to-time.
-
 ### Rule table
 
-The rule table is used to store the various rules about where segments should
+The rule table stores the various rules about where segments should
 land. These rules are used by the [Coordinator](../design/coordinator.md)
   when making segment (re-)allocation decisions about the cluster.
 
 ### Config table
 
-The config table is used to store runtime configuration objects. We do not have
+The config table stores runtime configuration objects. We do not have
 many of these yet and we are not sure if we will keep this mechanism going
 forward, but it is the beginnings of a method of changing some configuration
 parameters across the cluster at runtime.
 
 ### Task-related tables
 
-There are also a number of tables created and used by the [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) when managing tasks.
+Task-related tables are created and used by the [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) when managing tasks.
 
 ### Audit table
 
-The Audit table is used to store the audit history for configuration changes
-e.g rule changes done by [Coordinator](../design/coordinator.md) and other
+The audit table stores the audit history for configuration changes
+such as rule changes done by [Coordinator](../design/coordinator.md) and other
 config changes.
 
-## Accessed by
+## Metadata storage access
 
-The Metadata Storage is accessed only by:
+Only the following processes access the metadata storage:
 
-1. Indexing Service Processes (if any)
-2. Realtime Processes (if any)
-3. Coordinator Processes
+1. Indexing service processes (if any)
+2. Realtime processes (if any)
+3. Coordinator processes
 
-Thus you need to give permissions (e.g., in AWS Security Groups) only for these machines to access the Metadata storage.
+Thus you need to give permissions (e.g., in AWS security groups) for only these machines to access the metadata storage.
+
+## Learn more
+
+See the following topics for more information:
+* [Metadata storage configuration](../configuration/index.md#metadata-storage)
+* [Automated cleanup for metadata records](../operations/clean-metadata-store.md)
+

@@ -342,7 +342,7 @@ public class ColumnProcessors
           );
         }
 
-        if (mayBeMultiValue(capabilities)) {
+        if (capabilities.hasMultipleValues().isMaybeTrue()) {
           return processorFactory.makeMultiValueDimensionProcessor(
               capabilities,
               multiValueDimensionSelectorFn.apply(selectorFactory)
@@ -367,8 +367,13 @@ public class ColumnProcessors
   }
 
   /**
-   * Returns true if a given set of capabilities might indicate an underlying multi-value column. Errs on the side
-   * of returning true if unknown; i.e. if this returns false, there are _definitely not_ mul.
+   * Returns true if a given set of {@link ColumnCapabilities} indicate that a processor should handle the column as a
+   * multi-value column. If capabilities are null, or if {@link ColumnCapabilities#hasMultipleValues()} is unknown,
+   * this method errs on the side of returning true. If this method returns false, the column is _definitely not_
+   * multi-value.
+   *
+   * Note, this method is not suitable for use with vector engines because null capabilities are indicative of a column
+   * that does not exist, rather than unknown capabilities.
    */
   private static boolean mayBeMultiValue(@Nullable final ColumnCapabilities capabilities)
   {

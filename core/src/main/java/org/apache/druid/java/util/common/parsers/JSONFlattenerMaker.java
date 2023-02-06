@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.BinaryNode;
 import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
@@ -53,19 +54,27 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
+  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
   private final boolean keepNullValues;
 
-  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
+  private final boolean discoverNestedFields;
 
-  public JSONFlattenerMaker(boolean keepNullValues)
+
+  public JSONFlattenerMaker(boolean keepNullValues, boolean discoverNestedFields)
   {
     this.keepNullValues = keepNullValues;
+    this.discoverNestedFields = discoverNestedFields;
   }
 
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
   {
-    return FluentIterable.from(() -> obj.fields())
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
+    if (discoverNestedFields) {
+      return obj::fieldNames;
+    }
+    return FluentIterable.from(obj::fields)
                          .filter(
                              entry -> {
                                final JsonNode val = entry.getValue();
@@ -79,14 +88,14 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   @Override
   public Object getRootField(final JsonNode obj, final String key)
   {
-    return valueConversionFunction(obj.get(key));
+    return finalizeConversionForMap(obj.get(key));
   }
 
   @Override
   public Function<JsonNode, Object> makeJsonPathExtractor(final String expr)
   {
     final JsonPath jsonPath = JsonPath.compile(expr);
-    return node -> valueConversionFunction(jsonPath.read(node, JSONPATH_CONFIGURATION));
+    return node -> finalizeConversionForMap(jsonPath.read(node, JSONPATH_CONFIGURATION));
   }
 
   @Override
@@ -96,7 +105,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       final JsonQuery jsonQuery = JsonQuery.compile(expr);
       return jsonNode -> {
         try {
-          return valueConversionFunction(jsonQuery.apply(jsonNode).get(0));
+          return finalizeConversionForMap(jsonQuery.apply(jsonNode).get(0));
         }
         catch (JsonQueryException e) {
           throw new RuntimeException(e);
@@ -109,23 +118,40 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   }
 
   @Override
+  public Function<JsonNode, Object> makeJsonTreeExtractor(final List<String> nodes)
+  {
+    // create a defensive copy
+    final String[] keyNames = nodes.toArray(new String[0]);
+
+    return jsonNode -> {
+      JsonNode targetNode = jsonNode;
+      for (String keyName : keyNames) {
+        if (targetNode == null) {
+          return null;
+        }
+        targetNode = targetNode.get(keyName);
+      }
+      return finalizeConversionForMap(targetNode);
+    };
+  }
+
+  @Override
   public JsonProvider getJsonProvider()
   {
     return JSON_PROVIDER;
   }
 
-  @Nullable
-  private Object valueConversionFunction(Object val)
+  @Override
+  public Object finalizeConversionForMap(Object o)
   {
-    if (val instanceof JsonNode) {
-      return convertJsonNode((JsonNode) val);
-    } else {
-      return val;
+    if (o instanceof JsonNode) {
+      return convertJsonNode((JsonNode) o, enc);
     }
+    return o;
   }
 
   @Nullable
-  private Object convertJsonNode(JsonNode val)
+  public static Object convertJsonNode(JsonNode val, CharsetEncoder enc)
   {
     if (val == null || val.isNull()) {
       return null;
@@ -140,15 +166,24 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
 
     if (val.isTextual()) {
-      return charsetFix(val.asText());
+      return charsetFix(val.asText(), enc);
     }
+
+    if (val.isBoolean()) {
+      return val.asBoolean();
+    }
+
+    // this is a jackson specific type, and is unlikely to occur in the wild. But, in the event we do encounter it,
+    // handle it since it is a ValueNode
+    if (val.isBinary() && val instanceof BinaryNode) {
+      return ((BinaryNode) val).binaryValue();
+    }
+
 
     if (val.isArray()) {
       List<Object> newList = new ArrayList<>();
       for (JsonNode entry : val) {
-        if (!entry.isNull()) {
-          newList.add(valueConversionFunction(entry));
-        }
+        newList.add(convertJsonNode(entry, enc));
       }
       return newList;
     }
@@ -157,16 +192,19 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
       Map<String, Object> newMap = new LinkedHashMap<>();
       for (Iterator<Map.Entry<String, JsonNode>> it = val.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
-        newMap.put(entry.getKey(), valueConversionFunction(entry.getValue()));
+        newMap.put(entry.getKey(), convertJsonNode(entry.getValue(), enc));
       }
       return newMap;
     }
 
-    return val;
+    // All ValueNode implementations, as well as ArrayNode and ObjectNode will be handled by this point, so we should
+    // only be dealing with jackson specific types if we end up here (MissingNode, POJONode) so we can just return null
+    // so that we don't leak unhadled JsonNode objects
+    return null;
   }
 
   @Nullable
-  private String charsetFix(String s)
+  private static String charsetFix(String s, CharsetEncoder enc)
   {
     if (s != null && !enc.canEncode(s)) {
       // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
@@ -178,7 +216,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
     }
   }
 
-  private boolean isFlatList(JsonNode list)
+  private static boolean isFlatList(JsonNode list)
   {
     for (JsonNode obj : list) {
       if (obj.isObject() || obj.isArray()) {

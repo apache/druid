@@ -31,18 +31,10 @@ import java.util.List;
 public class JvmUtilsTest
 {
   @Test
-  public void testgetMaxDirectMemory()
+  public void testGetMaxDirectMemory()
   {
-    try {
-      long maxMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-      Assert.assertTrue((maxMemory > 0));
-    }
-    catch (UnsupportedOperationException expected) {
-      Assert.assertTrue(true);
-    }
-    catch (RuntimeException expected) {
-      Assert.assertTrue(true);
-    }
+    long maxMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+    Assert.assertTrue((maxMemory > 0));
   }
 
   @Test

@@ -18,9 +18,19 @@
 
 import * as JSONBig from 'json-bigint-native';
 
+function noLocalStorage(): boolean {
+  try {
+    return typeof localStorage === 'undefined';
+  } catch {
+    return true;
+  }
+}
+
 export const LocalStorageKeys = {
   CAPABILITIES_OVERRIDE: 'capabilities-override' as const,
   INGESTION_SPEC: 'ingestion-spec' as const,
+  BATCH_INGESTION_SPEC: 'batch-ingestion-spec' as const,
+  STREAMING_INGESTION_SPEC: 'streaming-ingestion-spec' as const,
   DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as const,
   SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as const,
   SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as const,
@@ -30,7 +40,6 @@ export const LocalStorageKeys = {
   QUERY_KEY: 'druid-console-query' as const,
   QUERY_CONTEXT: 'query-context' as const,
   INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as const,
-  QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as const,
   TASKS_REFRESH_RATE: 'task-refresh-rate' as const,
   DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as const,
   SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as const,
@@ -39,15 +48,33 @@ export const LocalStorageKeys = {
   LOOKUPS_REFRESH_RATE: 'lookups-refresh-rate' as const,
   QUERY_HISTORY: 'query-history' as const,
   LIVE_QUERY_MODE: 'live-query-mode' as const,
+
+  WORKBENCH_QUERIES: 'workbench-queries' as const,
+  WORKBENCH_LAST_TAB: 'workbench-last-tab' as const,
+  WORKBENCH_PANE_SIZE: 'workbench-pane-size' as const,
+  WORKBENCH_HISTORY: 'workbench-history' as const,
+  WORKBENCH_TASK_PANEL: 'workbench-task-panel' as const,
+
+  SQL_DATA_LOADER_CONTENT: 'sql-data-loader-content' as const,
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 
 // ----------------------------
 
+let localStorageNamespace: string | undefined;
+
+export function setLocalStorageNamespace(namespace: string) {
+  localStorageNamespace = namespace;
+}
+
+function prependNamespace(key: string): string {
+  return localStorageNamespace ? `${localStorageNamespace}:${key}` : key;
+}
+
 export function localStorageSet(key: LocalStorageKeys, value: string): void {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(prependNamespace(key), value);
   } catch (e) {
     console.error('Issue setting local storage key', e);
   }
@@ -58,9 +85,9 @@ export function localStorageSetJson(key: LocalStorageKeys, value: any): void {
 }
 
 export function localStorageGet(key: LocalStorageKeys): string | undefined {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
-    return localStorage.getItem(key) || undefined;
+    return localStorage.getItem(prependNamespace(key)) || localStorage.getItem(key) || undefined;
   } catch (e) {
     console.error('Issue getting local storage key', e);
     return;
@@ -78,9 +105,9 @@ export function localStorageGetJson(key: LocalStorageKeys): any {
 }
 
 export function localStorageRemove(key: LocalStorageKeys): void {
-  if (typeof localStorage === 'undefined') return;
+  if (noLocalStorage()) return;
   try {
-    localStorage.removeItem(key);
+    localStorage.removeItem(prependNamespace(key));
   } catch (e) {
     console.error('Issue removing local storage key', e);
   }

@@ -57,6 +57,7 @@ public class ClientCompactionTaskTransformSpecTest
     Assert.assertEquals(expected, fromJson);
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testAsMap()
   {
@@ -67,9 +68,9 @@ public class ClientCompactionTaskTransformSpecTest
     final ClientCompactionTaskTransformSpec spec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter(dimension, value, null));
     final Map<String, Object> map = spec.asMap(objectMapper);
     Assert.assertNotNull(map);
-    Assert.assertEquals(4, ((Map) map.get("filter")).size());
-    Assert.assertEquals(dimension, ((Map) map.get("filter")).get("dimension"));
-    Assert.assertEquals(value, ((Map) map.get("filter")).get("value"));
+    Assert.assertEquals(3, ((Map<String, Object>) map.get("filter")).size());
+    Assert.assertEquals(dimension, ((Map<String, Object>) map.get("filter")).get("dimension"));
+    Assert.assertEquals(value, ((Map<String, Object>) map.get("filter")).get("value"));
     ClientCompactionTaskTransformSpec actual = objectMapper.convertValue(map, ClientCompactionTaskTransformSpec.class);
     Assert.assertEquals(spec, actual);
   }

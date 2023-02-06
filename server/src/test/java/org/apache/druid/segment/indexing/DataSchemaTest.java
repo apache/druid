@@ -78,7 +78,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA"))),
                 null,
                 null,
                 null
@@ -112,11 +112,12 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
+                DimensionsSpec.builder()
+                              .setDimensions(
+                                  DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2"))
+                              )
+                              .setDimensionExclusions(ImmutableList.of("dimC"))
+                              .build(),
                 null,
                 null,
                 null
@@ -151,9 +152,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of(),
-                    null
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2"))
                 ),
                 null,
                 null,
@@ -208,12 +207,19 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                    "time",
-                    "dimA",
-                    "dimB",
-                    "metric1"
-                )), ImmutableList.of("dimC"), null),
+                DimensionsSpec.builder()
+                              .setDimensions(
+                                  DimensionsSpec.getDefaultSchemas(
+                                      ImmutableList.of(
+                                          "time",
+                                          "dimA",
+                                          "dimB",
+                                          "metric1"
+                                      )
+                                  )
+                              )
+                              .setDimensionExclusions(ImmutableList.of("dimC"))
+                              .build(),
                 null,
                 null,
                 null
@@ -254,11 +260,12 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     DataSchema schema = new DataSchema(
         IdUtilsTest.VALID_ID_CHARS,
         new TimestampSpec("time", "auto", null),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(ImmutableList.of("__time", "dimA", "dimB", "metric1")),
-            ImmutableList.of("dimC"),
-            null
-        ),
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("__time", "dimA", "dimB", "metric1"))
+                      )
+                      .setDimensionExclusions(ImmutableList.of("dimC"))
+                      .build(),
         null,
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
@@ -274,12 +281,19 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                    "__time",
-                    "dimA",
-                    "dimB",
-                    "metric1"
-                )), ImmutableList.of("dimC"), null),
+                DimensionsSpec.builder()
+                              .setDimensions(
+                                  DimensionsSpec.getDefaultSchemas(
+                                      ImmutableList.of(
+                                          "__time",
+                                          "dimA",
+                                          "dimB",
+                                          "metric1"
+                                      )
+                                  )
+                              )
+                              .setDimensionExclusions(ImmutableList.of("dimC"))
+                              .build(),
                 null,
                 null,
                 null
@@ -313,11 +327,10 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
+                DimensionsSpec.builder()
+                              .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time")))
+                              .setDimensionExclusions(ImmutableList.of("dimC"))
+                              .build(),
                 null,
                 null,
                 null
@@ -386,11 +399,12 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
-                    ImmutableList.of("dimC"),
-                    null
-                ),
+                DimensionsSpec.builder()
+                              .setDimensions(
+                                  DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2"))
+                              )
+                              .setDimensionExclusions(ImmutableList.of("dimC"))
+                              .build(),
                 null,
                 null,
                 null
@@ -485,7 +499,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
-            new DimensionsSpec(null, Arrays.asList("__time", "metric1", "xXx", "col1"), null),
+            DimensionsSpec.builder().setDimensionExclusions(Arrays.asList("__time", "metric1", "xXx", "col1")).build(),
             null,
             null,
             null
@@ -552,7 +566,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA"))),
                 null,
                 null,
                 null
@@ -592,7 +606,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA"))),
                 null,
                 null,
                 null

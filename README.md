@@ -17,7 +17,6 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
 [![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://app.travis-ci.com/github/apache/druid)
 [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/druid)](https://codecov.io/gh/apache/druid)
@@ -29,12 +28,14 @@
 ---
 
 [Website](https://druid.apache.org/) |
-[Documentation](https://druid.apache.org/docs/latest/design/) |
-[Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
-[User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
-[Slack](https://s.apache.org/slack-invite) |
 [Twitter](https://twitter.com/druidio) |
-[Download](https://druid.apache.org/downloads.html)
+[Download](https://druid.apache.org/downloads.html) |
+[Get Started](#getting-started) |
+[Documentation](https://druid.apache.org/docs/latest/design/) |
+[Community](#community) |
+[Build](#building-from-source) |
+[Contribute](#contributing) |
+[License](#license)
 
 ---
 
@@ -49,7 +50,7 @@ Druid is designed for workflows where fast queries and ingest really matter. Dru
 You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
-You can also interact with Druid via the [built-in console](https://druid.apache.org/docs/latest/operations/druid-console.html) (shown below).
+You can also interact with Druid via the built-in [web console](https://druid.apache.org/docs/latest/operations/web-console.html) (shown below).
 
 #### Load data
 
@@ -71,28 +72,26 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
-the [project website](https://druid.apache.org).
+See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release.  If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
 
-If you would like to contribute documentation, please do so under
-`/docs` in this repository and submit a pull request.
+Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
 
 ### Community
 
-Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
-is hosted at Google Groups.
+Visit the official project [community](https://druid.apache.org/community/) page to read about getting involved in contributing to Apache Druid, and how we help one another use and operate Druid.
 
-Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
-you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
+* Druid users can find help in the [`druid-user`](https://groups.google.com/forum/#!forum/druid-user) mailing list on Google Groups, and have more technical conversations in `#troubleshooting` on Slack.
+* Druid development discussions take place in the [`druid-dev`](https://lists.apache.org/list.html?dev@druid.apache.org) mailing list ([dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org)).  Subscribe by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).  For live conversations, join the `#dev` channel on Slack.
 
-Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
+Check out the official [community](https://druid.apache.org/community/) page for details of how to join the community Slack channels.
+
+Find articles written by community members and a calendar of upcoming events on the [project site](https://druid.apache.org/) - contribute your own events and articles by submitting a PR in the [`apache/druid-website-src`](https://github.com/apache/druid-website-src/tree/master/_data) repository.
 
 ### Building from source
 
-Please note that JDK 8 is required to build Druid.
+Please note that JDK 8 or JDK 11 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
+See the latest [build guide](https://druid.apache.org/docs/latest/development/build.html) for instructions on building Apache Druid from source.
 
 ### Contributing
 

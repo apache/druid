@@ -20,7 +20,11 @@
 package org.apache.druid.indexing.overlord.autoscaling;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TaskRunner;
+
+import javax.annotation.Nonnull;
+import java.util.Collection;
 
 /**
  * In general, the resource management is tied to the runner.
@@ -35,4 +39,15 @@ public interface ProvisioningStrategy<T extends TaskRunner>
    * @param runner The TaskRunner state holder this strategy should use during execution
    */
   ProvisioningService makeProvisioningService(T runner);
+
+  /**
+   * Returns the expected number of task slots available for each worker.
+   * This method can returns -1 if the provisioning strategy does not support getting the expected worker capacity.
+   *
+   * @return the expected number of task slots available for each worker if provisioning strategy support getting the expected worker capacity, otherwise -1
+   */
+  default int getExpectedWorkerCapacity(@Nonnull Collection<ImmutableWorkerInfo> workers)
+  {
+    return -1;
+  }
 }

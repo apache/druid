@@ -27,6 +27,7 @@ import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.services.storage.Storage;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -103,6 +104,10 @@ public class GoogleStorageDruidModule implements DruidModule
         .in(LazySingleton.class);
   }
 
+  /**
+   * Returns a GoogleStorage that lazily initialize {@link {@link Storage}}.
+   * This is to avoid immediate config validation but defer it until you actually use the client.
+   */
   @Provides
   @LazySingleton
   public GoogleStorage getGoogleStorage(
@@ -113,11 +118,13 @@ public class GoogleStorageDruidModule implements DruidModule
   {
     LOG.info("Building Cloud Storage Client...");
 
-    Storage storage = new Storage
-        .Builder(httpTransport, jsonFactory, requestInitializer)
-        .setApplicationName(APPLICATION_NAME)
-        .build();
-
-    return new GoogleStorage(storage);
+    return new GoogleStorage(
+        Suppliers.memoize(
+            () -> new Storage
+                .Builder(httpTransport, jsonFactory, requestInitializer)
+                .setApplicationName(APPLICATION_NAME)
+                .build()
+        )
+    );
   }
 }

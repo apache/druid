@@ -19,10 +19,9 @@
 
 package org.apache.druid.query.aggregation.bloom.sql;
 
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -35,8 +34,10 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BloomFilterExtensionModule;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -53,13 +54,14 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
@@ -73,19 +75,19 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
   private static final String DATA_SOURCE = "numfoo";
 
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new BloomFilterSqlAggregator()),
-      ImmutableSet.of()
-  );
-
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
+    super.configureGuice(builder);
+    builder.addModule(new BloomFilterExtensionModule());
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
+  ) throws IOException
   {
     InputRowParser parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
@@ -96,9 +98,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                              .add(new DoubleDimensionSchema("d1"))
                              .add(new FloatDimensionSchema("f1"))
                              .add(new LongDimensionSchema("l1"))
-                             .build(),
-                null,
-                null
+                             .build()
             )
         ));
 
@@ -116,7 +116,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                             .withRollup(false)
                             .build()
                     )
-                    .rows(CalciteTests.ROWS1_WITH_NUMERIC_DIMS)
+                    .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                     .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
@@ -131,19 +131,13 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return OPERATOR_TABLE;
-  }
-
   @Test
   public void testBloomFilterAgg() throws Exception
   {
     cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
       if (raw == null) {
         expected1.addBytes(null, 0, 0);
@@ -174,7 +168,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -186,7 +180,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
       if (raw == null) {
         expected1.addBytes(null, 0, 0);
@@ -207,6 +201,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
       }
     }
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "BLOOM_FILTER(dim1, 1000),\n"
@@ -235,8 +230,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );
@@ -248,7 +243,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
       // empty string extractionFn produces null
       if (raw == null || "".equals(raw)) {
@@ -284,10 +279,9 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
-
   }
 
   @Test
@@ -296,7 +290,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     BloomKFilter expected3 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("l1");
       if (raw == null) {
         if (NullHandling.replaceWithDefault()) {
@@ -331,7 +325,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected3)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected3)}
         )
     );
   }
@@ -341,7 +335,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("l1");
       if (raw == null) {
         if (NullHandling.replaceWithDefault()) {
@@ -384,7 +378,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -395,7 +389,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("f1");
       if (raw == null) {
         if (NullHandling.replaceWithDefault()) {
@@ -438,7 +432,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -449,7 +443,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
-    for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
+    for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("d1");
       if (raw == null) {
         if (NullHandling.replaceWithDefault()) {
@@ -492,7 +486,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{CalciteTests.getJsonMapper().writeValueAsString(expected1)}
+            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
         )
     );
   }
@@ -506,6 +500,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "BLOOM_FILTER(dim1, 1000),\n"
@@ -536,8 +531,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[] {
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );
@@ -552,6 +547,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
 
+    ObjectMapper jsonMapper = queryFramework().queryJsonMapper();
     testQuery(
         "SELECT\n"
         + "dim2,\n"
@@ -592,8 +588,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] {
                 "a",
-                CalciteTests.getJsonMapper().writeValueAsString(expected1),
-                CalciteTests.getJsonMapper().writeValueAsString(expected2)
+                jsonMapper.writeValueAsString(expected1),
+                jsonMapper.writeValueAsString(expected2)
             }
         )
     );

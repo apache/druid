@@ -63,6 +63,11 @@ public interface Expr extends Cacheable
     return false;
   }
 
+  default boolean isIdentifier()
+  {
+    return false;
+  }
+
   /**
    * Returns the value of expr if expr is a literal, or throws an exception otherwise.
    *
@@ -126,6 +131,9 @@ public interface Expr extends Cacheable
    * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}. Each {@link Expr} is responsible for
    * ensuring the {@link Shuttle} can visit all of its {@link Expr} children, as well as updating its children
    * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
+   *
+   * When this Expr is the result of {@link ExprMacroTable.ExprMacro#apply}, all of the original arguments to the
+   * macro must be visited, including arguments that may have been "baked in" to this Expr.
    */
   Expr visit(Shuttle shuttle);
 
@@ -158,6 +166,7 @@ public interface Expr extends Cacheable
    * Check if an expression can be 'vectorized', for a given set of inputs. If this method returns true,
    * {@link #buildVectorized} is expected to produce a {@link ExprVectorProcessor} which can evaluate values in batches
    * to use with vectorized query engines.
+   *
    * @param inspector
    */
   default boolean canVectorize(InputBindingInspector inspector)
@@ -168,6 +177,7 @@ public interface Expr extends Cacheable
   /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
+   *
    * @param inspector
    */
   default <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
@@ -390,6 +400,17 @@ public interface Expr extends Cacheable
      * Provide the {@link Shuttle} with an {@link Expr} to inspect and potentially rewrite.
      */
     Expr visit(Expr expr);
+
+    default List<Expr> visitAll(List<Expr> exprs)
+    {
+      final List<Expr> newExprs = new ArrayList<>();
+
+      for (final Expr arg : exprs) {
+        newExprs.add(arg.visit(this));
+      }
+
+      return newExprs;
+    }
   }
 
   /**

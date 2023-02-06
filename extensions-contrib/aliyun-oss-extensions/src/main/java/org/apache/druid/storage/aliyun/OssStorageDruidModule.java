@@ -22,6 +22,8 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -97,10 +99,26 @@ public class OssStorageDruidModule implements DruidModule
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
   }
 
+  /**
+   * Creates {@link OSS} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the OSS client.
+   * Use {@link #initializeOssClientSupplier} instead in that case.
+   */
   @Provides
   @LazySingleton
   public OSS initializeOssClient(OssClientConfig inputSourceConfig)
   {
     return inputSourceConfig.buildClient();
+  }
+
+  /**
+   * Creates a supplier that lazily initialize {@link OSS}.
+   * You may want to use the supplier to defer config validation until you actually use the OSS client.
+   */
+  @Provides
+  @LazySingleton
+  public Supplier<OSS> initializeOssClientSupplier(OssClientConfig inputSourceConfig)
+  {
+    return Suppliers.memoize(() -> initializeOssClient(inputSourceConfig));
   }
 }

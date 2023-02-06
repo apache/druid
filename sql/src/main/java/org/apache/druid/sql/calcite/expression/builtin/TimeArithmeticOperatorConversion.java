@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -30,10 +31,12 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.List;
@@ -82,12 +85,15 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       return null;
     }
 
+    final ColumnType outputType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
+
     if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
       // timestamp_expr { + | - } <interval_expr> (year-month interval)
       // Period is a value in months.
-      return DruidExpression.fromExpression(
-          DruidExpression.functionCall(
-              "timestamp_shift",
+      return DruidExpression.ofExpression(
+          outputType,
+          DruidExpression.functionCall("timestamp_shift"),
+          ImmutableList.of(
               leftExpr,
               rightExpr.map(
                   simpleExtraction -> null,
@@ -96,20 +102,22 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
                     StringUtils.format("'P%sM'", RexLiteral.value(rightRexNode)) :
                     StringUtils.format("concat('P', %s, 'M')", expression)
               ),
-              DruidExpression.fromExpression(DruidExpression.numberLiteral(direction > 0 ? 1 : -1)),
-              DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+              DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(direction > 0 ? 1 : -1)),
+              DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
           )
       );
     } else if (rightRexNode.getType().getFamily() == SqlTypeFamily.INTERVAL_DAY_TIME) {
       // timestamp_expr { + | - } <interval_expr> (day-time interval)
       // Period is a value in milliseconds. Ignore time zone.
-      return DruidExpression.fromExpression(
-          StringUtils.format(
+      return DruidExpression.ofExpression(
+          outputType,
+          (args) -> StringUtils.format(
               "(%s %s %s)",
-              leftExpr.getExpression(),
+              args.get(0).getExpression(),
               direction > 0 ? "+" : "-",
-              rightExpr.getExpression()
-          )
+              args.get(1).getExpression()
+          ),
+          ImmutableList.of(leftExpr, rightExpr)
       );
     } else if ((leftRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
         leftRexNode.getType().getFamily() == SqlTypeFamily.DATE) &&
@@ -120,22 +128,25 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       // the second argument.
       Preconditions.checkState(direction < 0, "Time arithmetic require direction < 0");
       if (call.getType().getFamily() == SqlTypeFamily.INTERVAL_YEAR_MONTH) {
-        return DruidExpression.fromExpression(
-            DruidExpression.functionCall(
-                "subtract_months",
+        return DruidExpression.ofExpression(
+            outputType,
+            DruidExpression.functionCall("subtract_months"),
+            ImmutableList.of(
                 leftExpr,
                 rightExpr,
-                DruidExpression.fromExpression(DruidExpression.stringLiteral(plannerContext.getTimeZone().getID()))
+                DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
             )
         );
       } else {
-        return DruidExpression.fromExpression(
-          StringUtils.format(
-              "(%s %s %s)",
-              leftExpr.getExpression(),
-              "-",
-              rightExpr.getExpression()
-          )
+        return DruidExpression.ofExpression(
+            outputType,
+            (args) -> StringUtils.format(
+                "(%s %s %s)",
+                args.get(0).getExpression(),
+                "-",
+                args.get(1).getExpression()
+            ),
+            ImmutableList.of(leftExpr, rightExpr)
         );
       }
     } else {

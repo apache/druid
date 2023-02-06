@@ -19,6 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -26,8 +29,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -61,7 +62,8 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
 {
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Required
   private String argumentSpec;
 
   private HadoopDruidIndexerConfig config;

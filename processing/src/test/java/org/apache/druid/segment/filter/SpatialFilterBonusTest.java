@@ -123,16 +123,16 @@ public class SpatialFilterBonusTest
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Collections.singletonList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                new ArrayList<>()
-                            )
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Collections.singletonList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              new ArrayList<>()
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
@@ -270,17 +270,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
-
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -293,16 +292,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -315,17 +314,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
-
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)

@@ -53,11 +53,17 @@ public class VectorProcessors
   {
     final ExpressionType leftType = left.getOutputType(inspector);
 
+    // if type is null, it means the input is all nulls
     if (leftType == null) {
       return right.buildVectorized(inspector);
     }
 
-    Preconditions.checkArgument(inspector.areSameTypes(left, right));
+    Preconditions.checkArgument(
+        inspector.areSameTypes(left, right),
+        "%s and %s are not the same type",
+        leftType,
+        right.getOutputType(inspector)
+    );
 
     ExprVectorProcessor<?> processor = null;
     if (Types.is(leftType, ExprType.STRING)) {
@@ -76,9 +82,9 @@ public class VectorProcessors
 
   public static <T> ExprVectorProcessor<T> constant(@Nullable String constant, int maxVectorSize)
   {
-    final String[] strings = new String[maxVectorSize];
+    final Object[] strings = new Object[maxVectorSize];
     Arrays.fill(strings, constant);
-    final ExprEvalStringVector eval = new ExprEvalStringVector(strings);
+    final ExprEvalObjectVector eval = new ExprEvalObjectVector(strings);
     return new ExprVectorProcessor<T>()
     {
       @Override
@@ -153,23 +159,29 @@ public class VectorProcessors
 
   public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingInspector inspector, Expr arg, int radix)
   {
-    final ExprVectorProcessor<?> processor = new LongOutStringInFunctionVectorProcessor(
-        CastToTypeVectorProcessor.cast(arg.buildVectorized(inspector), ExpressionType.STRING),
-        inspector.getMaxVectorSize()
+    final ExprVectorProcessor<?> processor = new LongOutObjectInFunctionVectorProcessor(
+        arg.buildVectorized(inspector),
+        inspector.getMaxVectorSize(),
+        ExpressionType.STRING
     )
     {
       @Override
-      public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
+      public void processIndex(Object[] strings, long[] longs, boolean[] outputNulls, int i)
       {
         try {
-          final String input = strings[i];
-          if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
-            // Strip leading 0x from hex strings.
-            longs[i] = Long.parseLong(input.substring(2), radix);
+          final String input = (String) strings[i];
+          if (input == null) {
+            longs[i] = 0L;
+            outputNulls[i] = NullHandling.sqlCompatible();
           } else {
-            longs[i] = Long.parseLong(input, radix);
+            if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
+              // Strip leading 0x from hex strings.
+              longs[i] = Long.parseLong(input.substring(2), radix);
+            } else {
+              longs[i] = Long.parseLong(input, radix);
+            }
+            outputNulls[i] = false;
           }
-          outputNulls[i] = false;
         }
         catch (NumberFormatException e) {
           longs[i] = 0L;
@@ -193,16 +205,16 @@ public class VectorProcessors
 
     ExprVectorProcessor<?> processor = null;
     if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<String[]> input = expr.buildVectorized(inspector);
+      final ExprVectorProcessor<Object[]> input = expr.buildVectorized(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
         @Override
         public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
         {
-          final ExprEvalVector<String[]> inputEval = input.evalVector(bindings);
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
 
           final int currentSize = bindings.getCurrentVectorSize();
-          final String[] values = inputEval.values();
+          final Object[] values = inputEval.values();
           for (int i = 0; i < currentSize; i++) {
             if (values[i] == null) {
               outputValues[i] = 1L;
@@ -301,16 +313,16 @@ public class VectorProcessors
 
     ExprVectorProcessor<?> processor = null;
     if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<String[]> input = expr.buildVectorized(inspector);
+      final ExprVectorProcessor<Object[]> input = expr.buildVectorized(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
         @Override
         public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
         {
-          final ExprEvalVector<String[]> inputEval = input.evalVector(bindings);
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
 
           final int currentSize = bindings.getCurrentVectorSize();
-          final String[] values = inputEval.values();
+          final Object[] values = inputEval.values();
           for (int i = 0; i < currentSize; i++) {
             if (values[i] == null) {
               outputValues[i] = 0L;
@@ -477,19 +489,19 @@ public class VectorProcessors
             return new ExprEvalDoubleVector(output, outputNulls);
           }
         },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<String[]>(
+        () -> new SymmetricalBivariateFunctionVectorProcessor<Object[]>(
             ExpressionType.STRING,
             left.buildVectorized(inspector),
             right.buildVectorized(inspector)
         )
         {
-          final String[] output = new String[maxVectorSize];
+          final Object[] output = new Object[maxVectorSize];
 
           @Override
           public void processIndex(
-              String[] leftInput,
+              Object[] leftInput,
               @Nullable boolean[] leftNulls,
-              String[] rightInput,
+              Object[] rightInput,
               @Nullable boolean[] rightNulls,
               int i
           )
@@ -498,9 +510,9 @@ public class VectorProcessors
           }
 
           @Override
-          public ExprEvalVector<String[]> asEval()
+          public ExprEvalVector<Object[]> asEval()
           {
-            return new ExprEvalStringVector(output);
+            return new ExprEvalObjectVector(output);
           }
         }
     );
@@ -512,14 +524,18 @@ public class VectorProcessors
     final int maxVectorSize = inspector.getMaxVectorSize();
     ExprVectorProcessor<?> processor = null;
     if (Types.is(inputType, ExprType.STRING)) {
-      processor = new LongOutStringInFunctionVectorProcessor(expr.buildVectorized(inspector), maxVectorSize)
+      processor = new LongOutObjectInFunctionVectorProcessor(
+          expr.buildVectorized(inspector),
+          maxVectorSize,
+          ExpressionType.STRING
+      )
       {
         @Override
-        public void processIndex(String[] strings, long[] longs, boolean[] outputNulls, int i)
+        public void processIndex(Object[] strings, long[] longs, boolean[] outputNulls, int i)
         {
           outputNulls[i] = strings[i] == null;
           if (!outputNulls[i]) {
-            longs[i] = Evals.asLong(!Evals.asBoolean(strings[i]));
+            longs[i] = Evals.asLong(!Evals.asBoolean((String) strings[i]));
           }
         }
       };
@@ -664,7 +680,7 @@ public class VectorProcessors
             return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new BivariateFunctionVectorProcessor<String[], String[], long[]>(
+        () -> new BivariateFunctionVectorProcessor<Object[], Object[], long[]>(
             ExpressionType.LONG,
             left.buildVectorized(inspector),
             right.buildVectorized(inspector)
@@ -675,9 +691,9 @@ public class VectorProcessors
 
           @Override
           public void processIndex(
-              String[] leftInput,
+              Object[] leftInput,
               @Nullable boolean[] leftNulls,
-              String[] rightInput,
+              Object[] rightInput,
               @Nullable boolean[] rightNulls,
               int i
           )
@@ -691,17 +707,17 @@ public class VectorProcessors
                 outputNulls[i] = true;
                 return;
               }
-              final boolean bool = Evals.asBoolean(rightInput[i]);
+              final boolean bool = Evals.asBoolean((String) rightInput[i]);
               output[i] = Evals.asLong(bool);
               outputNulls[i] = !bool;
               return;
             } else if (rightNull) {
-              final boolean bool = Evals.asBoolean(leftInput[i]);
+              final boolean bool = Evals.asBoolean((String) leftInput[i]);
               output[i] = Evals.asLong(bool);
               outputNulls[i] = !bool;
               return;
             }
-            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(Evals.asBoolean((String) leftInput[i]) || Evals.asBoolean((String) rightInput[i]));
           }
 
           @Override
@@ -818,7 +834,7 @@ public class VectorProcessors
             return new ExprEvalLongVector(output, outputNulls);
           }
         },
-        () -> new BivariateFunctionVectorProcessor<String[], String[], long[]>(
+        () -> new BivariateFunctionVectorProcessor<Object[], Object[], long[]>(
             ExpressionType.STRING,
             left.buildVectorized(inputTypes),
             right.buildVectorized(inputTypes)
@@ -829,9 +845,9 @@ public class VectorProcessors
 
           @Override
           public void processIndex(
-              String[] leftInput,
+              Object[] leftInput,
               @Nullable boolean[] leftNulls,
-              String[] rightInput,
+              Object[] rightInput,
               @Nullable boolean[] rightNulls,
               int i
           )
@@ -845,17 +861,19 @@ public class VectorProcessors
                 outputNulls[i] = true;
                 return;
               }
-              final boolean bool = Evals.asBoolean(rightInput[i]);
+              final boolean bool = Evals.asBoolean((String) rightInput[i]);
               output[i] = Evals.asLong(bool);
               outputNulls[i] = bool;
               return;
             } else if (rightNull) {
-              final boolean bool = Evals.asBoolean(leftInput[i]);
+              final boolean bool = Evals.asBoolean((String) leftInput[i]);
               output[i] = Evals.asLong(bool);
               outputNulls[i] = bool;
               return;
             }
-            output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
+            output[i] = Evals.asLong(
+                Evals.asBoolean((String) leftInput[i]) && Evals.asBoolean((String) rightInput[i])
+            );
           }
 
           @Override

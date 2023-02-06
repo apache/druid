@@ -26,7 +26,7 @@ sidebar_label: "Granularities"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about time functions available in SQL, refer to the
-> [SQL documentation](sql.md#time-functions).
+> [SQL documentation](sql-scalar.md#date-and-time-functions).
 
 Granularity determines how to bucket data across the time dimension, or how to aggregate data by hour, day, minute, etc.
 
@@ -38,10 +38,28 @@ You can specify a time period as a [simple](#simple-granularities) string, as a 
 
 Simple granularities are specified as a string and bucket timestamps by their UTC time (e.g., days start at 00:00 UTC).
 
-Supported granularity strings are: `all`, `none`, `second`, `minute`, `fifteen_minute`, `thirty_minute`, `hour`, `day`, `week`, `month`, `quarter` and `year`.
+Druid supports the following granularity strings: 
+  - `all`
+  - `none`
+  - `second`
+  - `minute`
+  - `five_minute`
+  - `ten_minute`
+  - `fifteen_minute`
+  - `thirty_minute`
+  - `hour`
+  - `six_hour`
+  - `eight_hour`
+  - `day`
+  - `week`
+  - `month`
+  - `quarter` 
+  - `year`
 
-* `all` buckets everything into a single bucket
-* `none` does not bucket data (it actually uses the granularity of the index - minimum here is `none` which means millisecond granularity). Using `none` in a [TimeseriesQuery](../querying/timeseriesquery.md) is currently not recommended (the system will try to generate 0 values for all milliseconds that didn’t exist, which is often a lot).
+The minimum and maximum granularities are `none` and `all`, described as follows:
+* `all` buckets everything into a single bucket.
+* `none` does not mean zero bucketing. It buckets data to millisecond granularity—the granularity of the internal index. You can think of `none` as equivalent to `millisecond`.
+  > Do not use `none` in a [timeseries query](../querying/timeseriesquery.md); Druid fills empty interior time buckets with zeroes, meaning the output will contain results for every single millisecond in the requested interval.
 
 #### Example:
 

@@ -41,8 +41,10 @@ public class AzureAccountConfig
   private String account;
 
   @JsonProperty
-  @NotNull
   private String key;
+
+  @JsonProperty
+  private String sharedAccessStorageToken;
 
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
@@ -85,5 +87,16 @@ public class AzureAccountConfig
   public String getKey()
   {
     return key;
+  }
+
+  public String getSharedAccessStorageToken()
+  {
+    return sharedAccessStorageToken;
+  }
+
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
+  public void setSharedAccessStorageToken(String sharedAccessStorageToken)
+  {
+    this.sharedAccessStorageToken = sharedAccessStorageToken;
   }
 }

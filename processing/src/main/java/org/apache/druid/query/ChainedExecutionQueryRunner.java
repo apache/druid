@@ -78,7 +78,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
-    final int priority = QueryContexts.getPriority(query);
+    final int priority = query.context().getPriority();
     final Ordering ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
     return new BaseSequence<T, Iterator<T>>(
@@ -137,11 +137,12 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             queryWatcher.registerQueryFuture(query, future);
 
             try {
+              final QueryContext context = query.context();
               return new MergeIterable<>(
-                  ordering.nullsFirst(),
-                  QueryContexts.hasTimeout(query) ?
-                      future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      future.get()
+                  context.hasTimeout() ?
+                      future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
+                      future.get(),
+                  ordering.nullsFirst()
               ).iterator();
             }
             catch (InterruptedException e) {

@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.antlr.ExprBaseListener;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
 import javax.annotation.Nullable;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -145,7 +146,7 @@ public class ExprListenerImpl extends ExprBaseListener
   {
     nodes.put(
         ctx,
-        new LongExpr(Long.parseLong(ctx.getText()))
+        new BigIntegerExpr(new BigInteger(ctx.getText()))
     );
   }
 

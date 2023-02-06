@@ -17,7 +17,7 @@
 
 image:
   repository: apache/druid
-  tag: 0.22.0
+  tag: 0.23.0
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -232,6 +232,9 @@ historical:
     # requests:
     #   cpu: 500m
     #   memory: 512Mi
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
 
   ## (dict) If specified, apply these annotations to each master Pod
   podAnnotations: {}

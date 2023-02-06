@@ -145,7 +145,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -194,7 +194,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -242,7 +242,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -301,7 +301,7 @@ public class IndexGeneratorJobTest
             new HadoopyStringInputRowParser(
                 new CSVParseSpec(
                     new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
@@ -335,7 +335,7 @@ public class IndexGeneratorJobTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("ts", "yyyyMMddHH", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -376,7 +376,7 @@ public class IndexGeneratorJobTest
                         "Q",
                         "X",
                         "Y"
-                    )), null, null),
+                    ))),
                     null,
                     null,
                     null

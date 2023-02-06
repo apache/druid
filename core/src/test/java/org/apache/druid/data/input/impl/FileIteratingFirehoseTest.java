@@ -79,7 +79,7 @@ public class FileIteratingFirehoseTest extends NullHandlingTest
     parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("ts", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x"))),
             ",",
             ImmutableList.of("ts", "x"),
             false,

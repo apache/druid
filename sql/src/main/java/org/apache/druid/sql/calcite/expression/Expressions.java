@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -34,6 +35,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -50,14 +52,15 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
@@ -65,6 +68,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -92,7 +96,12 @@ public class Expressions
   )
   {
     if (project == null) {
-      // I don't think the factory impl matters here.
+      // Gian doesn't think the factory impl matters here, he's likely correct.  But, upon reading what this is doing,
+      // we are re-building the list of things in the RelDataType for every single call to `fromFieldAccess`.
+      // `fromFieldAccess` is called pretty regularly in pretty low-level areas of the code, so it would make sense
+      // that we are perhaps re-creating the exact same object over and over and over and over again and wasting CPU
+      // cycles.  It would likely be good to refactor the code such that we ensure we only ever compute the thing
+      // once and then reuse it.
       return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);
@@ -208,10 +217,49 @@ public class Expressions
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
     } else if (kind == SqlKind.LITERAL) {
       return literalToDruidExpression(plannerContext, rexNode);
+    } else if (kind == SqlKind.FIELD_ACCESS) {
+      return fieldAccessToDruidExpression(rowSignature, rexNode);
     } else {
       // Can't translate.
       return null;
     }
+  }
+
+  private static DruidExpression fieldAccessToDruidExpression(
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    // Translate field references.
+    final RexFieldAccess ref = (RexFieldAccess) rexNode;
+    if (ref.getField().getIndex() > rowSignature.size()) {
+      // This case arises in the case of a correlation where the rexNode points to a table from the left subtree
+      // while the underlying datasource is the scan stub created from LogicalValuesRule
+      // In such a case we throw a CannotBuildQueryException so that Calcite does not go ahead with this path
+      // This exception is caught while returning false from isValidDruidQuery() method
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Cannot build query as column name [%s] does not exist in row [%s]", ref.getField().getName(), rowSignature)
+      );
+    }
+
+    final String columnName = ref.getField().getName();
+    final int index = rowSignature.indexOf(columnName);
+
+    // This case arises when the rexNode has a name which is not in the underlying stub created using DruidUnnestDataSourceRule
+    // The column name has name ZERO with rowtype as LONG
+    // causes the index to be -1. In such a case we cannot build the query
+    // and throw an exception while returning false from isValidDruidQuery() method
+    if (index < 0) {
+      throw new CannotBuildQueryException(StringUtils.format(
+          "Expression referred to nonexistent index[%d] in row[%s]",
+          index,
+          rowSignature
+      ));
+    }
+    
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(index);
+
+    return DruidExpression.ofColumn(columnType.get(), columnName);
   }
 
   private static DruidExpression inputRefToDruidExpression(
@@ -222,11 +270,12 @@ public class Expressions
     // Translate field references.
     final RexInputRef ref = (RexInputRef) rexNode;
     final String columnName = rowSignature.getColumnName(ref.getIndex());
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getIndex());
     if (columnName == null) {
       throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
-    return DruidExpression.fromColumn(columnName);
+    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
   }
 
   private static DruidExpression rexCallToDruidExpression(
@@ -242,6 +291,7 @@ public class Expressions
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
+      plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
       return null;
     } else {
 
@@ -257,7 +307,7 @@ public class Expressions
         if (postAggregator != null) {
           postAggregatorVisitor.addPostAgg(postAggregator);
           String exprName = postAggregator.getName();
-          return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
+          return DruidExpression.ofColumn(postAggregator.getType(rowSignature), exprName);
         }
       }
 
@@ -271,7 +321,8 @@ public class Expressions
     }
   }
 
-  private static DruidExpression literalToDruidExpression(
+  @Nullable
+  static DruidExpression literalToDruidExpression(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
@@ -279,32 +330,48 @@ public class Expressions
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
 
     // Translate literal.
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
+    } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
+      );
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      // Numeric, non-INT, means we represent it as a double.
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.doubleLiteral(number.doubleValue())
+      );
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(milliseconds));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(milliseconds));
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(months));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
       } else {
-        return DruidExpression.fromExpression(
-            DruidExpression.numberLiteral(
+        return DruidExpression.ofLiteral(
+            columnType,
+            DruidExpression.longLiteral(
                 Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
             )
         );
       }
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      return DruidExpression.ofLiteral(
+          columnType,
+          DruidExpression.longLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0)
+      );
     } else {
       // Can't translate other literals.
       return null;
@@ -469,14 +536,13 @@ public class Expressions
             druidExpression.getSimpleExtraction().getExtractionFn()
         );
       } else if (virtualColumnRegistry != null) {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
-            virtualColumn.getOutputName(),
+            virtualColumn,
             NullHandling.defaultStringValue(),
             null
         );
@@ -558,13 +624,10 @@ public class Expressions
         column = lhsExpression.getSimpleExtraction().getColumn();
         extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
       } else if (virtualColumnRegistry != null) {
-        VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             lhsExpression,
             lhs.getType()
         );
-
-        column = virtualLhs.getOutputName();
         extractionFn = null;
       } else {
         return null;

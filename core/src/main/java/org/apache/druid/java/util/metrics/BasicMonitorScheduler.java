@@ -52,8 +52,7 @@ public class BasicMonitorScheduler extends MonitorScheduler
         exec,
         getConfig().getEmitterPeriod(),
         () -> {
-          // Run one more time even if the monitor was removed, in case there's some extra data to flush
-          if (monitor.monitor(getEmitter()) && hasMonitor(monitor)) {
+          if (hasMonitor(monitor) && monitor.monitor(getEmitter())) {
             return Signal.REPEAT;
           } else {
             removeMonitor(monitor);

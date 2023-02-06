@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.first;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 /**
  * For backwards compatibility; equivalent to a regular StringFirstAggregatorFactory.
@@ -30,5 +31,11 @@ public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFa
   public StringFirstFoldingAggregatorFactory(String name, String fieldName, Integer maxStringBytes)
   {
     super(name, fieldName, null, maxStringBytes);
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringFirstFoldingAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
   }
 }

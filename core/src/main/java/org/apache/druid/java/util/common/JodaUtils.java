@@ -24,9 +24,10 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -182,18 +183,18 @@ public class JodaUtils
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
   {
-    ArrayList<DateTime> startDates = new ArrayList<>();
-    ArrayList<DateTime> endDates = new ArrayList<>();
+    boolean emptyIntervals = true;
+    DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
+    DateTime minStart = new DateTime(Long.MAX_VALUE, ISOChronology.getInstanceUTC());
+    DateTime maxEnd = new DateTime(Long.MIN_VALUE, ISOChronology.getInstanceUTC());
 
     for (Interval interval : intervals) {
-      startDates.add(interval.getStart());
-      endDates.add(interval.getEnd());
+      emptyIntervals = false;
+      minStart = Collections.min(ImmutableList.of(minStart, interval.getStart()), dateTimeComp);
+      maxEnd = Collections.max(ImmutableList.of(maxEnd, interval.getEnd()), dateTimeComp);
     }
 
-    DateTime minStart = minDateTime(startDates.toArray(new DateTime[0]));
-    DateTime maxEnd = maxDateTime(endDates.toArray(new DateTime[0]));
-
-    if (minStart == null || maxEnd == null) {
+    if (emptyIntervals) {
       throw new IllegalArgumentException("Empty list of intervals");
     }
     return new Interval(minStart, maxEnd);

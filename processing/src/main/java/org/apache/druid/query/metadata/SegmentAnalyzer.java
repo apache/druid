@@ -37,13 +37,14 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -57,8 +58,8 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class SegmentAnalyzer
 {
@@ -95,9 +96,10 @@ public class SegmentAnalyzer
     final StorageAdapter storageAdapter = segment.asStorageAdapter();
 
     // get length and column names from storageAdapter
-    final int length = storageAdapter.getNumRows();
+    final int numRows = storageAdapter.getNumRows();
 
-    Map<String, ColumnAnalysis> columns = new TreeMap<>();
+    // Use LinkedHashMap to preserve column order.
+    final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
     final RowSignature rowSignature = storageAdapter.getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {
@@ -117,13 +119,13 @@ public class SegmentAnalyzer
           final int bytesPerRow =
               ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
 
-          analysis = analyzeNumericColumn(capabilities, length, bytesPerRow);
+          analysis = analyzeNumericColumn(capabilities, numRows, bytesPerRow);
           break;
         case FLOAT:
-          analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
+          analysis = analyzeNumericColumn(capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
           break;
         case DOUBLE:
-          analysis = analyzeNumericColumn(capabilities, length, Double.BYTES);
+          analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
           break;
         case STRING:
           if (index != null) {
@@ -134,7 +136,7 @@ public class SegmentAnalyzer
           break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
-          analysis = analyzeComplexColumn(capabilities, columnHolder);
+          analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
           break;
         default:
           log.warn("Unknown column type[%s].", capabilities.asTypeString());
@@ -200,32 +202,35 @@ public class SegmentAnalyzer
     Comparable max = null;
     long size = 0;
     final int cardinality;
-    if (capabilities.hasBitmapIndexes()) {
-      final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-      cardinality = bitmapIndex.getCardinality();
-
+    final ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
+    final DictionaryEncodedStringValueIndex valueIndex =
+        indexSupplier == null ? null : indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+    if (valueIndex != null) {
+      cardinality = valueIndex.getCardinality();
       if (analyzingSize()) {
         for (int i = 0; i < cardinality; ++i) {
-          String value = bitmapIndex.getValue(i);
+          String value = valueIndex.getValue(i);
           if (value != null) {
-            size += StringUtils.estimatedBinaryLengthAsUTF8(value) *
-                    ((long) bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size());
+            size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
           }
         }
       }
-
       if (analyzingMinMax() && cardinality > 0) {
-        min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
-        max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
+        min = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(0));
+        max = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(cardinality - 1));
       }
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       try (BaseColumn column = columnHolder.getColumn()) {
-        DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
-        cardinality = theColumn.getCardinality();
-        if (analyzingMinMax() && cardinality > 0) {
-          min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-          max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+        if (column instanceof DictionaryEncodedColumn) {
+          DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
+          cardinality = theColumn.getCardinality();
+          if (analyzingMinMax() && cardinality > 0) {
+            min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
+            max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+          }
+        } else {
+          cardinality = 0;
         }
       }
       catch (IOException e) {
@@ -329,6 +334,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeComplexColumn(
       @Nullable final ColumnCapabilities capabilities,
+      final int numCells,
       @Nullable final ColumnHolder columnHolder
   )
   {
@@ -361,8 +367,7 @@ public class SegmentAnalyzer
           );
         }
 
-        final int length = complexColumn.getLength();
-        for (int i = 0; i < length; ++i) {
+        for (int i = 0; i < numCells; ++i) {
           size += inputSizeFn.apply(complexColumn.getRowValue(i));
         }
       }

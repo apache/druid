@@ -132,6 +132,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getUpper()
   {
     return upper;
@@ -139,18 +140,21 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getLower()
   {
     return lower;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isLowerStrict()
   {
     return lowerStrict;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isUpperStrict()
   {
     return upperStrict;
@@ -168,6 +172,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
@@ -374,7 +379,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
           try {
             lowerLongBound = lowerBigDecimal.longValueExact();
             hasLowerLongBound = true;
-          } 
+          }
           catch (ArithmeticException ae) { // the BigDecimal can't be contained in a long
             hasLowerLongBound = false;
             lowerLongBound = 0L;
@@ -452,7 +457,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } 
+    }
     catch (NumberFormatException nfe) {
       return null;
     }
@@ -470,7 +475,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     BigDecimal convertedBD;
     try {
       convertedBD = new BigDecimal(floatStr);
-    } 
+    }
     catch (NumberFormatException nfe) {
       return null;
     }

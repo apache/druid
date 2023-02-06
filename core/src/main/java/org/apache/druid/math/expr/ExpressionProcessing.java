@@ -48,13 +48,19 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests(@Nullable Boolean allowNestedArrays)
   {
-    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null);
+    INSTANCE = new ExpressionProcessingConfig(allowNestedArrays, null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForStrictBooleansTests(boolean useStrict)
   {
-    INSTANCE = new ExpressionProcessingConfig(null, useStrict);
+    INSTANCE = new ExpressionProcessingConfig(null, useStrict, null, null);
+  }
+
+  @VisibleForTesting
+  public static void initializeForHomogenizeNullMultiValueStrings()
+  {
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
   }
 
   /**
@@ -62,23 +68,47 @@ public class ExpressionProcessing
    */
   public static boolean allowNestedArrays()
   {
-    // this should only be null in a unit test context
-    // in production this will be injected by the expression processing module
-    if (INSTANCE == null) {
-      throw new IllegalStateException(
-          "Expressions module not initialized, call ExpressionProcessing.initializeForTests()"
-      );
-    }
+    checkInitialized();
     return INSTANCE.allowNestedArrays();
   }
 
-
+  /**
+   * All boolean expressions are {@link ExpressionType#LONG}
+   */
   public static boolean useStrictBooleans()
+  {
+    checkInitialized();
+    return INSTANCE.isUseStrictBooleans();
+  }
+
+  /**
+   * All {@link ExprType#ARRAY} values will be converted to {@link ExpressionType#STRING} by their column selectors
+   * (not within expression processing) to be treated as multi-value strings instead of native arrays.
+   */
+  public static boolean processArraysAsMultiValueStrings()
+  {
+    checkInitialized();
+    return INSTANCE.processArraysAsMultiValueStrings();
+  }
+
+  /**
+   * All multi-value string expression input values of 'null', '[]', and '[null]' will be coerced to '[null]'. If false,
+   * (the default) this will only be done when single value expressions are implicitly mapped across multi-value rows,
+   * so that the single valued expression will always be evaluated with an input value of 'null'
+   */
+  public static boolean isHomogenizeNullMultiValueStringArrays()
+  {
+    checkInitialized();
+    return INSTANCE.isHomogenizeNullMultiValueStringArrays();
+  }
+
+  private static void checkInitialized()
   {
     // this should only be null in a unit test context, in production this will be injected by the null handling module
     if (INSTANCE == null) {
-      throw new IllegalStateException("ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests()");
+      throw new IllegalStateException(
+          "ExpressionProcessing module not initialized, call ExpressionProcessing.initializeForTests() or one of its variants"
+      );
     }
-    return INSTANCE.isUseStrictBooleans();
   }
 }

@@ -20,12 +20,14 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
 import org.joda.time.Chronology;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -33,7 +35,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -48,9 +49,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 3 || args.size() > 4) {
-      throw new IAE("Function[%s] must have 3 to 4 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 3, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       return new TimestampShiftExpr(args);
@@ -110,8 +109,32 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampShiftExpr(newArgs));
+      return shuttle.visit(new TimestampShiftExpr(shuttle.visitAll(args)));
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> buildVectorized(VectorInputBindingInspector inspector)
+    {
+      ExprVectorProcessor<?> processor;
+      processor = new LongOutLongInFunctionVectorValueProcessor(
+          CastToTypeVectorProcessor.cast(args.get(0).buildVectorized(inspector), ExpressionType.LONG),
+          inspector.getMaxVectorSize()
+      )
+      {
+        @Override
+        public long apply(long input)
+        {
+          return chronology.add(period, input, step);
+        }
+      };
+
+      return (ExprVectorProcessor<T>) processor;
     }
 
     @Nullable
@@ -146,8 +169,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampShiftDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampShiftDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -156,5 +178,6 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       return ExpressionType.LONG;
     }
+
   }
 }

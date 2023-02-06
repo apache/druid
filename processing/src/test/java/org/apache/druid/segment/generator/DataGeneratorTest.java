@@ -646,7 +646,7 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
             new StringDimensionSchema("dimA"),
             new StringDimensionSchema("dimB"),
             new StringDimensionSchema("dimC")
-        ), null, null
+        )
     );
     AggregatorFactory[] metrics = {
         new CountAggregatorFactory("cnt")

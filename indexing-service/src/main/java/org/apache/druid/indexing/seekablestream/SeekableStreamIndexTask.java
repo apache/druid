@@ -95,7 +95,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         groupId,
         taskResource,
         dataSchema.getDataSource(),
-        context
+        context,
+        IngestionMode.APPEND
     );
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -144,8 +145,9 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
+    emitMetric(toolbox.getEmitter(), "ingest/count", 1);
     return getRunner().run(toolbox);
   }
 
@@ -201,7 +203,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        isUseMaxMemoryEstimates()
     );
   }
 
@@ -260,7 +263,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         );
       }
     }
-
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 

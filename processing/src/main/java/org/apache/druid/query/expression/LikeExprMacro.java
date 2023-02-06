@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -45,23 +44,22 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 or 3 arguments", name());
-    }
+    validationHelperCheckAnyOfArgumentCount(args, 2, 3);
 
     final Expr arg = args.get(0);
     final Expr patternExpr = args.get(1);
     final Expr escapeExpr = args.size() > 2 ? args.get(2) : null;
 
-    if (!patternExpr.isLiteral() || (escapeExpr != null && !escapeExpr.isLiteral())) {
-      throw new IAE("pattern and escape must be literals");
+    validationHelperCheckArgIsLiteral(patternExpr, "pattern");
+    if (escapeExpr != null) {
+      validationHelperCheckArgIsLiteral(escapeExpr, "escape");
     }
 
     final String escape = escapeExpr == null ? null : (String) escapeExpr.getLiteralValue();
     final Character escapeChar;
 
     if (escape != null && escape.length() != 1) {
-      throw new IllegalArgumentException("Escape must be null or a single character");
+      throw validationFailed("escape must be null or a single character");
     } else {
       escapeChar = escape == null ? null : escape.charAt(0);
     }
@@ -88,8 +86,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new LikeExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

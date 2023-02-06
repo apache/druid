@@ -26,7 +26,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteOrder;
 
 /**

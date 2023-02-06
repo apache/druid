@@ -23,7 +23,7 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
-import org.apache.druid.sql.calcite.run.QueryFeature;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 /**
  * Rule that converts an {@link ExternalTableScan} to a call to {@link DruidQueryRel#scanExternal}.
@@ -43,9 +43,15 @@ public class ExternalTableScanRule extends RelOptRule
   @Override
   public boolean matches(RelOptRuleCall call)
   {
-    if (plannerContext.getQueryMaker().feature(QueryFeature.CAN_READ_EXTERNAL_DATA)) {
+    if (plannerContext.engineHasFeature(EngineFeature.READ_EXTERNAL_DATA)) {
       return super.matches(call);
     } else {
+      plannerContext.setPlanningError(
+          "Cannot use '%s' with SQL engine '%s'.",
+          ExternalOperatorConversion.FUNCTION_NAME,
+          plannerContext.getEngine().name()
+      );
+
       return false;
     }
   }
@@ -53,6 +59,11 @@ public class ExternalTableScanRule extends RelOptRule
   @Override
   public void onMatch(final RelOptRuleCall call)
   {
+    if (!plannerContext.engineHasFeature(EngineFeature.READ_EXTERNAL_DATA)) {
+      // Not called because "matches" returns false.
+      throw new UnsupportedOperationException();
+    }
+
     final ExternalTableScan scan = call.rel(0);
     call.transformTo(DruidQueryRel.scanExternal(scan, plannerContext));
   }

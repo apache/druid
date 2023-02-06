@@ -54,7 +54,7 @@ public class JavaScriptParseSpecTest
     );
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc"))),
         "abc",
         JavaScriptConfig.getEnabledInstance()
     );
@@ -75,7 +75,7 @@ public class JavaScriptParseSpecTest
     final JavaScriptConfig config = JavaScriptConfig.getEnabledInstance();
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc"))),
         "function(str) { var parts = str.split(\"-\"); return { one: parts[0], two: parts[1] } }",
         config
     );
@@ -91,7 +91,7 @@ public class JavaScriptParseSpecTest
     final JavaScriptConfig config = new JavaScriptConfig(false);
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc"))),
         "abc",
         config
     );

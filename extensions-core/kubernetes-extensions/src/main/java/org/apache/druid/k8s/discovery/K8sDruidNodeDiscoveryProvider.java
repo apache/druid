@@ -267,7 +267,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
           try {
             while (iter.hasNext()) {
               Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
-              if (item != null && item.type != null) {
+              if (item != null && item.type != null && item.object != null) {
                 switch (item.type) {
                   case WatchResult.ADDED:
                     baseNodeRoleWatcher.childAdded(item.object.getNode());
@@ -282,7 +282,10 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                 nextResourceVersion = item.object.getResourceVersion();
 
               } else {
-                LOGGER.error("WTH! item or item.type is NULL");
+                // Try again by starting the watch from the beginning. This can happen if the
+                // watch goes bad.
+                LOGGER.debug("Received NULL item while watching node type [%s]. Restarting watch.", this.nodeRole);
+                return;
               }
             }
           }

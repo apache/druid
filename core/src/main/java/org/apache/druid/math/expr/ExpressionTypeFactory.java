@@ -21,7 +21,11 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.TypeFactory;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 
@@ -84,5 +88,35 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
   public ExpressionType ofComplex(@Nullable String complexTypeName)
   {
     return INTERNER.intern(new ExpressionType(ExprType.COMPLEX, complexTypeName, null));
+  }
+
+  @Override
+  public <T> TypeStrategy<T> getTypeStrategy(ExpressionType expressionType)
+  {
+    final TypeStrategy strategy;
+    switch (expressionType.getType()) {
+      case LONG:
+        strategy = TypeStrategies.LONG;
+        break;
+      case DOUBLE:
+        strategy = TypeStrategies.DOUBLE;
+        break;
+      case STRING:
+        strategy = TypeStrategies.STRING;
+        break;
+      case ARRAY:
+        strategy = new TypeStrategies.ArrayTypeStrategy(expressionType);
+        break;
+      case COMPLEX:
+        TypeStrategy<?> complexStrategy = TypeStrategies.getComplex(expressionType.getComplexTypeName());
+        if (complexStrategy == null) {
+          throw new IAE("Cannot find strategy for type [%s]", expressionType.asTypeString());
+        }
+        strategy = complexStrategy;
+        break;
+      default:
+        throw new ISE("Unsupported expression type[%s]", expressionType.getType());
+    }
+    return strategy;
   }
 }

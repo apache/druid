@@ -34,8 +34,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -220,7 +222,16 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    MetricsEmittingQueryRunner<Result<TimeseriesResultValue>> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<Result<TimeseriesResultValue>>(
+            stubServiceEmitter,
+            new TimeseriesQueryQueryToolChest(),
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    Iterable<Result<TimeseriesResultValue>> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
@@ -306,6 +317,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
+    stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
     Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
@@ -639,7 +651,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         new Result<>(
             QueryRunnerTestHelper.EMPTY_INTERVAL.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
-                TestHelper.createExpectedMap(
+                TestHelper.makeMap(
                     "rows",
                     0L,
                     "index",
@@ -3031,6 +3043,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0",
                                               null,
                                               false,
+                                              false,
+                                              false,
                                               "__acc + 1",
                                               "__acc + diy_count",
                                               null,
@@ -3045,6 +3059,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "0.0",
                                               null,
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               null,
                                               null,
@@ -3057,8 +3073,10 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               ImmutableSet.of("index"),
                                               null,
                                               "0.0",
-                                              "<DOUBLE>[]",
+                                              "ARRAY<DOUBLE>[]",
                                               null,
+                                              false,
+                                              false,
                                               "__acc + index",
                                               "array_concat(__acc, diy_decomposed_sum)",
                                               null,
@@ -3073,6 +3091,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,
@@ -3094,7 +3114,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 6626.151569,
                     "diy_decomposed_sum", 6626.151569,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         ),
@@ -3105,7 +3125,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     "diy_count", 13L,
                     "diy_sum", 5833.209718,
                     "diy_decomposed_sum", 5833.209718,
-                    "array_agg_distinct", new String[] {"upfront", "spot", "total_market"}
+                    "array_agg_distinct", new String[] {"spot", "total_market", "upfront"}
                 )
             )
         )
@@ -3122,7 +3142,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     cannotVectorize();
     if (!vectorize) {
       // size bytes when it overshoots varies slightly between algorithms
-      expectedException.expectMessage("Unable to serialize [ARRAY<STRING>]");
+      expectedException.expectMessage("Exceeded memory usage when aggregating type [ARRAY<STRING>]");
     }
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3137,6 +3157,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                               "[]",
                                               null,
                                               null,
+                                              true,
+                                              false,
                                               "array_set_add(acc, market)",
                                               "array_set_add_all(acc, array_agg_distinct)",
                                               null,
@@ -3231,12 +3253,12 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, results);
   }
 
-  private Map<String, Object> makeContext()
+  protected Map<String, Object> makeContext()
   {
     return makeContext(ImmutableMap.of());
   }
 
-  private Map<String, Object> makeContext(final Map<String, Object> myContext)
+  protected Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
     context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
@@ -3246,7 +3268,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     return context;
   }
 
-  private void cannotVectorize()
+  protected void cannotVectorize()
   {
     if (vectorize) {
       expectedException.expect(RuntimeException.class);

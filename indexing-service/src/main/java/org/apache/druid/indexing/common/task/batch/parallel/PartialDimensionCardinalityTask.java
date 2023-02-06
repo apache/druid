@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -250,13 +249,12 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
 
   private void sendReport(TaskToolbox toolbox, DimensionCardinalityReport report)
   {
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
-        ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
-        ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
-    );
-    taskClient.report(supervisorTaskId, report);
+    final ParallelIndexSupervisorTaskClient taskClient =
+        toolbox.getSupervisorTaskClientProvider().build(
+            supervisorTaskId,
+            ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
+            ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
+        );
+    taskClient.report(report);
   }
 }

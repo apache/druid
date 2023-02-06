@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
@@ -59,4 +60,9 @@ public class MomentSketchMergeAggregatorFactory extends MomentSketchAggregatorFa
     return new MomentSketchMergeBufferAggregator(selector, getK(), getCompress());
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new MomentSketchMergeAggregatorFactory(newName, getK(), getCompress());
+  }
 }

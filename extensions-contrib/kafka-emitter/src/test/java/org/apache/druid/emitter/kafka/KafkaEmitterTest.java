@@ -30,10 +30,8 @@ import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.DefaultRequestLogEventBuilderFactory;
 import org.apache.druid.server.log.RequestLogEvent;
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,6 +39,10 @@ import org.junit.runners.Parameterized;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @RunWith(Parameterized.class)
 public class KafkaEmitterTest
@@ -57,8 +59,8 @@ public class KafkaEmitterTest
     };
   }
 
-  // there is 10 seconds wait in kafka emitter before it starts sending events to broker, so set a timeout for 15 seconds
-  @Test(timeout = 15_000)
+  // there is 1 seconds wait in kafka emitter before it starts sending events to broker, set a timeout for 5 seconds
+  @Test(timeout = 5_000)
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(
@@ -80,7 +82,7 @@ public class KafkaEmitterTest
 
     final CountDownLatch countDownSentEvents = new CountDownLatch(
         requestTopic == null ? totalEventsExcludingRequestLogEvents : totalEvents);
-    final KafkaProducer<String, String> producer = EasyMock.createStrictMock(KafkaProducer.class);
+    final KafkaProducer<String, String> producer = mock(KafkaProducer.class);
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
         new KafkaEmitterConfig("", "metrics", "alerts", requestTopic, "test-cluster", null),
         new ObjectMapper()
@@ -89,22 +91,17 @@ public class KafkaEmitterTest
       @Override
       protected Producer<String, String> setKafkaProducer()
       {
+        // override send interval to 1 second
+        sendInterval = 1;
         return producer;
-      }
-
-      @Override
-      protected void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue,
-          Callback callback
-      )
-      {
-        countDownSentEvents.countDown();
-        super.sendToKafka(topic, recordQueue, callback);
       }
     };
 
-    EasyMock.expect(producer.send(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null)
-        .times(requestTopic == null ? totalEventsExcludingRequestLogEvents : totalEvents);
-    EasyMock.replay(producer);
+    when(producer.send(any(), any())).then((invocation) -> {
+      countDownSentEvents.countDown();
+      return null;
+    });
+
     kafkaEmitter.start();
 
     for (Event event : serviceMetricEvents) {
@@ -122,18 +119,5 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
     Assert.assertEquals(requestTopic == null ? requestLogEvents.size() : 0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
-
-    while (true) {
-      try {
-        EasyMock.verify(producer);
-        break;
-      }
-      catch (Throwable e) {
-        // although the latch may have count down, producer.send may not have been called yet in KafkaEmitter
-        // so wait for sometime before verifying the mock
-        Thread.sleep(100);
-        // just continue
-      }
-    }
   }
 }

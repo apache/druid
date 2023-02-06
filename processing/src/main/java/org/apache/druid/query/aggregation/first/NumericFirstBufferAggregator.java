@@ -86,6 +86,9 @@ public abstract class NumericFirstBufferAggregator<TSelector extends BaseNullabl
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     long time = timeSelector.getLong();
     long firstTime = buf.getLong(position);
     if (time < firstTime) {

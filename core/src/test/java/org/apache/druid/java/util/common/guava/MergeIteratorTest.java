@@ -21,7 +21,7 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -34,12 +34,12 @@ public class MergeIteratorTest
   public void testSanity()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
-        Ordering.natural(),
         Lists.newArrayList(
             Arrays.asList(1, 3, 5, 7, 9).iterator(),
             Arrays.asList(2, 8).iterator(),
             Arrays.asList(4, 6, 8).iterator()
-        )
+        ),
+        Ordering.natural()
     );
 
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9), Lists.newArrayList(iter));
@@ -49,12 +49,12 @@ public class MergeIteratorTest
   public void testScrewsUpOnOutOfOrder()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
-        Ordering.natural(),
         Lists.newArrayList(
             Arrays.asList(1, 3, 5, 4, 7, 9).iterator(),
             Arrays.asList(2, 8).iterator(),
             Arrays.asList(4, 6).iterator()
-        )
+        ),
+        Ordering.natural()
     );
 
     Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 4, 6, 7, 8, 9), Lists.newArrayList(iter));

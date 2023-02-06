@@ -32,7 +32,6 @@ import com.google.common.primitives.Chars;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
@@ -295,21 +294,18 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     }
 
     /**
-     * Checks if the suffix of strings.get(i) matches the suffix of this matcher. The first prefix.length characters
-     * of s are ignored. This method is useful if you've already independently verified the prefix. This method
-     * evalutes strings.get(i) lazily to save time when it isn't necessary to actually look at the string.
+     * Checks if the suffix of "value" matches the suffix of this matcher. The first prefix.length() characters
+     * of "value" are ignored. This method is useful if you've already independently verified the prefix.
      */
-    public boolean matchesSuffixOnly(final Indexed<String> strings, final int i)
+    public boolean matchesSuffixOnly(@Nullable String value)
     {
       if (suffixMatch == SuffixMatch.MATCH_ANY) {
         return true;
       } else if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
-        final String s = strings.get(i);
-        return s == null ? matches(null) : s.length() == prefix.length();
+        return value == null ? matches(null) : value.length() == prefix.length();
       } else {
         // suffixMatch is MATCH_PATTERN
-        final String s = strings.get(i);
-        return matches(s);
+        return matches(value);
       }
     }
 

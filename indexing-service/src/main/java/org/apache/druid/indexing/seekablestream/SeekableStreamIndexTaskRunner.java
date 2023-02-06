@@ -60,6 +60,7 @@ import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataActi
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -393,7 +394,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         null
     );
     this.fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    toolbox.addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
+    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters);
+    toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
     final LookupNodeService lookupNodeService = lookupTier == null ?
@@ -767,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -895,12 +899,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
         toolbox.getChatHandlerProvider().unregister(task.getId());
-
+        toolbox.removeMonitor(metricsMonitor);
         if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
           toolbox.getDataSegmentServerAnnouncer().unannounce();
@@ -1024,6 +1027,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     return null;
                   }
                 }
+            );
+            // emit segment count metric:
+            int segmentCount = 0;
+            if (publishedSegmentsAndCommitMetadata != null
+                && publishedSegmentsAndCommitMetadata.getSegments() != null) {
+              segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
+            }
+            task.emitMetric(
+                toolbox.getEmitter(),
+                "ingest/segments/count",
+                segmentCount
             );
           }
 
@@ -1240,10 +1254,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SequenceOffsetType endSequenceNumber
   )
   {
-    final int compareToEnd = createSequenceNumber(recordSequenceNumber)
-        .compareTo(createSequenceNumber(endSequenceNumber));
-
-    return isEndOffsetExclusive() ? compareToEnd < 0 : compareToEnd <= 0;
+    return createSequenceNumber(recordSequenceNumber).isMoreToReadBeforeReadingRecord(
+        createSequenceNumber(endSequenceNumber),
+        isEndOffsetExclusive()
+    );
   }
 
   /**
@@ -1298,14 +1312,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PAUSED;
         hasPaused.signalAll();
 
-        log.debug("Received pause command, pausing ingestion until resumed.");
+        long pauseTime = System.currentTimeMillis();
+        log.info("Received pause command, pausing ingestion until resumed.");
         while (pauseRequested) {
           shouldResume.await();
         }
 
         status = Status.READING;
         shouldResume.signalAll();
-        log.debug("Received resume command, resuming ingestion.");
+        log.info("Received resume command, resuming ingestion.");
+        task.emitMetric(toolbox.getEmitter(), "ingest/pause/time", System.currentTimeMillis() - pauseTime);
         return true;
       }
     }
@@ -1639,6 +1655,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
+                         .type(MediaType.TEXT_PLAIN)
                          .entity(StringUtils.format(
                              "Sequence [%s] has already endOffsets set, cannot set to [%s]",
                              latestSequence,
@@ -1771,6 +1788,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
+                     .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
     }

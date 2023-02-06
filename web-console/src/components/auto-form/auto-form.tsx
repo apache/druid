@@ -16,7 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, FormGroup, Intent, NumericInput } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  FormGroup,
+  InputGroup,
+  Intent,
+  NumericInput,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
@@ -27,7 +34,8 @@ import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
 import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
-import { SuggestibleInput, Suggestion } from '../suggestible-input/suggestible-input';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
+import { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 
@@ -45,22 +53,32 @@ export interface Field<M> {
     | 'boolean'
     | 'string-array'
     | 'json'
-    | 'interval';
+    | 'interval'
+    | 'custom';
   defaultValue?: any;
   emptyValue?: any;
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: Functor<M, string>;
   min?: number;
+  max?: number;
   zeroMeansUndefined?: boolean;
   height?: string;
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean>;
   required?: Functor<M, boolean>;
+  multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
   adjustment?: (model: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
+
+  customSummary?: (v: any) => string;
+  customDialog?: (o: {
+    value: any;
+    onValueChange: (v: any) => void;
+    onClose: () => void;
+  }) => JSX.Element;
 }
 
 interface ComputedFieldValues {
@@ -81,6 +99,7 @@ export interface AutoFormProps<M> {
 
 export interface AutoFormState {
   showMore: boolean;
+  customDialog?: JSX.Element;
 }
 
 export class AutoForm<T extends Record<string, any>> extends React.PureComponent<
@@ -247,6 +266,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           if (onFinalize) onFinalize();
         }}
         min={field.min || 0}
+        max={field.max}
         fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
@@ -302,6 +322,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
       />
     );
   }
@@ -369,6 +390,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
       />
     );
   }
@@ -385,6 +407,36 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         }}
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+      />
+    );
+  }
+
+  private renderCustomInput(field: Field<T>): JSX.Element {
+    const { model } = this.props;
+    const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
+    const effectiveValue = modelValue || defaultValue;
+
+    const onEdit = () => {
+      this.setState({
+        customDialog: field.customDialog?.({
+          value: effectiveValue,
+          onValueChange: v => this.fieldChange(field, v),
+          onClose: () => {
+            this.setState({ customDialog: undefined });
+          },
+        }),
+      });
+    };
+
+    return (
+      <InputGroup
+        className="custom-input"
+        value={(field.customSummary || String)(effectiveValue)}
+        intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+        readOnly
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
+        rightElement={<Button icon={IconNames.EDIT} minimal onClick={onEdit} />}
+        onClick={onEdit}
       />
     );
   }
@@ -407,6 +459,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         return this.renderJsonInput(field);
       case 'interval':
         return this.renderIntervalInput(field);
+      case 'custom':
+        return this.renderCustomInput(field);
       default:
         throw new Error(`unknown field type '${field.type}'`);
     }
@@ -458,7 +512,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
   render(): JSX.Element {
     const { fields, model, showCustom } = this.props;
-    const { showMore } = this.state;
+    const { showMore, customDialog } = this.state;
 
     let shouldShowMore = false;
     const shownFields = fields.filter(field => {
@@ -483,6 +537,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         {model && shownFields.map(this.renderField)}
         {model && showCustom && showCustom(model) && this.renderCustom()}
         {shouldShowMore && this.renderMoreOrLess()}
+        {customDialog}
       </div>
     );
   }

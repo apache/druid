@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -156,7 +155,7 @@ public class ClientInfoResource
     }
 
     final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline =
-        timelineServerView.getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource(dataSourceName)));
+        timelineServerView.getTimeline((new TableDataSource(dataSourceName)).getAnalysis());
     final Optional<Iterable<TimelineObjectHolder<String, ServerSelector>>> maybeServersLookup =
         maybeTimeline.map(timeline -> timeline.lookup(theInterval));
     if (!maybeServersLookup.isPresent() || Iterables.isEmpty(maybeServersLookup.get())) {

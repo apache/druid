@@ -34,7 +34,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
@@ -43,30 +42,20 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
   private volatile boolean hasNulls = false;
 
-  @Nullable
   @Override
-  public Double processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
-    if (dimValues instanceof List) {
-      throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
-    }
     Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
     if (d == null) {
       hasNulls = NullHandling.sqlCompatible();
     }
-    return d;
+    return new EncodedKeyComponent<>(d, Double.BYTES);
   }
 
   @Override
   public void setSparseIndexed()
   {
     hasNulls = NullHandling.sqlCompatible();
-  }
-
-  @Override
-  public long estimateEncodedKeyComponentSize(Double key)
-  {
-    return Double.BYTES;
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Predicates;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -28,6 +29,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -36,7 +38,7 @@ import java.nio.file.Files;
 public class FileUtilsTest
 {
   @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -44,7 +46,7 @@ public class FileUtilsTest
   @Test
   public void testMap() throws IOException
   {
-    File dataFile = folder.newFile("data");
+    File dataFile = temporaryFolder.newFile("data");
     long buffersMemoryBefore = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
@@ -58,9 +60,41 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testMapFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    final IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> FileUtils.map(dataFile, 0, (long) Integer.MAX_VALUE + 1)
+    );
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+  }
+
+  @Test
+  public void testMapRandomAccessFileTooLarge() throws IOException
+  {
+    File dataFile = temporaryFolder.newFile("data");
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
+      raf.write(42);
+      raf.setLength(1 << 20); // 1 MiB
+    }
+    try (RandomAccessFile raf = new RandomAccessFile(dataFile, "r")) {
+      final IllegalArgumentException e = Assert.assertThrows(
+          IllegalArgumentException.class,
+          () -> FileUtils.map(raf, 0, (long) Integer.MAX_VALUE + 1)
+      );
+      MatcherAssert.assertThat(e.getMessage(), CoreMatchers.containsString("Cannot map region larger than"));
+    }
+  }
+
+  @Test
   public void testWriteAtomically() throws IOException
   {
-    final File tmpDir = folder.newFolder();
+    final File tmpDir = temporaryFolder.newFolder();
     final File tmpFile = new File(tmpDir, "file1");
     FileUtils.writeAtomically(tmpFile, out -> {
       out.write(StringUtils.toUtf8("foo"));
@@ -148,7 +182,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirp() throws IOException
   {
-    final File tmpDir = folder.newFolder();
+    final File tmpDir = temporaryFolder.newFolder();
     final File testDirectory = new File(tmpDir, "test");
 
     FileUtils.mkdirp(testDirectory);
@@ -161,7 +195,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirpCannotCreateOverExistingFile() throws IOException
   {
-    final File tmpFile = folder.newFile();
+    final File tmpFile = temporaryFolder.newFile();
 
     expectedException.expect(IOException.class);
     expectedException.expectMessage("Cannot create directory");
@@ -171,7 +205,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirpCannotCreateInNonWritableDirectory() throws IOException
   {
-    final File tmpDir = folder.newFolder();
+    final File tmpDir = temporaryFolder.newFolder();
     final File testDirectory = new File(tmpDir, "test");
     tmpDir.setWritable(false);
     try {
@@ -189,5 +223,66 @@ public class FileUtilsTest
     // Now it should work.
     FileUtils.mkdirp(testDirectory);
     Assert.assertTrue(testDirectory.isDirectory());
+  }
+
+  @Test
+  public void testCopyLarge() throws IOException
+  {
+    final File dstDirectory = temporaryFolder.newFolder();
+    final File dstFile = new File(dstDirectory, "dst");
+    final String data = "test data to write";
+
+    final long result = FileUtils.copyLarge(
+        () -> new ByteArrayInputStream(StringUtils.toUtf8(data)),
+        dstFile,
+        new byte[1024],
+        Predicates.alwaysFalse(),
+        3,
+        null
+    );
+
+    Assert.assertEquals(data.length(), result);
+    Assert.assertEquals(data, StringUtils.fromUtf8(Files.readAllBytes(dstFile.toPath())));
+  }
+
+  @Test
+  public void testLinkOrCopy1() throws IOException
+  {
+    // Will be a LINK.
+
+    final File fromFile = temporaryFolder.newFile();
+    final File toDir = temporaryFolder.newFolder();
+    final File toFile = new File(toDir, "toFile");
+
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("foo"));
+    final FileUtils.LinkOrCopyResult linkOrCopyResult = FileUtils.linkOrCopy(fromFile, toFile);
+
+    // Verify the new link.
+    Assert.assertEquals(FileUtils.LinkOrCopyResult.LINK, linkOrCopyResult);
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+
+    // Verify they are actually the same file.
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("bar"));
+    Assert.assertEquals("bar", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+  }
+
+  @Test
+  public void testLinkOrCopy2() throws IOException
+  {
+    // Will be a COPY, because the destination file already exists and therefore Files.createLink fails.
+
+    final File fromFile = temporaryFolder.newFile();
+    final File toFile = temporaryFolder.newFile();
+
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("foo"));
+    final FileUtils.LinkOrCopyResult linkOrCopyResult = FileUtils.linkOrCopy(fromFile, toFile);
+
+    // Verify the new link.
+    Assert.assertEquals(FileUtils.LinkOrCopyResult.COPY, linkOrCopyResult);
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
+
+    // Verify they are not the same file.
+    Files.write(fromFile.toPath(), StringUtils.toUtf8("bar"));
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(toFile.toPath())));
   }
 }

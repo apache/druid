@@ -81,6 +81,7 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
             null,
             null,
             null,
+            null,
             new MaxSizeSplitHintSpec(null, 1),
             newPartitionsSpec,
             null,
@@ -94,9 +95,11 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
             null,
             null,
             null,
-            1
+            1,
+            null
         ),
         new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
+        null,
         null,
         null,
         new UserCompactionTaskIOConfig(true),

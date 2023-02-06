@@ -28,6 +28,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
 import org.junit.Assert;
@@ -39,6 +40,37 @@ public class OnHeapNamespaceExtractionCacheManagerTest
 {
   @Test
   public void testInjection()
+  {
+    final NamespaceExtractionCacheManager manager = getCacheManager();
+    Assert.assertEquals(OnHeapNamespaceExtractionCacheManager.class, manager.getClass());
+  }
+
+  @Test
+  public void testImmutableAfterAttach()
+  {
+    NamespaceExtractionCacheManager manager = getCacheManager();
+    CacheHandler handler = manager.allocateCache();
+    handler.getCache().put("some key", "some value");
+    CacheHandler immutableHandler = manager.attachCache(handler);
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> immutableHandler.getCache().put("other key", "other value")
+    );
+  }
+
+  @Test
+  public void testIllegalToDoubleAttach()
+  {
+    NamespaceExtractionCacheManager manager = getCacheManager();
+    CacheHandler handler = manager.createCache();
+    handler.getCache().put("some key", "some value");
+    Assert.assertThrows(
+        ISE.class,
+        () -> manager.attachCache(handler)
+    );
+  }
+
+  private NamespaceExtractionCacheManager getCacheManager()
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -61,6 +93,6 @@ public class OnHeapNamespaceExtractionCacheManagerTest
     properties.clear();
     properties.put(NamespaceExtractionModule.TYPE_PREFIX, "onHeap");
     final NamespaceExtractionCacheManager manager = injector.getInstance(NamespaceExtractionCacheManager.class);
-    Assert.assertEquals(OnHeapNamespaceExtractionCacheManager.class, manager.getClass());
+    return manager;
   }
 }

@@ -72,18 +72,14 @@ public class IngestSegmentFirehoseTest
       ImmutableList.of(
           new StringDimensionSchema("host"),
           new NewSpatialDimensionSchema("spatial", ImmutableList.of("x", "y"))
-      ),
-      null,
-      null
+      )
   );
 
   private static final DimensionsSpec DIMENSIONS_SPEC_REINDEX = new DimensionsSpec(
       ImmutableList.of(
           new StringDimensionSchema("host"),
           new NewSpatialDimensionSchema("spatial", ImmutableList.of("spatial"))
-      ),
-      null,
-      null
+      )
   );
 
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(

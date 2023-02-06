@@ -22,14 +22,14 @@ package org.apache.druid.math.expr.vector;
 import org.apache.druid.math.expr.ExpressionType;
 
 /**
- * specialized {@link UnivariateFunctionVectorValueProcessor} for processing (long[]) -> double[]
+ * specialized {@link UnivariateDoubleFunctionVectorValueProcessor} for processing (long[]) -> double[]
  */
 public abstract class DoubleOutLongInFunctionVectorValueProcessor
-    extends UnivariateFunctionVectorValueProcessor<long[], double[]>
+    extends UnivariateDoubleFunctionVectorValueProcessor<long[]>
 {
   public DoubleOutLongInFunctionVectorValueProcessor(ExprVectorProcessor<long[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG), maxVectorSize, new double[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG), maxVectorSize);
   }
 
   public abstract double apply(long input);
@@ -44,11 +44,5 @@ public abstract class DoubleOutLongInFunctionVectorValueProcessor
   final void processIndex(long[] input, int i)
   {
     outValues[i] = apply(input[i]);
-  }
-
-  @Override
-  final ExprEvalVector<double[]> asEval()
-  {
-    return new ExprEvalDoubleVector(outValues, outNulls);
   }
 }

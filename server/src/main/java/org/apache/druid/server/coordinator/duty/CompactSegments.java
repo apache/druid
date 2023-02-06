@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -31,7 +33,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -44,7 +45,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -56,7 +57,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class CompactSegments implements CoordinatorDuty
+public class CompactSegments implements CoordinatorCustomDuty
 {
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String AVAILABLE_COMPACTION_TASK_SLOT = "availableCompactionTaskSlot";
@@ -90,10 +91,11 @@ public class CompactSegments implements CoordinatorDuty
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
   @Inject
+  @JsonCreator
   public CompactSegments(
-      DruidCoordinatorConfig config,
-      ObjectMapper objectMapper,
-      IndexingServiceClient indexingServiceClient
+      @JacksonInject DruidCoordinatorConfig config,
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject IndexingServiceClient indexingServiceClient
   )
   {
     this.policy = new NewestSegmentFirstPolicy(objectMapper);
@@ -102,6 +104,18 @@ public class CompactSegments implements CoordinatorDuty
     autoCompactionSnapshotPerDataSource.set(new HashMap<>());
 
     LOG.info("Scheduling compaction with skipLockedIntervals [%s]", skipLockedIntervals);
+  }
+
+  @VisibleForTesting
+  public boolean isSkipLockedIntervals()
+  {
+    return skipLockedIntervals;
+  }
+
+  @VisibleForTesting
+  IndexingServiceClient getIndexingServiceClient()
+  {
+    return indexingServiceClient;
   }
 
   @Override
@@ -113,7 +127,7 @@ public class CompactSegments implements CoordinatorDuty
     final CoordinatorStats stats = new CoordinatorStats();
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
+      Map<String, SegmentTimeline> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
@@ -174,8 +188,21 @@ public class CompactSegments implements CoordinatorDuty
         final CompactionSegmentIterator iterator =
             policy.reset(compactionConfigs, dataSources, intervalsToSkipCompaction);
 
+        int totalCapacity;
+        if (dynamicConfig.isUseAutoScaleSlots()) {
+          try {
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacityWithAutoScale();
+          }
+          catch (Exception e) {
+            LOG.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
+            totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+          }
+        } else {
+          totalCapacity = indexingServiceClient.getTotalWorkerCapacity();
+        }
+
         final int compactionTaskCapacity = (int) Math.min(
-            indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
+            totalCapacity * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
         final int numAvailableCompactionTaskSlots;
@@ -358,7 +385,7 @@ public class CompactSegments implements CoordinatorDuty
             try {
               segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
             }
-            catch (IAE iae) {
+            catch (IllegalArgumentException iae) {
               // This case can happen if the existing segment interval result in complicated periods.
               // Fall back to setting segmentGranularity as null
               LOG.warn("Cannot determine segmentGranularity from interval [%s]", interval);
@@ -399,14 +426,35 @@ public class CompactSegments implements CoordinatorDuty
           dropExisting = config.getIoConfig().isDropExisting();
         }
 
+        // If all the segments found to be compacted are tombstones then dropExisting
+        // needs to be forced to true. This forcing needs to  happen in the case that
+        // the flag is null, or it is false. It is needed when it is null to avoid the
+        // possibility of the code deciding to default it to false later.
+        // Forcing the flag to true will enable the task ingestion code to generate new, compacted, tombstones to
+        // cover the tombstones found to be compacted as well as to mark them
+        // as compacted (update their lastCompactionState). If we don't force the
+        // flag then every time this compact duty runs it will find the same tombstones
+        // in the interval since their lastCompactionState
+        // was not set repeating this over and over and the duty will not make progress; it
+        // will become stuck on this set of tombstones.
+        // This forcing code should be revised
+        // when/if the autocompaction code policy to decide which segments to compact changes
+        if (dropExisting == null || !dropExisting) {
+          if (segmentsToCompact.stream().allMatch(dataSegment -> dataSegment.isTombstone())) {
+            dropExisting = true;
+            LOG.info("Forcing dropExisting to %s since all segments to compact are tombstones", dropExisting);
+          }
+        }
+
         // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             "coordinator-issued",
             segmentsToCompact,
             config.getTaskPriority(),
-            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment(), config.getMetricsSpec() != null),
             granularitySpec,
             dimensionsSpec,
+            config.getMetricsSpec(),
             transformSpec,
             dropExisting,
             newAutoCompactionContext(config.getTaskContext())

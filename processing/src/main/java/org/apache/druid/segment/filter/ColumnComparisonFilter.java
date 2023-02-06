@@ -20,9 +20,8 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -55,10 +55,11 @@ public class ColumnComparisonFilter implements Filter
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    throw new UnsupportedOperationException();
+    return null;
   }
 
   @Override
@@ -134,19 +135,7 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return false;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return false;
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return false;
   }
@@ -158,11 +147,10 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
     throw new UnsupportedOperationException();
   }
-
 
   @Override
   public boolean equals(Object o)

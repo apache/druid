@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 
@@ -106,44 +105,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Snapshots a pair of capabilities and then merges them
-   */
-  @Nullable
-  public static ColumnCapabilitiesImpl merge(
-      @Nullable final ColumnCapabilities capabilities,
-      @Nullable final ColumnCapabilities other,
-      CoercionLogic coercionLogic
-  )
-  {
-    ColumnCapabilitiesImpl merged = snapshot(capabilities, coercionLogic);
-    ColumnCapabilitiesImpl otherSnapshot = snapshot(other, coercionLogic);
-    if (merged == null) {
-      return otherSnapshot;
-    } else if (otherSnapshot == null) {
-      return merged;
-    }
-
-    if (merged.type == null) {
-      merged.type = other.getType();
-    }
-
-    if (!merged.type.equals(otherSnapshot.getType())) {
-      throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
-    }
-
-    merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
-    merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
-    merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
-    merged.dictionaryValuesUnique = merged.dictionaryValuesUnique.and(otherSnapshot.areDictionaryValuesUnique());
-    merged.hasNulls = merged.hasNulls.or(other.hasNulls());
-    merged.hasInvertedIndexes |= otherSnapshot.hasBitmapIndexes();
-    merged.hasSpatialIndexes |= otherSnapshot.hasSpatialIndexes();
-    merged.filterable &= otherSnapshot.isFilterable();
-
-    return merged;
-  }
-
-  /**
    * Creates a {@link ColumnCapabilitiesImpl} where all {@link ColumnCapabilities.Capable} that default to unknown
    * instead are coerced to true or false
    */
@@ -154,7 +115,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
-   * @param valueType
    */
   public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(TypeSignature<ValueType> valueType)
   {
@@ -187,14 +147,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasMultipleValues} is explicitly true
-   * and {@link #hasNulls} is not set
-   * @param valueType
+   * Similar to {@link #createSimpleNumericColumnCapabilities} except {@link #hasNulls} is not set
    */
   public static ColumnCapabilitiesImpl createSimpleArrayColumnCapabilities(TypeSignature<ValueType> valueType)
   {
     ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
-                                                                 .setHasMultipleValues(true)
+                                                                 .setHasMultipleValues(false)
                                                                  .setHasBitmapIndexes(false)
                                                                  .setDictionaryEncoded(false)
                                                                  .setDictionaryValuesSorted(false)
@@ -225,6 +183,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private Capable hasNulls = Capable.UNKNOWN;
 
+  @Nullable
   @Override
   @JsonProperty
   public ValueType getType()

@@ -36,6 +36,7 @@ import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -129,6 +130,13 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     this(server, config, zkPaths, () -> announcer, jsonMapper, ZkEnablementConfig.ENABLED);
   }
 
+  @LifecycleStop
+  public void stop()
+  {
+    changes.stop();
+  }
+
+
   @Override
   public void announceSegment(DataSegment segment) throws IOException
   {
@@ -165,7 +173,6 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
           SegmentZNode availableZNode = iter.next();
           if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
             availableZNode.addSegment(toAnnounce);
-
             log.info(
                 "Announcing segment[%s] at existing path[%s]",
                 toAnnounce.getId(),
@@ -194,7 +201,11 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(toAnnounce);
 
-        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getId(), availableZNode.getPath());
+        log.info("Announcing %s[%s] at new path[%s]",
+                 toAnnounce.isTombstone() ? DataSegment.TOMBSTONE_LOADSPEC_TYPE : "segment",
+                 toAnnounce.getId(),
+                 availableZNode.getPath()
+        );
         announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
         segmentLookup.put(toAnnounce, availableZNode);
         availableZNodes.add(availableZNode);

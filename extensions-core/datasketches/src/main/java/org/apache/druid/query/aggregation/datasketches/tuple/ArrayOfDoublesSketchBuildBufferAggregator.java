@@ -32,7 +32,9 @@ import org.apache.druid.segment.data.IndexedInts;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -48,6 +50,18 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Nullable
   private double[] values; // not part of the state, but to reuse in aggregate() method
 
+
+  private final boolean canLookupUtf8;
+  private final boolean canCacheById;
+  private final LinkedHashMap<Integer, Object> stringCache = new LinkedHashMap<Integer, Object>()
+  {
+    @Override
+    protected boolean removeEldestEntry(Map.Entry eldest)
+    {
+      return size() >= 10;
+    }
+  };
+
   public ArrayOfDoublesSketchBuildBufferAggregator(
       final DimensionSelector keySelector,
       final List<BaseDoubleColumnValueSelector> valueSelectors,
@@ -60,6 +74,9 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     this.nominalEntries = nominalEntries;
     this.maxIntermediateSize = maxIntermediateSize;
     values = new double[valueSelectors.size()];
+
+    this.canCacheById = this.keySelector.nameLookupPossibleInAdvance();
+    this.canLookupUtf8 = this.keySelector.supportsLookupNameUtf8();
   }
 
   @Override
@@ -82,16 +99,42 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
         values[i] = valueSelectors[i].getDouble();
       }
     }
-    final IndexedInts keys = keySelector.getRow();
     // Wrapping memory and ArrayOfDoublesSketch is inexpensive compared to sketch operations.
     // Maintaining a cache of wrapped objects per buffer position like in Theta sketch aggregator
     // might might be considered, but it would increase complexity including relocate() support.
     final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-    for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
-      final String key = keySelector.lookupName(keys.get(i));
-      sketch.update(key, values);
+    final IndexedInts keys = keySelector.getRow();
+    if (canLookupUtf8) {
+      for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
+        final ByteBuffer key;
+        if (canCacheById) {
+          key = (ByteBuffer) stringCache.computeIfAbsent(keys.get(i), keySelector::lookupNameUtf8);
+        } else {
+          key = keySelector.lookupNameUtf8(keys.get(i));
+        }
+
+        if (key != null) {
+          byte[] bytes = new byte[key.remaining()];
+          key.mark();
+          key.get(bytes);
+          key.reset();
+
+          sketch.update(bytes, values);
+        }
+      }
+    } else {
+      for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
+        final String key;
+        if (canCacheById) {
+          key = (String) stringCache.computeIfAbsent(keys.get(i), keySelector::lookupName);
+        } else {
+          key = keySelector.lookupName(keys.get(i));
+        }
+
+        sketch.update(key, values);
+      }
     }
   }
 

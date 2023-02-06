@@ -1,166 +1,170 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`LoadDataView matches snapshot 1`] = `
+exports[`LoadDataView matches snapshot batch 1`] = `
 <div
   className="load-data-view app-view welcome"
 >
   <div
-    className="bp3-tabs step-nav"
+    className="step-nav"
   >
     <div
-      className="step-section"
-      key="Connect and parse raw data"
+      className="step-nav-inner"
     >
       <div
-        className="step-nav-l1"
+        className="step-section"
+        key="Connect and parse raw data"
       >
-        Connect and parse raw data
+        <div
+          className="step-nav-l1"
+        >
+          Connect and parse raw data
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={true}
+            className="welcome"
+            disabled={false}
+            icon={false}
+            key="welcome"
+            onClick={[Function]}
+            text="Start"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="connect"
+            disabled={true}
+            icon={false}
+            key="connect"
+            onClick={[Function]}
+            text="Connect"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="parser"
+            disabled={true}
+            icon={false}
+            key="parser"
+            onClick={[Function]}
+            text="Parse data"
+          />
+        </Blueprint4.ButtonGroup>
       </div>
-      <Blueprint3.ButtonGroup
-        className="step-nav-l2"
-      >
-        <Blueprint3.Button
-          active={true}
-          className="welcome"
-          disabled={false}
-          icon={false}
-          key="welcome"
-          onClick={[Function]}
-          text="Start"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="connect"
-          disabled={true}
-          icon={false}
-          key="connect"
-          onClick={[Function]}
-          text="Connect"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="parser"
-          disabled={true}
-          icon={false}
-          key="parser"
-          onClick={[Function]}
-          text="Parse data"
-        />
-      </Blueprint3.ButtonGroup>
-    </div>
-    <div
-      className="step-section"
-      key="Transform data and configure schema"
-    >
       <div
-        className="step-nav-l1"
+        className="step-section"
+        key="Transform data and configure schema"
       >
-        Transform data and configure schema
+        <div
+          className="step-nav-l1"
+        >
+          Transform data and configure schema
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="timestamp"
+            disabled={true}
+            icon={false}
+            key="timestamp"
+            onClick={[Function]}
+            text="Parse time"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="transform"
+            disabled={true}
+            icon={false}
+            key="transform"
+            onClick={[Function]}
+            text="Transform"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="filter"
+            disabled={true}
+            icon={false}
+            key="filter"
+            onClick={[Function]}
+            text="Filter"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="schema"
+            disabled={true}
+            icon={false}
+            key="schema"
+            onClick={[Function]}
+            text="Configure schema"
+          />
+        </Blueprint4.ButtonGroup>
       </div>
-      <Blueprint3.ButtonGroup
-        className="step-nav-l2"
-      >
-        <Blueprint3.Button
-          active={false}
-          className="timestamp"
-          disabled={true}
-          icon={false}
-          key="timestamp"
-          onClick={[Function]}
-          text="Parse time"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="transform"
-          disabled={true}
-          icon={false}
-          key="transform"
-          onClick={[Function]}
-          text="Transform"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="filter"
-          disabled={true}
-          icon={false}
-          key="filter"
-          onClick={[Function]}
-          text="Filter"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="schema"
-          disabled={true}
-          icon={false}
-          key="schema"
-          onClick={[Function]}
-          text="Configure schema"
-        />
-      </Blueprint3.ButtonGroup>
-    </div>
-    <div
-      className="step-section"
-      key="Tune parameters"
-    >
       <div
-        className="step-nav-l1"
+        className="step-section"
+        key="Tune parameters"
       >
-        Tune parameters
+        <div
+          className="step-nav-l1"
+        >
+          Tune parameters
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="partition"
+            disabled={true}
+            icon={false}
+            key="partition"
+            onClick={[Function]}
+            text="Partition"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="tuning"
+            disabled={true}
+            icon={false}
+            key="tuning"
+            onClick={[Function]}
+            text="Tune"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="publish"
+            disabled={true}
+            icon={false}
+            key="publish"
+            onClick={[Function]}
+            text="Publish"
+          />
+        </Blueprint4.ButtonGroup>
       </div>
-      <Blueprint3.ButtonGroup
-        className="step-nav-l2"
-      >
-        <Blueprint3.Button
-          active={false}
-          className="partition"
-          disabled={true}
-          icon={false}
-          key="partition"
-          onClick={[Function]}
-          text="Partition"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="tuning"
-          disabled={true}
-          icon={false}
-          key="tuning"
-          onClick={[Function]}
-          text="Tune"
-        />
-        <Blueprint3.Button
-          active={false}
-          className="publish"
-          disabled={true}
-          icon={false}
-          key="publish"
-          onClick={[Function]}
-          text="Publish"
-        />
-      </Blueprint3.ButtonGroup>
-    </div>
-    <div
-      className="step-section"
-      key="Verify and submit"
-    >
       <div
-        className="step-nav-l1"
+        className="step-section"
+        key="Verify and submit"
       >
-        Verify and submit
+        <div
+          className="step-nav-l1"
+        >
+          Verify and submit
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="spec"
+            disabled={false}
+            icon="manually-entered-data"
+            key="spec"
+            onClick={[Function]}
+            text="Edit spec"
+          />
+        </Blueprint4.ButtonGroup>
       </div>
-      <Blueprint3.ButtonGroup
-        className="step-nav-l2"
-      >
-        <Blueprint3.Button
-          active={false}
-          className="spec"
-          disabled={false}
-          icon="manually-entered-data"
-          key="spec"
-          onClick={[Function]}
-          text="Edit spec"
-        />
-      </Blueprint3.ButtonGroup>
     </div>
   </div>
   <div
@@ -173,13 +177,201 @@ exports[`LoadDataView matches snapshot 1`] = `
   <div
     className="control"
   >
-    <Blueprint3.FormGroup>
-      <Blueprint3.Callout>
+    <Blueprint4.FormGroup>
+      <Blueprint4.Callout>
         <p>
-          Please specify where your raw data is located
+          Please specify where your raw data is located.
         </p>
-      </Blueprint3.Callout>
-    </Blueprint3.FormGroup>
+      </Blueprint4.Callout>
+    </Blueprint4.FormGroup>
+  </div>
+</div>
+`;
+
+exports[`LoadDataView matches snapshot streaming 1`] = `
+<div
+  className="load-data-view app-view welcome"
+>
+  <div
+    className="step-nav"
+  >
+    <div
+      className="step-nav-inner"
+    >
+      <div
+        className="step-section"
+        key="Connect and parse raw data"
+      >
+        <div
+          className="step-nav-l1"
+        >
+          Connect and parse raw data
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={true}
+            className="welcome"
+            disabled={false}
+            icon={false}
+            key="welcome"
+            onClick={[Function]}
+            text="Start"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="connect"
+            disabled={true}
+            icon={false}
+            key="connect"
+            onClick={[Function]}
+            text="Connect"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="parser"
+            disabled={true}
+            icon={false}
+            key="parser"
+            onClick={[Function]}
+            text="Parse data"
+          />
+        </Blueprint4.ButtonGroup>
+      </div>
+      <div
+        className="step-section"
+        key="Transform data and configure schema"
+      >
+        <div
+          className="step-nav-l1"
+        >
+          Transform data and configure schema
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="timestamp"
+            disabled={true}
+            icon={false}
+            key="timestamp"
+            onClick={[Function]}
+            text="Parse time"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="transform"
+            disabled={true}
+            icon={false}
+            key="transform"
+            onClick={[Function]}
+            text="Transform"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="filter"
+            disabled={true}
+            icon={false}
+            key="filter"
+            onClick={[Function]}
+            text="Filter"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="schema"
+            disabled={true}
+            icon={false}
+            key="schema"
+            onClick={[Function]}
+            text="Configure schema"
+          />
+        </Blueprint4.ButtonGroup>
+      </div>
+      <div
+        className="step-section"
+        key="Tune parameters"
+      >
+        <div
+          className="step-nav-l1"
+        >
+          Tune parameters
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="partition"
+            disabled={true}
+            icon={false}
+            key="partition"
+            onClick={[Function]}
+            text="Partition"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="tuning"
+            disabled={true}
+            icon={false}
+            key="tuning"
+            onClick={[Function]}
+            text="Tune"
+          />
+          <Blueprint4.Button
+            active={false}
+            className="publish"
+            disabled={true}
+            icon={false}
+            key="publish"
+            onClick={[Function]}
+            text="Publish"
+          />
+        </Blueprint4.ButtonGroup>
+      </div>
+      <div
+        className="step-section"
+        key="Verify and submit"
+      >
+        <div
+          className="step-nav-l1"
+        >
+          Verify and submit
+        </div>
+        <Blueprint4.ButtonGroup
+          className="step-nav-l2"
+        >
+          <Blueprint4.Button
+            active={false}
+            className="spec"
+            disabled={false}
+            icon="manually-entered-data"
+            key="spec"
+            onClick={[Function]}
+            text="Edit spec"
+          />
+        </Blueprint4.ButtonGroup>
+      </div>
+    </div>
+  </div>
+  <div
+    className="main"
+  >
+    <div
+      className="ingestion-cards"
+    />
+  </div>
+  <div
+    className="control"
+  >
+    <Blueprint4.FormGroup>
+      <Blueprint4.Callout>
+        <p>
+          Please specify where your raw data is located.
+        </p>
+      </Blueprint4.Callout>
+    </Blueprint4.FormGroup>
   </div>
 </div>
 `;

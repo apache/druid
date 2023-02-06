@@ -20,11 +20,11 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
 
 /**
  * Indexed is a fixed-size, immutable, indexed set of values which allows
@@ -37,61 +37,54 @@ import java.util.Comparator;
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
 
+  /**
+   * Number of elements in the value set
+   */
   int size();
 
+  /**
+   * Get the value at specified position
+   */
   @CalledFromHotLoop
   @Nullable
   T get(int index);
 
   /**
    * Returns the index of "value" in this Indexed object, or a negative number if the value is not present.
-   * The negative number is not guaranteed to be any particular number. Subclasses may tighten this contract
-   * (GenericIndexed does this).
+   * The negative number is not guaranteed to be any particular number unless {@link #isSorted()} returns true, in
+   * which case it will be a negative number equal to (-(insertion point) - 1), in the manner of Arrays.binarySearch.
    *
    * @param value value to search for
    *
-   * @return index of value, or a negative number
+   * @return index of value, or a negative number (equal to (-(insertion point) - 1) if {@link #isSorted()})
    */
   int indexOf(@Nullable T value);
 
   /**
-   * Returns the index of "value" in some object whose values are accessible by index some {@link IndexedGetter}, or
-   * (-(insertion point) - 1) if the value is not present, in the manner of Arrays.binarySearch.
-   *
-   * This is used by {@link GenericIndexed} to strengthen the contract of {@link #indexOf(Object)}, which only
-   * guarantees that values-not-found will return some negative number.
-   *
-   * @param value value to search for
-   *
-   * @return index of value, or negative number equal to (-(insertion point) - 1).
+   * Indicates if this value set is sorted, the implication being that the contract of {@link #indexOf} is strenthened
+   * to return a negative number equal to (-(insertion point) - 1) when the value is not present in the set.
    */
-  static <T> int indexOf(IndexedGetter<T> indexed, int size, Comparator<T> comparator, @Nullable T value)
+  default boolean isSorted()
   {
-    int minIndex = 0;
-    int maxIndex = size - 1;
-    while (minIndex <= maxIndex) {
-      int currIndex = (minIndex + maxIndex) >>> 1;
-
-      T currValue = indexed.get(currIndex);
-      int comparison = comparator.compare(currValue, value);
-      if (comparison == 0) {
-        return currIndex;
-      }
-
-      if (comparison < 0) {
-        minIndex = currIndex + 1;
-      } else {
-        maxIndex = currIndex - 1;
-      }
-    }
-
-    return -(minIndex + 1);
+    return false;
   }
 
-  @FunctionalInterface
-  interface IndexedGetter<T>
+  /**
+   * Checks  if {@code index} is between 0 and {@code size}. Similar to Preconditions.checkElementIndex() except this
+   * method throws {@link IAE} with custom error message.
+   * <p>
+   * Used here to get existing behavior(same error message and exception) of V1 {@link GenericIndexed}.
+   *
+   * @param index identifying an element of an {@link Indexed}
+   * @param size size of the {@link Indexed}
+   */
+  static void checkIndex(int index, int size)
   {
-    @Nullable
-    T get(int id);
+    if (index < 0) {
+      throw new IAE("Index[%s] < 0", index);
+    }
+    if (index >= size) {
+      throw new IAE("Index[%d] >= size[%d]", index, size);
+    }
   }
 }

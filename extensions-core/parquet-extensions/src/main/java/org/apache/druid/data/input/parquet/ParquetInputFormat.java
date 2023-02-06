@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
@@ -29,9 +30,11 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.parquet.guice.Parquet;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Objects;
 
 public class ParquetInputFormat extends NestedInputFormat
@@ -51,7 +54,28 @@ public class ParquetInputFormat extends NestedInputFormat
     this.conf = conf;
   }
 
+  private void initialize(Configuration conf)
+  {
+    // Initializing seperately since during eager initialization, resolving
+    // namenode hostname throws an error if nodes are ephemeral
+
+    // Ensure that FileSystem class level initialization happens with correct CL
+    // See https://github.com/apache/druid/issues/1714
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      FileSystem.get(conf);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean getBinaryAsString()
   {
     return binaryAsString;
@@ -70,6 +94,7 @@ public class ParquetInputFormat extends NestedInputFormat
       File temporaryDirectory
   )
   {
+    initialize(conf);
     return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }
 

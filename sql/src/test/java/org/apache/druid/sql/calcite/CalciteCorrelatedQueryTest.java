@@ -43,14 +43,12 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 @RunWith(JUnitParamsRunner.class)
@@ -59,7 +57,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubquery(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubquery(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -153,8 +151,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("country"),
-                                    DruidExpression.fromColumn("j0._d0")
+                                    makeColumnExpression("country"),
+                                    makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT
                             )
@@ -176,7 +174,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -242,8 +240,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("country"),
-                                    DruidExpression.fromColumn("j0._d0")
+                                    makeColumnExpression("country"),
+                                    makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
                                 selector("city", "B", null)
@@ -265,7 +263,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext)
   {
     cannotVectorize();
 
@@ -335,8 +333,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("country"),
-                                    DruidExpression.fromColumn("j0._d0")
+                                    makeColumnExpression("country"),
+                                    makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT
                             )
@@ -356,7 +354,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -428,8 +426,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("country"),
-                                    DruidExpression.fromColumn("j0._d0")
+                                    makeColumnExpression("country"),
+                                    makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
                                 selector("city", "B", null)
@@ -450,7 +448,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext) throws Exception
+  public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext)
   {
     cannotVectorize();
     queryContext = withLeftDirectAccessEnabled(queryContext);
@@ -521,8 +519,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(
-                                    DruidExpression.fromColumn("country"),
-                                    DruidExpression.fromColumn("j0._d0")
+                                    makeColumnExpression("country"),
+                                    makeColumnExpression("j0._d0")
                                 ),
                                 JoinType.LEFT,
                                 selector("city", "B", null)
@@ -547,10 +545,6 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
       Granularity granularity
   )
   {
-    Map<String, Object> output = new HashMap<>(input);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, granularity);
-    output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
-    return output;
+    return withTimestampResultContext(input, timestampResultField, 0, granularity);
   }
 }

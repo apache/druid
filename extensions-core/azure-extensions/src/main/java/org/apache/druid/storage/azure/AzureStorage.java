@@ -20,6 +20,7 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
@@ -48,10 +49,19 @@ public class AzureStorage
 
   private static final Logger log = new Logger(AzureStorage.class);
 
-  private final CloudBlobClient cloudBlobClient;
+  /**
+   * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
+   * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
+   * if we have a CloudBlobClient instead of a supplier of it, it can cause unnecessary config validation
+   * against Azure storage even when it's not used at all. To perform the config validation
+   * only when it is actually used, we use a supplier.
+   *
+   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
+   */
+  private final Supplier<CloudBlobClient> cloudBlobClient;
 
   public AzureStorage(
-      CloudBlobClient cloudBlobClient
+      Supplier<CloudBlobClient> cloudBlobClient
   )
   {
     this.cloudBlobClient = cloudBlobClient;
@@ -114,7 +124,7 @@ public class AzureStorage
   @VisibleForTesting
   CloudBlobClient getCloudBlobClient()
   {
-    return this.cloudBlobClient;
+    return this.cloudBlobClient.get();
   }
 
   @VisibleForTesting
@@ -125,7 +135,7 @@ public class AzureStorage
       int maxResults
   ) throws StorageException, URISyntaxException
   {
-    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.get().getContainerReference(containerName);
     return cloudBlobContainer
         .listBlobsSegmented(
             prefix,
@@ -143,7 +153,7 @@ public class AzureStorage
   private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)
       throws StorageException, URISyntaxException
   {
-    CloudBlobContainer cloudBlobContainer = cloudBlobClient.getContainerReference(containerName);
+    CloudBlobContainer cloudBlobContainer = cloudBlobClient.get().getContainerReference(containerName);
     cloudBlobContainer.createIfNotExists();
 
     return cloudBlobContainer;

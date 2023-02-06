@@ -40,7 +40,7 @@ import {
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap, oneOf } from './general';
+import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
@@ -65,10 +65,10 @@ export interface SampleResponse {
 export type CacheRows = Record<string, any>[];
 
 export interface SampleResponseWithExtraInfo extends SampleResponse {
-  queryGranularity?: any;
-  rollup?: boolean;
-  columns?: Record<string, any>;
+  columns?: string[];
+  columnInfo?: Record<string, any>;
   aggregators?: Record<string, any>;
+  rollup?: boolean;
 }
 
 export interface SampleEntry {
@@ -78,7 +78,7 @@ export interface SampleEntry {
   error?: string;
 }
 
-export interface HeaderAndRows {
+export interface SampleHeaderAndRows {
   header: string[];
   rows: SampleEntry[];
 }
@@ -140,13 +140,15 @@ export interface HeaderFromSampleResponseOptions {
   ignoreTimeColumn?: boolean;
   columnOrder?: string[];
   suffixColumnOrder?: string[];
+  useInput?: boolean;
 }
 
 export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
-  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder } = options;
+  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder, useInput } = options;
 
+  const key = useInput ? 'input' : 'parsed';
   let columns = arrangeWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))),
+    dedupe(sampleResponse.data.flatMap(s => (s[key] ? Object.keys(s[key]!) : []))),
     columnOrder || [TIME_COLUMN],
     suffixColumnOrder || [],
   );
@@ -164,12 +166,12 @@ export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSample
 
 export function headerAndRowsFromSampleResponse(
   options: HeaderAndRowsFromSampleResponseOptions,
-): HeaderAndRows {
+): SampleHeaderAndRows {
   const { sampleResponse, parsedOnly } = options;
 
   return {
     header: headerFromSampleResponse(options),
-    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
+    rows: parsedOnly ? sampleResponse.data.filter(d => d.parsed) : sampleResponse.data,
   };
 }
 
@@ -236,26 +238,6 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
-function cleanupQueryGranularity(queryGranularity: any): any {
-  let queryGranularityType = deepGet(queryGranularity, 'type');
-  if (typeof queryGranularityType !== 'string') return queryGranularity;
-  queryGranularityType = queryGranularityType.toUpperCase();
-
-  const knownGranularity = oneOf(
-    queryGranularityType,
-    'NONE',
-    'SECOND',
-    'MINUTE',
-    'HOUR',
-    'DAY',
-    'WEEK',
-    'MONTH',
-    'YEAR',
-  );
-
-  return knownGranularity ? queryGranularityType : queryGranularity;
-}
-
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -271,7 +253,7 @@ export async function sampleForConnect(
   if (!reingestMode) {
     ioConfig = deepSet(ioConfig, 'inputFormat', {
       type: 'regex',
-      pattern: '(.*)',
+      pattern: '([\\s\\S]*)', // Match the entire line, every single character
       listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
       columns: ['raw'],
     });
@@ -299,26 +281,41 @@ export async function sampleForConnect(
   if (!samplerResponse.data.length) return samplerResponse;
 
   if (reingestMode) {
-    const segmentMetadataResponse = await queryDruidRune({
-      queryType: 'segmentMetadata',
-      dataSource: deepGet(ioConfig, 'inputSource.dataSource'),
-      intervals: [deepGet(ioConfig, 'inputSource.interval')],
-      merge: true,
-      lenientAggregatorMerge: true,
-      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+    const dataSource = deepGet(ioConfig, 'inputSource.dataSource');
+    const intervals = deepGet(ioConfig, 'inputSource.interval');
+
+    const scanResponse = await queryDruidRune({
+      queryType: 'scan',
+      dataSource,
+      intervals,
+      resultFormat: 'compactedList',
+      limit: 1,
+      columns: [],
+      granularity: 'all',
     });
 
-    if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
-      const segmentMetadataResponse0 = segmentMetadataResponse[0];
-      samplerResponse.queryGranularity = cleanupQueryGranularity(
-        segmentMetadataResponse0.queryGranularity,
-      );
-      samplerResponse.rollup = segmentMetadataResponse0.rollup;
-      samplerResponse.columns = segmentMetadataResponse0.columns;
-      samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
-    } else {
+    const columns = deepGet(scanResponse, '0.columns');
+    if (!Array.isArray(columns)) {
+      throw new Error(`unexpected response from scan query`);
+    }
+    samplerResponse.columns = columns;
+
+    const segmentMetadataResponse = await queryDruidRune({
+      queryType: 'segmentMetadata',
+      dataSource,
+      intervals,
+      merge: true,
+      lenientAggregatorMerge: true,
+      analysisTypes: ['aggregators', 'rollup'],
+    });
+
+    if (!Array.isArray(segmentMetadataResponse) || segmentMetadataResponse.length !== 1) {
       throw new Error(`unexpected response from segmentMetadata query`);
     }
+    const segmentMetadataResponse0 = segmentMetadataResponse[0];
+    samplerResponse.rollup = segmentMetadataResponse0.rollup;
+    samplerResponse.columnInfo = segmentMetadataResponse0.columns;
+    samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
   }
 
   return samplerResponse;

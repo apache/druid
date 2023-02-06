@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.expression;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
@@ -57,7 +58,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(ExpressionValidationException.class, "requires 1 argument");
 
     testExpression(
         Collections.emptyList(),
@@ -69,7 +70,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(ExpressionValidationException.class, "requires 1 argument");
 
     testExpression(
         Arrays.asList(
@@ -225,7 +226,7 @@ public class IPv4AddressParseExpressionTest extends ExpressionTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)

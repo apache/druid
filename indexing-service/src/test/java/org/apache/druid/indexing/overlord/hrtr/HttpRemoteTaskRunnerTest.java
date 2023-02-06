@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
+import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -42,6 +43,8 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
+import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
@@ -77,6 +80,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static org.easymock.EasyMock.isA;
 
 /**
  *
@@ -102,6 +108,113 @@ public class HttpRemoteTaskRunnerTest
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
+    HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        new NoopProvisioningStrategy<>());
+
+    taskRunner.start();
+
+    DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
+        new DruidNode("service", "host1", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
+        new DruidNode("service", "host2", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1, druidNode2));
+
+    int numTasks = 8;
+    List<Future<TaskStatus>> futures = new ArrayList<>();
+    for (int i = 0; i < numTasks; i++) {
+      futures.add(taskRunner.run(NoopTask.create("task-id-" + i, 0)));
+    }
+
+    for (Future<TaskStatus> future : futures) {
+      Assert.assertTrue(future.get().isSuccess());
+    }
+
+    Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
+    Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
+  }
+
+  /*
+  Simulates startup of Overlord. Overlord is then stopped and is expected to close down certain things.
+   */
+  @Test(timeout = 60_000L)
+  public void testFreshStartAndStop()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery).times(2);
+    ProvisioningStrategy provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
+    ProvisioningService provisioningService = EasyMock.createNiceMock(ProvisioningService.class);
+    EasyMock.expect(provisioningStrategy.makeProvisioningService(isA(HttpRemoteTaskRunner.class)))
+            .andReturn(provisioningService);
+    provisioningService.close();
+    EasyMock.expectLastCall();
+    EasyMock.replay(druidNodeDiscoveryProvider, provisioningStrategy, provisioningService);
+
+    DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
+        new DruidNode("service", "host1", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
+        new DruidNode("service", "host2", false, 8080, null, true, false),
+        NodeRole.MIDDLE_MANAGER,
+        ImmutableMap.of(
+            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
+        )
+    );
+
+    HttpRemoteTaskRunner taskRunner = newHttpTaskRunnerInstance(
+        druidNodeDiscoveryProvider,
+        provisioningStrategy);
+
+    taskRunner.start();
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1, druidNode2));
+    ConcurrentMap<String, WorkerHolder> workers = taskRunner.getWorkersForTestingReadOnly();
+    Assert.assertEquals(2, workers.size());
+    Assert.assertTrue(workers.values().stream().noneMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
+    workers.values().iterator().next().stop();
+    taskRunner.stop();
+    Assert.assertTrue(druidNodeDiscovery.getListeners().isEmpty());
+    Assert.assertEquals(2, workers.size());
+    Assert.assertTrue(workers.values().stream().allMatch(w -> w.getUnderlyingSyncer().isExecutorShutdown()));
+    EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy, provisioningService);
+  }
+
+  /*
+  Simulates startup of Overlord with no provisoner. Overlord is then stopped and is expected to close down certain
+  things.
+   */
+  @Test(timeout = 60_000L)
+  public void testFreshStartAndStopNoProvisioner()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    ProvisioningStrategy provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery).times(2);
+    EasyMock.expect(provisioningStrategy.makeProvisioningService(isA(HttpRemoteTaskRunner.class)))
+            .andReturn(null);
+    EasyMock.expectLastCall();
+    EasyMock.replay(druidNodeDiscoveryProvider, provisioningStrategy);
+
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
         new HttpRemoteTaskRunnerConfig()
@@ -114,11 +227,12 @@ public class HttpRemoteTaskRunnerTest
         },
         EasyMock.createNiceMock(HttpClient.class),
         DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
-        new NoopProvisioningStrategy<>(),
+        provisioningStrategy,
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -149,37 +263,8 @@ public class HttpRemoteTaskRunnerTest
     };
 
     taskRunner.start();
-
-    DiscoveryDruidNode druidNode1 = new DiscoveryDruidNode(
-        new DruidNode("service", "host1", false, 8080, null, true, false),
-        NodeRole.MIDDLE_MANAGER,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip1", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
-        )
-    );
-
-    DiscoveryDruidNode druidNode2 = new DiscoveryDruidNode(
-        new DruidNode("service", "host2", false, 8080, null, true, false),
-        NodeRole.MIDDLE_MANAGER,
-        ImmutableMap.of(
-            WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("ip2", 2, "0", WorkerConfig.DEFAULT_CATEGORY)
-        )
-    );
-
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1, druidNode2));
-
-    int numTasks = 8;
-    List<Future<TaskStatus>> futures = new ArrayList<>();
-    for (int i = 0; i < numTasks; i++) {
-      futures.add(taskRunner.run(NoopTask.create("task-id-" + i, 0)));
-    }
-
-    for (Future<TaskStatus> future : futures) {
-      Assert.assertTrue(future.get().isSuccess());
-    }
-
-    Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
-    Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
+    taskRunner.stop();
+    EasyMock.verify(druidNodeDiscoveryProvider, provisioningStrategy);
   }
 
   /*
@@ -215,7 +300,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -263,7 +349,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1, druidNode2));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1, druidNode2));
 
     taskRunner.run(task1);
     Future<TaskStatus> future2 = taskRunner.run(task2);
@@ -319,7 +405,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorageMock,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -410,7 +497,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(
         ImmutableList.of(
             druidNode
         )
@@ -461,7 +548,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -551,7 +639,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(
         ImmutableList.of(
             druidNode
         )
@@ -564,7 +652,7 @@ public class HttpRemoteTaskRunnerTest
       Thread.sleep(100);
     }
 
-    druidNodeDiscovery.listener.nodesRemoved(
+    druidNodeDiscovery.getListeners().get(0).nodesRemoved(
         ImmutableList.of(
             druidNode
         )
@@ -599,7 +687,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(
         ImmutableList.of(
             druidNode
         )
@@ -636,7 +724,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -722,7 +811,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(
         ImmutableList.of(
             druidNode
         )
@@ -735,7 +824,7 @@ public class HttpRemoteTaskRunnerTest
       Thread.sleep(100);
     }
 
-    druidNodeDiscovery.listener.nodesRemoved(
+    druidNodeDiscovery.getListeners().get(0).nodesRemoved(
         ImmutableList.of(
             druidNode
         )
@@ -787,7 +876,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(
         ImmutableList.of(
             druidNode
         )
@@ -833,7 +922,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -909,7 +999,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(1, taskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
@@ -951,7 +1041,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode2));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode2));
 
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
@@ -999,7 +1089,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode3));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode3));
 
     Assert.assertEquals(2, taskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(1, taskRunner.getTotalTaskSlotCount().get(additionalWorkerCategory).longValue());
@@ -1322,7 +1412,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1393,7 +1484,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
     Future<TaskStatus> future = taskRunner.run(NoopTask.create("task-id", 0));
     Assert.assertTrue(future.get().isFailure());
@@ -1434,7 +1525,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1504,7 +1596,7 @@ public class HttpRemoteTaskRunnerTest
         )
     );
 
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode1));
+    druidNodeDiscovery.getListeners().get(0).nodesAdded(ImmutableList.of(druidNode1));
 
     Future<TaskStatus> future = taskRunner.run(NoopTask.create("task-id", 0));
     Assert.assertTrue(future.get().isFailure());
@@ -1515,7 +1607,68 @@ public class HttpRemoteTaskRunnerTest
     );
   }
 
-  private HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
+  /**
+   * Validate the internal state of tasks within the task runner
+   * when shutdown is called on pending / running tasks and completed tasks
+   */
+  @Test
+  public void testShutdown()
+  {
+    List<Object> listenerNotificationsAccumulator = new ArrayList<>();
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForTestTaskAddedOrUpdated(
+        EasyMock.createStrictMock(TaskStorage.class),
+        listenerNotificationsAccumulator
+    );
+
+    Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+
+    WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
+    workerHolder.resetContinuouslyFailedTasksCount();
+    EasyMock.expect(workerHolder.getContinuouslyFailedTasksCount()).andReturn(0);
+    EasyMock.replay(workerHolder);
+
+    taskRunner.start();
+
+    Task pendingTask = NoopTask.create("pendingTask");
+    taskRunner.run(pendingTask);
+    // Pending task is not cleaned up immediately
+    taskRunner.shutdown(pendingTask.getId(), "Forced shutdown");
+    Assert.assertTrue(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(pendingTask.getId())
+    );
+
+    Task completedTask = NoopTask.create("completedTask");
+    taskRunner.run(completedTask);
+    taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
+        completedTask,
+        TaskStatus.success(completedTask.getId()),
+        TaskLocation.create("worker", 1, 2)
+    ), workerHolder);
+    Assert.assertEquals(completedTask.getId(), Iterables.getOnlyElement(taskRunner.getCompletedTasks()).getTaskId());
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+
+    // Completed tasks are cleaned up when shutdown is invokded on them (by TaskQueue)
+    taskRunner.shutdown(completedTask.getId(), "Cleanup");
+    Assert.assertFalse(taskRunner.getKnownTasks()
+                                .stream()
+                                .map(TaskRunnerWorkItem::getTaskId)
+                                .collect(Collectors.toSet())
+                                .contains(completedTask.getId())
+    );
+
+  }
+
+  public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
       TaskStorage taskStorage,
       List<Object> listenerNotificationsAccumulator
   )
@@ -1542,7 +1695,8 @@ public class HttpRemoteTaskRunnerTest
         druidNodeDiscoveryProvider,
         taskStorage,
         EasyMock.createNiceMock(CuratorFramework.class),
-        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
     );
 
     taskRunner.start();
@@ -1605,6 +1759,7 @@ public class HttpRemoteTaskRunnerTest
     {
       private final String workerHost;
       private final int workerPort;
+      private final LifecycleLock startStopLock = new LifecycleLock();
 
       {
         String hostAndPort = worker.getHost();
@@ -1619,25 +1774,45 @@ public class HttpRemoteTaskRunnerTest
       @Override
       public void start()
       {
-        disabled.set(false);
+        synchronized (startStopLock) {
+          if (!startStopLock.canStart()) {
+            throw new ISE("Can't start worker[%s:%s].", workerHost, workerPort);
+          }
+          try {
+            disabled.set(false);
 
-        if (!preExistingTaskAnnouncements.isEmpty()) {
-          workersSyncExec.execute(
-              () -> {
-                for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
-                  tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
-                  listener.taskAddedOrUpdated(announcement, this);
-                }
-                ticks.incrementAndGet();
-              }
-          );
+            if (!preExistingTaskAnnouncements.isEmpty()) {
+              workersSyncExec.execute(
+                  () -> {
+                    for (TaskAnnouncement announcement : preExistingTaskAnnouncements) {
+                      tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);
+                      listener.taskAddedOrUpdated(announcement, this);
+                    }
+                    ticks.incrementAndGet();
+                  }
+              );
+            }
+            startStopLock.started();
+          }
+          finally {
+            startStopLock.exitStart();
+          }
         }
       }
 
       @Override
       public void stop()
       {
-
+        synchronized (startStopLock) {
+          if (!startStopLock.canStop()) {
+            throw new ISE("Can't stop worker[%s:%s].", workerHost, workerPort);
+          }
+          try {
+          }
+          finally {
+            startStopLock.exitStop();
+          }
+        }
       }
 
       @Override
@@ -1724,9 +1899,14 @@ public class HttpRemoteTaskRunnerTest
     };
   }
 
-  private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
+  public static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
-    Listener listener;
+    private List<Listener> listeners;
+
+    public TestDruidNodeDiscovery()
+    {
+      listeners = new ArrayList<>();
+    }
 
     @Override
     public Collection<DiscoveryDruidNode> getAllNodes()
@@ -1739,11 +1919,22 @@ public class HttpRemoteTaskRunnerTest
     {
       listener.nodesAdded(ImmutableList.of());
       listener.nodeViewInitialized();
-      this.listener = listener;
+      listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(Listener listener)
+    {
+      listeners.remove(listener);
+    }
+
+    public List<Listener> getListeners()
+    {
+      return listeners;
     }
   }
 
-  private interface CustomFunction
+  public interface CustomFunction
   {
     WorkerHolder apply(
         ObjectMapper smileMapper,
@@ -1754,5 +1945,57 @@ public class HttpRemoteTaskRunnerTest
         Worker worker,
         List<TaskAnnouncement> knownAnnouncements
     );
+  }
+
+  private static HttpRemoteTaskRunner newHttpTaskRunnerInstance(
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      ProvisioningStrategy provisioningStrategy)
+  {
+    return new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig()
+        {
+          @Override
+          public int getPendingTasksRunnerNumThreads()
+          {
+            return 3;
+          }
+        },
+        EasyMock.createNiceMock(HttpClient.class),
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        provisioningStrategy,
+        druidNodeDiscoveryProvider,
+        EasyMock.createNiceMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
+        new NoopServiceEmitter()
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker,
+          List<TaskAnnouncement> knownAnnouncements
+      )
+      {
+        return HttpRemoteTaskRunnerTest.createWorkerHolder(
+            smileMapper,
+            httpClient,
+            config,
+            workersSyncExec,
+            listener,
+            worker,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            ImmutableMap.of(),
+            new AtomicInteger(),
+            ImmutableSet.of()
+        );
+      }
+    };
   }
 }

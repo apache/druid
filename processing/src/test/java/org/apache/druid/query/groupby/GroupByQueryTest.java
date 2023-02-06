@@ -42,6 +42,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,7 +62,13 @@ public class GroupByQueryTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.QUALITY_DIMENSION, "alias"),
+                       new DefaultDimensionSpec(
+                           QueryRunnerTestHelper.MARKET_DIMENSION,
+                           "market",
+                           ColumnType.STRING_ARRAY
+                       )
+        )
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
@@ -120,12 +127,13 @@ public class GroupByQueryTest
                                            .addDimension(new DefaultDimensionSpec("foo", "foo", ColumnType.LONG))
                                            .addDimension(new DefaultDimensionSpec("bar", "bar", ColumnType.FLOAT))
                                            .addDimension(new DefaultDimensionSpec("baz", "baz", ColumnType.STRING))
+                                           .addDimension(new DefaultDimensionSpec("bat", "bat", ColumnType.STRING_ARRAY))
                                            .build();
 
     final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);
     final int compare = rowOrdering.compare(
-        ResultRow.of(1, 1f, "a"),
-        ResultRow.of(1L, 1d, "b")
+        ResultRow.of(1, 1f, "a", ComparableStringArray.of("1", "2")),
+        ResultRow.of(1L, 1d, "b", ComparableStringArray.of("3"))
     );
     Assert.assertEquals(-1, compare);
   }

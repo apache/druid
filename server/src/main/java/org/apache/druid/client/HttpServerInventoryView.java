@@ -177,7 +177,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     node.getDruidNode().getHostAndPort(),
                     node.getDruidNode().getHostAndTlsPort(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
-                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
+                    ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getServerType(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
                     ((DataNodeService) node.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
                 );
@@ -550,7 +550,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             if (request instanceof SegmentChangeRequestLoad) {
               DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
               toRemove.remove(segment.getId());
-              addSegment(segment);
+              addSegment(segment, true);
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -561,7 +561,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           }
 
           for (DataSegment segmentToRemove : toRemove.values()) {
-            removeSegment(segmentToRemove);
+            removeSegment(segmentToRemove, true);
           }
         }
 
@@ -570,9 +570,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         {
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {
-              addSegment(((SegmentChangeRequestLoad) request).getSegment());
+              addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
-              removeSegment(((SegmentChangeRequestDrop) request).getSegment());
+              removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
             } else {
               log.error(
                   "Server[%s] gave a non load/drop dataSegmentChangeRequest[%s], Ignored.",
@@ -585,7 +585,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       };
     }
 
-    private void addSegment(DataSegment segment)
+    private void addSegment(DataSegment segment, boolean fullSync)
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
         if (druidServer.getSegment(segment.getId()) == null) {
@@ -601,7 +601,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 }
               }
           );
-        } else {
+        } else if (!fullSync) {
+          // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
           log.warn(
               "Not adding or running callbacks for existing segment[%s] on server[%s]",
               segment.getId(),
@@ -611,7 +612,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
     }
 
-    private void removeSegment(final DataSegment segment)
+    private void removeSegment(final DataSegment segment, boolean fullSync)
     {
       if (druidServer.removeDataSegment(segment.getId()) != null) {
         runSegmentCallbacks(
@@ -624,7 +625,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               }
             }
         );
-      } else {
+      } else if (!fullSync) {
+        // duplicates can happen when doing a full sync from a 'reset', so only warn for dupes on delta changes
         log.warn(
             "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
             segment.getId(),

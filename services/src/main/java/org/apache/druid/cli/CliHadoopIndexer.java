@@ -19,14 +19,15 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
-import io.airlift.airline.Arguments;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
-import org.apache.druid.guice.ExtensionsConfig;
+import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.indexing.common.task.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -45,28 +46,27 @@ import java.util.List;
 )
 public class CliHadoopIndexer implements Runnable
 {
-
   private static final List<String> DEFAULT_HADOOP_COORDINATES = TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
-  @Arguments(description = "A JSON object or the path to a file that contains a JSON object", required = true)
+  @Arguments(description = "A JSON object or the path to a file that contains a JSON object")
+  @Required
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
           description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version",
-          required = false)
+          description = "don't pull down the default hadoop version")
   public boolean noDefaultHadoop;
 
   @Inject
-  private ExtensionsConfig extensionsConfig = null;
+  private ExtensionsLoader extnLoader;
 
   @Override
-  @SuppressWarnings("unchecked")
   public void run()
   {
     try {
@@ -79,8 +79,8 @@ public class CliHadoopIndexer implements Runnable
       }
 
       final List<URL> extensionURLs = new ArrayList<>();
-      for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
-        final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+      for (final File extension : extnLoader.getExtensionFilesToLoad()) {
+        final URLClassLoader extensionLoader = extnLoader.getClassLoaderForExtension(extension, false);
         extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
       }
 
@@ -90,8 +90,8 @@ public class CliHadoopIndexer implements Runnable
 
       final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
-        final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+      for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extnLoader.config())) {
+        final URLClassLoader hadoopLoader = extnLoader.getClassLoaderForExtension(hadoopDependency, false);
         driverURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
       }
 
@@ -120,5 +120,4 @@ public class CliHadoopIndexer implements Runnable
       System.exit(1);
     }
   }
-
 }

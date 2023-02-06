@@ -30,6 +30,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -41,6 +42,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -139,6 +141,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
+    final ColumnCapabilities capabilities = capabilities(factory, name);
+    // we make a special column value selector for values that are expected to be STRING to conform to behavior of
+    // other single and multi-value STRING selectors, whose getObject is expected to produce a single STRING value
+    // or List of STRING values.
+    if (capabilities.is(ValueType.STRING)) {
+      return ExpressionSelectors.makeStringColumnValueSelector(factory, parsedExpression.get());
+    }
     return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 
@@ -178,8 +187,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
 
-    // array types must not currently escape from the expression system
-    if (outputType != null && outputType.isArray()) {
+    if (ExpressionProcessing.processArraysAsMultiValueStrings() && outputType != null && outputType.isArray()) {
       return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
     }
 

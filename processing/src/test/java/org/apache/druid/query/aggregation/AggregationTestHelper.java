@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -59,6 +58,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -82,6 +82,8 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.TransformingStringInputRowParser;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -152,13 +154,14 @@ public class AggregationTestHelper implements Closeable
       TemporaryFolder tempFolder
   )
   {
+    final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
-        config
+        config,
+        groupByBuffers
     );
-    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    final Closer closer = factoryAndCloser.rhs;
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -507,6 +510,51 @@ public class AggregationTestHelper implements Closeable
   }
 
   public void createIndex(
+      InputStream inputDataStream,
+      String parserJson,
+      String transformSpecJson,
+      String aggregators,
+      File outDir,
+      long minTimestamp,
+      Granularity gran,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    try {
+      StringInputRowParser parser = mapper.readValue(parserJson, StringInputRowParser.class);
+      TransformSpec transformSpec;
+      if (transformSpecJson != null) {
+        transformSpec = mapper.readValue(transformSpecJson, TransformSpec.class);
+        parser = new TransformingStringInputRowParser(parser.getParseSpec(), parser.getEncoding(), transformSpec);
+      }
+
+      LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
+      List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
+          aggregators,
+          new TypeReference<List<AggregatorFactory>>()
+          {
+          }
+      );
+
+      createIndex(
+          iter,
+          parser,
+          aggregatorSpecs.toArray(new AggregatorFactory[0]),
+          outDir,
+          minTimestamp,
+          gran,
+          true,
+          maxRowCount,
+          rollup
+      );
+    }
+    finally {
+      Closeables.close(inputDataStream, true);
+    }
+  }
+
+  public void createIndex(
       Iterator rows,
       InputRowParser parser,
       final AggregatorFactory[] metrics,
@@ -561,6 +609,7 @@ public class AggregationTestHelper implements Closeable
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
           //InputRowsParser<String>
           index.add(((StringInputRowParser) parser).parse((String) row));
+
         } else {
           index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
         }
@@ -618,7 +667,7 @@ public class AggregationTestHelper implements Closeable
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(minTimestamp)
                 .withQueryGranularity(gran)
-                .withDimensionsSpec(new DimensionsSpec(dimensions, null, null))
+                .withDimensionsSpec(new DimensionsSpec(dimensions))
                 .withMetrics(metrics)
                 .withRollup(rollup)
                 .build()
@@ -844,6 +893,11 @@ public class AggregationTestHelper implements Closeable
     agg.relocate(0, 7574, myBuf, newBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
+  }
+
+  public IndexIO getIndexIO()
+  {
+    return indexIO;
   }
 
   @Override

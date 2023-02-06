@@ -24,15 +24,27 @@ import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
+import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 public class LikeDimFilterTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
+
   @Test
   public void testSerde() throws IOException
   {
@@ -87,5 +99,50 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
                   .usingGetClass()
                   .withNonnullFields("suffixMatch", "prefix", "pattern")
                   .verify();
+  }
+
+  @Test
+  public void testPrefixMatchUsesRangeIndex()
+  {
+    // An implementation test.
+    // This test confirms that "like" filters with prefix matchers use index-range lookups without matcher predicates.
+
+    final Filter likeFilter = new LikeDimFilter("dim0", "f%", null, null, null).toFilter();
+
+    final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
+    final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
+    final LexicographicalRangeIndex rangeIndex = Mockito.mock(LexicographicalRangeIndex.class);
+    final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
+
+    Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
+    Mockito.when(indexSupplier.as(LexicographicalRangeIndex.class)).thenReturn(rangeIndex);
+    Mockito.when(
+        // Verify that likeFilter uses forRange without a matcher predicate; it's unnecessary and slows things down
+        rangeIndex.forRange("f", false, "f" + Character.MAX_VALUE, false)
+    ).thenReturn(bitmapColumnIndex);
+
+    final BitmapColumnIndex retVal = likeFilter.getBitmapColumnIndex(indexSelector);
+    Assert.assertSame("likeFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
+  }
+
+  @Test
+  public void testExactMatchUsesValueIndex()
+  {
+    // An implementation test.
+    // This test confirms that "like" filters with exact matchers use index lookups.
+
+    final Filter likeFilter = new LikeDimFilter("dim0", "f", null, null, null).toFilter();
+
+    final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
+    final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
+    final StringValueSetIndex valueIndex = Mockito.mock(StringValueSetIndex.class);
+    final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
+
+    Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
+    Mockito.when(indexSupplier.as(StringValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(valueIndex.forValue("f")).thenReturn(bitmapColumnIndex);
+
+    final BitmapColumnIndex retVal = likeFilter.getBitmapColumnIndex(indexSelector);
+    Assert.assertSame("likeFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
   }
 }

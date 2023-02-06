@@ -27,7 +27,7 @@ import java.util.Properties;
 
 public class ZkEnablementConfig
 {
-  private static final String PROP_KEY_ENABLED = StringUtils.format("%s.enabled", CuratorModule.CURATOR_CONFIG_PREFIX);
+  private static final String PROP_KEY_ENABLED = StringUtils.format("%s.enabled", CuratorConfig.CONFIG_PREFIX);
 
   public static final ZkEnablementConfig ENABLED = new ZkEnablementConfig(true);
 

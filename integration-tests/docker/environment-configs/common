@@ -26,7 +26,7 @@ COMMON_DRUID_JAVA_OPTS=-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlog4j.configu
 DRUID_DEP_LIB_DIR=/shared/hadoop_xml:/shared/docker/lib/*:/usr/local/druid/lib/mysql-connector-java.jar
 
 # Druid configs
-druid_extensions_loadList=["mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service"]
+druid_extensions_loadList=["mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service","druid-s3-extensions"]
 druid_startup_logging_logProperties=true
 druid_extensions_directory=/shared/docker/extensions
 druid_auth_authenticator_basic_authorizerName=basic
@@ -36,10 +36,11 @@ druid_auth_authenticator_basic_type=basic
 druid_auth_authenticatorChain=["basic"]
 druid_auth_authorizer_basic_type=basic
 druid_auth_authorizers=["basic"]
+druid_auth_authorizeQueryContextParams=true
 druid_client_https_certAlias=druid
 druid_client_https_keyManagerPassword=druid123
 druid_client_https_keyStorePassword=druid123
-druid_client_https_keyStorePath=/tls/server.jks
+druid_client_https_keyStorePath=/tls/server.p12
 druid_client_https_protocol=TLSv1.2
 druid_client_https_trustStoreAlgorithm=PKIX
 druid_client_https_trustStorePassword=druid123
@@ -56,8 +57,8 @@ druid_server_http_allowedHttpMethods=["OPTIONS"]
 druid_server_https_certAlias=druid
 druid_server_https_keyManagerPassword=druid123
 druid_server_https_keyStorePassword=druid123
-druid_server_https_keyStorePath=/tls/server.jks
-druid_server_https_keyStoreType=jks
+druid_server_https_keyStorePath=/tls/server.p12
+druid_server_https_keyStoreType=PKCS12
 druid_server_https_requireClientCertificate=true
 druid_server_https_trustStoreAlgorithm=PKIX
 druid_server_https_trustStorePassword=druid123

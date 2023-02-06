@@ -1,7 +1,25 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`TableCell matches snapshot Date (invalid) 1`] = `
+<div
+  class="table-cell timestamp"
+  title="NaN"
+>
+  Unusable date
+</div>
+`;
+
+exports[`TableCell matches snapshot Date 1`] = `
+<div
+  class="table-cell timestamp"
+  title="1645664523000"
+>
+  2022-02-24T01:02:03.000Z
+</div>
+`;
+
 exports[`TableCell matches snapshot array long 1`] = `
-<span
+<div
   class="table-cell truncated"
 >
   [0, 1, 2, 3, 4, 5, 6, 7
@@ -12,7 +30,8 @@ exports[`TableCell matches snapshot array long 1`] = `
   </span>
   7, 98, 99]
   <span
-    class="bp3-icon bp3-icon-more action-icon"
+    aria-hidden="true"
+    class="bp4-icon bp4-icon-more action-icon"
     icon="more"
   >
     <svg
@@ -21,52 +40,57 @@ exports[`TableCell matches snapshot array long 1`] = `
       viewBox="0 0 16 16"
       width="16"
     >
-      <desc>
-        more
-      </desc>
       <path
         d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
       />
     </svg>
   </span>
-</span>
+</div>
+`;
+
+exports[`TableCell matches snapshot array mixed 1`] = `
+<div
+  class="table-cell plain"
+>
+  ["a",{"v":"b"},"c"]
+</div>
 `;
 
 exports[`TableCell matches snapshot array short 1`] = `
-<span
+<div
   class="table-cell plain"
 >
   [a, b, c]
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot null 1`] = `
-<span
+<div
   class="table-cell null"
 >
   null
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot object 1`] = `
-<span
+<div
   class="table-cell plain"
 >
   {"hello":"world"}
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot simple 1`] = `
-<span
+<div
   class="table-cell plain"
 >
   Hello World
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot truncate 1`] = `
-<span
+<div
   class="table-cell truncated"
 >
   test_test_test_test_tes
@@ -77,7 +101,8 @@ exports[`TableCell matches snapshot truncate 1`] = `
   </span>
   test_test_
   <span
-    class="bp3-icon bp3-icon-more action-icon"
+    aria-hidden="true"
+    class="bp4-icon bp4-icon-more action-icon"
     icon="more"
   >
     <svg
@@ -86,30 +111,27 @@ exports[`TableCell matches snapshot truncate 1`] = `
       viewBox="0 0 16 16"
       width="16"
     >
-      <desc>
-        more
-      </desc>
       <path
         d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
         fill-rule="evenodd"
       />
     </svg>
   </span>
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot unlimited (absolute max) 1`] = `
-<span
+<div
   class="table-cell plain"
 >
   test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_...
-</span>
+</div>
 `;
 
 exports[`TableCell matches snapshot unlimited 1`] = `
-<span
+<div
   class="table-cell plain"
 >
   test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_test_
-</span>
+</div>
 `;

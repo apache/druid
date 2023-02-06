@@ -28,6 +28,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -41,12 +43,8 @@ import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.List;
 
 /**
@@ -59,56 +57,6 @@ public class S3StorageDruidModule implements DruidModule
   public static final String SCHEME_S3_ZIP = "s3_zip";
 
   private static final Logger log = new Logger(S3StorageDruidModule.class);
-
-  private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
-  {
-    if (StringUtils.isNotEmpty(proxyConfig.getHost())) {
-      conf.setProxyHost(proxyConfig.getHost());
-    }
-    if (proxyConfig.getPort() != -1) {
-      conf.setProxyPort(proxyConfig.getPort());
-    }
-    if (StringUtils.isNotEmpty(proxyConfig.getUsername())) {
-      conf.setProxyUsername(proxyConfig.getUsername());
-    }
-    if (StringUtils.isNotEmpty(proxyConfig.getPassword())) {
-      conf.setProxyPassword(proxyConfig.getPassword());
-    }
-    return conf;
-  }
-
-  @Nullable
-  private static Protocol parseProtocol(@Nullable String protocol)
-  {
-    if (protocol == null) {
-      return null;
-    }
-
-    if (protocol.equalsIgnoreCase("http")) {
-      return Protocol.HTTP;
-    } else if (protocol.equalsIgnoreCase("https")) {
-      return Protocol.HTTPS;
-    } else {
-      throw new IAE("Unknown protocol[%s]", protocol);
-    }
-  }
-
-  private static Protocol determineProtocol(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
-  {
-    final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
-    final String endpointUrl = endpointConfig.getUrl();
-    if (StringUtils.isNotEmpty(endpointUrl)) {
-      //noinspection ConstantConditions
-      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
-      final Protocol protocol = parseProtocol(uri.getScheme());
-      if (protocol != null && (protocol != protocolFromClientConfig)) {
-        log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);
-      }
-      return protocol;
-    } else {
-      return protocolFromClientConfig;
-    }
-  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -148,8 +96,14 @@ public class S3StorageDruidModule implements DruidModule
              .addBinding(SCHEME_S3N)
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME_S3_ZIP).to(S3DataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentKiller.class)
+           .in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentMover.class)
+           .in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentArchiver.class)
@@ -180,11 +134,11 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
-    final Protocol protocol = determineProtocol(clientConfig, endpointConfig);
+    final Protocol protocol = S3Utils.determineProtocol(clientConfig, endpointConfig);
     final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
         .builder()
         .withCredentials(provider)
-        .withClientConfiguration(setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
+        .withClientConfiguration(S3Utils.setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
         .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
         .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
         .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
@@ -202,6 +156,11 @@ public class S3StorageDruidModule implements DruidModule
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
+  /**
+   * Creates {@link ServerSideEncryptingAmazonS3} which may perform config validation immediately.
+   * You may want to avoid immediate config validation but defer it until you actually use the s3 client.
+   * Use {@link #getAmazonS3ClientSupplier} instead in that case.
+   */
   @Provides
   @LazySingleton
   public ServerSideEncryptingAmazonS3 getAmazonS3Client(
@@ -209,5 +168,18 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     return serverSideEncryptingAmazonS3Builder.build();
+  }
+
+  /**
+   * Creates a supplier that lazily initialize {@link ServerSideEncryptingAmazonS3}.
+   * You may want to use the supplier to defer config validation until you actually use the s3 client.
+   */
+  @Provides
+  @LazySingleton
+  public Supplier<ServerSideEncryptingAmazonS3> getAmazonS3ClientSupplier(
+      ServerSideEncryptingAmazonS3.Builder serverSideEncryptingAmazonS3Builder
+  )
+  {
+    return Suppliers.memoize(serverSideEncryptingAmazonS3Builder::build);
   }
 }

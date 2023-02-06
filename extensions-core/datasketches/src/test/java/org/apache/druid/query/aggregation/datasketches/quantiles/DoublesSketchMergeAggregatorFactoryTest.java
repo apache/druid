@@ -51,7 +51,8 @@ public class DoublesSketchMergeAggregatorFactoryTest
     final DoublesSketchMergeAggregatorFactory factory = new DoublesSketchMergeAggregatorFactory(
         "myFactory",
         1024,
-        1000L
+        1000L,
+        null
     );
     final byte[] json = mapper.writeValueAsBytes(factory);
     final DoublesSketchMergeAggregatorFactory fromJson = (DoublesSketchMergeAggregatorFactory) mapper.readValue(
@@ -59,5 +60,18 @@ public class DoublesSketchMergeAggregatorFactoryTest
         AggregatorFactory.class
     );
     Assert.assertEquals(factory, fromJson);
+  }
+
+  @Test
+  public void testWithName()
+  {
+    final DoublesSketchMergeAggregatorFactory factory = new DoublesSketchMergeAggregatorFactory(
+        "myFactory",
+        1024,
+        1000L,
+        null
+    );
+    Assert.assertEquals(factory, factory.withName("myFactory"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -27,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
@@ -51,6 +51,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
@@ -133,6 +134,8 @@ public class CliIndexer extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
             binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+            // needed for the CliPeon, not needed for indexer, but have to bind annotation.
+            binder.bindConstant().annotatedWith(AttemptId.class).to("");
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 

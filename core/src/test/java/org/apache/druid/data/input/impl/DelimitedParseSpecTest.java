@@ -25,7 +25,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -38,7 +37,7 @@ public class DelimitedParseSpecTest
   {
     DelimitedParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec("abc", "iso", null),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc"))),
         "\u0001",
         "\u0002",
         Collections.singletonList("abc"),
@@ -68,11 +67,7 @@ public class DelimitedParseSpecTest
             "auto",
             null
         ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b"))),
         ",",
         null,
         Collections.singletonList("a,"),
@@ -91,11 +86,7 @@ public class DelimitedParseSpecTest
             "auto",
             null
         ),
-        new DimensionsSpec(
-            DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            new ArrayList<>(),
-            new ArrayList<>()
-        ),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b"))),
         ",",
         null,
         null,

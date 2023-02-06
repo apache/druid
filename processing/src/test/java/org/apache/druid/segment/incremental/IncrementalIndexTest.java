@@ -78,7 +78,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             new FloatDimensionSchema("float"),
             new LongDimensionSchema("long"),
             new DoubleDimensionSchema("double")
-        ), null, null
+        )
     );
     AggregatorFactory[] metrics = {
         new FilteredAggregatorFactory(
@@ -228,6 +228,79 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [could not convert value [] to double]",
+        result.getParseException().getMessage()
+    );
+  }
+
+  @Test
+  public void testMultiValuedNumericDimensions() throws IndexSizeExceededException
+  {
+    IncrementalIndex index = indexCreator.createIndex();
+
+    IncrementalIndexAddResult result;
+    result = index.add(
+        new MapBasedInputRow(
+            0,
+            Lists.newArrayList("string", "float", "long", "double"),
+            ImmutableMap.of(
+                "string", "A",
+                "float", "19.0",
+                "long", Arrays.asList(10L, 5L),
+                "double", 21.0d
+            )
+        )
+    );
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "{string=A, float=19.0, long=[10, 5], double=21.0}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [10, 5] as long. A long column cannot have multiple values in the same row.]",
+        result.getParseException().getMessage()
+    );
+
+    result = index.add(
+        new MapBasedInputRow(
+            0,
+            Lists.newArrayList("string", "float", "long", "double"),
+            ImmutableMap.of(
+                "string", "A",
+                "float", Arrays.asList(10.0f, 5.0f),
+                "long", 20,
+                "double", 21.0d
+            )
+        )
+    );
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "{string=A, float=[10.0, 5.0], long=20, double=21.0}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [10.0, 5.0] as float. A float column cannot have multiple values in the same row.]",
+        result.getParseException().getMessage()
+    );
+
+    result = index.add(
+        new MapBasedInputRow(
+            0,
+            Lists.newArrayList("string", "float", "long", "double"),
+            ImmutableMap.of(
+                "string", "A",
+                "float", 19.0,
+                "long", 20,
+                "double", Arrays.asList(10.0D, 5.0D)
+            )
+        )
+    );
+    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "{string=A, float=19.0, long=20, double=[10.0, 5.0]}",
+        result.getParseException().getInput()
+    );
+    Assert.assertEquals(
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [10.0, 5.0] as double. A double column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
   }

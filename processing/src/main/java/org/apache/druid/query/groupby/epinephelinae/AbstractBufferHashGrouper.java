@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 
@@ -76,8 +77,8 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   /**
    * Called to check if it's possible to skip aggregation for a row.
    *
-   * @param bucketOffset  Offset of the bucket containing this row's entry in the hash table,
-   *                      within the buffer returned by hashTable.getTableBuffer()
+   * @param bucketOffset Offset of the bucket containing this row's entry in the hash table,
+   *                     within the buffer returned by hashTable.getTableBuffer()
    *
    * @return true if aggregation can be skipped, false otherwise.
    */
@@ -171,15 +172,29 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
     aggregators.close();
   }
 
-  protected Entry<KeyType> bucketEntryForOffset(final int bucketOffset)
+  /**
+   * Populate a {@link ReusableEntry} with values from a particular bucket.
+   */
+  protected Entry<KeyType> populateBucketEntryForOffset(
+      final ReusableEntry<KeyType> reusableEntry,
+      final int bucketOffset
+  )
   {
     final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-    final KeyType key = keySerde.fromByteBuffer(tableBuffer, bucketOffset + HASH_SIZE);
-    final Object[] values = new Object[aggregators.size()];
-    for (int i = 0; i < aggregators.size(); i++) {
-      values[i] = aggregators.get(tableBuffer, bucketOffset + baseAggregatorOffset, i);
+    keySerde.readFromByteBuffer(reusableEntry.getKey(), tableBuffer, bucketOffset + HASH_SIZE);
+
+    if (reusableEntry.getValues().length != aggregators.size()) {
+      throw new ISE(
+          "Expected entry with [%d] values but got [%d]",
+          aggregators.size(),
+          reusableEntry.getValues().length
+      );
     }
 
-    return new Entry<>(key, values);
+    for (int i = 0; i < aggregators.size(); i++) {
+      reusableEntry.getValues()[i] = aggregators.get(tableBuffer, bucketOffset + baseAggregatorOffset, i);
+    }
+
+    return reusableEntry;
   }
 }

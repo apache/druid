@@ -41,6 +41,11 @@ public abstract class AbstractMonitor implements Monitor
     started = false;
   }
 
+  public boolean isStarted()
+  {
+    return started;
+  }
+
   @Override
   public boolean monitor(ServiceEmitter emitter)
   {

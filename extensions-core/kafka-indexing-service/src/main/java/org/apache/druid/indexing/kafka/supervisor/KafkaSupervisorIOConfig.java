@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,7 +45,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
-
+  private final KafkaConfigOverrides configOverrides;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -61,7 +63,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("completionTimeout") Period completionTimeout,
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime
+      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
+      @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
+      @JsonProperty("idleConfig") IdleConfig idleConfig
   )
   {
     super(
@@ -77,7 +81,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
-        lateMessageRejectionStartDateTime
+        lateMessageRejectionStartDateTime,
+        idleConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -86,6 +91,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
+    this.configOverrides = configOverrides;
   }
 
   @JsonProperty
@@ -112,6 +118,12 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return isUseEarliestSequenceNumber();
   }
 
+  @JsonProperty
+  public KafkaConfigOverrides getConfigOverrides()
+  {
+    return configOverrides;
+  }
+
   @Override
   public String toString()
   {
@@ -121,7 +133,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", consumerProperties=" + consumerProperties +
-           ", autoScalerConfig=" + getAutoscalerConfig() +
+           ", autoScalerConfig=" + getAutoScalerConfig() +
            ", pollTimeout=" + pollTimeout +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +
@@ -130,6 +142,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
+           ", configOverrides=" + getConfigOverrides() +
+           ", idleConfig=" + getIdleConfig() +
            '}';
   }
 

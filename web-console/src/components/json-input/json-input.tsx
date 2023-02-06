@@ -148,6 +148,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           enableLiveAutocompletion: false,
           showLineNumbers: false,
           tabSize: 2,
+          newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
         }}
         style={{}}
         onLoad={editor => {

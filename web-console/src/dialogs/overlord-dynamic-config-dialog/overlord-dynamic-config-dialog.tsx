@@ -20,7 +20,7 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { AutoForm, ExternalLink } from '../../components';
+import { AutoForm, ExternalLink, Loader } from '../../components';
 import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
@@ -31,24 +31,25 @@ import { SnitchDialog } from '..';
 import './overlord-dynamic-config-dialog.scss';
 
 export interface OverlordDynamicConfigDialogProps {
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicConfigDialog(
   props: OverlordDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
-  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig>({});
+  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig | undefined>();
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
+    initQuery: null,
     processQuery: async () => {
       const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`);
       return historyResp.data;
     },
-    initQuery: null,
   });
 
   useQueryManager<null, Record<string, any>>({
+    initQuery: null,
     processQuery: async () => {
       try {
         const configResp = await Api.instance.get(`/druid/indexer/v1/worker`);
@@ -59,12 +60,10 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           intent: Intent.DANGER,
           message: `Could not load overlord dynamic config: ${getDruidErrorMessage(e)}`,
         });
-        setDynamicConfig({});
         onClose();
       }
       return {};
     },
-    initQuery: null,
   });
 
   async function saveConfig(comment: string) {
@@ -98,20 +97,27 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
       title="Overlord dynamic config"
       historyRecords={historyRecordsState.data}
     >
-      <p>
-        Edit the overlord dynamic configuration on the fly. For more information please refer to the{' '}
-        <ExternalLink
-          href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-        >
-          documentation
-        </ExternalLink>
-        .
-      </p>
-      <AutoForm
-        fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
-        model={dynamicConfig}
-        onChange={setDynamicConfig}
-      />
+      {dynamicConfig ? (
+        <>
+          <p>
+            Edit the overlord dynamic configuration on the fly. For more information please refer to
+            the{' '}
+            <ExternalLink
+              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
+            >
+              documentation
+            </ExternalLink>
+            .
+          </p>
+          <AutoForm
+            fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
+            model={dynamicConfig}
+            onChange={setDynamicConfig}
+          />
+        </>
+      ) : (
+        <Loader />
+      )}
     </SnitchDialog>
   );
 });

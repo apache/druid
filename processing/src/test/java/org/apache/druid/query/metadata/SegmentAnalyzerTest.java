@@ -46,6 +46,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -68,6 +69,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -108,9 +110,20 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         columns.size()
     ); // All columns including time and empty/null column
 
-    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+    // Verify key order is the same as the underlying segment.
+    // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
+    final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
+
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+
+    // Start from 1: skipping __time
+    for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
+      final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
+      final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      final ColumnAnalysis columnAnalysis = columns.get(dimension);
+      Assert.assertEquals(dimension, analysisEntry.getKey());
+      final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
 
       Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
@@ -161,30 +174,32 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     Assert.assertEquals(SegmentId.dummy("test_1").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
-    Assert.assertEquals(
-        TestIndex.COLUMNS.length + 3 - 1,
-        columns.size()
-    ); // All columns including time and excluding empty/null column
+    // Verify key order is the same as the underlying segment.
+    // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
+    final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
 
-    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+
+    // Start from 1: skipping __time
+    for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
+      final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
+      final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      final ColumnAnalysis columnAnalysis = columns.get(dimension);
-      if ("null_column".equals(dimension)) {
-        Assert.assertNull(columnAnalysis);
-      } else {
-        final boolean isString = schema.getColumnType().is(ValueType.STRING);
-        Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
-        Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+      Assert.assertEquals(dimension, analysisEntry.getKey());
+      final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
+      final boolean isString = schema.getColumnType().is(ValueType.STRING);
+      Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
+      Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
 
-        if (isString) {
-          if (analyses == null) {
-            Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
-          } else {
-            Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
-          }
+      if (isString) {
+        if (analyses == null) {
+          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
         } else {
-          Assert.assertNull(dimension, columnAnalysis.getCardinality());
+          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
         }
+      } else {
+        Assert.assertNull(dimension, columnAnalysis.getCardinality());
       }
     }
 
@@ -208,6 +223,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
    * *Awesome* method name auto-generated by IntelliJ!  I love IntelliJ!
    *
    * @param index
+   *
    * @return
    */
   private List<SegmentAnalysis> getSegmentAnalysises(Segment index, EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
@@ -261,6 +277,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
    * (which can happen if an aggregator was removed for a later version), then,
    * analyzing the segment doesn't fail and the result of analysis of the complex column
    * is reported as an error.
+   *
    * @throws IOException
    */
   @Test
@@ -321,7 +338,10 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       Assert.assertEquals("error:unknown_complex_invalid_complex_column_type", invalidColumnAnalysis.getErrorMessage());
 
       // Run a segment metadata query also to verify it doesn't break
-      final List<SegmentAnalysis> results = getSegmentAnalysises(segment, EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
+      final List<SegmentAnalysis> results = getSegmentAnalysises(
+          segment,
+          EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE)
+      );
       for (SegmentAnalysis result : results) {
         Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
       }
@@ -454,6 +474,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     public int getMaxIntermediateSize()
     {
       return 0;
+    }
+
+    @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new InvalidAggregatorFactory(newName, fieldName);
     }
 
     @Override

@@ -26,7 +26,7 @@ sidebar_label: "Scan"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql.md#query-types).
+> [SQL documentation](sql-translation.md#query-types).
 
 The Scan query returns raw Apache Druid rows in streaming mode.  
 

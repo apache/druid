@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
@@ -42,6 +44,7 @@ import java.util.Objects;
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
   public static final boolean DEFAULT_ROUND = false;
+  public static final boolean DEFAULT_SHOULD_FINALIZE = true;
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
@@ -52,6 +55,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final int lgK;
   private final TgtHllType tgtHllType;
+  private final boolean shouldFinalize;
   private final boolean round;
 
   HllSketchAggregatorFactory(
@@ -59,6 +63,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       final String fieldName,
       @Nullable final Integer lgK,
       @Nullable final String tgtHllType,
+      final Boolean shouldFinalize,
       final boolean round
   )
   {
@@ -66,6 +71,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     this.fieldName = Objects.requireNonNull(fieldName);
     this.lgK = lgK == null ? DEFAULT_LG_K : lgK;
     this.tgtHllType = tgtHllType == null ? DEFAULT_TGT_HLL_TYPE : TgtHllType.valueOf(tgtHllType);
+    this.shouldFinalize = shouldFinalize == null ? DEFAULT_SHOULD_FINALIZE : shouldFinalize;
     this.round = round;
   }
 
@@ -95,6 +101,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
+  public boolean isShouldFinalize()
+  {
+    return shouldFinalize;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isRound()
   {
     return round;
@@ -114,7 +128,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), round)
+        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), shouldFinalize, round)
     );
   }
 
@@ -179,9 +193,10 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable final Object object)
   {
-    if (object == null) {
-      return null;
+    if (!shouldFinalize || object == null) {
+      return object;
     }
+
     final HllSketch sketch = (HllSketch) object;
     final double estimate = sketch.getEstimate();
 
@@ -201,7 +216,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType(), isRound());
+    return new HllSketchMergeAggregatorFactory(
+        getName(),
+        getName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
   @Override
@@ -212,51 +234,41 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean equals(final Object object)
+  public boolean equals(Object o)
   {
-    if (this == object) {
+    if (this == o) {
       return true;
     }
-    if (object == null || !getClass().equals(object.getClass())) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) object;
-    if (!name.equals(that.getName())) {
-      return false;
-    }
-    if (!fieldName.equals(that.getFieldName())) {
-      return false;
-    }
-    if (lgK != that.getLgK()) {
-      return false;
-    }
-    if (!tgtHllType.equals(that.tgtHllType)) {
-      return false;
-    }
-    if (round != that.round) {
-      return false;
-    }
-    return true;
+    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) o;
+    return lgK == that.lgK
+           && shouldFinalize == that.shouldFinalize
+           && round == that.round
+           && Objects.equals(name, that.name)
+           && Objects.equals(fieldName, that.fieldName)
+           && tgtHllType == that.tgtHllType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, lgK, tgtHllType);
+    return Objects.hash(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + " {"
-           + " name=" + name
-           + ", fieldName=" + fieldName
-           + ", lgK=" + lgK
-           + ", tgtHllType=" + tgtHllType
-           + ", round=" + round
-           + " }";
+    return getClass().getSimpleName() + "{" +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", lgK=" + lgK +
+           ", tgtHllType=" + tgtHllType +
+           (shouldFinalize != DEFAULT_SHOULD_FINALIZE ? ", shouldFinalize=" + shouldFinalize : "") +
+           (round != DEFAULT_ROUND ? ", round=" + round : "") +
+           '}';
   }
 
   protected abstract byte getCacheTypeId();
-
 }

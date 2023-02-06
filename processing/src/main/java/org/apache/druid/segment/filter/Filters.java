@@ -20,18 +20,13 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
@@ -40,25 +35,25 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.IntIteratorUtils;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.CloseableIndexed;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.column.DruidPredicateIndex;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -147,191 +142,59 @@ public class Filters
     );
   }
 
-  public static ImmutableBitmap allFalse(final BitmapIndexSelector selector)
-  {
-    return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-  }
-
-  public static ImmutableBitmap allTrue(final BitmapIndexSelector selector)
-  {
-    return selector.getBitmapFactory()
-                   .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
-  }
-
-  /**
-   * Transform an iterable of indexes of bitmaps to an iterable of bitmaps
-   *
-   * @param indexes     indexes of bitmaps
-   * @param bitmapIndex an object to retrieve bitmaps using indexes
-   *
-   * @return an iterable of bitmaps
-   */
-  public static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
-  {
-    // Do not use Iterables.transform() to avoid boxing/unboxing integers.
-    return new Iterable<ImmutableBitmap>()
-    {
-      @Override
-      public Iterator<ImmutableBitmap> iterator()
-      {
-        final IntIterator iterator = indexes.iterator();
-
-        return new Iterator<ImmutableBitmap>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return iterator.hasNext();
-          }
-
-          @Override
-          public ImmutableBitmap next()
-          {
-            return bitmapIndex.getBitmap(iterator.nextInt());
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    };
-  }
-
-  /**
-   * Return the union of bitmaps for all values matching a particular predicate.
-   *
-   * @param dimension           dimension to look at
-   * @param selector            bitmap selector
-   * @param bitmapResultFactory
-   * @param predicate           predicate to use
-   *
-   * @return bitmap of matching rows
-   *
-   * @see #estimateSelectivity(String, BitmapIndexSelector, Predicate)
-   */
-  public static <T> T matchPredicate(
-      final String dimension,
-      final BitmapIndexSelector selector,
-      BitmapResultFactory<T> bitmapResultFactory,
-      final Predicate<String> predicate
+  @Nullable
+  public static BitmapColumnIndex makePredicateIndex(
+      final String column,
+      final ColumnIndexSelector selector,
+      final DruidPredicateFactory predicateFactory
   )
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(matchPredicateNoUnion(dimension, selector, predicate));
-  }
-
-  /**
-   * Return an iterable of bitmaps for all values matching a particular predicate. Unioning these bitmaps
-   * yields the same result that {@link #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)}
-   * would have returned.
-   *
-   * @param dimension dimension to look at
-   * @param selector  bitmap selector
-   * @param predicate predicate to use
-   *
-   * @return iterable of bitmaps of matching rows
-   */
-  public static Iterable<ImmutableBitmap> matchPredicateNoUnion(
-      final String dimension,
-      final BitmapIndexSelector selector,
-      final Predicate<String> predicate
-  )
-  {
-    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(column, "column");
     Preconditions.checkNotNull(selector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
-
-    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
-      if (dimValues == null || dimValues.size() == 0) {
-        return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
+    Preconditions.checkNotNull(predicateFactory, "predicateFactory");
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
+    if (indexSupplier != null) {
+      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
+      if (predicateIndex != null) {
+        return predicateIndex.forPredicate(predicateFactory);
       }
-
-      // Apply predicate to all dimension values and union the matching bitmaps
-      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-      return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+      // index doesn't exist
+      return null;
     }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    // missing column -> match all rows if the predicate matches null; match no rows otherwise
+    return predicateFactory.makeStringPredicate().apply(null)
+           ? new AllTrueBitmapColumnIndex(selector)
+           : new AllFalseBitmapColumnIndex(selector);
   }
 
-  /**
-   * Return an estimated selectivity for bitmaps of all values matching the given predicate.
-   *
-   * @param dimension     dimension to look at
-   * @param indexSelector bitmap selector
-   * @param predicate     predicate to use
-   *
-   * @return estimated selectivity
-   *
-   * @see #matchPredicate(String, BitmapIndexSelector, BitmapResultFactory, Predicate)
-   */
-  public static double estimateSelectivity(
-      final String dimension,
-      final BitmapIndexSelector indexSelector,
-      final Predicate<String> predicate
+  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  {
+    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+  }
+
+  public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
+  {
+    return filter.getBitmapColumnIndex(selector).computeBitmapResult(
+        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+    );
+  }
+
+  public static boolean supportsSelectivityEstimation(
+      Filter filter,
+      String dimension,
+      ColumnSelector columnSelector,
+      ColumnIndexSelector indexSelector
   )
   {
-    Preconditions.checkNotNull(dimension, "dimension");
-    Preconditions.checkNotNull(indexSelector, "selector");
-    Preconditions.checkNotNull(predicate, "predicate");
-
-    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    try (final CloseableIndexed<String> dimValues = indexSelector.getDimensionValues(dimension)) {
-      if (dimValues == null || dimValues.size() == 0) {
-        return predicate.apply(null) ? 1. : 0.;
+    if (filter.getBitmapColumnIndex(indexSelector) != null) {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
+      if (columnHolder != null) {
+        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
       }
-
-      // Apply predicate to all dimension values and union the matching bitmaps
-      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-      return estimateSelectivity(
-          bitmapIndex,
-          IntIteratorUtils.toIntList(
-              makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()
-          ),
-          indexSelector.getNumRows()
-      );
     }
-    catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return false;
   }
 
-  /**
-   * Return an estimated selectivity for bitmaps for the dimension values given by dimValueIndexes.
-   *
-   * @param bitmapIndex  bitmap index
-   * @param bitmaps      bitmaps to extract, by index
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
-  public static double estimateSelectivity(
-      final BitmapIndex bitmapIndex,
-      final IntList bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    for (int i = 0; i < bitmaps.size(); i++) {
-      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(bitmaps.getInt(i));
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
-  }
-
-  /**
-   * Return an estimated selectivity for bitmaps given by an iterator.
-   *
-   * @param bitmaps      iterator of bitmaps
-   * @param totalNumRows number of rows in the column associated with this bitmap index
-   *
-   * @return estimated selectivity
-   */
   public static double estimateSelectivity(
       final Iterator<ImmutableBitmap> bitmaps,
       final long totalNumRows
@@ -343,87 +206,7 @@ public class Filters
       numMatchedRows += bitmap.size();
     }
 
-    return Math.min(1., (double) numMatchedRows / totalNumRows);
-  }
-
-  private static Iterable<ImmutableBitmap> makePredicateQualifyingBitmapIterable(
-      final BitmapIndex bitmapIndex,
-      final Predicate<String> predicate,
-      final Indexed<String> dimValues
-  )
-  {
-    return bitmapsFromIndexes(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues), bitmapIndex);
-  }
-
-  private static IntIterable makePredicateQualifyingIndexIterable(
-      final BitmapIndex bitmapIndex,
-      final Predicate<String> predicate,
-      final Indexed<String> dimValues
-  )
-  {
-    return new IntIterable()
-    {
-      @Override
-      public IntIterator iterator()
-      {
-        return new IntIterator()
-        {
-          private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
-          private int nextIndex = 0;
-          private int found;
-
-          {
-            found = findNextIndex();
-          }
-
-          private int findNextIndex()
-          {
-            while (nextIndex < bitmapIndexCardinality && !predicate.apply(dimValues.get(nextIndex))) {
-              nextIndex++;
-            }
-
-            if (nextIndex < bitmapIndexCardinality) {
-              return nextIndex++;
-            } else {
-              return -1;
-            }
-          }
-
-          @Override
-          public boolean hasNext()
-          {
-            return found != -1;
-          }
-
-          @Override
-          public int nextInt()
-          {
-            int foundIndex = this.found;
-            if (foundIndex == -1) {
-              throw new NoSuchElementException();
-            }
-            this.found = findNextIndex();
-            return foundIndex;
-          }
-        };
-      }
-    };
-  }
-
-  public static boolean supportsSelectivityEstimation(
-      Filter filter,
-      String dimension,
-      ColumnSelector columnSelector,
-      BitmapIndexSelector indexSelector
-  )
-  {
-    if (filter.supportsBitmapIndex(indexSelector)) {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
-      if (columnHolder != null) {
-        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
-      }
-    }
-    return false;
+    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable
@@ -432,11 +215,16 @@ public class Filters
     if (filter == null) {
       return null;
     }
-    boolean useCNF = query.getContextBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
-    return useCNF ? Filters.toCnf(filter) : filter;
+    boolean useCNF = query.context().getBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
+    try {
+      return useCNF ? Filters.toCnf(filter) : filter;
+    }
+    catch (CNFFilterExplosionException cnfFilterExplosionException) {
+      return filter; // cannot convert to CNF, return the filter as is
+    }
   }
 
-  public static Filter toCnf(Filter current)
+  public static Filter toCnf(Filter current) throws CNFFilterExplosionException
   {
     // Push down NOT filters to leaves if possible to remove NOT on NOT filters and reduce hierarchy.
     // ex) ~(a OR ~b) => ~a AND b
@@ -456,34 +244,40 @@ public class Filters
     return current;
   }
 
-  /**
-   * This method provides a "standard" implementation of {@link Filter#shouldUseBitmapIndex(BitmapIndexSelector)} which takes
-   * a {@link Filter}, a {@link BitmapIndexSelector}, and {@link FilterTuning} to determine if:
-   * a) the filter supports bitmap indexes for all required columns
-   * b) the filter tuning specifies that it should use the index
-   * c) the cardinality of the column is above the minimum threshold and below the maximum threshold to use the index
-   *
-   * If all these things are true, {@link org.apache.druid.segment.QueryableIndexStorageAdapter} will utilize the
-   * indexes.
-   */
-  public static boolean shouldUseBitmapIndex(
-      Filter filter,
-      BitmapIndexSelector indexSelector,
+
+  public static boolean checkFilterTuningUseIndex(
+      String columnName,
+      ColumnIndexSelector indexSelector,
       @Nullable FilterTuning filterTuning
   )
   {
-    final FilterTuning tuning = filterTuning != null ? filterTuning : FilterTuning.createDefault(filter, indexSelector);
-    if (filter.supportsBitmapIndex(indexSelector) && tuning.getUseBitmapIndex()) {
-      return filter.getRequiredColumns().stream().allMatch(column -> {
-        final BitmapIndex index = indexSelector.getBitmapIndex(column);
-        Preconditions.checkNotNull(index, "Column does not have a bitmap index");
-        final int cardinality = index.getCardinality();
-        return cardinality >= tuning.getMinCardinalityToUseBitmapIndex()
-               && cardinality <= tuning.getMaxCardinalityToUseBitmapIndex();
-      });
+    if (filterTuning != null) {
+      if (!filterTuning.getUseBitmapIndex()) {
+        return false;
+      }
+      if (filterTuning.hasValueCardinalityThreshold()) {
+        final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(columnName);
+        if (indexSupplier != null) {
+          final DictionaryEncodedStringValueIndex valueIndex =
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+          if (valueIndex != null) {
+            final int cardinality = valueIndex.getCardinality();
+            Integer min = filterTuning.getMinCardinalityToUseBitmapIndex();
+            Integer max = filterTuning.getMaxCardinalityToUseBitmapIndex();
+            if (min != null && cardinality < min) {
+              return false;
+            }
+            if (max != null && cardinality > max) {
+              return false;
+            }
+          }
+        }
+      }
     }
-    return false;
+    return true;
   }
+
+
 
   /**
    * Create a filter representing an AND relationship across a list of filters. Deduplicates filters, flattens stacks,
@@ -578,7 +372,7 @@ public class Filters
    *
    * @return The normalized or clauses for the provided filter.
    */
-  public static List<Filter> toNormalizedOrClauses(Filter filter)
+  public static List<Filter> toNormalizedOrClauses(Filter filter) throws CNFFilterExplosionException
   {
     Filter normalizedFilter = Filters.toCnf(filter);
 

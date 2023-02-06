@@ -19,22 +19,16 @@
 
 package org.apache.druid.query.filter.sql;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
-import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.expressions.BloomFilterExpressions;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
@@ -42,53 +36,25 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
 
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
   @Override
-  public DruidOperatorTable createOperatorTable()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    CalciteTests.getJsonMapper().registerModule(new BloomFilterSerializersModule());
-    return new DruidOperatorTable(
-        ImmutableSet.of(
-            new CountSqlAggregator(new ApproxCountDistinctSqlAggregator(new BuiltinApproxCountDistinctSqlAggregator()))
-        ),
-        ImmutableSet.of(new BloomFilterOperatorConversion())
-    );
-  }
-
-  @Override
-  public ExprMacroTable createMacroTable()
-  {
-    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
-    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(CalciteTests.INJECTOR.getInstance(clazz));
-    }
-    exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
-    exprMacros.add(new BloomFilterExpressions.TestExprMacro());
-    return new ExprMacroTable(exprMacros);
-  }
-
-  @Override
-  public Iterable<? extends Module> getJacksonModules()
-  {
-    return Iterables.concat(super.getJacksonModules(), new BloomFilterExtensionModule().getJacksonModules());
+    super.configureGuice(builder);
+    builder.addModule(new BloomFilterExtensionModule());
   }
 
   @Test
-  public void testBloomFilter() throws Exception
+  public void testBloomFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -116,7 +82,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterExprFilter() throws Exception
+  public void testBloomFilterExprFilter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
@@ -143,7 +109,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                               base64
                           ),
                           null,
-                          createMacroTable()
+                          queryFramework().macroTable()
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -157,7 +123,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterVirtualColumn() throws Exception
+  public void testBloomFilterVirtualColumn() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def-foo");
@@ -187,7 +153,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testBloomFilterVirtualColumnNumber() throws Exception
+  public void testBloomFilterVirtualColumnNumber() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addFloat(20.2f);
@@ -218,7 +184,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilters() throws Exception
+  public void testBloomFilters() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
@@ -254,7 +220,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is really slow and is intended to use for comparisons with testBloomFilterBigParameter")
   @Test
-  public void testBloomFilterBigNoParam() throws Exception
+  public void testBloomFilterBigNoParam() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -282,7 +248,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 
   @Ignore("this test is for comparison with testBloomFilterBigNoParam")
   @Test
-  public void testBloomFilterBigParameter() throws Exception
+  public void testBloomFilterBigParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(5_000_000);
     filter.addString("def");
@@ -310,7 +276,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterNullParameter() throws Exception
+  public void testBloomFilterNullParameter() throws IOException
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addBytes(null, 0, 0);

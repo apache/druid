@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -30,9 +29,9 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.AfterClass;
@@ -61,7 +61,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
-public class ExpressionVectorSelectorsTest
+public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 {
   private static List<String> EXPRESSIONS = ImmutableList.of(
       "long1 * long2",
@@ -95,7 +95,7 @@ public class ExpressionVectorSelectorsTest
       "concat(string1, nonexistent)"
   );
 
-  private static final int ROWS_PER_SEGMENT = 100_000;
+  private static final int ROWS_PER_SEGMENT = 10_000;
 
   private static QueryableIndex INDEX;
   private static Closer CLOSER;
@@ -145,17 +145,7 @@ public class ExpressionVectorSelectorsTest
   public void setup()
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(
-        new ColumnInspector()
-        {
-          @Nullable
-          @Override
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return QueryableIndexStorageAdapter.getColumnCapabilities(INDEX, column);
-          }
-        }
-    );
+    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(INDEX));
     if (outputType == null) {
       outputType = ExpressionType.STRING;
     }
@@ -273,7 +263,7 @@ public class ExpressionVectorSelectorsTest
           int rows = 0;
           while (!nonVectorized.isDone()) {
             Assert.assertEquals(
-                StringUtils.format("Failed at row %s", rows),
+                "Failed at row " + rows,
                 nonSelector.getObject(),
                 results.get(rows)
             );

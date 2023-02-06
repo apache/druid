@@ -27,13 +27,11 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -61,7 +59,7 @@ public class ITSqlCancelTest
   private static final int NUM_QUERIES = 3;
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private DataLoaderHelper dataLoaderHelper;
   @Inject
   private SqlTestQueryHelper sqlHelper;
   @Inject
@@ -75,9 +73,7 @@ public class ITSqlCancelTest
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
   }
 
   @Test
@@ -110,10 +106,10 @@ public class ITSqlCancelTest
         throw new ISE("Query is not canceled after cancel request");
       }
       QueryException queryException = jsonMapper.readValue(queryResponse.getContent(), QueryException.class);
-      if (!QueryInterruptedException.QUERY_CANCELLED.equals(queryException.getErrorCode())) {
+      if (!"Query cancelled".equals(queryException.getErrorCode())) {
         throw new ISE(
             "Expected error code [%s], actual [%s]",
-            QueryInterruptedException.QUERY_CANCELLED,
+            "Query cancelled",
             queryException.getErrorCode()
         );
       }
@@ -141,7 +137,11 @@ public class ITSqlCancelTest
 
     final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
     if (!queryResponse.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE("Cancel request failed with status[%s] and content[%s]", queryResponse.getStatus(), queryResponse.getContent());
+      throw new ISE(
+          "Cancel request failed with status[%s] and content[%s]",
+          queryResponse.getStatus(),
+          queryResponse.getContent()
+      );
     }
   }
 }

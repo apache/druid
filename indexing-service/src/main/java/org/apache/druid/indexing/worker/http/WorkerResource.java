@@ -24,7 +24,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -53,6 +52,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  */
@@ -206,6 +206,7 @@ public class WorkerResource
     IdUtils.validateId("taskId", taskId);
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
+                     .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
                          taskRunner.getClass().getName()
@@ -213,10 +214,10 @@ public class WorkerResource
                      .build();
     }
     try {
-      final Optional<ByteSource> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskId, offset);
+      final Optional<InputStream> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskId, offset);
 
       if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
+        return Response.ok(stream.get()).build();
       } else {
         return Response.status(Response.Status.NOT_FOUND).build();
       }

@@ -27,18 +27,25 @@ import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.util.Map;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
   private static final String TYPE = "index_kinesis";
+  private static final Logger log = new Logger(KinesisIndexTask.class);
 
+  private final boolean useListShards;
   private final AWSCredentialsConfig awsCredentialsConfig;
+  private RuntimeInfo runtimeInfo;
 
   @JsonCreator
   public KinesisIndexTask(
@@ -48,6 +55,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
       @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("useListShards") boolean useListShards,
       @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
   )
   {
@@ -60,7 +68,15 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         context,
         getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
+    this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
+  }
+
+  @Override
+  public TaskStatus runTask(TaskToolbox toolbox)
+  {
+    this.runtimeInfo = toolbox.getAdjustedRuntimeInfo();
+    return super.runTask(toolbox);
   }
 
   @Override
@@ -81,14 +97,23 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   {
     KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
-    int fetchThreads = tuningConfig.getFetchThreads() != null
-                       ? tuningConfig.getFetchThreads()
-                       : Runtime.getRuntime().availableProcessors() * 2;
+    final int fetchThreads = computeFetchThreads(runtimeInfo, tuningConfig.getFetchThreads());
+    final int recordsPerFetch = ioConfig.getRecordsPerFetchOrDefault(runtimeInfo.getMaxHeapSizeBytes(), fetchThreads);
+    final int recordBufferSize =
+        tuningConfig.getRecordBufferSizeOrDefault(runtimeInfo.getMaxHeapSizeBytes(), ioConfig.isDeaggregate());
+    final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate());
 
-    Preconditions.checkArgument(
-        fetchThreads > 0,
-        "Must have at least one background fetch thread for the record supplier"
+    log.info(
+        "Starting record supplier with fetchThreads [%d], fetchDelayMillis [%d], recordsPerFetch [%d], "
+        + "recordBufferSize [%d], maxRecordsPerPoll [%d], deaggregate [%s].",
+        fetchThreads,
+        ioConfig.getFetchDelayMillis(),
+        recordsPerFetch,
+        recordBufferSize,
+        maxRecordsPerPoll,
+        ioConfig.isDeaggregate()
     );
+
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
@@ -96,16 +121,16 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        ioConfig.getRecordsPerFetch(),
+        recordsPerFetch,
         ioConfig.getFetchDelayMillis(),
         fetchThreads,
         ioConfig.isDeaggregate(),
-        tuningConfig.getRecordBufferSize(),
+        recordBufferSize,
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getFetchSequenceNumberTimeout(),
-        tuningConfig.getMaxRecordsPerPoll(),
-        false
+        maxRecordsPerPoll,
+        false,
+        useListShards
     );
   }
 
@@ -132,5 +157,23 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   AWSCredentialsConfig getAwsCredentialsConfig()
   {
     return awsCredentialsConfig;
+  }
+
+  @VisibleForTesting
+  static int computeFetchThreads(final RuntimeInfo runtimeInfo, final Integer configuredFetchThreads)
+  {
+    final int fetchThreads;
+    if (configuredFetchThreads != null) {
+      fetchThreads = configuredFetchThreads;
+    } else {
+      fetchThreads = runtimeInfo.getAvailableProcessors() * 2;
+    }
+
+    Preconditions.checkArgument(
+        fetchThreads > 0,
+        "Must have at least one background fetch thread for the record supplier"
+    );
+
+    return fetchThreads;
   }
 }

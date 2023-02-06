@@ -33,8 +33,7 @@ make sure it has `/master/` in the URL.
 
 ##### Installing Java and Maven
 
-- JDK 8, 8u92+. We recommend using an OpenJDK distribution that provides long-term support and open-source licensing,
-  like [Amazon Corretto](https://aws.amazon.com/corretto/) or [Azul Zulu](https://www.azul.com/downloads/zulu/).
+- JDK 8, 8u92+ or JDK 11. See our [Java documentation](../operations/java.md) for information about obtaining a JDK.
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
 ##### Other dependencies
@@ -64,7 +63,7 @@ In addition to the basic stages, you may also want to add the following profiles
 - **-Papache-release** - Apache release profile: Generates GPG signature and checksums, and builds the source distribution tarball as `distribution/target/apache-druid-x.x.x-src.tar.gz`
 - **-Prat** - Apache Rat profile: Runs the Apache Rat license audit tool
 - **-DskipTests** - Skips unit tests (which reduces build time)
-- **-Ddruid.console.skip=true** - Skip front end project
+- **-Dweb.console.skip=true** - Skip front end project
 
 Putting these together, if you wish to build the source and binary distributions with signatures and checksums, audit licenses, and skip the unit tests, you would run:
 

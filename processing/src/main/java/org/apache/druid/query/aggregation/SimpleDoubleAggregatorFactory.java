@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -234,6 +235,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getFieldName()
   {
     return fieldName;
@@ -241,6 +243,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getExpression()
   {
     return expression;

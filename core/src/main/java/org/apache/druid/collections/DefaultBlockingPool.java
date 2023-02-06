@@ -85,39 +85,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     );
   }
 
-  @Nullable
-  private T pollObject()
-  {
-    final ReentrantLock lock = this.lock;
-    lock.lock();
-    try {
-      return objects.isEmpty() ? null : objects.pop();
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  @Nullable
-  private T pollObject(long timeoutMs) throws InterruptedException
-  {
-    long nanos = TIME_UNIT.toNanos(timeoutMs);
-    final ReentrantLock lock = this.lock;
-    lock.lockInterruptibly();
-    try {
-      while (objects.isEmpty()) {
-        if (nanos <= 0) {
-          return null;
-        }
-        nanos = notEnough.awaitNanos(nanos);
-      }
-      return objects.pop();
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
   @Override
   public List<ReferenceCountingResourceHolder<T>> takeBatch(final int elementNum, final long timeoutMs)
   {

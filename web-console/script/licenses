@@ -163,6 +163,7 @@ checker.init(
               hasLicense = true;
             } catch (e) {
               console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+              console.log(`Find and copy the package's license file to '../${licenseDest}'`);
             }
           }
         }

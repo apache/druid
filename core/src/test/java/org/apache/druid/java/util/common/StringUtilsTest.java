@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,12 +29,31 @@ import org.junit.rules.ExpectedException;
 import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  *
  */
 public class StringUtilsTest
 {
+  private static final List<String> COMPARE_TEST_STRINGS = ImmutableList.of(
+      "（請參見已被刪除版本）",
+      "請參見已被刪除版本",
+      "שָׁלוֹם",
+      "＋{{[[Template:別名重定向|別名重定向]]}}",
+      "\uD83D\uDC4D\uD83D\uDC4D\uD83D\uDC4D",
+      "\uD83D\uDCA9",
+      "",
+      "f",
+      "fo",
+      "\uD83D\uDE42",
+      "\uD83E\uDEE5",
+      "\uD83E\uDD20",
+      "quick",
+      "brown",
+      "fox"
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -125,12 +146,14 @@ public class StringUtilsTest
   @Test
   public void fromUtf8ByteBufferDirect()
   {
-    ByteBuffer bytes = ByteBuffer.allocateDirect(4);
-    bytes.put(new byte[]{'a', 'b', 'c', 'd'});
-    bytes.rewind();
-    Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
-    bytes.rewind();
-    Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    try (final ResourceHolder<ByteBuffer> bufferHolder = ByteBufferUtils.allocateDirect(4)) {
+      final ByteBuffer bytes = bufferHolder.get();
+      bytes.put(new byte[]{'a', 'b', 'c', 'd'});
+      bytes.rewind();
+      Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
+      bytes.rewind();
+      Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    }
   }
 
   @SuppressWarnings("MalformedFormatString")
@@ -286,5 +309,81 @@ public class StringUtilsTest
     Assert.assertEquals("smile \uD83D", StringUtils.fastLooseChop("smile 🙂 for the camera", 7));
     Assert.assertEquals("smile ", StringUtils.fastLooseChop("smile 🙂 for the camera", 6));
     Assert.assertEquals("smile", StringUtils.fastLooseChop("smile 🙂 for the camera", 5));
+  }
+
+  @Test
+  public void testUnicodeStringCompare()
+  {
+    for (final String string1 : COMPARE_TEST_STRINGS) {
+      for (final String string2 : COMPARE_TEST_STRINGS) {
+        final int compareUnicode = StringUtils.compareUnicode(string1, string2);
+        final int compareUtf8 = StringUtils.compareUtf8(
+            StringUtils.toUtf8(string1),
+            StringUtils.toUtf8(string2)
+        );
+
+        Assert.assertEquals(
+            StringUtils.format(
+                "compareUnicode (actual) matches compareUtf8 (expected) for [%s] vs [%s]",
+                string1,
+                string2
+            ),
+            (int) Math.signum(compareUtf8),
+            (int) Math.signum(compareUnicode)
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testJavaStringCompare()
+  {
+    for (final String string1 : COMPARE_TEST_STRINGS) {
+      for (final String string2 : COMPARE_TEST_STRINGS) {
+        final int compareJavaString = string1.compareTo(string2);
+
+        final byte[] utf8Bytes1 = StringUtils.toUtf8(string1);
+        final byte[] utf8Bytes2 = StringUtils.toUtf8(string2);
+        final int compareByteArrayUtf8UsingJavaStringOrdering =
+            StringUtils.compareUtf8UsingJavaStringOrdering(utf8Bytes1, utf8Bytes2);
+
+        final ByteBuffer utf8ByteBuffer1 = ByteBuffer.allocate(utf8Bytes1.length + 2);
+        final ByteBuffer utf8ByteBuffer2 = ByteBuffer.allocate(utf8Bytes2.length + 2);
+        utf8ByteBuffer1.position(1);
+        utf8ByteBuffer1.put(utf8Bytes1, 0, utf8Bytes1.length).position(utf8Bytes1.length);
+        utf8ByteBuffer2.position(1);
+        utf8ByteBuffer2.put(utf8Bytes2, 0, utf8Bytes2.length).position(utf8Bytes2.length);
+        final int compareByteBufferUtf8UsingJavaStringOrdering = StringUtils.compareUtf8UsingJavaStringOrdering(
+            utf8ByteBuffer1,
+            1,
+            utf8Bytes1.length,
+            utf8ByteBuffer2,
+            1,
+            utf8Bytes2.length
+        );
+
+        Assert.assertEquals(
+            StringUtils.format(
+                "compareUtf8UsingJavaStringOrdering(byte[]) (actual) "
+                + "matches compareJavaString (expected) for [%s] vs [%s]",
+                string1,
+                string2
+            ),
+            (int) Math.signum(compareJavaString),
+            (int) Math.signum(compareByteArrayUtf8UsingJavaStringOrdering)
+        );
+
+        Assert.assertEquals(
+            StringUtils.format(
+                "compareByteBufferUtf8UsingJavaStringOrdering(ByteBuffer) (actual) "
+                + "matches compareJavaString (expected) for [%s] vs [%s]",
+                string1,
+                string2
+            ),
+            (int) Math.signum(compareJavaString),
+            (int) Math.signum(compareByteBufferUtf8UsingJavaStringOrdering)
+        );
+      }
+    }
   }
 }

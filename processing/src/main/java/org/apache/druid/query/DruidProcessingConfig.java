@@ -71,10 +71,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     catch (UnsupportedOperationException e) {
       // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
       directSizeBytes = computeMaxMemoryFromMaxHeapSize();
-      log.info(
-          "Defaulting to at most [%,d] bytes (25%% of max heap size) of direct memory for computation buffers",
-          directSizeBytes
-      );
+      log.info("Using up to [%,d] bytes of direct memory for computation buffers.", directSizeBytes);
     }
 
     int numProcessingThreads = getNumThreads();
@@ -85,7 +82,9 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers",
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers. "
+          + "If you run out of direct memory, you may need to set these parameters explicitly using the guidelines at "
+          + "https://druid.apache.org/docs/latest/operations/basic-cluster-tuning.html#processing-threads-buffers.",
           computedSizePerBuffer,
           numProcessingThreads,
           numMergeBuffers
@@ -153,7 +152,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   @Config(value = "${base_path}.fifo")
   public boolean isFifo()
   {
-    return false;
+    return true;
   }
 
   @Config(value = "${base_path}.tmpDir")

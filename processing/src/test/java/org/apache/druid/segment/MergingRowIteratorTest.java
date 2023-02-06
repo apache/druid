@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MergingRowIteratorTest
+public class MergingRowIteratorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testEmpty()
@@ -114,40 +114,41 @@ public class MergingRowIteratorTest
   @SafeVarargs
   private static void testMerge(String message, int markIteration, List<Long>... timestampSequences)
   {
-    MergingRowIterator mergingRowIterator = new MergingRowIterator(
+    try (MergingRowIterator mergingRowIterator = new MergingRowIterator(
         Stream.of(timestampSequences).map(TestRowIterator::new).collect(Collectors.toList())
-    );
-    UnmodifiableIterator<Long> mergedTimestamps = Iterators.mergeSorted(
-        Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
-        Comparator.naturalOrder()
-    );
-    long markedTimestamp = 0;
-    long currentTimestamp = 0;
-    int i = 0;
-    boolean marked = false;
-    boolean iterated = false;
-    while (mergedTimestamps.hasNext()) {
-      currentTimestamp = mergedTimestamps.next();
-      Assert.assertTrue(message, mergingRowIterator.moveToNext());
-      iterated = true;
-      Assert.assertEquals(message, currentTimestamp, mergingRowIterator.getPointer().timestampSelector.getLong());
-      if (marked) {
-        Assert.assertEquals(
-            message,
-            markedTimestamp != currentTimestamp,
-            mergingRowIterator.hasTimeAndDimsChangedSinceMark()
-        );
+    )) {
+      Iterator<Long> mergedTimestamps = Utils.mergeSorted(
+          Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
+          Comparator.naturalOrder()
+      );
+      long markedTimestamp = 0;
+      long currentTimestamp = 0;
+      int i = 0;
+      boolean marked = false;
+      boolean iterated = false;
+      while (mergedTimestamps.hasNext()) {
+        currentTimestamp = mergedTimestamps.next();
+        Assert.assertTrue(message, mergingRowIterator.moveToNext());
+        iterated = true;
+        Assert.assertEquals(message, currentTimestamp, mergingRowIterator.getPointer().timestampSelector.getLong());
+        if (marked) {
+          Assert.assertEquals(
+              message,
+              markedTimestamp != currentTimestamp,
+              mergingRowIterator.hasTimeAndDimsChangedSinceMark()
+          );
+        }
+        if (i == markIteration) {
+          mergingRowIterator.mark();
+          markedTimestamp = currentTimestamp;
+          marked = true;
+        }
+        i++;
       }
-      if (i == markIteration) {
-        mergingRowIterator.mark();
-        markedTimestamp = currentTimestamp;
-        marked = true;
+      Assert.assertFalse(message, mergingRowIterator.moveToNext());
+      if (iterated) {
+        Assert.assertEquals(message, currentTimestamp, mergingRowIterator.getPointer().timestampSelector.getLong());
       }
-      i++;
-    }
-    Assert.assertFalse(message, mergingRowIterator.moveToNext());
-    if (iterated) {
-      Assert.assertEquals(message, currentTimestamp, mergingRowIterator.getPointer().timestampSelector.getLong());
     }
   }
 

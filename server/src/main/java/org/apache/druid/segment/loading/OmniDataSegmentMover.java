@@ -19,22 +19,32 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class OmniDataSegmentMover implements DataSegmentMover
 {
-  private final Map<String, DataSegmentMover> movers;
+  private final Map<String, Supplier<DataSegmentMover>> movers;
 
   @Inject
   public OmniDataSegmentMover(
-      Map<String, DataSegmentMover> movers
+      Map<String, Provider<DataSegmentMover>> movers
   )
   {
-    this.movers = movers;
+    this.movers = new HashMap<>();
+    for (Map.Entry<String, Provider<DataSegmentMover>> entry : movers.entrySet()) {
+      String type = entry.getKey();
+      Provider<DataSegmentMover> provider = entry.getValue();
+      this.movers.put(type, Suppliers.memoize(provider::get));
+    }
   }
 
   @Override
@@ -46,12 +56,18 @@ public class OmniDataSegmentMover implements DataSegmentMover
   private DataSegmentMover getMover(DataSegment segment) throws SegmentLoadingException
   {
     String type = MapUtils.getString(segment.getLoadSpec(), "type");
-    DataSegmentMover mover = movers.get(type);
+    Supplier<DataSegmentMover> mover = movers.get(type);
 
     if (mover == null) {
       throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, movers.keySet());
     }
 
-    return mover;
+    return mover.get();
+  }
+
+  @VisibleForTesting
+  public Map<String, Supplier<DataSegmentMover>> getMovers()
+  {
+    return movers;
   }
 }

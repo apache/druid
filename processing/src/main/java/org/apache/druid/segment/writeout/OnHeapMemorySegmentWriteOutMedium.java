@@ -32,7 +32,17 @@ public final class OnHeapMemorySegmentWriteOutMedium implements SegmentWriteOutM
   @Override
   public WriteOutBytes makeWriteOutBytes()
   {
-    return new HeapByteBufferWriteOutBytes();
+    HeapByteBufferWriteOutBytes writeOutBytes = new HeapByteBufferWriteOutBytes();
+    closer.register(writeOutBytes::free);
+    return writeOutBytes;
+  }
+
+  @Override
+  public SegmentWriteOutMedium makeChildWriteOutMedium()
+  {
+    OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
+    closer.register(medium);
+    return medium;
   }
 
   @Override

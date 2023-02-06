@@ -24,6 +24,13 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
 
+/**
+ * DataSegmentMover knows how to move the segment location from one to another.
+ * Since any implementation of DataSegmentMover is initialized when an ingestion job starts
+ * if a deep storage extension is loaded even when that deep storage is actually not used,
+ * implementations should avoid initializing the deep storage client immediately
+ * but defer it until the deep storage client is actually used.
+ */
 @ExtensionPoint
 public interface DataSegmentMover
 {

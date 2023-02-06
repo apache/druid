@@ -23,7 +23,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,8 +34,10 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Locale;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -45,7 +46,10 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
+  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME = "com.mysql.jdbc.exceptions.MySQLTransientException";
 
+  @Nullable
+  private final Class<?> myTransientExceptionClass;
   private final DBI dbi;
 
   @Inject
@@ -57,17 +61,13 @@ public class MySQLConnector extends SQLMetadataConnector
   )
   {
     super(config, dbTables);
-    try {
-      log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
-      Class.forName(driverConfig.getDriverClassName(), false, getClass().getClassLoader());
-    }
-    catch (ClassNotFoundException e) {
-      throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
-                   + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                   + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
-                   + "https://druid.apache.org/downloads for more details.",
-                    driverConfig.getDriverClassName()
-      );
+    log.info("Loading MySQL metadata connector driver %s", driverConfig.getDriverClassName());
+    tryLoadDriverClass(driverConfig.getDriverClassName(), true);
+
+    if (driverConfig.getDriverClassName().contains("mysql")) {
+      myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false);
+    } else {
+      myTransientExceptionClass = null;
     }
 
     final BasicDataSource datasource = getDatasource();
@@ -179,6 +179,12 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     String databaseCharset = handle
@@ -205,8 +211,11 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    return e instanceof MySQLTransientException
-           || (e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */);
+    if (myTransientExceptionClass != null) {
+      return myTransientExceptionClass.isAssignableFrom(e.getClass())
+             || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
+    }
+    return false;
   }
 
   @Override
@@ -240,5 +249,25 @@ public class MySQLConnector extends SQLMetadataConnector
   public DBI getDBI()
   {
     return dbi;
+  }
+
+  @Nullable
+  private Class<?> tryLoadDriverClass(String className, boolean failIfNotFound)
+  {
+    try {
+      return Class.forName(className, false, getClass().getClassLoader());
+    }
+    catch (ClassNotFoundException e) {
+      if (failIfNotFound) {
+        throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
+                         + "distribution but is required to use MySQL. Please download a compatible library (for example "
+                         + "'mysql-connector-java-5.1.49.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "https://druid.apache.org/downloads for more details.",
+                      className
+        );
+      }
+      log.warn("Could not find %s on the classpath.", className);
+      return null;
+    }
   }
 }

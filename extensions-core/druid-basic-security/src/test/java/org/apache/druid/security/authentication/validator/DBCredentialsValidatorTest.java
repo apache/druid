@@ -29,6 +29,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.security.basic.authentication.validator.MetadataStoreCredentialsValidator;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -143,7 +144,7 @@ public class DBCredentialsValidatorTest
     String password = "badpassword";
 
     expectedException.expect(BasicSecurityAuthenticationException.class);
-    expectedException.expectMessage("User metadata store authentication failed.");
+    expectedException.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
     validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
   }
 }

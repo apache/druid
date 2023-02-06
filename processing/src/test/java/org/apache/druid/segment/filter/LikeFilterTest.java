@@ -58,7 +58,7 @@ public class LikeFilterTest extends BaseFilterTest
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(null, null, null)
+          DimensionsSpec.EMPTY
       )
   );
 
@@ -269,6 +269,23 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "ew_line", null, new SubstringDimExtractionFn(1, 100)),
         ImmutableList.of("6")
+    );
+  }
+
+  @Test
+  public void testListFilteredVirtualColumn()
+  {
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "1%", null, null),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "3%", null, null),
+        ImmutableList.of("3")
+    );
+    assertFilterMatchesSkipVectorize(
+        new LikeDimFilter("allow-dim0", "%3", null, null),
+        ImmutableList.of("3")
     );
   }
 

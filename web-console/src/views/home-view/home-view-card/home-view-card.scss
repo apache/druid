@@ -20,8 +20,8 @@
 @import '../../../blueprint-overrides/common/colors';
 
 .home-view-card {
-  .bp3-card {
-    height: 170px;
+  .#{$bp-ns}-card {
+    height: 200px;
   }
 
   &:hover {
@@ -42,7 +42,7 @@
       height: 20px;
       fill: $blue3;
 
-      .bp3-dark & {
+      .#{$bp-ns}-dark & {
         fill: $druid-brand;
       }
     }
@@ -51,7 +51,7 @@
 
 a.home-view-card,
 a.home-view-card:hover {
-  .bp3-dark & {
+  .#{$bp-ns}-dark & {
     color: $gray4;
   }
   color: $gray2;

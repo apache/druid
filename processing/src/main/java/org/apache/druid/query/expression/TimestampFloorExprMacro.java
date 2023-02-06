@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -34,7 +33,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -49,9 +47,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 4) {
-      throw new IAE("Function[%s] must have 2 to 4 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       return new TimestampFloorExpr(args);
@@ -111,9 +107,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-
-      return shuttle.visit(new TimestampFloorExpr(newArgs));
+      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
@@ -189,8 +183,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampFloorDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

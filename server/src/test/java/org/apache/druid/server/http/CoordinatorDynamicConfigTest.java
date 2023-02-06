@@ -22,7 +22,6 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.junit.Assert;
@@ -79,6 +78,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -101,6 +101,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -123,6 +124,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -145,6 +147,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -159,7 +162,10 @@ public class CoordinatorDynamicConfigTest
         Integer.MAX_VALUE
     );
 
-    actual = CoordinatorDynamicConfig.builder().withPercentOfSegmentsToConsiderPerMove(10).build(actual);
+    actual = CoordinatorDynamicConfig.builder()
+                                     .withPercentOfSegmentsToConsiderPerMove(10)
+                                     .withUseBatchedSegmentSampler(false)
+                                     .build(actual);
     assertConfig(
         actual,
         1,
@@ -167,6 +173,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -189,6 +196,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -211,6 +219,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         10,
+        false,
         1,
         1,
         2,
@@ -224,7 +233,62 @@ public class CoordinatorDynamicConfigTest
         true,
         10
     );
+  }
 
+  @Test
+  public void testConstructorWithNullsShouldKillUnusedSegmentsInAllDataSources()
+  {
+    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
+        1,
+        1,
+        1,
+        1,
+        null,
+        false,
+        1,
+        2,
+        10,
+        true,
+        null,
+        null,
+        null,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10,
+        false
+    );
+    Assert.assertTrue(config.isKillUnusedSegmentsInAllDataSources());
+    Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
+  }
+
+  @Test
+  public void testConstructorWithSpecificDataSourcesToKillShouldNotKillUnusedSegmentsInAllDatasources()
+  {
+    CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
+        1,
+        1,
+        1,
+        1,
+        null,
+        false,
+        1,
+        2,
+        10,
+        true,
+        ImmutableSet.of("test1"),
+        null,
+        null,
+        ImmutableSet.of("host1"),
+        5,
+        true,
+        true,
+        10,
+        false
+    );
+    Assert.assertFalse(config.isKillUnusedSegmentsInAllDataSources());
+    Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
   }
 
   @Test
@@ -261,7 +325,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
-        1,
+        true, 1,
         1,
         2,
         true,
@@ -283,6 +347,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -305,6 +370,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -353,6 +419,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -471,6 +538,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         100,
+        true,
         1,
         1,
         2,
@@ -520,6 +588,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -534,23 +603,21 @@ public class CoordinatorDynamicConfigTest
         Integer.MAX_VALUE
     );
 
-    //ensure whitelist is empty when killAllDataSources is true
-    try {
-      jsonStr = "{\n"
-                + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-                + "  \"killAllDataSources\": true,\n"
-                + "  \"percentOfSegmentsToConsiderPerMove\": 1\n"
-                + "}\n";
-      mapper.readValue(
-          jsonStr,
-          CoordinatorDynamicConfig.class
-      );
+    // killAllDataSources is a config in versions 0.22.x and older and is no longer used.
+    // This used to be an invalid config, but as of 0.23.0 the killAllDataSources flag no longer exsist,
+    // so this is a valid config
+    jsonStr = "{\n"
+              + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
+              + "  \"killAllDataSources\": true,\n"
+              + "  \"percentOfSegmentsToConsiderPerMove\": 1\n"
+              + "}\n";
+    actual = mapper.readValue(
+        jsonStr,
+        CoordinatorDynamicConfig.class
+    );
 
-      Assert.fail("deserialization should fail.");
-    }
-    catch (JsonMappingException e) {
-      Assert.assertTrue(e.getCause() instanceof IAE);
-    }
+    Assert.assertFalse(actual.isKillUnusedSegmentsInAllDataSources());
+    Assert.assertEquals(2, actual.getSpecificDataSourcesToKillUnusedSegmentsIn().size());
   }
 
   @Test
@@ -586,6 +653,7 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        true,
         1,
         1,
         2,
@@ -613,14 +681,46 @@ public class CoordinatorDynamicConfigTest
         100,
         5,
         100,
+        true,
         15,
         10,
         1,
         false,
         emptyList,
-        false,
+        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
+        70,
+        false,
+        false,
+        Integer.MAX_VALUE
+    );
+  }
+
+  @Test
+  public void testBuilderWithDefaultSpecificDataSourcesToKillUnusedSegmentsInSpecified()
+  {
+    CoordinatorDynamicConfig defaultConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of("DATASOURCE"))
+                                .build();
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build(defaultConfig);
+    assertConfig(
+        config,
+        900000,
+        524288000,
+        100,
+        5,
+        100,
+        true,
+        15,
+        10,
+        1,
+        false,
+        ImmutableSet.of("DATASOURCE"),
+        false,
+        EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
+        ImmutableSet.of(),
         70,
         false,
         false,
@@ -703,6 +803,7 @@ public class CoordinatorDynamicConfigTest
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
       int expectedPercentOfSegmentsToConsiderPerMove,
+      boolean expectedUseBatchedSegmentSampler,
       int expectedReplicantLifetime,
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
@@ -725,6 +826,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
     Assert.assertEquals(expectedPercentOfSegmentsToConsiderPerMove, config.getPercentOfSegmentsToConsiderPerMove(), 0);
+    Assert.assertEquals(expectedUseBatchedSegmentSampler, config.useBatchedSegmentSampler());
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());

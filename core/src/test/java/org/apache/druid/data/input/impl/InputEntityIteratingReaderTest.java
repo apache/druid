@@ -24,9 +24,11 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,12 +37,14 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-public class InputEntityIteratingReaderTest
+public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -50,6 +54,7 @@ public class InputEntityIteratingReaderTest
   {
     final int numFiles = 5;
     final List<File> files = new ArrayList<>();
+    long totalFileSize = 0;
     for (int i = 0; i < numFiles; i++) {
       final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
@@ -57,8 +62,10 @@ public class InputEntityIteratingReaderTest
         writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
         writer.write(StringUtils.format("%d,%s,%d", 20190102 + i, "name_" + (i + 1), i + 1));
       }
+      totalFileSize += file.length();
     }
-    final InputEntityIteratingReader firehose = new InputEntityIteratingReader(
+
+    final InputEntityIteratingReader reader = new InputEntityIteratingReader(
         new InputRowSchema(
             new TimestampSpec("time", "yyyyMMdd", null),
             new DimensionsSpec(
@@ -77,7 +84,8 @@ public class InputEntityIteratingReaderTest
         temporaryFolder.newFolder()
     );
 
-    try (CloseableIterator<InputRow> iterator = firehose.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       int i = 0;
       while (iterator.hasNext()) {
         InputRow row = iterator.next();
@@ -93,6 +101,36 @@ public class InputEntityIteratingReaderTest
         i++;
       }
       Assert.assertEquals(numFiles, i);
+      Assert.assertEquals(totalFileSize, inputStats.getProcessedBytes());
     }
+  }
+
+  @Test
+  public void testIncorrectURI() throws IOException, URISyntaxException
+  {
+    final InputEntityIteratingReader firehose = new InputEntityIteratingReader(
+        new InputRowSchema(
+            new TimestampSpec(null, null, null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "name", "score"))
+            ),
+            ColumnsFilter.all()
+        ),
+        new CsvInputFormat(
+            ImmutableList.of("time", "name", "score"),
+            null,
+            null,
+            false,
+            0
+        ),
+        ImmutableList.of(
+            new HttpEntity(new URI("testscheme://some/path"), null, null)
+        ).iterator(),
+        temporaryFolder.newFolder()
+    );
+    String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
+    Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
+
+    Assert.assertTrue(exception.getMessage().contains(expectedMessage));
   }
 }

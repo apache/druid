@@ -21,6 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.datasketches.memory.DefaultMemoryRequestServer;
+import org.apache.datasketches.memory.MemoryRequestServer;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.DoublesUnion;
 
@@ -30,6 +32,7 @@ import java.util.IdentityHashMap;
 
 public class DoublesSketchMergeBufferAggregatorHelper
 {
+  private static final MemoryRequestServer MEM_REQ_SERVER = new DefaultMemoryRequestServer();
   private final int k;
   private final int maxIntermediateSize;
   private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
@@ -93,7 +96,8 @@ public class DoublesSketchMergeBufferAggregatorHelper
 
   private WritableMemory getMemory(final ByteBuffer buffer)
   {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN));
+    return memCache.computeIfAbsent(buffer,
+        buf -> WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN, MEM_REQ_SERVER));
   }
 
   private void putUnion(final ByteBuffer buffer, final int position, final DoublesUnion union)

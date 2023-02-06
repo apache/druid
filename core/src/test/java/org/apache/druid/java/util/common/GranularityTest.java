@@ -46,6 +46,7 @@ public class GranularityTest
   final Granularity MINUTE = Granularities.MINUTE;
   final Granularity HOUR = Granularities.HOUR;
   final Granularity SIX_HOUR = Granularities.SIX_HOUR;
+  final Granularity EIGHT_HOUR = Granularities.EIGHT_HOUR;
   final Granularity FIFTEEN_MINUTE = Granularities.FIFTEEN_MINUTE;
   final Granularity DAY = Granularities.DAY;
   final Granularity WEEK = Granularities.WEEK;
@@ -397,6 +398,90 @@ public class GranularityTest
     };
 
     checkToDate(SIX_HOUR, Granularity.Formatter.DEFAULT, hourChecks);
+  }
+
+  @Test
+  public void testEightHourToDate()
+  {
+    PathDate[] hourChecks = {
+        new PathDate(
+            new DateTime(2011, 3, 15, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "y=2011/m=03/d=15/H=20/M=50/S=43/Test0"
+        ),
+        new PathDate(
+            new DateTime(2011, 3, 15, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "/y=2011/m=03/d=15/H=20/M=50/S=43/Test0"
+        ),
+        new PathDate(
+            new DateTime(2011, 3, 15, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "valid/y=2011/m=03/d=15/H=20/M=50/S=43/Test1"
+        ),
+        new PathDate(
+            new DateTime(2011, 3, 15, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "valid/y=2011/m=03/d=15/H=20/M=50/Test2"
+        ),
+        new PathDate(
+            new DateTime(2011, 3, 15, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "valid/y=2011/m=03/d=15/H=20/Test3"
+        ),
+        new PathDate(null, null, "valid/y=2011/m=03/d=15/Test4"),
+        new PathDate(null, null, "valid/y=2011/m=03/Test5"),
+        new PathDate(null, null, "valid/y=2011/Test6"),
+        new PathDate(null, null, "null/y=/m=/d=/Test7"),
+        new PathDate(null, null, "null/m=10/y=2011/d=23/Test8"),
+        new PathDate(null, null, "null/Test9"),
+        new PathDate(null, null, ""), //Test10 Intentionally empty.
+        new PathDate(
+            new DateTime(2011, 10, 20, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=20/M=42/S=72/Test11"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 16, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=20/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=00/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=02/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 0, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=06/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 8, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=11/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 8, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=12/M=90/S=24/Test12"
+        ),
+        new PathDate(
+            new DateTime(2011, 10, 20, 8, 0, 0, 0, ISOChronology.getInstanceUTC()),
+            null,
+            "error/y=2011/m=10/d=20/H=13/M=90/S=24/Test12"
+        ),
+        new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=20/H=42/M=42/S=24/Test13"),
+        new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=10/d=33/H=20/M=42/S=24/Test14"),
+        new PathDate(null, IllegalFieldValueException.class, "error/y=2011/m=13/d=20/H=20/M=42/S=24/Test15")
+    };
+
+    checkToDate(EIGHT_HOUR, Granularity.Formatter.DEFAULT, hourChecks);
   }
 
   @Test
@@ -886,6 +971,7 @@ public class GranularityTest
     Assert.assertEquals(
         ImmutableList.of(
             Granularities.DAY,
+            Granularities.EIGHT_HOUR,
             Granularities.SIX_HOUR,
             Granularities.HOUR,
             Granularities.THIRTY_MINUTE,
@@ -927,6 +1013,7 @@ public class GranularityTest
             Granularities.MONTH,
             Granularities.WEEK,
             Granularities.DAY,
+            Granularities.EIGHT_HOUR,
             Granularities.SIX_HOUR,
             Granularities.HOUR,
             Granularities.THIRTY_MINUTE,

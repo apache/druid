@@ -30,7 +30,9 @@ import org.apache.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
+import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
@@ -57,6 +59,7 @@ public class NamespacedExtractorModuleTest
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private NamespaceExtractionCacheManager cacheManager;
 
   @Before
   public void setUp() throws Exception
@@ -75,10 +78,15 @@ public class NamespacedExtractorModuleTest
     lifecycle = new Lifecycle();
     lifecycle.start();
     NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+    cacheManager = new OnHeapNamespaceExtractionCacheManager(
+        lifecycle,
+        noopServiceEmitter,
+        new NamespaceExtractionConfig()
+    );
     scheduler = new CacheScheduler(
         noopServiceEmitter,
         factoryMap,
-        new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
+        cacheManager
     );
   }
 
@@ -108,9 +116,10 @@ public class NamespacedExtractorModuleTest
         null,
         null
     );
-    CacheScheduler.VersionedCache versionedCache = factory.generateCache(namespace, null, null, scheduler);
-    Assert.assertNotNull(versionedCache);
-    Map<String, String> map = versionedCache.getCache();
+    CacheHandler cache = cacheManager.allocateCache();
+    String version = factory.generateCache(namespace, null, null, cache);
+    Assert.assertNotNull(version);
+    Map<String, String> map = cache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
   }

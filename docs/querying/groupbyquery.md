@@ -26,7 +26,7 @@ sidebar_label: "GroupBy"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes a query
 > type in the native language. For information about when Druid SQL will use this query type, refer to the
-> [SQL documentation](sql.md#query-types).
+> [SQL documentation](sql-translation.md#query-types).
 
 These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
@@ -86,6 +86,7 @@ Following are main parts to a groupBy query:
 |queryType|This String should always be "groupBy"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |dimensions|A JSON list of dimensions to do the groupBy over; or see [DimensionSpec](../querying/dimensionspecs.md) for ways to extract dimensions. |yes|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference the virtual columns in `dimensions`, `aggregations`, or `postAggregations`.| no (default none)|
 |limitSpec|See [LimitSpec](../querying/limitspec.md).|no|
 |having|See [Having](../querying/having.md).|no|
 |granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.md)|yes|
@@ -275,13 +276,18 @@ as the index, so the aggregated values in the array can be accessed directly wit
 
 ### Memory tuning and resource limits
 
-When using groupBy v2, three parameters control resource usage and limits:
+When using groupBy v2, four parameters control resource usage and limits:
 
 - `druid.processing.buffer.sizeBytes`: size of the off-heap hash table used for aggregation, per query, in bytes. At
 most `druid.processing.numMergeBuffers` of these will be created at once, which also serves as an upper limit on the
 number of concurrently running groupBy queries.
-- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap dictionary used when grouping on strings, per query,
-in bytes. Note that this is based on a rough estimate of the dictionary size, not the actual size.
+- `druid.query.groupBy.maxSelectorDictionarySize`: size of the on-heap segment-level dictionary used when grouping on
+string or array-valued expressions that do not have pre-existing dictionaries. There is at most one dictionary per
+processing thread; therefore there are up to `druid.processing.numThreads` of these. Note that the size is based on a
+rough estimate of the dictionary footprint.
+- `druid.query.groupBy.maxMergingDictionarySize`: size of the on-heap query-level dictionary used when grouping on
+any string expression. There is at most one dictionary per concurrently-running query; therefore there are up to
+`druid.server.http.numThreads` of these. Note that the size is based on a rough estimate of the dictionary footprint.
 - `druid.query.groupBy.maxOnDiskStorage`: amount of space on disk used for aggregation, per query, in bytes. By default,
 this is 0, which means aggregation will not use disk.
 
@@ -381,16 +387,15 @@ Supported runtime properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for the string dictionary during merging. When the dictionary exceeds this size, a spill to disk will be triggered.|100000000|
+|`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries.  If set to `0` (automatic), each query's dictionary can use 10% of the Java heap divided by `druid.processing.numMergeBuffers`, or 1GB, whichever is smaller.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|0 (automatic)|
+|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. If set to `0` (automatic), each query's dictionary uses 30% of the Java heap divided by `druid.processing.numMergeBuffers`, or 1GB, whichever is smaller.<br /><br />See [Memory tuning and resource limits](#memory-tuning-and-resource-limits) for details on changing this property.|0 (automatic)|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 
 Supported query contexts:
 
 |Key|Description|
 |---|-----------|
-|`maxMergingDictionarySize`|Can be used to lower the value of `druid.query.groupBy.maxMergingDictionarySize` for this query.|
 |`maxOnDiskStorage`|Can be used to lower the value of `druid.query.groupBy.maxOnDiskStorage` for this query.|
-
 
 ### Advanced configurations
 
@@ -402,6 +407,7 @@ Supported runtime properties:
 |--------|-----------|-------|
 |`druid.query.groupBy.defaultStrategy`|Default groupBy query strategy.|v2|
 |`druid.query.groupBy.singleThreaded`|Merge results using a single thread.|false|
+|`druid.query.groupBy.intermediateResultAsMapCompat`|Whether Brokers are able to understand map-based result rows. Setting this to `true` adds some overhead to all groupBy queries. It is required for compatibility with data servers running versions older than 0.16.0, which introduced [array-based result rows](#array-based-result-rows).|false|
 
 Supported query contexts:
 
@@ -433,9 +439,11 @@ Supported query contexts:
 |`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|
 |`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|None|
 |`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|None|
+|`mergeThreadLocal`|Whether merge buffers should always be split into thread-local buffers. Setting this to `true` reduces thread contention, but uses memory less efficiently. This tradeoff is beneficial when memory is plentiful. |false|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
 |`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
 |`applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan. This context value can be used to override `druid.query.groupBy.applyLimitPushDownToSegment`.|true|
+|`groupByEnableMultiValueUnnesting`|Safety flag to enable/disable the implicit unnesting on multi value column's as part of the grouping key. 'true' indicates multi-value grouping keys are unnested. 'false' returns an error if a multi value column is found as part of the grouping key.|true|
 
 
 #### GroupBy v1 configurations

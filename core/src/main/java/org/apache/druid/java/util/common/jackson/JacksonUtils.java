@@ -19,9 +19,17 @@
 
 package org.apache.druid.java.util.common.jackson;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Map;
 
@@ -40,18 +48,91 @@ public final class JacksonUtils
       {
       };
 
-  /** Silences Jackson's {@link IOException}. */
-  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueClass)
+  private JacksonUtils()
+  {
+  }
+
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, Class<T> valueType)
   {
     try {
-      return mapper.readValue(bytes, valueClass);
+      return mapper.readValue(bytes, valueType);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  private JacksonUtils()
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, JavaType valueType)
   {
+    try {
+      return mapper.readValue(bytes, valueType);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Silences Jackson's {@link IOException}.
+   */
+  public static <T> T readValue(ObjectMapper mapper, byte[] bytes, TypeReference<T> valueType)
+  {
+    try {
+      return mapper.readValue(bytes, valueType);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Returns a serializer for a particular class. If you have a {@link SerializerProvider}, this is better than calling
+   * {@link JsonGenerator#writeObject(Object)} or {@link ObjectMapper#writeValue(JsonGenerator, Object)}, because it
+   * avoids re-creating the {@link SerializerProvider} for each serialized object.
+   */
+  public static JsonSerializer<Object> getSerializer(final SerializerProvider serializerProvider, final Class<?> clazz)
+      throws JsonMappingException
+  {
+    // cache = true, property = null because this is what DefaultSerializerProvider.serializeValue would do.
+    return serializerProvider.findTypedValueSerializer(clazz, true, null);
+  }
+
+  /**
+   * Serializes an object using a {@link JsonGenerator}. If you have a {@link SerializerProvider}, this is better than
+   * calling {@link JsonGenerator#writeObject(Object)}, because it avoids re-creating the {@link SerializerProvider}
+   * for each serialized object.
+   */
+  public static void writeObjectUsingSerializerProvider(
+      final JsonGenerator jsonGenerator,
+      final SerializerProvider serializers,
+      @Nullable final Object o
+  ) throws IOException
+  {
+    if (o == null) {
+      jsonGenerator.writeNull();
+    } else {
+      final JsonSerializer<Object> serializer = getSerializer(serializers, o.getClass());
+      serializer.serialize(o, jsonGenerator, serializers);
+    }
+  }
+
+  /**
+   * Convert the given object to an array of bytes. Use when the object is
+   * known serializable so that the Jackson exception can be suppressed.
+   */
+  public static byte[] toBytes(ObjectMapper jsonMapper, Object obj)
+  {
+    try {
+      return jsonMapper.writeValueAsBytes(obj);
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Failed to serialize " + obj.getClass().getSimpleName());
+    }
   }
 }

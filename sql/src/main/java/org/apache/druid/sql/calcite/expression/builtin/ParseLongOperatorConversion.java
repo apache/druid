@@ -56,6 +56,6 @@ public class ParseLongOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "parse_long");
+    return OperatorConversions.convertDirectCall(plannerContext, rowSignature, rexNode, "parse_long");
   }
 }

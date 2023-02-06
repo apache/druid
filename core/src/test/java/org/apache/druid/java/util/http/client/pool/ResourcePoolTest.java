@@ -39,12 +39,23 @@ public class ResourcePoolTest
   @Before
   public void setUp()
   {
+    setUpPool(true);
+  }
+
+  public void setUpPoolWithoutEagerInitialization()
+  {
+    setUpPool(false);
+  }
+
+  public void setUpPool(boolean eagerInitialization)
+  {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     EasyMock.replay(resourceFactory);
     pool = new ResourcePool<String, String>(
         resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4))
+        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
+        eagerInitialization
     );
 
     EasyMock.verify(resourceFactory);
@@ -56,6 +67,171 @@ public class ResourcePoolTest
   {
     primePool();
     EasyMock.replay(resourceFactory);
+  }
+
+  @Test
+  public void testTakeOnce_lazy()
+  {
+    setUpPoolWithoutEagerInitialization();
+
+    EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(1);
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
+  }
+
+  @Test
+  public void testTakeAfterReturn_lazy()
+  {
+    setUpPoolWithoutEagerInitialization();
+
+    // Generate and check before return
+    EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(1);
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    // Only check since there's no need to generate after return
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
+
+    billyString = pool.take("billy");
+    Assert.assertEquals("billy0", billyString.get());
+
+    billyString.returnResource();
+  }
+
+  @Test
+  public void testTakeAfterFailure()
+  {
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0");
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1");
+
+    EasyMock.expect(resourceFactory.isGood("billy0")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2");
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy3");
+    EasyMock.expect(resourceFactory.isGood("billy3")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy3")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true);
+
+    EasyMock.replay(resourceFactory);
+    // numLentResources == 0, resourceHolderList.size() == 2
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources == 0, resourceHolderList.size() == 1
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources == 0, resourceHolderList.size() == 0
+
+    ResourceContainer<String> a = pool.take("billy");
+    // numLentResources == 1, resourceHolderList.size() == 0
+
+    ResourceContainer<String> b = pool.take("billy");
+    // numLentResources == 2, resourceHolderList.size() == 0
+
+    a.returnResource();
+    // numLentResources = 1, resourceHolderList.size() == 1
+
+    a = pool.take("billy");
+    // numLentResources = 2, resourceHolderList.size() == 0
+
+    b.returnResource();
+    // numLentResources = 1, resourceHolderList.size() == 1
+
+    a.returnResource();
+    // numLentResources = 0, resourceHolderList.size() == 2
+  }
+
+  @Test
+  public void testTakeAfterFailure_lazy()
+  {
+    setUpPoolWithoutEagerInitialization();
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0");
+    EasyMock.expect(resourceFactory.isGood("billy0")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1");
+    EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.expect(resourceFactory.generate("billy")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy3");
+    EasyMock.expect(resourceFactory.isGood("billy3")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy4");
+    EasyMock.expect(resourceFactory.isGood("billy4")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy3")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy4")).andReturn(true);
+
+    EasyMock.expect(resourceFactory.isGood("billy3")).andThrow(new RuntimeException("blah"));
+
+    EasyMock.replay(resourceFactory);
+    // numLentResources == 0, resourceHolderList.size() == 0
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources == 0, resourceHolderList.size() == 0
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources == 0, resourceHolderList.size() == 0
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources == 0, resourceHolderList.size() == 0
+
+    ResourceContainer<String> a = pool.take("billy");
+    // numLentResources == 1, resourceHolderList.size() == 0
+
+    ResourceContainer<String> b = pool.take("billy");
+    // numLentResources == 2, resourceHolderList.size() == 0
+
+    a.returnResource();
+    // numLentResources == 1, resourceHolderList.size() == 1
+
+    try {
+      pool.take("billy");
+    }
+    catch (Exception e) {
+    }
+    // numLentResources = 1, resourceHolderList.size() == 0
+
+    b.returnResource();
+    // numLentResources = 0, resourceHolderList.size() == 1
   }
 
   private void primePool()
@@ -111,6 +287,7 @@ public class ResourcePoolTest
     EasyMock.expectLastCall();
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new ISE("where's billy?")).times(1);
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     IllegalStateException e1 = null;
@@ -243,7 +420,8 @@ public class ResourcePoolTest
 
     pool = new ResourcePool<String, String>(
         resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10))
+        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10)),
+        true
     );
 
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
@@ -263,7 +441,6 @@ public class ResourcePoolTest
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1").times(1);
     resourceFactory.close("billy1");
-    EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");

@@ -20,11 +20,14 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +42,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entry object representing this entry
    * @param active active or inactive flag
    * @param status status object associated wit this object, can be null
+   * @param type entry type
+   * @param groupId entry group id
    * @throws EntryExistsException
    */
   void insert(
@@ -47,9 +52,10 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @NotNull String dataSource,
       @NotNull EntryType entry,
       boolean active,
-      @Nullable StatusType status
+      @Nullable StatusType status,
+      @NotNull String type,
+      @NotNull String groupId
   ) throws EntryExistsException;
-
 
   /**
    * Sets or updates the status for any active entry with the given id.
@@ -82,26 +88,44 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
 
   /**
-   * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries
-   * created on or later than the given timestamp
+   * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
    *
-   * @param timestamp      timestamp
-   * @param maxNumStatuses maxNumStatuses
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if there are more than one lookup is given.
    *
-   * @return list of {@link TaskInfo}
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
    */
-  List<TaskInfo<EntryType, StatusType>> getCompletedTaskInfo(
-      DateTime timestamp,
-      @Nullable Integer maxNumStatuses,
+  List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
   /**
-   * Return {@link TaskInfo} objects for all active entries
+   * Returns the statuses of the specified tasks.
    *
-   * @return list of {@link TaskInfo}
+   * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
+   * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
+   * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
+   * All lookups should be processed atomically if more than one lookup is given.
+   *
+   * @param taskLookups task lookup type and filters.
+   * @param datasource  datasource filter
    */
-  List<TaskInfo<EntryType, StatusType>> getActiveTaskInfo(@Nullable String dataSource);
+  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  );
+
+  default List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+      TaskLookup taskLookup,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(Collections.singletonMap(taskLookup.getType(), taskLookup), datasource);
+  }
 
   /**
    * Add a lock to the given entry
@@ -169,4 +193,10 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   @Nullable
   Long getLockId(String entryId, LockType lock);
+
+  /**
+   * Utility to migrate existing tasks to the new schema by populating type and groupId asynchronously
+   */
+  void populateTaskTypeAndGroupIdAsync();
+
 }

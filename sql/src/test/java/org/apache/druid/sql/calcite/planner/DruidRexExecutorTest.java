@@ -34,7 +34,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.BasicSqlType;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -52,6 +51,7 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
@@ -70,8 +70,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       .operandTypes(SqlTypeFamily.ANY)
       .requiredOperands(0)
       .returnTypeInference(
-          ReturnTypes.explicit(
-              new RowSignatures.ComplexSqlType(SqlTypeName.OTHER, ColumnType.ofComplex("hyperUnique"), true)
+          opBinding -> RowSignatures.makeComplexType(
+              opBinding.getTypeFactory(),
+              ColumnType.ofComplex("hyperUnique"),
+              true
           )
       )
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
@@ -93,7 +95,9 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      ImmutableMap.of()
+      null, /* Don't need an engine */
+      Collections.emptyMap(),
+      CalciteTests.createJoinableFactoryWrapper()
   );
 
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
@@ -133,7 +137,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
     Assert.assertEquals(
-        DruidExpression.fromExpression("hyper_unique()"),
+        CalciteTestBase.makeExpression(ColumnType.ofComplex("hyperUnique"), "hyper_unique()"),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.builder().build(),
@@ -154,7 +158,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        DruidExpression.fromExpression("array(50.12,12.1)"),
+        DruidExpression.ofExpression(
+            ColumnType.DOUBLE_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "50.12"),
+                DruidExpression.ofLiteral(ColumnType.DOUBLE, "12.1")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
@@ -175,7 +186,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     rexy.reduce(rexBuilder, ImmutableList.of(literal), reduced);
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(
-        DruidExpression.fromExpression("array(50,12)"),
+        DruidExpression.ofExpression(
+            ColumnType.LONG_ARRAY,
+            DruidExpression.functionCall("array"),
+            ImmutableList.of(
+                DruidExpression.ofLiteral(ColumnType.LONG, "50"),
+                DruidExpression.ofLiteral(ColumnType.LONG, "12")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.empty(),
@@ -198,7 +216,14 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, reduced.size());
     Assert.assertEquals(SqlKind.OTHER_FUNCTION, reduced.get(0).getKind());
     Assert.assertEquals(
-        DruidExpression.fromExpression("string_to_array('a,b,c',',')"),
+        DruidExpression.ofExpression(
+            ColumnType.STRING,
+            DruidExpression.functionCall("string_to_array"),
+            ImmutableList.of(
+                DruidExpression.ofStringLiteral("a,b,c"),
+                DruidExpression.ofStringLiteral(",")
+            )
+        ),
         Expressions.toDruidExpression(
             PLANNER_CONTEXT,
             RowSignature.builder().build(),

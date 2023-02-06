@@ -63,23 +63,38 @@ public enum ValueType implements TypeDescriptor
    * String object type. This type may be used as a grouping key, an input to certain types of complex sketch
    * aggregators, and as an input to expression virtual columns. String types might potentially be 'multi-valued' when
    * stored in segments, and contextually at various layers of query processing, but this information is not available
-   * through this enum alone, and must be accompany this type indicator to properly handle.
+   * at this level.
+   *
+   * Strings are typically represented as {@link String}. Multi-value strings appear as {@link java.util.List<String>}
+   * when necessary to represent multiple values, and can vary between string and list from one row to the next.
    */
   STRING,
   /**
    * Placeholder for arbitrary 'complex' types, which have a corresponding serializer/deserializer implementation. Note
    * that knowing a type is complex alone isn't enough information to work with it directly, and additional information
-   * in the form of a type name that is registered in the complex type registry must be available to make this type
-   * meaningful. This type is not currently supported as a grouping key for aggregations, and may not be used as an
-   * input to expression virtual columns, and might only be supported by the specific aggregators crafted to handle
-   * this complex type.
+   * in the form of a type name which must be registered in the complex type registry. Complex types are not currently
+   * supported as a grouping key for aggregations. Complex types can be used as inputs to aggregators, in cases where
+   * the specific aggregator supports the specific complex type. Filtering on these types with standard filters is not
+   * well supported, and will be treated as null values.
+   *
+   * These types are represented by the individual Java type associated with the complex type name as defined in the
+   * type registry.
    */
   COMPLEX,
 
   /**
-   * Placeholder for arbitrary arrays of other {@link ValueType}. This type is not currently supported as a grouping
-   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
-   * limited support as an input among complex type sketch aggregators.
+   * Placeholder for arbitrary arrays of other {@link ValueType}. This type has limited support as a grouping
+   * key for aggregations, ARRAY of STRING, LONG, DOUBLE, and FLOAT are supported, but ARRAY types in general are not.
+   * ARRAY types cannot be used as an input for numerical primitive aggregations such as sums, and have limited support
+   * as an input among complex type sketch aggregators.
+   *
+   * There are currently no native ARRAY typed columns, but they may be produced by expression virtual columns,
+   * aggregators, and post-aggregators.
+   *
+   * Arrays are represented as Object[], long[], double[], or float[]. The preferred type is Object[], since the
+   * expression system is the main consumer of arrays, and the expression system uses Object[] internally. Some code
+   * represents arrays in other ways; in particular the groupBy engine and SQL result layer. Over time we expect these
+   * usages to migrate to Object[], long[], double[], and float[].
    */
   ARRAY;
 

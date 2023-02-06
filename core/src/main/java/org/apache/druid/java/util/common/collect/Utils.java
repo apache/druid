@@ -20,9 +20,12 @@
 package org.apache.druid.java.util.common.collect;
 
 
+import org.apache.druid.java.util.common.guava.MergeIterator;
+
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -88,5 +91,21 @@ public class Utils
     } else {
       return o.getClass().getName();
     }
+  }
+
+  /**
+   * Like Guava's {@link com.google.common.collect.Iterators#mergeSorted(Iterable, Comparator)}, but avoids
+   * calling next() on any iterator prior to returning the value returned by the previous call to next(). This is
+   * important when merging iterators that reuse container objects across calls to next().
+   *
+   * If the Iterators are {@link org.apache.druid.java.util.common.parsers.CloseableIterator}, use
+   * {@link org.apache.druid.java.util.common.CloseableIterators#mergeSorted} instead.
+   */
+  public static <T> Iterator<T> mergeSorted(
+      final Iterable<? extends Iterator<? extends T>> sortedIterators,
+      final Comparator<? super T> comparator
+  )
+  {
+    return new MergeIterator<>(sortedIterators, comparator);
   }
 }

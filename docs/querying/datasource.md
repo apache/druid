@@ -102,7 +102,7 @@ To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
 > Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql.md#string-functions).
+> SQL [`LOOKUP` function](sql-scalar.md#string-functions).
 > However, the join operator must evaluate the condition on each row, whereas the
 > `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
 > usually faster than joining to a lookup datasource.
@@ -322,7 +322,7 @@ a table on the left-hand side, but not the right, so a subquery is needed.
 - Join conditions where the right-hand expression is not a direct column access.
 
 For more information about how Druid translates SQL to native queries, refer to the
-[Druid SQL](sql.md#query-translation) documentation.
+[Druid SQL](sql-translation.md) documentation.
 
 #### Joins in native queries
 
@@ -341,10 +341,10 @@ Native join datasources have the following properties. All are required.
 Joins are a feature that can significantly affect performance of your queries. Some performance tips and notes:
 
 1. Joins are especially useful with [lookup datasources](#lookup), but in most cases, the
-[`LOOKUP` function](sql.md#string-functions) performs better than a join. Consider using the `LOOKUP` function if
+[`LOOKUP` function](sql-scalar.md#string-functions) performs better than a join. Consider using the `LOOKUP` function if
 it is appropriate for your use case.
 2. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
-your queries. Refer to the [Druid SQL](sql.md#query-translation) documentation for more details about when this happens
+your queries. Refer to the [Druid SQL](sql-translation.md) documentation for more details about when this happens
 and how to detect it.
 3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will
@@ -370,3 +370,57 @@ always be correct.
 - Join algorithms other than broadcast hash-joins.
 - Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
+
+### `unnest`
+
+> The unnest datasource is currently only available as part of a native query.
+
+Use the `unnest` datasource to unnest a column with multiple values in an array. 
+For example, you have a source column that looks like this:
+
+| Nested | 
+| -- | 
+| [a, b] |
+| [c, d] |
+| [e, [f,g]] |
+
+When you use the `unnest` datasource, the unnested column looks like this:
+
+| Unnested | 
+| -- |
+| a |
+| b |
+| c |
+| d |
+| e |
+| [f, g] |
+
+When unnesting data, keep the following in mind:
+
+- The total number of rows will grow to accommodate the new rows that the unnested data occupy.
+- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+
+The `unnest` datasource uses the following syntax:
+
+```json
+  "dataSource": {
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data"
+    },
+    "column": "nested_source_column",
+    "outputName": "unnested_target_column",
+    "allowList": []
+  },
+```
+
+* `dataSource.type`: Set this to `unnest`.
+* `dataSource.base`: Defines the datasource you want to unnest.
+  * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
+  * `dataSource.base.name`: The name of the datasource you want to unnest.
+* `dataSource.column`: The name of the source column that contains the nested values.
+* `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
+* `dataSource.allowList`: Optional. The subset of values you want to unnest.
+
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).

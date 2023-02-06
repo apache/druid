@@ -38,7 +38,6 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -154,16 +153,11 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
           compression
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
           ColumnType.FLOAT
       );
-      aggregatorFactory = new TDigestSketchAggregatorFactory(
-          sketchName,
-          virtualColumn.getOutputName(),
-          compression
-      );
+      aggregatorFactory = new TDigestSketchAggregatorFactory(sketchName, virtualColumnName, compression);
     }
 
     return Aggregation.create(

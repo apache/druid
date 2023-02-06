@@ -28,11 +28,11 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -49,6 +49,13 @@ import java.util.List;
 
 public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
+  private final boolean finalizeSketch;
+
+  protected ThetaSketchBaseSqlAggregator(boolean finalizeSketch)
+  {
+    this.finalizeSketch = finalizeSketch;
+  }
+
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -98,12 +105,14 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
+        && rowSignature.getColumnType(columnArg.getDirectColumn())
+                       .map(type -> type.is(ValueType.COMPLEX))
+                       .orElse(false)) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),
           sketchSize,
-          null,
+          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null
       );
@@ -123,19 +132,18 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             columnArg,
             dataType
         );
-        dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
+        dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
           dimensionSpec.getDimension(),
           sketchSize,
-          null,
+          finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null
       );

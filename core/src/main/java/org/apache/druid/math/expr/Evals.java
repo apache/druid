@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -30,8 +29,6 @@ import java.util.List;
  */
 public class Evals
 {
-  private static final Logger log = new Logger(Evals.class);
-
   public static boolean isAllConstants(Expr... exprs)
   {
     return isAllConstants(Arrays.asList(exprs));
@@ -70,5 +67,17 @@ public class Evals
   public static boolean asBoolean(@Nullable String x)
   {
     return !NullHandling.isNullOrEquivalent(x) && Boolean.parseBoolean(x);
+  }
+
+  /**
+   * Call {@link Object#toString()} on a non-null value
+   */
+  @Nullable
+  public static String asString(@Nullable Object o)
+  {
+    if (o == null) {
+      return null;
+    }
+    return o.toString();
   }
 }

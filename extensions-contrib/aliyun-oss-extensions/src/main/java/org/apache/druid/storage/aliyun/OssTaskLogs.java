@@ -25,7 +25,6 @@ import com.aliyun.oss.model.GetObjectRequest;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
@@ -66,54 +65,44 @@ public class OssTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "log");
     return streamTaskFile(offset, taskKey);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "report.json");
     return streamTaskFile(0, taskKey);
   }
 
-  private Optional<ByteSource> streamTaskFile(final long offset, String taskKey) throws IOException
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
   {
     try {
       final ObjectMetadata objectMetadata = client.getObjectMetadata(config.getBucket(), taskKey);
+      try {
+        final long start;
+        final long end = objectMetadata.getContentLength() - 1;
 
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                final long start;
-                final long end = objectMetadata.getContentLength() - 1;
+        if (offset > 0 && offset < objectMetadata.getContentLength()) {
+          start = offset;
+        } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
+          start = objectMetadata.getContentLength() + offset;
+        } else {
+          start = 0;
+        }
 
-                if (offset > 0 && offset < objectMetadata.getContentLength()) {
-                  start = offset;
-                } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
-                  start = objectMetadata.getContentLength() + offset;
-                } else {
-                  start = 0;
-                }
+        final GetObjectRequest request = new GetObjectRequest(config.getBucket(), taskKey);
+        request.setMatchingETagConstraints(Collections.singletonList(objectMetadata.getETag()));
+        request.setRange(start, end);
 
-                final GetObjectRequest request = new GetObjectRequest(config.getBucket(), taskKey);
-                request.setMatchingETagConstraints(Collections.singletonList(objectMetadata.getETag()));
-                request.setRange(start, end);
-
-                return client.getObject(request).getObjectContent();
-              }
-              catch (OSSException e) {
-                throw new IOException(e);
-              }
-            }
-          }
-      );
+        return Optional.of(client.getObject(request).getObjectContent());
+      }
+      catch (OSSException e) {
+        throw new IOException(e);
+      }
     }
     catch (OSSException e) {
       if ("NoSuchKey".equals(e.getErrorCode())

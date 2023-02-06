@@ -25,7 +25,7 @@ title: "Aggregations"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about aggregators available in SQL, refer to the
-> [SQL documentation](sql.md#aggregation-functions).
+> [SQL documentation](sql-aggregations.md).
 
 You can use aggregations:
 -  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
@@ -43,9 +43,9 @@ The following sections list the available aggregate functions. Unless otherwise 
 { "type" : "count", "name" : <output_name> }
 ```
 
-Please note the count aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested.
+The `count` aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested.
 This is because Druid can be configured to roll up data at ingestion time. To
-count the number of ingested rows of data, include a count aggregator at ingestion time, and a longSum aggregator at
+count the number of ingested rows of data, include a `count` aggregator at ingestion time and a `longSum` aggregator at
 query time.
 
 ### Sum aggregators
@@ -58,8 +58,9 @@ Computes the sum of values as a 64-bit, signed integer.
 { "type" : "longSum", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-`name` – output name for the summed value
-`fieldName` – name of the metric column to sum over
+The `longSum` aggregator takes the following properties:
+* `name`: Output name for the summed value
+* `fieldName`: Name of the metric column to sum over
 
 #### `doubleSum` aggregator
 
@@ -77,7 +78,7 @@ Computes and stores the sum of values as a 32-bit floating point value. Similar 
 { "type" : "floatSum", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-### Min / Max aggregators
+### Min and max aggregators
 
 #### `doubleMin` aggregator
 
@@ -137,11 +138,14 @@ To accomplish mean aggregation on ingestion, refer to the [Quantiles aggregator]
 { "type" : "doubleMean", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-### First / Last aggregator
+### First and last aggregators
 
-(Double/Float/Long) Do not use First and Last aggregators in an ingestion spec. They are only supported for queries.
+The first and last aggregators determine the metric values that respectively correspond to the earliest and latest values of a time column.
 
-Note that queries with first/last aggregators on a segment created with rollup enabled return the rolled up value, and not the last value within the raw ingested data.
+Do not use first and last aggregators for the double, float, and long types in an ingestion spec. They are only supported for queries.
+The string-typed aggregators, `stringFirst` and `stringLast`, are supported for both ingestion and querying.
+
+Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the raw ingested data.
 
 #### `doubleFirst` aggregator
 
@@ -251,7 +255,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 }
 ```
 
-### ANY aggregator
+### ANY aggregators
 
 (Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 

@@ -44,9 +44,9 @@ Druid has several types of services:
 * [**Historical**](../design/historical.md) services store queryable data.
 * [**MiddleManager**](../design/middlemanager.md) services ingest data.
 
-You can view services in the **Services** tab in the Druid console: 
+You can view services in the **Services** tab in the web console: 
 
-![Druid services](../assets/services-overview.png "Services in the Druid console")
+![Druid services](../assets/services-overview.png "Services in the web console")
 
 
 ## Druid servers
@@ -214,7 +214,7 @@ happens immediately before publishing metadata to the metadata store.
 or a Historical process.
 
 You can inspect the state of currently active segments using the Druid SQL
-[`sys.segments` table](../querying/sql.md#segments-table). It includes the following flags:
+[`sys.segments` table](../querying/sql-metadata-tables.md#segments-table). It includes the following flags:
 
 - `is_published`: True if segment metadata has been published to the metadata store and `used` is true.
 - `is_available`: True if the segment is currently available for querying, either on a realtime task or Historical

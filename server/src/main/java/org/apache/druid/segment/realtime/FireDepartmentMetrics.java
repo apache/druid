@@ -21,13 +21,16 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 public class FireDepartmentMetrics
 {
-  private static final long DEFAULT_PROCESSING_COMPLETION_TIME = -1L;
+  private static final long NO_EMIT_SEGMENT_HANDOFF_TIME = -1L;
+
+  private static final long NO_EMIT_MESSAGE_GAP = -1L;
 
   private final AtomicLong processedCount = new AtomicLong(0);
   private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
@@ -47,7 +50,9 @@ public class FireDepartmentMetrics
   private final AtomicLong sinkCount = new AtomicLong(0);
   private final AtomicLong messageMaxTimestamp = new AtomicLong(0);
   private final AtomicLong messageGap = new AtomicLong(0);
-  private final AtomicLong messageProcessingCompletionTime = new AtomicLong(DEFAULT_PROCESSING_COMPLETION_TIME);
+  private final AtomicBoolean processingDone = new AtomicBoolean(false);
+
+  private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
 
   public void incrementProcessed()
   {
@@ -134,21 +139,20 @@ public class FireDepartmentMetrics
     this.messageMaxTimestamp.set(Math.max(messageMaxTimestamp, this.messageMaxTimestamp.get()));
   }
 
+  public void reportMaxSegmentHandoffTime(long maxSegmentHandoffTime)
+  {
+    this.maxSegmentHandoffTime.set(Math.max(maxSegmentHandoffTime, this.maxSegmentHandoffTime.get()));
+  }
+
   public void markProcessingDone()
   {
-    markProcessingDone(System.currentTimeMillis());
+    this.processingDone.set(true);
   }
 
   @VisibleForTesting
-  void markProcessingDone(long timestamp)
+  public boolean isProcessingDone()
   {
-    this.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, timestamp);
-  }
-
-  @VisibleForTesting
-  public long processingCompletionTime()
-  {
-    return messageProcessingCompletionTime.get();
+    return processingDone.get();
   }
 
   public long processed()
@@ -231,14 +235,14 @@ public class FireDepartmentMetrics
     return sinkCount.get();
   }
 
-  public long messageMaxTimestamp()
-  {
-    return messageMaxTimestamp.get();
-  }
-
   public long messageGap()
   {
     return messageGap.get();
+  }
+
+  public long maxSegmentHandoffTime()
+  {
+    return maxSegmentHandoffTime.get();
   }
 
   public FireDepartmentMetrics snapshot()
@@ -261,9 +265,24 @@ public class FireDepartmentMetrics
     retVal.handOffCount.set(handOffCount.get());
     retVal.sinkCount.set(sinkCount.get());
     retVal.messageMaxTimestamp.set(messageMaxTimestamp.get());
-    retVal.messageProcessingCompletionTime.set(messageProcessingCompletionTime.get());
-    retVal.messageProcessingCompletionTime.compareAndSet(DEFAULT_PROCESSING_COMPLETION_TIME, System.currentTimeMillis());
-    retVal.messageGap.set(retVal.messageProcessingCompletionTime.get() - messageMaxTimestamp.get());
+    retVal.maxSegmentHandoffTime.set(maxSegmentHandoffTime.get());
+
+    long messageGapSnapshot = 0;
+    final long maxTimestamp = retVal.messageMaxTimestamp.get();
+    if (processingDone.get()) {
+      messageGapSnapshot = NO_EMIT_MESSAGE_GAP;
+    } else if (maxTimestamp > 0) {
+      messageGapSnapshot = System.currentTimeMillis() - maxTimestamp;
+    }
+    retVal.messageGap.set(messageGapSnapshot);
+
+    reset();
+
     return retVal;
+  }
+
+  private void reset()
+  {
+    maxSegmentHandoffTime.set(NO_EMIT_SEGMENT_HANDOFF_TIME);
   }
 }

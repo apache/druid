@@ -16,26 +16,28 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .show-value-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     padding-bottom: 10px;
   }
 
-  &.normal.bp3-dialog {
+  &.normal.#{$bp-ns}-dialog {
     height: 600px;
   }
 
-  &.large.bp3-dialog {
+  &.large.#{$bp-ns}-dialog {
     width: 90vw;
     height: 90vh;
   }
 
-  .bp3-input {
+  .#{$bp-ns}-input {
     margin: 10px;
     flex: 1;
   }
 
-  .bp3-dialog-footer-actions {
+  .#{$bp-ns}-dialog-footer-actions {
     padding-right: 10px;
   }
 }

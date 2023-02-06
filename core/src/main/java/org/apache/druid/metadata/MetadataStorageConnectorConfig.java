@@ -22,12 +22,15 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
+import java.util.Map;
 import java.util.Properties;
 
 /**
  */
 public class MetadataStorageConnectorConfig
 {
+  public static final String PROPERTY_BASE = "druid.metadata.storage.connector";
+
   @JsonProperty
   private boolean createTables = true;
 
@@ -48,6 +51,30 @@ public class MetadataStorageConnectorConfig
 
   @JsonProperty("dbcp")
   private Properties dbcpProperties;
+
+  public static MetadataStorageConnectorConfig create(
+      String connectUri,
+      String user,
+      String password,
+      Map<String, Object> properties
+  )
+  {
+    MetadataStorageConnectorConfig config = new MetadataStorageConnectorConfig();
+    if (connectUri != null) {
+      config.connectURI = connectUri;
+    }
+    if (user != null) {
+      config.user = user;
+    }
+    if (password != null) {
+      config.passwordProvider = () -> password;
+    }
+    if (properties != null) {
+      config.dbcpProperties = new Properties();
+      config.dbcpProperties.putAll(properties);
+    }
+    return config;
+  }
 
   @JsonProperty
   public boolean isCreateTables()

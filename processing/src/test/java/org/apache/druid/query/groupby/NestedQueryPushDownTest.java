@@ -26,10 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.StupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -37,12 +33,13 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
@@ -54,6 +51,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
@@ -75,10 +73,12 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
@@ -86,7 +86,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,10 +93,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class NestedQueryPushDownTest
+public class NestedQueryPushDownTest extends InitializedNullHandlingTest
 {
   private static final IndexIO INDEX_IO;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -108,6 +106,7 @@ public class NestedQueryPushDownTest
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
+  private Closer closer;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -135,9 +134,7 @@ public class NestedQueryPushDownTest
                         new StringDimensionSchema("dimB"),
                         new LongDimensionSchema("metA"),
                         new LongDimensionSchema("metB")
-                    ),
-                    null,
-                    null
+                    )
                 ))
                 .build()
         )
@@ -149,6 +146,7 @@ public class NestedQueryPushDownTest
   @Before
   public void setup() throws Exception
   {
+    closer = Closer.create();
     tmpDir = FileUtils.createTempDir();
 
     InputRow row;
@@ -251,23 +249,15 @@ public class NestedQueryPushDownTest
   {
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
-    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByBenchmark-computeBufferPool",
-        new OffheapBufferGenerator("compute", 10_000_000),
-        0,
-        Integer.MAX_VALUE
-    );
-
-    // limit of 3 is required since we simulate running historical running nested query and broker doing the final merge
-    BlockingPool<ByteBuffer> mergePool = new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
-        10
-    );
-    // limit of 3 is required since we simulate running historical running nested query and broker doing the final merge
-    BlockingPool<ByteBuffer> mergePool2 = new DefaultBlockingPool<>(
-        new OffheapBufferGenerator("merge", 10_000_000),
-        10
-    );
+    TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
+    TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 10);
+    TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 10);
+    closer.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+    });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
@@ -284,9 +274,9 @@ public class NestedQueryPushDownTest
       }
 
       @Override
-      public long getMaxOnDiskStorage()
+      public HumanReadableBytes getMaxOnDiskStorage()
       {
-        return 1_000_000_000L;
+        return HumanReadableBytes.valueOf(1_000_000_000L);
       }
     };
     config.setSingleThreaded(false);
@@ -322,6 +312,7 @@ public class NestedQueryPushDownTest
             configSupplier,
             bufferPool,
             mergePool,
+            TestHelper.makeJsonMapper(),
             new ObjectMapper(new SmileFactory()),
             NOOP_QUERYWATCHER
         )
@@ -339,6 +330,7 @@ public class NestedQueryPushDownTest
             configSupplier,
             bufferPool,
             mergePool2,
+            TestHelper.makeJsonMapper(),
             new ObjectMapper(new SmileFactory()),
             NOOP_QUERYWATCHER
         )
@@ -358,6 +350,9 @@ public class NestedQueryPushDownTest
   @After
   public void tearDown() throws Exception
   {
+    closer.close();
+    closer = null;
+
     for (IncrementalIndex incrementalIndex : incrementalIndices) {
       incrementalIndex.close();
     }
@@ -866,34 +861,6 @@ public class NestedQueryPushDownTest
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
-  }
-
-  private static class OffheapBufferGenerator implements Supplier<ByteBuffer>
-  {
-    private static final Logger log = new Logger(OffheapBufferGenerator.class);
-
-    private final String description;
-    private final int computationBufferSize;
-    private final AtomicLong count = new AtomicLong(0);
-
-    public OffheapBufferGenerator(String description, int computationBufferSize)
-    {
-      this.description = description;
-      this.computationBufferSize = computationBufferSize;
-    }
-
-    @Override
-    public ByteBuffer get()
-    {
-      log.info(
-          "Allocating new %s buffer[%,d] of size[%,d]",
-          description,
-          count.getAndIncrement(),
-          computationBufferSize
-      );
-
-      return ByteBuffer.allocateDirect(computationBufferSize);
-    }
   }
 
   private static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(

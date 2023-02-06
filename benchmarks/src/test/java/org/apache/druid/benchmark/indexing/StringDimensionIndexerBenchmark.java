@@ -32,6 +32,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -53,13 +54,13 @@ public class StringDimensionIndexerBenchmark
   @Param({"10000"})
   public int cardinality;
 
-  @Param({"8"})
+  @Param({"8", "40"})
   public int rowSize;
 
   @Setup
   public void setup()
   {
-    indexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false);
+    indexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false, true);
 
     for (int i = 0; i < cardinality; i++) {
       indexer.processRowValsToUnsortedEncodedKeyComponent("abcd-" + i, true);
@@ -75,7 +76,18 @@ public class StringDimensionIndexerBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  @Threads(1)
   public void estimateEncodedKeyComponentSize(Blackhole blackhole)
+  {
+    long sz = indexer.estimateEncodedKeyComponentSize(exampleArray);
+    blackhole.consume(sz);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  @Threads(2)
+  public void estimateEncodedKeyComponentSizeTwoThreads(Blackhole blackhole)
   {
     long sz = indexer.estimateEncodedKeyComponentSize(exampleArray);
     blackhole.consume(sz);

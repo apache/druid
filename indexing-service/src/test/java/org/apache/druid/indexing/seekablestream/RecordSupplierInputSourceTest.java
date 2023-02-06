@@ -27,11 +27,14 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
@@ -71,7 +74,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   public void testRead() throws IOException
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
-    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, null);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
@@ -87,7 +90,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     );
 
     int read = 0;
-    try (CloseableIterator<InputRow> iterator = reader.read()) {
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         final InputRow inputRow = iterator.next();
         Assert.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
@@ -95,7 +99,39 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       }
     }
 
+    Assert.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
     Assert.assertEquals(NUM_ROWS, read);
+    Assert.assertTrue(supplier.isClosed());
+  }
+
+  @Test
+  public void testReadTimeout() throws IOException
+  {
+    final RandomCsvSupplier supplier = new RandomCsvSupplier();
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, -1000);
+    final List<String> colNames = IntStream.range(0, NUM_COLS)
+                                           .mapToObj(i -> StringUtils.format("col_%d", i))
+                                           .collect(Collectors.toList());
+    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0);
+    final InputSourceReader reader = inputSource.reader(
+        new InputRowSchema(
+            new TimestampSpec("col_0", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(colNames.subList(1, colNames.size()))),
+            ColumnsFilter.all()
+        ),
+        inputFormat,
+        temporaryFolder.newFolder()
+    );
+
+    int read = 0;
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
+      for (; read < NUM_ROWS && iterator.hasNext(); read++) {
+        iterator.next();
+      }
+    }
+    Assert.assertEquals(0, inputStats.getProcessedBytes());
+    Assert.assertEquals(0, read);
     Assert.assertTrue(supplier.isClosed());
   }
 
@@ -215,9 +251,20 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public boolean isOffsetAvailable(StreamPartition<Integer> partition, OrderedSequenceNumber<Integer> offset)
+    {
+      return true;
+    }
+
+    @Override
     public Integer getPosition(StreamPartition<Integer> partition)
     {
       throw new UnsupportedOperationException();
+    }
+
+    private long getMinRowSize()
+    {
+      return TIMESTAMP_STRING.length() + (NUM_COLS - 1) * STR_LEN;
     }
   }
 }

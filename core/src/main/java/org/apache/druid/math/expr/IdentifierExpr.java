@@ -23,12 +23,11 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprEvalDoubleVector;
 import org.apache.druid.math.expr.vector.ExprEvalLongVector;
-import org.apache.druid.math.expr.vector.ExprEvalStringVector;
+import org.apache.druid.math.expr.vector.ExprEvalObjectVector;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -84,6 +83,12 @@ class IdentifierExpr implements Expr
   public String getBinding()
   {
     return binding;
+  }
+
+  @Override
+  public boolean isIdentifier()
+  {
+    return true;
   }
 
   @Nullable
@@ -152,15 +157,12 @@ class IdentifierExpr implements Expr
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
       // (numbers will be populated with default values in default mode and non-null)
-      return new IdentifierVectorProcessor<String[]>(ExpressionType.STRING)
+      return new IdentifierVectorProcessor<Object[]>(ExpressionType.STRING)
       {
         @Override
-        public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
+        public ExprEvalVector<Object[]> evalVector(VectorInputBinding bindings)
         {
-          // need to cast to string[] because null columns come out as object[]
-          return new ExprEvalStringVector(
-              Arrays.stream(bindings.getObjectVector(binding)).map(x -> (String) x).toArray(String[]::new)
-          );
+          return new ExprEvalObjectVector(bindings.getObjectVector(binding));
         }
       };
     }
@@ -184,12 +186,12 @@ class IdentifierExpr implements Expr
           }
         };
       case STRING:
-        return new IdentifierVectorProcessor<String[]>(inputType)
+        return new IdentifierVectorProcessor<Object[]>(inputType)
         {
           @Override
-          public ExprEvalVector<String[]> evalVector(VectorInputBinding bindings)
+          public ExprEvalVector<Object[]> evalVector(VectorInputBinding bindings)
           {
-            return new ExprEvalStringVector(bindings.getObjectVector(binding));
+            return new ExprEvalObjectVector(bindings.getObjectVector(binding));
           }
         };
       default:

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumn;
@@ -2299,6 +2301,19 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertFalse(
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
+            ImmutableList.of(),
+            null
+        ).hasBuiltInFilters()
+    );
+  }
+
+  @Test
+  public void test_hasBuiltInFiltersForConvertedJoin()
+  {
+    Assert.assertTrue(
+        new HashJoinSegmentStorageAdapter(
+            factSegment.asStorageAdapter(),
+            new InDimFilter("dim", ImmutableSet.of("foo", "bar")),
             ImmutableList.of(),
             null
         ).hasBuiltInFilters()

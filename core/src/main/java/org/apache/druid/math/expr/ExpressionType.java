@@ -62,7 +62,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
       @JsonProperty("elementType") @Nullable ExpressionType elementType
   )
   {
-    super(exprType, complexTypeName, elementType);
+    super(ExpressionTypeFactory.getInstance(), exprType, complexTypeName, elementType);
   }
 
   @Nullable
@@ -130,6 +130,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
         switch (valueType.getElementType().getType()) {
           case LONG:
             return LONG_ARRAY;
+          case FLOAT:
           case DOUBLE:
             return DOUBLE_ARRAY;
           case STRING:
@@ -166,6 +167,7 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
         switch (valueType.getElementType().getType()) {
           case LONG:
             return LONG_ARRAY;
+          case FLOAT:
           case DOUBLE:
             return DOUBLE_ARRAY;
           case STRING:

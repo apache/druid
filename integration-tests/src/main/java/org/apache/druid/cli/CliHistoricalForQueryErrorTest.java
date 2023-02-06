@@ -19,9 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;

@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.Futures;
+import org.apache.commons.codec.Charsets;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -31,7 +33,9 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -39,23 +43,34 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -131,14 +146,14 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<PartitionLocation>> createPartitionToLocations(
+    private static Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> createPartitionToLocations(
         int count,
         String partitionLocationType
     )
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
-              i -> Pair.of(createInterval(i), i),
+              i -> new ParallelIndexSupervisorTask.Partition(createInterval(i), i),
               i -> Collections.singletonList(createPartitionLocation(i, partitionLocationType))
           )
       );
@@ -212,7 +227,7 @@ public class ParallelIndexSupervisorTaskTest
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
           new InlineInputSource("test"),
-          new JsonInputFormat(null, null, null),
+          new JsonInputFormat(null, null, null, null, null),
           appendToExisting,
           null
       );
@@ -334,6 +349,156 @@ public class ParallelIndexSupervisorTaskTest
       EasyMock.replay(inputSource, tuningConfig);
 
       Assert.assertFalse(ParallelIndexSupervisorTask.isParallelMode(inputSource, tuningConfig));
+    }
+
+    @Test
+    public void test_getPartitionToLocations_ordersPartitionsCorrectly()
+    {
+      final Interval day1 = Intervals.of("2022-01-01/2022-01-02");
+      final Interval day2 = Intervals.of("2022-01-02/2022-01-03");
+
+      final String task1 = "task1";
+      final String task2 = "task2";
+
+      // Create task reports
+      Map<String, GeneratedPartitionsReport> taskIdToReport = new HashMap<>();
+      taskIdToReport.put(task1, new GeneratedPartitionsReport(task1, Arrays.asList(
+          createRangePartitionStat(day1, 1),
+          createRangePartitionStat(day2, 7),
+          createRangePartitionStat(day1, 0),
+          createRangePartitionStat(day2, 1)
+      ), null));
+      taskIdToReport.put(task2, new GeneratedPartitionsReport(task2, Arrays.asList(
+          createRangePartitionStat(day1, 4),
+          createRangePartitionStat(day1, 6),
+          createRangePartitionStat(day2, 1),
+          createRangePartitionStat(day1, 1)
+      ), null));
+
+      Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations
+          = ParallelIndexSupervisorTask.getPartitionToLocations(taskIdToReport);
+      Assert.assertEquals(6, partitionToLocations.size());
+
+      // Verify that partitionIds are packed and in the same order as bucketIds
+      verifyPartitionIdAndLocations(day1, 0, partitionToLocations,
+                                    0, task1);
+      verifyPartitionIdAndLocations(day1, 1, partitionToLocations,
+                                    1, task1, task2);
+      verifyPartitionIdAndLocations(day1, 4, partitionToLocations,
+                                    2, task2);
+      verifyPartitionIdAndLocations(day1, 6, partitionToLocations,
+                                    3, task2);
+
+      verifyPartitionIdAndLocations(day2, 1, partitionToLocations,
+                                    0, task1, task2);
+      verifyPartitionIdAndLocations(day2, 7, partitionToLocations,
+                                    1, task1);
+    }
+
+    @Test
+    public void testGetTaskReportOk() throws Exception
+    {
+      final String taskId = "task";
+      final Map<String, Object> report = ImmutableMap.of("foo", "bar");
+
+      final OverlordClient client = mock(OverlordClient.class);
+      expect(client.taskReportAsMap(taskId)).andReturn(Futures.immediateFuture(report));
+      EasyMock.replay(client);
+
+      Assert.assertEquals(report, ParallelIndexSupervisorTask.getTaskReport(client, taskId));
+      EasyMock.verify(client);
+    }
+
+    @Test
+    public void testGetTaskReport404() throws Exception
+    {
+      final String taskId = "task";
+
+      final OverlordClient client = mock(OverlordClient.class);
+      final HttpResponse response = mock(HttpResponse.class);
+      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
+      expect(response.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
+      EasyMock.replay(response);
+
+      expect(client.taskReportAsMap(taskId)).andReturn(
+          Futures.immediateFailedFuture(
+              new HttpResponseException(new StringFullResponseHolder(response, Charsets.UTF_8))
+          )
+      );
+      EasyMock.replay(client);
+
+      Assert.assertNull(ParallelIndexSupervisorTask.getTaskReport(client, taskId));
+      EasyMock.verify(client, response);
+    }
+
+    @Test
+    public void testGetTaskReport403()
+    {
+      final String taskId = "task";
+
+      final OverlordClient client = mock(OverlordClient.class);
+      final HttpResponse response = mock(HttpResponse.class);
+      expect(response.getContent()).andReturn(ChannelBuffers.buffer(0));
+      expect(response.getStatus()).andReturn(HttpResponseStatus.FORBIDDEN).anyTimes();
+      EasyMock.replay(response);
+
+      expect(client.taskReportAsMap(taskId)).andReturn(
+          Futures.immediateFailedFuture(
+              new HttpResponseException(new StringFullResponseHolder(response, Charsets.UTF_8))
+          )
+      );
+      EasyMock.replay(client);
+
+      final ExecutionException e = Assert.assertThrows(
+          ExecutionException.class,
+          () -> ParallelIndexSupervisorTask.getTaskReport(client, taskId)
+      );
+
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(HttpResponseException.class));
+      MatcherAssert.assertThat(
+          e.getCause(),
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Server error [403 Forbidden]"))
+      );
+
+      EasyMock.verify(client, response);
+    }
+
+    private PartitionStat createRangePartitionStat(Interval interval, int bucketId)
+    {
+      return new DeepStoragePartitionStat(
+          interval,
+          new DimensionRangeBucketShardSpec(bucketId, Arrays.asList("dim1", "dim2"), null, null),
+          new HashMap<>()
+      );
+    }
+
+    private void verifyPartitionIdAndLocations(
+        Interval interval,
+        int bucketId,
+        Map<ParallelIndexSupervisorTask.Partition, List<PartitionLocation>> partitionToLocations,
+        int expectedPartitionId,
+        String... expectedTaskIds
+    )
+    {
+      final ParallelIndexSupervisorTask.Partition partition
+          = new ParallelIndexSupervisorTask.Partition(interval, bucketId);
+      List<PartitionLocation> locations = partitionToLocations.get(partition);
+      Assert.assertEquals(expectedTaskIds.length, locations.size());
+
+      final Set<String> observedTaskIds = new HashSet<>();
+      for (PartitionLocation location : locations) {
+        Assert.assertEquals(bucketId, location.getBucketId());
+        Assert.assertEquals(interval, location.getInterval());
+        Assert.assertEquals(expectedPartitionId, location.getShardSpec().getPartitionNum());
+
+        observedTaskIds.add(location.getSubTaskId());
+      }
+
+      // Verify the taskIds of the locations
+      Assert.assertEquals(
+          new HashSet<>(Arrays.asList(expectedTaskIds)),
+          observedTaskIds
+      );
     }
   }
 

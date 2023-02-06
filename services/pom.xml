@@ -27,12 +27,12 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.23.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <!-- include druid-core to prevent older versions of dependencies
-        from being pulled in by airline and dependencies of druid-server -->
+        from being pulled in by dependencies of druid-server -->
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-core</artifactId>
@@ -70,7 +70,7 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.airlift</groupId>
+            <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
         </dependency>
         <dependency>
@@ -324,6 +324,7 @@
                     </usedDependencies>
                     <ignoredUsedUndeclaredDependencies>
                         <ignoredUsedUndeclaredDependency>jakarta.xml.bind:jakarta.xml.bind-api</ignoredUsedUndeclaredDependency>
+                        <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
                 </configuration>
             </plugin>

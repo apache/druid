@@ -61,7 +61,7 @@ public class OverlordResourceTestClient
   private final String indexer;
 
   @Inject
-  OverlordResourceTestClient(
+  protected OverlordResourceTestClient(
       ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
@@ -72,7 +72,7 @@ public class OverlordResourceTestClient
     this.indexer = config.getOverlordUrl();
   }
 
-  private String getIndexerURL()
+  protected String getIndexerURL()
   {
     return StringUtils.format(
         "%s/druid/indexer/v1/",
@@ -144,6 +144,11 @@ public class OverlordResourceTestClient
     }
   }
 
+  public List<TaskResponseObject> getAllTasks()
+  {
+    return getTasks("tasks");
+  }
+
   public List<TaskResponseObject> getRunningTasks()
   {
     return getTasks("runningTasks");
@@ -197,7 +202,7 @@ public class OverlordResourceTestClient
     try {
       StatusResponseHolder response = makeRequest(
           HttpMethod.GET,
-          StringUtils.format("%stask/%s", getIndexerURL(), taskId)
+          StringUtils.format("%stask/%s", getIndexerURL(), StringUtils.urlEncode(taskId))
       );
       LOG.debug("Task %s response %s", taskId, response.getContent());
       return jsonMapper.readValue(
@@ -318,6 +323,8 @@ public class OverlordResourceTestClient
           {
             TaskState status = getTaskStatus(taskID).getStatusCode();
             if (status == TaskState.FAILED) {
+              LOG.error("Task failed: %s", taskID);
+              LOG.error("Message: %s", getTaskErrorMessage(taskID));
               throw new ISE("Indexer task FAILED");
             }
             return status == TaskState.SUCCESS;
@@ -713,7 +720,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  private StatusResponseHolder makeRequest(HttpMethod method, String url)
+  protected StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
       StatusResponseHolder response = this.httpClient

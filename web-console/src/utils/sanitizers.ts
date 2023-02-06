@@ -17,5 +17,5 @@
  */
 
 export function durationSanitizer(str: string): string {
-  return str.toUpperCase().replace(/[^0-9PYMDTHS.,]/g, '');
+  return str.toUpperCase().replace(/[^0-9PYMWDTHS.,]/g, '');
 }

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,7 +42,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class SegmentLocalCacheManagerTest
 {
@@ -56,7 +59,8 @@ public class SegmentLocalCacheManagerTest
   public SegmentLocalCacheManagerTest()
   {
     jsonMapper = new DefaultObjectMapper();
-    jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"),
+                                new NamedType(TombstoneLoadSpec.class, "tombstone"));
     jsonMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             LocalDataSegmentPuller.class,
@@ -95,6 +99,58 @@ public class SegmentLocalCacheManagerTest
 
     final DataSegment uncachedSegment = dataSegmentWithInterval("2014-10-21T00:00:00Z/P1D");
     Assert.assertFalse("Expect cache miss", manager.isSegmentCached(uncachedSegment));
+  }
+
+  @Test
+  public void testNoLoadingOfSegmentInPageCache() throws IOException
+  {
+    final DataSegment segment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
+    final File segmentFile = new File(
+        localSegmentCacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    FileUtils.mkdirp(segmentFile);
+    // should not throw any exception
+    manager.loadSegmentIntoPageCache(segment, null);
+  }
+
+  @Test
+  public void testLoadSegmentInPageCache() throws IOException
+  {
+    final DataSegment segment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
+    final File segmentFile = new File(
+        localSegmentCacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    FileUtils.mkdirp(segmentFile);
+    // should not throw any exception
+    manager.loadSegmentIntoPageCache(segment, Executors.newSingleThreadExecutor());
+  }
+
+  @Test
+  public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException
+  {
+    final DataSegment tombstone = DataSegment.builder()
+                                             .dataSource("foo")
+                                             .interval(Intervals.of("2014-10-20T00:00:00Z/P1D"))
+                                             .version("version")
+                                             .loadSpec(Collections.singletonMap(
+                                                 "type",
+                                                 DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                             ))
+                                             .shardSpec(TombstoneShardSpec.INSTANCE)
+                                             .size(1)
+                                             .build();
+
+
+    final File cachedSegmentFile = new File(
+        localSegmentCacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    FileUtils.mkdirp(cachedSegmentFile);
+
+    manager.getSegmentFiles(tombstone);
+    Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentCached(tombstone));
   }
 
   @Test

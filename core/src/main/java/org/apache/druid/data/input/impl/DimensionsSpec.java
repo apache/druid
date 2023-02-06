@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,8 +47,11 @@ public class DimensionsSpec
   private final List<DimensionSchema> dimensions;
   private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
+  private final boolean includeAllDimensions;
 
-  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null);
+  private final boolean useNestedColumnIndexerForSchemaDiscovery;
+
+  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, null);
 
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
   {
@@ -69,11 +73,23 @@ public class DimensionsSpec
     return new NewSpatialDimensionSchema(spatialSchema.getDimName(), spatialSchema.getDims());
   }
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public DimensionsSpec(List<DimensionSchema> dimensions)
+  {
+    this(dimensions, null, null, false, null);
+  }
+
   @JsonCreator
-  public DimensionsSpec(
+  private DimensionsSpec(
       @JsonProperty("dimensions") List<DimensionSchema> dimensions,
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
-      @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions
+      @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
+      @JsonProperty("includeAllDimensions") boolean includeAllDimensions,
+      @JsonProperty("useNestedColumnIndexerForSchemaDiscovery") Boolean useNestedColumnIndexerForSchemaDiscovery
   )
   {
     this.dimensions = dimensions == null
@@ -101,11 +117,9 @@ public class DimensionsSpec
       this.dimensions.add(newSchema);
       dimensionSchemaMap.put(newSchema.getName(), newSchema);
     }
-  }
-
-  public DimensionsSpec(List<DimensionSchema> dimensions)
-  {
-    this(dimensions, null, null);
+    this.includeAllDimensions = includeAllDimensions;
+    this.useNestedColumnIndexerForSchemaDiscovery =
+        useNestedColumnIndexerForSchemaDiscovery != null && useNestedColumnIndexerForSchemaDiscovery;
   }
 
   @JsonProperty
@@ -118,6 +132,18 @@ public class DimensionsSpec
   public Set<String> getDimensionExclusions()
   {
     return dimensionExclusions;
+  }
+
+  @JsonProperty
+  public boolean isIncludeAllDimensions()
+  {
+    return includeAllDimensions;
+  }
+
+  @JsonProperty
+  public boolean useNestedColumnIndexerForSchemaDiscovery()
+  {
+    return useNestedColumnIndexerForSchemaDiscovery;
   }
 
   @Deprecated
@@ -173,7 +199,13 @@ public class DimensionsSpec
   @PublicApi
   public DimensionsSpec withDimensions(List<DimensionSchema> dims)
   {
-    return new DimensionsSpec(dims, ImmutableList.copyOf(dimensionExclusions), null);
+    return new DimensionsSpec(
+        dims,
+        ImmutableList.copyOf(dimensionExclusions),
+        null,
+        includeAllDimensions,
+        useNestedColumnIndexerForSchemaDiscovery
+    );
   }
 
   public DimensionsSpec withDimensionExclusions(Set<String> dimExs)
@@ -181,14 +213,22 @@ public class DimensionsSpec
     return new DimensionsSpec(
         dimensions,
         ImmutableList.copyOf(Sets.union(dimensionExclusions, dimExs)),
-        null
+        null,
+        includeAllDimensions,
+        useNestedColumnIndexerForSchemaDiscovery
     );
   }
 
   @Deprecated
   public DimensionsSpec withSpatialDimensions(List<SpatialDimensionSchema> spatials)
   {
-    return new DimensionsSpec(dimensions, ImmutableList.copyOf(dimensionExclusions), spatials);
+    return new DimensionsSpec(
+        dimensions,
+        ImmutableList.copyOf(dimensionExclusions),
+        spatials,
+        includeAllDimensions,
+        useNestedColumnIndexerForSchemaDiscovery
+    );
   }
 
   private void verify(List<SpatialDimensionSchema> spatialDimensions)
@@ -225,22 +265,22 @@ public class DimensionsSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     DimensionsSpec that = (DimensionsSpec) o;
-
-    if (!dimensions.equals(that.dimensions)) {
-      return false;
-    }
-
-    return dimensionExclusions.equals(that.dimensionExclusions);
+    return includeAllDimensions == that.includeAllDimensions
+           && useNestedColumnIndexerForSchemaDiscovery == that.useNestedColumnIndexerForSchemaDiscovery
+           && Objects.equals(dimensions, that.dimensions)
+           && Objects.equals(dimensionExclusions, that.dimensionExclusions);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimensions.hashCode();
-    result = 31 * result + dimensionExclusions.hashCode();
-    return result;
+    return Objects.hash(
+        dimensions,
+        dimensionExclusions,
+        includeAllDimensions,
+        useNestedColumnIndexerForSchemaDiscovery
+    );
   }
 
   @Override
@@ -249,6 +289,66 @@ public class DimensionsSpec
     return "DimensionsSpec{" +
            "dimensions=" + dimensions +
            ", dimensionExclusions=" + dimensionExclusions +
+           ", includeAllDimensions=" + includeAllDimensions +
+           ", useNestedColumnIndexerForSchemaDiscovery=" + useNestedColumnIndexerForSchemaDiscovery +
            '}';
+  }
+
+  public static final class Builder
+  {
+    private List<DimensionSchema> dimensions;
+    private List<String> dimensionExclusions;
+    private List<SpatialDimensionSchema> spatialDimensions;
+    private boolean includeAllDimensions;
+
+    private boolean useNestedColumnIndexerForSchemaDiscovery;
+
+    public Builder setDimensions(List<DimensionSchema> dimensions)
+    {
+      this.dimensions = dimensions;
+      return this;
+    }
+
+    public Builder setDefaultSchemaDimensions(List<String> dimensions)
+    {
+      this.dimensions = getDefaultSchemas(dimensions);
+      return this;
+    }
+
+    public Builder setDimensionExclusions(List<String> dimensionExclusions)
+    {
+      this.dimensionExclusions = dimensionExclusions;
+      return this;
+    }
+
+    @Deprecated
+    public Builder setSpatialDimensions(List<SpatialDimensionSchema> spatialDimensions)
+    {
+      this.spatialDimensions = spatialDimensions;
+      return this;
+    }
+
+    public Builder setIncludeAllDimensions(boolean includeAllDimensions)
+    {
+      this.includeAllDimensions = includeAllDimensions;
+      return this;
+    }
+
+    public Builder setUseNestedColumnIndexerForSchemaDiscovery(boolean useNestedColumnIndexerForSchemaDiscovery)
+    {
+      this.useNestedColumnIndexerForSchemaDiscovery = useNestedColumnIndexerForSchemaDiscovery;
+      return this;
+    }
+
+    public DimensionsSpec build()
+    {
+      return new DimensionsSpec(
+          dimensions,
+          dimensionExclusions,
+          spatialDimensions,
+          includeAllDimensions,
+          useNestedColumnIndexerForSchemaDiscovery
+      );
+    }
   }
 }

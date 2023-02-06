@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.log;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +27,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -37,6 +40,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,7 +74,12 @@ public class DefaultRequestLogEventTest
             nativeLine);
 
     String logEventJson = objectMapper.writeValueAsString(defaultRequestLogEvent);
-    String expected = "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},\"descending\":true,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[],\"postAggregations\":[],\"limit\":5,\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\",\"service\":\"druid-service\",\"sql\":null,\"sqlQueryContext\":{},\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
+    String expected = "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
+        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},"
+        + "\"descending\":true,\"granularity\":{\"type\":\"all\"},\"limit\":5,"
+        + "\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\","
+        + "\"service\":\"druid-service\",\"sql\":null,\"sqlQueryContext\":{},\"remoteAddr\":\"127.0.0.1\","
+        + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
     Assert.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
   }
 
@@ -125,7 +134,14 @@ public class DefaultRequestLogEventTest
     final String host = "127.0.0.1";
     final String sql = "select * from 1337";
     final QueryStats queryStats = new QueryStats(
-        ImmutableMap.of("sqlQuery/time", 13L, "sqlQuery/bytes", 10L, "success", true, "identity", "allowAll"));
+        ImmutableMap.of(
+            "sqlQuery/time", 13L,
+            "sqlQuery/planningTimeMs", 1L,
+            "sqlQuery/bytes", 10L,
+            "success", true,
+            "identity", "allowAll"
+        )
+    );
 
     RequestLogLine nativeLine = RequestLogLine.forSql(
         sql,
@@ -150,4 +166,177 @@ public class DefaultRequestLogEventTest
 
     Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
   }
+
+  @Test
+  public void testSerializeSqlLogRequestMap() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    String timestamp = "2022-08-17T18:51:00.000Z";
+
+    Event event = DefaultRequestLogEventBuilderFactory.instance()
+                                                      .createRequestLogEventBuilder(
+                                                          "requests",
+                                                          RequestLogLine.forSql(
+                                                              "SELECT * FROM dummy",
+                                                              Collections.emptyMap(),
+                                                              DateTimes.of(timestamp),
+                                                              "127.0.0.1",
+                                                              new QueryStats(ImmutableMap.of())
+                                                          )
+                                                      )
+                                                      .build("my-service", "my-host");
+
+    String actual = mapper.writeValueAsString(event.toMap());
+    String expected = "{"
+                      + "\"feed\":\"requests\","
+                      + "\"timestamp\":\""
+                      + timestamp
+                      + "\","
+                      + "\"service\":\"my-service\","
+                      + "\"host\":\"my-host\","
+                      + "\"sql\":\"SELECT * FROM dummy\","
+                      + "\"sqlQueryContext\":{},"
+                      + "\"queryStats\":{},"
+                      + "\"remoteAddr\":\"127.0.0.1\""
+                      + "}";
+
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+  }
+
+  @Test
+  public void testSerializeNativeLogRequestMap() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    RequestLogLine nativeLine = RequestLogLine.forNative(
+        new TimeseriesQuery(
+            new TableDataSource("dummy"),
+            new MultipleIntervalSegmentSpec(
+                ImmutableList.of(Intervals.of(
+                    "2015-01-01/2015-01-02"))),
+            true,
+            VirtualColumns.EMPTY,
+            null,
+            Granularities.ALL,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            5,
+            ImmutableMap.of("key", "value")
+        ),
+        DateTimes.of(2019, 12, 12, 3, 1),
+        "127.0.0.1",
+        new QueryStats(ImmutableMap.of(
+            "query/time",
+            13L,
+            "query/bytes",
+            10L,
+            "success",
+            true,
+            "identity",
+            "allowAll"
+        ))
+    );
+
+    Event event = DefaultRequestLogEventBuilderFactory.instance()
+                                                      .createRequestLogEventBuilder("my-feed", nativeLine)
+                                                      .build("my-service", "my-host");
+
+    String actual = mapper.writeValueAsString(event.toMap());
+    String queryString = "{"
+                         + "\"queryType\":\"timeseries\","
+                         + "\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
+                         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},"
+                         + "\"descending\":true,"
+                         + "\"granularity\":{\"type\":\"all\"},"
+                         + "\"limit\":5,"
+                         + "\"context\":{\"key\":\"value\"}"
+                         + "}";
+
+    String expected = "{"
+                      + "\"feed\":\"my-feed\","
+                      + "\"host\":\"my-host\","
+                      + "\"service\":\"my-service\","
+                      + "\"timestamp\":\"2019-12-12T03:01:00.000Z\","
+                      + "\"query\":"
+                      + queryString
+                      + ","
+                      + "\"remoteAddr\":\"127.0.0.1\","
+                      + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
+
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+  }
+
+  @Test
+  public void testSerializeNativeLogRequestMapWithAdditionalParameters() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+
+    RequestLogLine nativeLine = RequestLogLine.forNative(
+        new TimeseriesQuery(
+            new TableDataSource("dummy"),
+            new MultipleIntervalSegmentSpec(
+                ImmutableList.of(Intervals.of(
+                    "2015-01-01/2015-01-02"))),
+            true,
+            VirtualColumns.EMPTY,
+            null,
+            Granularities.ALL,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            5,
+            ImmutableMap.of("key", "value")
+        ),
+        DateTimes.of(2019, 12, 12, 3, 1),
+        "127.0.0.1",
+        new QueryStats(ImmutableMap.of(
+            "query/time",
+            13L,
+            "query/bytes",
+            10L,
+            "success",
+            true,
+            "identity",
+            "allowAll"
+        ))
+    );
+
+    Event event = DefaultRequestLogEventBuilderFactory.instance()
+                                                      .createRequestLogEventBuilder("my-feed", nativeLine)
+                                                      .build("my-service", "my-host");
+
+    EventMap map = EventMap.builder()
+                           .putNonNull("number", 1)
+                           .putNonNull("text", "some text")
+                           .putNonNull("null", null)
+                           .putAll(event.toMap())
+                           .build();
+
+    String actual = mapper.writeValueAsString(map);
+    String queryString = "{"
+                         + "\"queryType\":\"timeseries\","
+                         + "\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
+                         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},"
+                         + "\"descending\":true,"
+                         + "\"granularity\":{\"type\":\"all\"},"
+                         + "\"limit\":5,"
+                         + "\"context\":{\"key\":\"value\"}"
+                         + "}";
+
+    String expected = "{"
+                      + "\"feed\":\"my-feed\","
+                      + "\"host\":\"my-host\","
+                      + "\"service\":\"my-service\","
+                      + "\"timestamp\":\"2019-12-12T03:01:00.000Z\","
+                      + "\"query\":"
+                      + queryString
+                      + ","
+                      + "\"remoteAddr\":\"127.0.0.1\","
+                      + "\"number\":1,"
+                      + "\"text\":\"some text\","
+                      + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
+
+    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+  }
+
 }

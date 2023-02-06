@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.37
+version: 1.12.317
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -343,7 +343,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.8.0
+version: 2.11.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -596,6 +596,16 @@ libraries:
 
 ---
 
+name: IPAddress
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.3.4
+libraries:
+  - com.github.seancfoley: ipaddress
+
+---
+
 name: Apache Commons Collections
 license_category: binary
 module: java-core
@@ -658,13 +668,16 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.1
+version: 3.12.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
   - commons-lang3: |
       Apache Commons Lang
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2001-2021 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -709,37 +722,35 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3
+version: 1.10.0
 libraries:
   - org.apache.commons: commons-text
 notices:
   - commons-text: |
       Apache Commons Text
-      Copyright 2001-2018 The Apache Software Foundation
+      Copyright 2014-2020 The Apache Software Foundation
 
----
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
-name: Apache Commons Text
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.4
-libraries:
-  - org.apache.commons: commons-text
 ---
 
 name: Airline
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.7
+version: 2.8.4
 libraries:
-  - io.airlift: airline
+  - com.github.rvesse: airline
+  - com.github.rvesse: airline-io
 notices:
   - airline: |
       Copyright Notices
       =================
 
+      Copyright 2013-18 Rob Vesse <rvesse@dotnetrdf.org>
+      Copyright 2013 Fernando Hernandez <fernando@clarkparsia.com>
+      Copyright 2013 Michael Grove <mike@clarkparsia.com>
       Copyright 2011 Dain Sundstrom <dain@iq80.com>
       Copyright 2010 Cedric Beust <cedric@beust.com>
 
@@ -789,7 +800,7 @@ name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.5
+version: 1.7
 libraries:
   - com.nimbusds: lang-tag
 
@@ -819,18 +830,9 @@ name: net.bytebuddy byte-buddy
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.9.10
+version: 1.12.7
 libraries:
   - net.bytebuddy: byte-buddy
-
----
-
-name: net.bytebuddy byte-buddy-agent
-license_category: binary
-module: extensions/druid-pac4j
-license_name: Apache License version 2.0
-version: 1.9.10
-libraries:
   - net.bytebuddy: byte-buddy-agent
 
 ---
@@ -839,7 +841,7 @@ name: org.mockito mockito-core
 license_category: binary
 module: extensions/druid-pac4j
 license_name: MIT License
-version: 2.28.2
+version: 4.3.1
 libraries:
   - org.mockito: mockito-core
 
@@ -869,7 +871,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java
 
@@ -879,7 +881,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-api
 
@@ -889,9 +891,19 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-extended
+
+---
+
+name: kubernetes fabric java client
+license_category: binary
+module: extensions-contrib/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 5.12.2
+libraries:
+  - io.fabric8: kubernetes-client
 
 ---
 
@@ -939,7 +951,7 @@ name: io.gsonfire gson-fire
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.8.4
+version: 1.8.5
 libraries:
   - io.gsonfire: gson-fire
 
@@ -952,6 +964,16 @@ license_name: Apache License version 2.0
 version: 1.6.2
 libraries:
   - io.swagger: swagger-annotations
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.8.6
+libraries:
+  - com.google.code.gson: gson
 
 ---
 
@@ -969,7 +991,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.2
+version: 0.7.3
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1009,7 +1031,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 10.0.1
+version: 11.0.1
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1247,7 +1269,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.68.Final
+version: 4.1.86.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1260,6 +1282,7 @@ libraries:
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
   - io.netty: netty-transport
+  - io.netty: netty-transport-classes-epoll
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
@@ -1501,6 +1524,16 @@ libraries:
 
 ---
 
+name: Jakarta Dependency Injection
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.3
+libraries:
+  - jakarta.inject: jakarta.inject-api
+
+---
+
 name: Javax Inject
 license_category: binary
 module: java-core
@@ -1647,7 +1680,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.3.0
+version: 5.4.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -1656,16 +1689,16 @@ libraries:
 notices:
   - curator-client: |
       Curator Client
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-framework: |
       Curator Framework
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-recipes: |
       Curator Recipes
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
   - curator-x-discovery: |
       Curator Service Discovery
-      Copyright 2011-2018 The Apache Software Foundation
+      Copyright 2011-2022 The Apache Software Foundation
 
 ---
 
@@ -1822,7 +1855,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.17.1
+version: 2.18.0
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -2007,7 +2040,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.40.v20210413
+version: 9.4.48.v20220622
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2142,16 +2175,6 @@ notice: |
   Permission to use, copy, modify and distribute UnixCrypt
   for non-commercial or commercial purposes and without fee is
   granted provided that the copyright notice appears in all copies.
-
----
-
-name: JVM Attach API
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.5
-libraries:
-  - org.gridkit.lab: jvm-attach-api
 
 ---
 
@@ -2348,7 +2371,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.8.0
 libraries:
   - org.lz4: lz4-java
 
@@ -3474,6 +3497,16 @@ libraries:
 
 ---
 
+name: Kinesis Client
+license_category: binary
+version: 1.14.4
+module: extensions/druid-kinesis-indexing-service
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: amazon-kinesis-client
+
+---
+
 name: Kafka Client
 version: 5.5.1-ccs
 license_category: binary
@@ -3682,7 +3715,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 libraries:
   - com.sun.jersey: jersey-json
 
@@ -3726,7 +3759,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.1.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3766,7 +3799,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.0.0
+version: 3.3.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3775,7 +3808,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3786,7 +3819,7 @@ name: snappy-java
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
-version: 1.1.2.6
+version: 1.1.8.4
 libraries:
   - org.xerial.snappy: snappy-java
 
@@ -3857,9 +3890,19 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.8.9
 libraries:
   - com.google.code.gson: gson
+
+---
+
+name: j2objc
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -3902,10 +3945,9 @@ libraries:
 name: JCL 1.2 Implemented Over SLF4J
 license_category: binary
 module: java-core
-license_name: MIT License
-version: 1.7.12
+license_name: Apache License version 2.0
+version: 1.7.36
 copyright: QOS.ch
-license_file_path: licenses/bin/jcl-over-slf4j.MIT
 libraries:
   - org.slf4j: jcl-over-slf4j
 
@@ -3915,7 +3957,7 @@ name: SLF4J API
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.7.25
+version: 1.7.36
 copyright: QOS.ch
 license_file_path: licenses/bin/slf4j.MIT
 libraries:
@@ -3940,7 +3982,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.3.3-1
+version: 1.5.2-3
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -3975,7 +4017,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -4028,7 +4070,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 7.1
+version: 9.3
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
@@ -4128,7 +4170,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4140,7 +4182,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4152,7 +4194,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.2.14
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4164,7 +4206,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4201,7 +4243,7 @@ name: Jersey
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4407,7 +4449,7 @@ name: Jersey
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: CDDL 1.1
-version: 1.19.3
+version: 1.19.4
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/jersey.CDDL11
 libraries:
@@ -4543,7 +4585,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.1
+version: 1.7.6
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4676,13 +4718,13 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.0.0
+version: 3.3.2
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -4968,7 +5010,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.7.1
+version: 1.1.8.4
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5004,7 +5046,7 @@ libraries:
 name: DNS Java
 license_category: binary
 module: java-core
-license_name: BSD 2-Clause license
+license_name: BSD-2-Clause License
 version: 2.1.7
 libraries:
   - dnsjava: dnsjava
@@ -5084,12 +5126,21 @@ license_file_path: licenses/bin/@babel-types.MIT
 
 ---
 
+name: "@blueprintjs/colors"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Palantir Technologies
+version: 4.0.1
+
+---
+
 name: "@blueprintjs/core"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.45.0
+version: 4.0.3
 
 ---
 
@@ -5098,7 +5149,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.23.4
+version: 4.0.3
 
 ---
 
@@ -5107,7 +5158,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 3.26.1
+version: 4.1.1
 
 ---
 
@@ -5116,7 +5167,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 0.10.1
+version: 1.0.3
 
 ---
 
@@ -5220,12 +5271,21 @@ license_file_path: licenses/bin/@hypnosphi-create-react-context.MIT
 
 ---
 
+name: "@juggle/resize-observer"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Juggle
+version: 3.3.1
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Federico Zivolo
-version: 2.9.2
+version: 2.11.4
 license_file_path: licenses/bin/@popperjs-core.MIT
 
 ---
@@ -5235,7 +5295,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 2.0.1
+version: 2.0.2
 license_file_path: licenses/bin/@types-dom4.MIT
 
 ---
@@ -5275,7 +5335,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 0.21.4
+version: 0.26.1
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5320,6 +5380,26 @@ license_file_path: licenses/bin/callsites.MIT
 
 ---
 
+name: "camel-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/camel-case.MIT
+
+---
+
+name: "capital-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 1.0.4
+license_file_path: licenses/bin/capital-case.MIT
+
+---
+
 name: "chalk"
 license_category: binary
 module: web-console
@@ -5327,6 +5407,16 @@ license_name: MIT License
 copyright: Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
 version: 2.4.2
 license_file_path: licenses/bin/chalk.MIT
+
+---
+
+name: "change-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 4.1.2
+license_file_path: licenses/bin/change-case.MIT
 
 ---
 
@@ -5357,6 +5447,16 @@ license_name: MIT License
 copyright: DY
 version: 1.1.3
 license_file_path: licenses/bin/color-name.MIT
+
+---
+
+name: "constant-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/constant-case.MIT
 
 ---
 
@@ -5425,7 +5525,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 2.3.3
+version: 2.12.1
 license_file_path: licenses/bin/d3-array.BSD3
 
 ---
@@ -5435,7 +5535,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.12
+version: 2.1.0
 license_file_path: licenses/bin/d3-axis.BSD3
 
 ---
@@ -5445,7 +5545,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-color.BSD3
 
 ---
@@ -5465,7 +5565,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.3.2
+version: 2.0.1
 license_file_path: licenses/bin/d3-interpolate.BSD3
 
 ---
@@ -5475,7 +5575,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 3.2.0
+version: 3.3.0
 license_file_path: licenses/bin/d3-scale.BSD3
 
 ---
@@ -5485,7 +5585,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-selection.BSD3
 
 ---
@@ -5554,7 +5654,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jason Quense
-version: 3.4.0
+version: 5.2.1
 license_file_path: licenses/bin/dom-helpers.MIT
 
 ---
@@ -5569,12 +5669,22 @@ license_file_path: licenses/bin/dom4.MIT
 
 ---
 
+name: "dot-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/dot-case.MIT
+
+---
+
 name: "druid-query-toolkit"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.4
+version: 0.17.2
 
 ---
 
@@ -5643,7 +5753,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.14.4
+version: 1.15.1
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5708,6 +5818,16 @@ license_file_path: licenses/bin/has.MIT
 
 ---
 
+name: "header-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.4
+license_file_path: licenses/bin/header-case.MIT
+
+---
+
 name: "history"
 license_category: binary
 module: web-console
@@ -5745,6 +5865,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 3.3.0
 license_file_path: licenses/bin/import-fresh.MIT
+
+---
+
+name: "internmap"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 1.0.1
+license_file_path: licenses/bin/internmap.ISC
 
 ---
 
@@ -5813,7 +5943,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Vadim Ogievetsky, Andrey Sidorov
-version: 1.1.0
+version: 1.2.0
 license_file_path: licenses/bin/json-bigint-native.MIT
 
 ---
@@ -5888,6 +6018,16 @@ license_file_path: licenses/bin/loose-envify.MIT
 
 ---
 
+name: "lower-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/lower-case.MIT
+
+---
+
 name: "memoize-one"
 license_category: binary
 module: web-console
@@ -5905,6 +6045,16 @@ license_name: MIT License
 copyright: StringEpsilon
 version: 0.3.2
 license_file_path: licenses/bin/mini-create-react-context.MIT
+
+---
+
+name: "no-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/no-case.MIT
 
 ---
 
@@ -5967,6 +6117,16 @@ version: 1.101.0
 
 ---
 
+name: "param-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/param-case.MIT
+
+---
+
 name: "parent-module"
 license_category: binary
 module: web-console
@@ -5987,12 +6147,32 @@ license_file_path: licenses/bin/parse-json.MIT
 
 ---
 
+name: "pascal-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.1.2
+license_file_path: licenses/bin/pascal-case.MIT
+
+---
+
+name: "path-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/path-case.MIT
+
+---
+
 name: "path-parse"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Javier Blanco
-version: 1.0.6
+version: 1.0.7
 license_file_path: licenses/bin/path-parse.MIT
 
 ---
@@ -6097,16 +6277,6 @@ license_file_path: licenses/bin/react-is.MIT
 
 ---
 
-name: "react-lifecycles-compat"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Facebook, Inc.
-version: 3.0.4
-license_file_path: licenses/bin/react-lifecycles-compat.MIT
-
----
-
 name: "react-popper"
 license_category: binary
 module: web-console
@@ -6162,7 +6332,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: React Community
-version: 2.9.0
+version: 4.4.2
 license_file_path: licenses/bin/react-transition-group.BSD3
 
 ---
@@ -6194,16 +6364,6 @@ license_name: MIT License
 copyright: Jordan Harband
 version: 1.2.0
 license_file_path: licenses/bin/regexp.prototype.flags.MIT
-
----
-
-name: "resize-observer-polyfill"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Denis Rul
-version: 1.5.1
-license_file_path: licenses/bin/resize-observer-polyfill.MIT
 
 ---
 
@@ -6254,6 +6414,26 @@ license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
 version: 0.19.1
 license_file_path: licenses/bin/scheduler.MIT
+
+---
+
+name: "sentence-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/sentence-case.MIT
+
+---
+
+name: "snake-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 3.0.4
+license_file_path: licenses/bin/snake-case.MIT
 
 ---
 
@@ -6322,7 +6502,7 @@ license_category: binary
 module: web-console
 license_name: Zero-Clause BSD
 copyright: Microsoft Corp.
-version: 1.13.0
+version: 2.3.1
 license_file_path: licenses/bin/tslib.0BSD
 
 ---
@@ -6334,6 +6514,26 @@ license_name: MIT License
 copyright: lttb
 version: 0.0.7
 license_file_path: licenses/bin/typed-styles.MIT
+
+---
+
+name: "upper-case-first"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case-first.MIT
+
+---
+
+name: "upper-case"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Blake Embrey
+version: 2.0.2
+license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
@@ -6364,4 +6564,14 @@ license_name: ISC License
 copyright: Eemeli Aro
 version: 1.10.2
 license_file_path: licenses/bin/yaml.ISC
+
+---
+
+name: "zustand"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Paul Henschel
+version: 3.7.2
+license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

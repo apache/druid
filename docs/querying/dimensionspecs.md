@@ -26,7 +26,7 @@ sidebar_label: "Dimensions"
 > Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 > This document describes the native
 > language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql.md#scalar-functions).
+> [SQL documentation](sql-scalar.md).
 
 The following JSON fields can be used in a query to operate on dimension values.
 
@@ -102,8 +102,6 @@ The following filtered dimension spec retains only the values starting with the 
 For more details and examples, see [multi-value dimensions](multi-value-dimensions.md).
 
 ### Lookup DimensionSpecs
-
-> Lookups are an [experimental](../development/experimental.md) feature.
 
 You can use lookup dimension specs to define a lookup implementation as a dimension spec directly.
 Generally, there are two kinds of lookup implementations.

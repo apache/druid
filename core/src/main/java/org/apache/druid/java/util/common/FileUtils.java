@@ -35,6 +35,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -52,6 +53,12 @@ import java.util.UUID;
 
 public class FileUtils
 {
+  public enum LinkOrCopyResult
+  {
+    LINK,
+    COPY
+  }
+
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
@@ -164,13 +171,70 @@ public class FileUtils
    *
    * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
    *
-   * @throws FileNotFoundException if the {@code file} does not exist
-   * @throws IOException           if an I/O error occurs
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
    * @see FileChannel#map(FileChannel.MapMode, long, long)
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
-    MappedByteBuffer mappedByteBuffer = com.google.common.io.Files.map(file);
+    return map(file, 0, file.length());
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param file   the file to map
+   * @param offset starting offset for the mmap
+   * @param length length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
+   *
+   * @throws FileNotFoundException    if the {@code file} does not exist
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(File file, long offset, long length) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+         final FileChannel channel = randomAccessFile.getChannel()) {
+      final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
+      return new MappedByteBufferHandler(mappedByteBuffer);
+    }
+  }
+
+  /**
+   * Fully maps a file read-only in to memory as per
+   * {@link FileChannel#map(FileChannel.MapMode, long, long)}.
+   *
+   * @param randomAccessFile the file to map. The file will not be closed.
+   * @param offset           starting offset for the mmap
+   * @param length           length for the mmap
+   *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code randomAccessFile}
+   *
+   * @throws IOException              if an I/O error occurs
+   * @throws IllegalArgumentException if length is greater than {@link Integer#MAX_VALUE}
+   * @see FileChannel#map(FileChannel.MapMode, long, long)
+   */
+  public static MappedByteBufferHandler map(
+      RandomAccessFile randomAccessFile,
+      long offset,
+      long length
+  ) throws IOException
+  {
+    if (length > Integer.MAX_VALUE) {
+      throw new IAE("Cannot map region larger than %,d bytes", Integer.MAX_VALUE);
+    }
+
+    final FileChannel channel = randomAccessFile.getChannel();
+    final MappedByteBuffer mappedByteBuffer = channel.map(FileChannel.MapMode.READ_ONLY, offset, length);
     return new MappedByteBufferHandler(mappedByteBuffer);
   }
 
@@ -283,12 +347,34 @@ public class FileUtils
       String messageOnRetry
   ) throws IOException
   {
+    return copyLarge(
+        () -> objectOpenFunction.open(object),
+        outFile,
+        fetchBuffer,
+        retryCondition,
+        numTries,
+        messageOnRetry
+    );
+  }
+
+  /**
+   * Copy a potentially large amount of data from an input source to a file.
+   */
+  public static long copyLarge(
+      InputStreamSupplier inputSource,
+      File outFile,
+      byte[] fetchBuffer,
+      Predicate<Throwable> retryCondition,
+      int numTries,
+      String messageOnRetry
+  ) throws IOException
+  {
     try {
       return RetryUtils.retry(
           () -> {
-            try (InputStream inputStream = objectOpenFunction.open(object);
+            try (InputStream in = inputSource.openStream();
                  OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
+              return IOUtils.copyLarge(in, out, fetchBuffer);
             }
           },
           retryCondition,
@@ -302,30 +388,26 @@ public class FileUtils
     }
   }
 
-  public static long copyLarge(
-      InputStream inputStream,
-      File outFile,
-      byte[] fetchBuffer,
-      Predicate<Throwable> retryCondition,
-      int numTries,
-      String messageOnRetry
-  ) throws IOException
+  /**
+   * Computes the size of the file. If it is a directory, computes the size up
+   * to a depth of 1.
+   */
+  public static long getFileSize(File file)
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (OutputStream out = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(inputStream, out, fetchBuffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          numTries,
-          messageOnRetry
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
+    if (file == null) {
+      return 0;
+    } else if (file.isDirectory()) {
+      File[] children = file.listFiles();
+      if (children == null) {
+        return 0;
+      }
+      long totalSize = 0;
+      for (File child : children) {
+        totalSize += child.length();
+      }
+      return totalSize;
+    } else {
+      return file.length();
     }
   }
 
@@ -408,8 +490,36 @@ public class FileUtils
     org.apache.commons.io.FileUtils.deleteDirectory(directory);
   }
 
+  /**
+   * Hard-link "src" as "dest", if possible. If not possible -- perhaps they are on separate filesystems -- then
+   * copy "src" to "dest".
+   *
+   * @return whether a link or copy was made. Can be safely ignored if you don't care.
+   *
+   * @throws IOException if something went wrong
+   */
+  public static LinkOrCopyResult linkOrCopy(final File src, final File dest) throws IOException
+  {
+    try {
+      Files.createLink(dest.toPath(), src.toPath());
+      return LinkOrCopyResult.LINK;
+    }
+    catch (IOException e) {
+      Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      return LinkOrCopyResult.COPY;
+    }
+  }
+
   public interface OutputStreamConsumer<T>
   {
     T apply(OutputStream outputStream) throws IOException;
+  }
+
+  /**
+   * Like {@link ByteSource}, but this is an interface, which allows use of lambdas.
+   */
+  public interface InputStreamSupplier
+  {
+    InputStream openStream() throws IOException;
   }
 }

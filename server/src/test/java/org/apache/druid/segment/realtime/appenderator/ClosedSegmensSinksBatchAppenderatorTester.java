@@ -145,7 +145,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         new MapInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 null,
                 null,
                 null
@@ -187,7 +187,7 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         objectMapper,
         () -> 0
     );
-    IndexMerger indexMerger = new IndexMergerV9(
+    IndexMergerV9 indexMerger = new IndexMergerV9(
         objectMapper,
         indexIO,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
@@ -246,7 +246,8 @@ public class ClosedSegmensSinksBatchAppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        true
     );
   }
 

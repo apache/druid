@@ -19,15 +19,11 @@
 
 package org.apache.druid.testing.guice;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.name.Names;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.apache.druid.testing.utils.ITTLSCertificateChecker;
-
-import java.util.Collections;
-import java.util.List;
 
 public class ITTLSCertificateCheckerModule implements DruidModule
 {
@@ -42,11 +38,4 @@ public class ITTLSCertificateCheckerModule implements DruidModule
           .annotatedWith(Names.named(IT_CHECKER_TYPE))
           .toInstance(INSTANCE);
   }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
 }
-

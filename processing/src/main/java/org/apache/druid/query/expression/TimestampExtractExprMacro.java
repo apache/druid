@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -69,16 +67,14 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 to 3 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 2, 3);
 
     if (!args.get(1).isLiteral() || args.get(1).getLiteralValue() == null) {
-      throw new IAE("Function[%s] unit arg must be literal", name());
+      throw validationFailed("unit arg must be literal");
     }
 
-    if (args.size() > 2 && !args.get(2).isLiteral()) {
-      throw new IAE("Function[%s] timezone arg must be literal", name());
+    if (args.size() > 2) {
+      validationHelperCheckArgIsLiteral(args.get(2), "timezone");
     }
 
     final Expr arg = args.get(0);
@@ -153,15 +149,14 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
             // See https://www.postgresql.org/docs/10/functions-datetime.html
             return ExprEval.of(Math.ceil((double) dateTime.year().get() / 1000));
           default:
-            throw new ISE("Unhandled unit[%s]", unit);
+            throw TimestampExtractExprMacro.this.validationFailed("unhandled unit[%s]", unit);
         }
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new TimestampExtractExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable

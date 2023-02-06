@@ -32,11 +32,9 @@ import java.util.function.Function;
  */
 public class ForbiddenException extends RuntimeException implements SanitizableException
 {
-  static final String DEFAULT_ERROR_MESSAGE = "Unauthorized.";
-
   public ForbiddenException()
   {
-    super(DEFAULT_ERROR_MESSAGE);
+    super(Access.DEFAULT_ERROR_MESSAGE);
   }
 
   @JsonCreator

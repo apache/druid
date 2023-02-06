@@ -90,11 +90,9 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 #### Segment Cache Size
 
-`druid.segmentCache.locations` specifies locations where segment data can be stored on the Historical. The sum of available disk space across these locations is set as the default value for property: `druid.server.maxSize`, which controls the total size of segment data that can be assigned by the Coordinator to a Historical.
+For better query performance, do not allocate segment data to a Historical in excess of the system free memory.  When `free system memory` is greater than or equal to `druid.segmentCache.locations`, the more segment data the Historical can be held in the memory-mapped segment cache.
 
-Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
-
-Therefore, the size of cache locations set within `druid.segmentCache.locations` should be such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / total size of all `druid.segmentCache.locations`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance. The total segment data size assigned to a Historical can be overridden with `druid.server.maxSize`, but this is not required for most of the use cases.
+Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For some rarer use cases, you can override this behavior with `druid.server.maxSize` property.
 
 #### Number of Historicals
 
@@ -139,7 +137,6 @@ If caching is enabled on the Broker, the cache is stored on heap, sized by `drui
 On the Broker, the amount of direct memory needed depends on how many merge buffers (used for merging GroupBys) are configured. The Broker does not generally need processing threads or processing buffers, as query results are merged on-heap in the HTTP connection threads instead.
 
 - `druid.processing.buffer.sizeBytes` can be set to 500MiB.
-- `druid.processing.numThreads`: set this to 1 (the minimum allowed)
 - `druid.processing.numMergeBuffers`: set this to the same value as on Historicals or a bit higher
 
 #### Connection pool sizing
@@ -176,7 +173,7 @@ If you need Broker HA, you can deploy 2 initially and then use the 1:15 ratio gu
 To estimate total memory usage of the Broker under these guidelines:
 
 - Heap: allocated heap size
-- Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
+- Direct Memory: `(druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
 ### MiddleManager
 
@@ -262,7 +259,7 @@ The total memory usage of the MiddleManager + Tasks:
 If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
-slots available for other tasks, such as [compaction tasks](../ingestion/compaction.md).
+slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).
 
 ###### Hadoop ingestion
 
@@ -399,7 +396,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 
 `-XX:+ExitOnOutOfMemoryError`
 
-#### Other useful JVM flags
+#### Other generally useful JVM flags
 
 ```
 -Duser.timezone=UTC
@@ -424,7 +421,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
 -XX:MaxDirectMemorySize=1g
 ```
-> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
+> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate
 for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
@@ -468,4 +465,3 @@ The limit on the number of open files can be set permanently by editing `/etc/se
 ##### max_map_count
 
 Historical processes and to a lesser extent, MiddleManager and Indexer processes memory map segment files, so depending on the number of segments per server, `/proc/sys/vm/max_map_count` might also need to be adjusted. Depending on the variant of Linux, this might be done via `sysctl` by placing a file in `/etc/sysctl.d/` that sets `vm.max_map_count`.
-

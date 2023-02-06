@@ -163,12 +163,23 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
 
+    VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
+        prefixSignaturePair.rhs,
+        getPlannerContext().getExprMacroTable(),
+        getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
+    );
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
+
     // Generate the condition for this join as a Druid expression.
     final DruidExpression condition = Expressions.toDruidExpression(
         getPlannerContext(),
         prefixSignaturePair.rhs,
         joinRel.getCondition()
     );
+
+    // Unsetting it to avoid any VC Registry leaks incase there are multiple druid quries for the SQL
+    // It should be fixed soon with changes in interface for SqlOperatorConversion and Expressions bridge class
+    getPlannerContext().setJoinExpressionVirtualColumnRegistry(null);
 
     // DruidJoinRule should not have created us if "condition" is null. Check defensively anyway, which also
     // quiets static code analysis.
@@ -184,12 +195,14 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             condition.getExpression(),
             toDruidJoinType(joinRel.getJoinType()),
             getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getExprMacroTable()
+            getPlannerContext().getExprMacroTable(),
+            getPlannerContext().getJoinableFactoryWrapper()
         ),
         prefixSignaturePair.rhs,
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        finalizeAggregations
+        finalizeAggregations,
+        virtualColumnRegistry
     );
   }
 
@@ -340,7 +353,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  private static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
   {
     // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
     return !DruidRels.isScanOrMapping(left, true);
@@ -359,7 +372,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
-  private static Pair<String, RowSignature> computeJoinRowSignature(
+  static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
       final RowSignature rightSignature
   )

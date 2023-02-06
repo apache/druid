@@ -21,6 +21,9 @@ package org.apache.druid.cli.validate;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -30,15 +33,13 @@ import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.output.NullWriter;
 import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.guice.DruidProcessingModule;
-import org.apache.druid.guice.ExtensionsConfig;
+import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
@@ -49,7 +50,6 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.IndexingHadoopModule;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
@@ -76,16 +76,18 @@ public class DruidJsonValidator extends GuiceRunnable
   private static final Logger LOG = new Logger(DruidJsonValidator.class);
   private Writer logWriter = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
 
-  @Option(name = "-f", title = "file", description = "file to validate", required = true)
+  @Option(name = "-f", title = "file", description = "file to validate")
+  @Required
   public String jsonFile;
 
-  @Option(name = "-t", title = "type", description = "the type of schema to validate", required = true)
+  @Option(name = "-t", title = "type", description = "the type of schema to validate")
+  @Required
   public String type;
 
-  @Option(name = "-r", title = "resource", description = "optional resources required for validation", required = false)
+  @Option(name = "-r", title = "resource", description = "optional resources required for validation")
   public String resource;
 
-  @Option(name = "--log", title = "toLogger", description = "redirects any outputs to logger", required = false)
+  @Option(name = "--log", title = "toLogger", description = "redirects any outputs to logger")
   public boolean toLogger;
 
   public DruidJsonValidator()
@@ -121,11 +123,12 @@ public class DruidJsonValidator extends GuiceRunnable
 
     final Injector injector = makeInjector();
     final ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
+    ExtensionsLoader extnLoader = injector.getInstance(ExtensionsLoader.class);
 
     registerModules(
         jsonMapper,
         Iterables.concat(
-            Initialization.getFromExtensions(injector.getInstance(ExtensionsConfig.class), DruidModule.class),
+            extnLoader.getModules(),
             Arrays.asList(
                 new FirehoseModule(),
                 new IndexingHadoopModule(),

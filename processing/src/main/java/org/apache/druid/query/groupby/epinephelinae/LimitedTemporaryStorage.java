@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -117,6 +118,12 @@ public class LimitedTemporaryStorage implements Closeable
   public long maxSize()
   {
     return maxBytesUsed;
+  }
+
+  @VisibleForTesting
+  long currentSize()
+  {
+    return bytesUsed.get();
   }
 
   @Override

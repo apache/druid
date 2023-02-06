@@ -45,6 +45,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class HllSketchAggregatorFactoryTest
@@ -80,7 +81,19 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
     Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
     Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
+    Assert.assertEquals(HllSketchAggregatorFactory.DEFAULT_SHOULD_FINALIZE, aggregatorFactory.isShouldFinalize());
     Assert.assertEquals(ROUND, aggregatorFactory.isRound());
+  }
+
+
+  @Test
+  public void testWithName()
+  {
+    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
+    Assert.assertEquals(1, aggregatorFactories.size());
+    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
   }
 
   @Test
@@ -225,8 +238,13 @@ public class HllSketchAggregatorFactoryTest
                                        .collect(Collectors.toList());
 
     for (Field field : toStringFields) {
-      String expectedToken = formatFieldForToString(field);
-      Assert.assertTrue("Missing \"" + expectedToken + "\"", string.contains(expectedToken));
+      if ("shouldFinalize".equals(field.getName())) {
+        // Skip; not included in the toString if it has the default value.
+        continue;
+      }
+
+      Pattern expectedPattern = testPatternForToString(field);
+      Assert.assertTrue("Missing \"" + field.getName() + "\"", expectedPattern.matcher(string).find());
     }
   }
 
@@ -245,11 +263,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchBuildAggregatorFactory(
                       "hllBuildRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -259,11 +279,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchMergeAggregatorFactory(
                       "hllMergeRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -308,9 +330,9 @@ public class HllSketchAggregatorFactoryTest
     return Modifier.isPrivate(modfiers) && !Modifier.isStatic(modfiers) && Modifier.isFinal(modfiers);
   }
 
-  private static String formatFieldForToString(Field field)
+  private static Pattern testPatternForToString(Field field)
   {
-    return " " + field.getName() + "=";
+    return Pattern.compile("\\b" + Pattern.quote(field.getName()) + "=");
   }
 
   // Helper for testing abstract base class
@@ -330,7 +352,7 @@ public class HllSketchAggregatorFactoryTest
         boolean round
     )
     {
-      super(name, fieldName, lgK, tgtHllType, round);
+      super(name, fieldName, lgK, tgtHllType, null, round);
     }
 
     @Override
@@ -361,6 +383,12 @@ public class HllSketchAggregatorFactoryTest
     public int getMaxIntermediateSize()
     {
       return DUMMY_SIZE;
+    }
+
+    @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new TestHllSketchAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
     }
   }
 }

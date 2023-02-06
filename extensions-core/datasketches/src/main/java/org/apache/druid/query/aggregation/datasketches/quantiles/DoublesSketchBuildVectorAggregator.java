@@ -55,13 +55,11 @@ public class DoublesSketchBuildVectorAggregator implements VectorAggregator
 
     final UpdateDoublesSketch sketch = helper.getSketchAtPosition(buf, position);
 
-    DoublesSketches.handleMaxStreamLengthLimit(() -> {
-      for (int i = startRow; i < endRow; i++) {
-        if (nulls == null || !nulls[i]) {
-          sketch.update(doubles[i]);
-        }
+    for (int i = startRow; i < endRow; i++) {
+      if (nulls == null || !nulls[i]) {
+        sketch.update(doubles[i]);
       }
-    });
+    }
   }
 
   @Override
@@ -76,16 +74,14 @@ public class DoublesSketchBuildVectorAggregator implements VectorAggregator
     final double[] doubles = selector.getDoubleVector();
     final boolean[] nulls = selector.getNullVector();
 
-    DoublesSketches.handleMaxStreamLengthLimit(() -> {
-      for (int i = 0; i < numRows; i++) {
-        final int idx = rows != null ? rows[i] : i;
+    for (int i = 0; i < numRows; i++) {
+      final int idx = rows != null ? rows[i] : i;
 
-        if (nulls == null || !nulls[idx]) {
-          final int position = positions[i] + positionOffset;
-          helper.getSketchAtPosition(buf, position).update(doubles[idx]);
-        }
+      if (nulls == null || !nulls[idx]) {
+        final int position = positions[i] + positionOffset;
+        helper.getSketchAtPosition(buf, position).update(doubles[idx]);
       }
-    });
+    }
   }
 
   @Override

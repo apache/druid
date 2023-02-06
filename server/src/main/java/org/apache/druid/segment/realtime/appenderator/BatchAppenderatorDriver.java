@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -199,6 +200,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
       @Nullable final Set<DataSegment> segmentsToBeDropped,
+      @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
@@ -211,6 +213,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     return publishInBackground(
         segmentsToBeOverwritten,
         segmentsToBeDropped,
+        tombstones == null ? Collections.emptySet() : tombstones,
         new SegmentsAndCommitMetadata(
             snapshot
                 .values()

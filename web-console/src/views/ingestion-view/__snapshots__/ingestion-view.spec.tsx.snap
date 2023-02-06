@@ -25,49 +25,59 @@ exports[`IngestionView matches snapshot 1`] = `
           onRefresh={[Function]}
         />
         <Memo(MoreButton)>
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="application"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="View SQL query for table"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="manually-entered-data"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Submit JSON supervisor"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="play"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Resume all supervisors"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="pause"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Suspend all supervisors"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="cross"
             intent="danger"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Terminate all supervisors"
           />
@@ -144,6 +154,7 @@ exports[`IngestionView matches snapshot 1`] = `
         columns={
           Array [
             Object {
+              "Cell": [Function],
               "Header": "Datasource",
               "accessor": "supervisor_id",
               "id": "datasource",
@@ -151,21 +162,23 @@ exports[`IngestionView matches snapshot 1`] = `
               "width": 300,
             },
             Object {
+              "Cell": [Function],
               "Header": "Type",
-              "accessor": [Function],
-              "id": "type",
+              "accessor": "type",
               "show": true,
+              "width": 100,
             },
             Object {
+              "Cell": [Function],
               "Header": "Topic/Stream",
-              "accessor": [Function],
-              "id": "source",
+              "accessor": "source",
               "show": true,
+              "width": 300,
             },
             Object {
               "Cell": [Function],
               "Header": "Status",
-              "accessor": [Function],
+              "accessor": "detailed_state",
               "id": "status",
               "show": true,
               "width": 300,
@@ -204,7 +217,7 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "id": "datasource",
-              "value": "datasource",
+              "value": "=datasource",
             },
           ]
         }
@@ -279,58 +292,62 @@ exports[`IngestionView matches snapshot 1`] = `
         <Component>
           Group by
         </Component>
-        <Blueprint3.ButtonGroup>
-          <Blueprint3.Button
+        <Blueprint4.ButtonGroup>
+          <Blueprint4.Button
             active={true}
             onClick={[Function]}
           >
             None
-          </Blueprint3.Button>
-          <Blueprint3.Button
+          </Blueprint4.Button>
+          <Blueprint4.Button
             active={false}
             onClick={[Function]}
           >
             Group ID
-          </Blueprint3.Button>
-          <Blueprint3.Button
+          </Blueprint4.Button>
+          <Blueprint4.Button
             active={false}
             onClick={[Function]}
           >
             Type
-          </Blueprint3.Button>
-          <Blueprint3.Button
+          </Blueprint4.Button>
+          <Blueprint4.Button
             active={false}
             onClick={[Function]}
           >
             Datasource
-          </Blueprint3.Button>
-          <Blueprint3.Button
+          </Blueprint4.Button>
+          <Blueprint4.Button
             active={false}
             onClick={[Function]}
           >
             Status
-          </Blueprint3.Button>
-        </Blueprint3.ButtonGroup>
+          </Blueprint4.Button>
+        </Blueprint4.ButtonGroup>
         <Memo(RefreshButton)
           localStorageKey="task-refresh-rate"
           onRefresh={[Function]}
         />
         <Memo(MoreButton)>
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="application"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="View SQL query for table"
           />
-          <Blueprint3.MenuItem
+          <Blueprint4.MenuItem
+            active={false}
             disabled={false}
             icon="manually-entered-data"
             multiline={false}
             onClick={[Function]}
             popoverProps={Object {}}
+            selected={false}
             shouldDismissPopover={true}
             text="Submit JSON task"
           />
@@ -342,10 +359,10 @@ exports[`IngestionView matches snapshot 1`] = `
               "Group ID",
               "Type",
               "Datasource",
-              "Location",
-              "Created time",
               "Status",
+              "Created time",
               "Duration",
+              "Location",
               "Actions",
             ]
           }
@@ -412,10 +429,11 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Task ID",
               "accessor": "task_id",
               "show": true,
-              "width": 500,
+              "width": 440,
             },
             Object {
               "Aggregated": [Function],
@@ -437,26 +455,12 @@ exports[`IngestionView matches snapshot 1`] = `
               "Header": "Datasource",
               "accessor": "datasource",
               "show": true,
-            },
-            Object {
-              "Aggregated": [Function],
-              "Header": "Location",
-              "accessor": "location",
-              "filterMethod": [Function],
-              "show": true,
-            },
-            Object {
-              "Aggregated": [Function],
-              "Header": "Created time",
-              "accessor": "created_time",
-              "show": true,
-              "width": 190,
+              "width": 200,
             },
             Object {
               "Cell": [Function],
               "Header": "Status",
               "accessor": [Function],
-              "filterMethod": [Function],
               "id": "status",
               "show": true,
               "sortMethod": [Function],
@@ -465,11 +469,28 @@ exports[`IngestionView matches snapshot 1`] = `
             Object {
               "Aggregated": [Function],
               "Cell": [Function],
+              "Header": "Created time",
+              "accessor": "created_time",
+              "show": true,
+              "width": 190,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Cell": [Function],
               "Header": "Duration",
               "accessor": "duration",
+              "className": "padded",
               "filterable": false,
               "show": true,
-              "width": 70,
+              "width": 80,
+            },
+            Object {
+              "Aggregated": [Function],
+              "Cell": [Function],
+              "Header": "Location",
+              "accessor": "location",
+              "show": true,
+              "width": 200,
             },
             Object {
               "Aggregated": [Function],
@@ -513,11 +534,11 @@ exports[`IngestionView matches snapshot 1`] = `
           Array [
             Object {
               "id": "group_id",
-              "value": "test",
+              "value": "=test",
             },
             Object {
               "id": "datasource",
-              "value": "datasource",
+              "value": "=datasource",
             },
           ]
         }
@@ -585,7 +606,7 @@ exports[`IngestionView matches snapshot 1`] = `
       />
     </div>
   </t>
-  <Blueprint3.Alert
+  <Blueprint4.Alert
     canEscapeKeyCancel={false}
     canOutsideClickCancel={false}
     confirmButtonText="OK"
@@ -596,6 +617,6 @@ exports[`IngestionView matches snapshot 1`] = `
     onConfirm={[Function]}
   >
     <p />
-  </Blueprint3.Alert>
+  </Blueprint4.Alert>
 </Fragment>
 `;

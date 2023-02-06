@@ -34,10 +34,9 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTimeZone;
-
-import java.util.stream.Collectors;
 
 public class TimeParseOperatorConversion implements SqlOperatorConversion
 {
@@ -83,13 +82,14 @@ public class TimeParseOperatorConversion implements SqlOperatorConversion
         plannerContext.getTimeZone()
     );
 
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType()),
         "timestamp_parse",
         ImmutableList.of(
-            timeExpression.getExpression(),
-            DruidExpression.stringLiteral(pattern),
-            DruidExpression.stringLiteral(timeZone.getID())
-        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+            timeExpression,
+            DruidExpression.ofStringLiteral(pattern),
+            DruidExpression.ofStringLiteral(timeZone.getID())
+        )
     );
   }
 }

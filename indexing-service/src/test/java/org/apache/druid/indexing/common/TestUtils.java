@@ -27,23 +27,24 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.NoopIndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -64,14 +65,17 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestUtils
 {
-  public static final IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
-  public static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY = new NoopIndexTaskClientFactory<>();
+  public static final OverlordClient OVERLORD_SERVICE_CLIENT = new NoopOverlordClient();
+  public static final ParallelIndexSupervisorTaskClientProvider TASK_CLIENT_PROVIDER =
+      (supervisorTaskId, httpTimeout, numRetries) -> {
+        throw new UnsupportedOperationException();
+      };
   public static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
 
   private static final Logger log = new Logger(TestUtils.class);
 
   private final ObjectMapper jsonMapper;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
@@ -82,7 +86,11 @@ public class TestUtils
         jsonMapper,
         () -> 0
     );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
+    indexMergerV9Factory = new IndexMergerV9Factory(
+        jsonMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
 
     this.rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
 
@@ -96,11 +104,11 @@ public class TestUtils
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
-            .addValue(IndexingServiceClient.class, INDEXING_SERVICE_CLIENT)
+            .addValue(IndexingServiceClient.class, OVERLORD_SERVICE_CLIENT)
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
-            .addValue(IndexTaskClientFactory.class, TASK_CLIENT_FACTORY)
+            .addValue(IndexTaskClientFactory.class, TASK_CLIENT_PROVIDER)
     );
 
     jsonMapper.registerModule(
@@ -130,7 +138,12 @@ public class TestUtils
 
   public IndexMergerV9 getTestIndexMergerV9()
   {
-    return indexMergerV9;
+    return indexMergerV9Factory.create(true);
+  }
+
+  public IndexMergerV9Factory getIndexMergerV9Factory()
+  {
+    return indexMergerV9Factory;
   }
 
   public IndexIO getTestIndexIO()

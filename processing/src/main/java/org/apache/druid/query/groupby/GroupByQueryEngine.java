@@ -32,6 +32,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.FunctionalIterator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -84,14 +85,24 @@ public class GroupByQueryEngine
     this.intermediateResultsBufferPool = intermediateResultsBufferPool;
   }
 
-  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
+  public Sequence<Row> process(
+      final GroupByQuery query,
+      final StorageAdapter storageAdapter,
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+  )
   {
     if (storageAdapter == null) {
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
-
+    if (!query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true)) {
+      throw new UOE(
+          "GroupBy v1 does not support %s as false. Set %s to true or use groupBy v2",
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING
+      );
+    }
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     if (intervals.size() != 1) {
       throw new IAE("Should only have one interval, got[%s]", intervals);
@@ -105,7 +116,7 @@ public class GroupByQueryEngine
         query.getVirtualColumns(),
         query.getGranularity(),
         false,
-        null
+        groupByQueryMetrics
     );
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();

@@ -73,19 +73,6 @@ import java.util.stream.StreamSupport;
 public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshadowable<ObjectType>>
     implements TimelineLookup<VersionType, ObjectType>
 {
-  public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterable<DataSegment> segments)
-  {
-    return forSegments(segments.iterator());
-  }
-
-  public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterator<DataSegment> segments)
-  {
-    final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Comparator.naturalOrder());
-    addSegments(timeline, segments);
-    return timeline;
-  }
-
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
   // Below timelines stores only *visible* timelineEntries
@@ -105,9 +92,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   private final Comparator<? super VersionType> versionComparator;
 
+  // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
+  private final boolean skipObjectsWithNoData;
+
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
+    this(versionComparator, false);
+  }
+
+  public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator, boolean skipObjectsWithNoData)
+  {
     this.versionComparator = versionComparator;
+    this.skipObjectsWithNoData = skipObjectsWithNoData;
   }
 
   public static void addSegments(
@@ -124,6 +120,17 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
                 segment.getShardSpec().createChunk(segment)
             )
         ));
+  }
+
+  public static <VersionType, ObjectType extends Overshadowable<ObjectType>> Iterable<ObjectType> getAllObjects(
+      final List<TimelineObjectHolder<VersionType, ObjectType>> holders
+  )
+  {
+    return () ->
+        holders.stream()
+               .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+               .map(PartitionChunk::getObject)
+               .iterator();
   }
 
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
@@ -743,7 +750,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       Interval timelineInterval = entry.getKey();
       TimelineEntry val = entry.getValue();
 
-      if (timelineInterval.overlaps(interval)) {
+      // exclude empty partition holders (i.e. tombstones) since they do not add value
+      // for higher level code...they have no data rows...
+      if ((!skipObjectsWithNoData || val.partitionHolder.hasData()) && timelineInterval.overlaps(interval)) {
         retVal.add(
             new TimelineObjectHolder<>(
                 timelineInterval,

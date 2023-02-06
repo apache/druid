@@ -153,15 +153,16 @@ public class BrokerProcessingModule implements Module
 
   private void verifyDirectMemory(DruidProcessingConfig config)
   {
+    final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
+                              (config.getNumMergeBuffers() + 1);
+
     try {
       final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
-                                (config.getNumMergeBuffers() + 1);
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             StringUtils.format(
-                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, or druid.processing.numMergeBuffers: "
                 + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + 1)",
                 maxDirectMemory,
                 memoryNeeded,
@@ -174,10 +175,14 @@ public class BrokerProcessingModule implements Module
     catch (UnsupportedOperationException e) {
       log.debug("Checking for direct memory size is not support on this platform: %s", e);
       log.info(
-          "Unable to determine max direct memory size. If druid.processing.buffer.sizeBytes is explicitly configured, "
-          + "then make sure to set -XX:MaxDirectMemorySize to at least \"druid.processing.buffer.sizeBytes * "
-          + "(druid.processing.numMergeBuffers[%,d] + 1)\", "
-          + "or else set -XX:MaxDirectMemorySize to at least 25%% of maximum jvm heap size.",
+          "Your memory settings require at least %,d bytes of direct memory. "
+          + "Your machine must have at least this much memory available, and your JVM "
+          + "-XX:MaxDirectMemorySize parameter must be at least this high. "
+          + "If it is, you may safely ignore this message. "
+          + "Otherwise, consider adjusting your memory settings. "
+          + "Calculation: druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + 1).",
+          memoryNeeded,
+          config.intermediateComputeSizeBytes(),
           config.getNumMergeBuffers()
       );
     }

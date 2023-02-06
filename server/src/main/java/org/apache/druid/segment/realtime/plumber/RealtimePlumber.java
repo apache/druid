@@ -65,6 +65,7 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -171,7 +172,7 @@ public class RealtimePlumber implements Plumber
         emitter,
         conglomerate,
         queryProcessingPool,
-        joinableFactory,
+        new JoinableFactoryWrapper(joinableFactory),
         cache,
         cacheConfig,
         cachePopulatorStats
@@ -271,6 +272,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -739,6 +741,7 @@ public class RealtimePlumber implements Plumber
           config.getAppendableIndexSpec(),
           config.getMaxRowsInMemory(),
           config.getMaxBytesInMemoryOrDefault(),
+          true,
           config.getDedupColumn(),
           hydrants
       );

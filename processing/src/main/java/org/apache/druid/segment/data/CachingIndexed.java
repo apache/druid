@@ -24,12 +24,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class CachingIndexed<T> implements Indexed<T>, Closeable
+public class CachingIndexed<T> implements CloseableIndexed<T>
 {
   private static final int INITIAL_CACHE_CAPACITY = 16384;
 
@@ -87,6 +86,12 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   public int indexOf(@Nullable T value)
   {
     return delegate.indexOf(value);
+  }
+
+  @Override
+  public boolean isSorted()
+  {
+    return delegate.isSorted();
   }
 
   @Override

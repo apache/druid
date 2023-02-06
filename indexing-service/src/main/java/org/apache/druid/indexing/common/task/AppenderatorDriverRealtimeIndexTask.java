@@ -242,7 +242,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
     authorizerMapper = toolbox.getAuthorizerMapper();
@@ -780,7 +780,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
-        parseExceptionHandler
+        parseExceptionHandler,
+        isUseMaxMemoryEstimates()
     );
   }
 

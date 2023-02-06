@@ -30,6 +30,8 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientSyncImpl;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -55,6 +57,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,6 +70,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 
 @RunWith(Parameterized.class)
@@ -91,7 +96,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   private StringFullResponseHolder responseHolder;
   private HttpResponse response;
   private HttpHeaders headers;
-  private KinesisIndexTaskClient client;
+  private SeekableStreamIndexTaskClient<String, String> client;
 
   @Parameterized.Parameters(name = "numThreads = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -138,7 +143,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testNoTaskLocation() throws IOException
+  public void testNoTaskLocation() throws Exception
   {
     EasyMock.reset(taskInfoProvider);
     EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();
@@ -147,25 +152,27 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
             .anyTimes();
     replayAll();
 
-    Assert.assertFalse(client.stop(TEST_ID, true));
-    Assert.assertFalse(client.resume(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(Status.NOT_STARTED, client.getStatus(TEST_ID));
-    Assert.assertNull(client.getStartTime(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
-    Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
-    Assert.assertFalse(client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
-    Assert.assertFalse(client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
+    Assert.assertFalse(client.stopAsync(TEST_ID, true).get());
+    Assert.assertFalse(client.resumeAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.pauseAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.pauseAsync(TEST_ID).get());
+    Assert.assertEquals(Status.NOT_STARTED, client.getStatusAsync(TEST_ID).get());
+    Assert.assertNull(client.getStartTimeAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsetsAsync(TEST_ID, true).get());
+    Assert.assertEquals(ImmutableMap.of(), client.getEndOffsetsAsync(TEST_ID).get());
+    Assert.assertFalse(client.setEndOffsetsAsync(TEST_ID, Collections.emptyMap(), true).get());
+    Assert.assertFalse(client.setEndOffsetsAsync(TEST_ID, Collections.emptyMap(), true).get());
 
     verifyAll();
   }
 
   @Test
-  public void testTaskNotRunnableException()
+  public void testTaskNotRunnableException() throws Exception
   {
-    expectedException.expect(IndexTaskClient.TaskNotRunnableException.class);
-    expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IndexTaskClient.TaskNotRunnableException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Aborting request because task [test-id] is not runnable")));
 
     EasyMock.reset(taskInfoProvider);
     EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID))
@@ -176,16 +183,17 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
             .anyTimes();
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testInternalServerError()
+  public void testInternalServerError() throws Exception
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IOException.class));
-    expectedException.expectMessage("Received server error with status [500 Internal Server Error]");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [500 Internal Server Error]")));
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
     EasyMock.expect(responseHolder.getContent()).andReturn("");
@@ -200,15 +208,17 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testBadRequest()
+  public void testBadRequest() throws Exception
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Received server error with status [400 Bad Request]");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [400 Bad Request]")));
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
     EasyMock.expect(responseHolder.getContent()).andReturn("");
@@ -223,12 +233,12 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testTaskLocationMismatch()
+  public void testTaskLocationMismatch() throws Exception
   {
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(2);
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
@@ -248,7 +258,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<String, String> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<String, String> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(0, results.size());
@@ -268,7 +278,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<String, String> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<String, String> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -309,7 +319,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
 
     replayAll();
 
-    Map<String, String> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<String, String> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(3, captured.getValues().size());
@@ -328,11 +338,13 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetCurrentOffsetsWithExhaustedRetries()
+  public void testGetCurrentOffsetsWithExhaustedRetries() throws Exception
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IOException.class));
-    expectedException.expectMessage("Received server error with status [404 Not Found]");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
+    expectedException.expectCause(ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)));
+    expectedException.expectCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [404 Not Found]"))));
 
     client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
 
@@ -351,7 +363,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     ).andReturn(errorResponseHolder()).anyTimes();
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
@@ -369,7 +381,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<String, String> results = client.getEndOffsets(TEST_ID);
+    Map<String, String> results = client.getEndOffsetsAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -404,7 +416,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     )).andReturn(errorResponseHolder()).once().andReturn(okResponseHolder());
     replayAll();
 
-    DateTime results = client.getStartTime(TEST_ID);
+    DateTime results = client.getStartTimeAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -434,7 +446,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Status results = client.getStatus(TEST_ID);
+    Status results = client.getStatusAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -463,7 +475,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<String, String> results = client.pause(TEST_ID);
+    Map<String, String> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -512,7 +524,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
 
     replayAll();
 
-    Map<String, String> results = client.pause(TEST_ID);
+    Map<String, String> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -543,6 +555,37 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
+  public void testPauseRetriesExhausted() throws Exception
+  {
+    client = new TestableKinesisIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
+    // ACCEPTED for first pause call and then OK for 3 status call
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED);
+    EasyMock.expect(responseHolder.getContent()).andReturn(null);
+    EasyMock.expect(responseHolder.getContent()).andReturn(OBJECT_MAPPER.writeValueAsString(Status.READING)).times(3);
+    EasyMock.expect(httpClient.go(
+        EasyMock.anyObject(),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
+        EasyMock.eq(TEST_HTTP_TIMEOUT)
+    )).andReturn(
+        okResponseHolder()
+    ).times(4);
+    replayAll();
+
+    try {
+      client.pauseAsync(TEST_ID).get();
+    }
+    catch (Exception ex) {
+      Assert.assertEquals(
+          "org.apache.druid.java.util.common.ISE: "
+          + "Task [test-id] failed to change its status from [READING] to [PAUSED], aborting", ex.getMessage());
+      verifyAll();
+      return;
+    }
+    Assert.fail("Expected an exception");
+  }
+
+
+  @Test
   public void testResume() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
@@ -556,7 +599,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.resume(TEST_ID);
+    client.resumeAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -584,7 +627,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true);
+    client.setEndOffsetsAsync(TEST_ID, endOffsets, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -613,7 +656,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true);
+    client.setEndOffsetsAsync(TEST_ID, endOffsets, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -640,7 +683,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.stop(TEST_ID, false);
+    client.stopAsync(TEST_ID, false).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -666,7 +709,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    client.stop(TEST_ID, true);
+    client.stopAsync(TEST_ID, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -1036,7 +1079,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     return Futures.immediateFuture(Either.error(responseHolder));
   }
 
-  private class TestableKinesisIndexTaskClient extends KinesisIndexTaskClient
+  private class TestableKinesisIndexTaskClient extends SeekableStreamIndexTaskClientSyncImpl<String, String>
   {
     TestableKinesisIndexTaskClient(
         HttpClient httpClient,
@@ -1060,6 +1103,19 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     @Override
     protected void checkConnection(String host, int port)
     {
+      // Do nothing.
+    }
+
+    @Override
+    public Class<String> getPartitionType()
+    {
+      return String.class;
+    }
+
+    @Override
+    public Class<String> getSequenceType()
+    {
+      return String.class;
     }
   }
 }
