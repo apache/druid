@@ -28,8 +28,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 
-import java.util.Map;
-
 public class TaskRealtimeMetricsMonitorBuilder
 {
   private TaskRealtimeMetricsMonitorBuilder()
