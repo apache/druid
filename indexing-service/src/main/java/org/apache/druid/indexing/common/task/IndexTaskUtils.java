@@ -113,6 +113,10 @@ public class IndexTaskUtils
     metricBuilder.setDimension(DruidMetrics.TASK_ID, task.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_TYPE, task.getType());
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
+    metricBuilder.setDimensionIfNotNull(
+        DruidMetrics.TAGS,
+        task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
+    );
   }
 
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final AbstractTask task)
