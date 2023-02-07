@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.GeneratedMessageV3;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.grpc.proto.QueryOuterClass.ColumnSchema;
@@ -30,7 +31,6 @@ import org.apache.druid.grpc.proto.QueryOuterClass.DruidType;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryParameter;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
-import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
@@ -56,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 
 /**
  * "Driver" for the gRPC query endpoint. Handles translating the gRPC {@link QueryRequest}
@@ -113,7 +114,7 @@ public class QueryDriver
       Thread.currentThread().setName(StringUtils.format("grpc-sql[%s]", stmt.sqlQueryId()));
       final ResultSet thePlan = stmt.plan();
       final SqlRowTransformer rowTransformer = thePlan.createRowTransformer();
-      final ByteString results = encodeResults(request.getResultFormat(), thePlan, rowTransformer);
+      final ByteString results = encodeResults(request, thePlan, rowTransformer);
       stmt.reporter().succeeded(0); // TODO: real byte count (of payload)
       stmt.close();
       return QueryResponse.newBuilder()
@@ -145,6 +146,7 @@ public class QueryDriver
     catch (SqlPlanningException e) {
       stmt.reporter().failed(e);
       stmt.close();
+      e.printStackTrace();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.INVALID_SQL)
@@ -154,6 +156,7 @@ public class QueryDriver
     catch (IOException | RuntimeException e) {
       stmt.reporter().failed(e);
       stmt.close();
+      e.printStackTrace();
       return QueryResponse.newBuilder()
           .setQueryId(stmt.sqlQueryId())
           .setStatus(QueryStatus.RUNTIME_ERROR)
@@ -346,7 +349,12 @@ public class QueryDriver
     {
       formatWriter.writeRowStart();
       for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
-        final Object value = rowTransformer.transform(row, i);
+        final Object value;
+        if (formatWriter instanceof ProtobufWriter) {
+          value = ProtobufTransformer.transform(rowTransformer, row, i);
+        } else {
+          value = rowTransformer.transform(row, i);
+        }
         formatWriter.writeRowField(rowTransformer.getFieldList().get(i), value);
       }
       formatWriter.writeRowEnd();
@@ -419,7 +427,7 @@ public class QueryDriver
    * fine for small result sets, but should be rethought for larger result sets.
    */
   private ByteString encodeResults(
-      final QueryResultFormat queryResultFormat,
+      final QueryRequest request,
       final ResultSet thePlan,
       final SqlRowTransformer rowTransformer
   ) throws IOException
@@ -429,7 +437,7 @@ public class QueryDriver
     GrpcResultWriter writer;
 
     // For the SQL-supported formats, use the SQL-provided writers.
-    switch (queryResultFormat) {
+    switch (request.getResultFormat()) {
       case CSV:
         writer = new GrpcResultFormatWriter(
             ResultFormat.CSV.createFormatter(out, jsonMapper),
@@ -456,8 +464,16 @@ public class QueryDriver
       case JSON_OBJECT_LINES:
         throw new UnsupportedOperationException(); // TODO
       case PROTOBUF_INLINE:
-        throw new UnsupportedOperationException(); // TODO
-
+        try {
+          writer = new GrpcResultFormatWriter(
+                  new ProtobufWriter(out, (Class<GeneratedMessageV3>) Class.forName(request.getProtobufMessageName())),
+                  rowTransformer
+          );
+        }
+        catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+        break;
       // This is the hard one: encode the results as a Protobuf array.
       case PROTOBUF_RESPONSE:
         throw new UnsupportedOperationException(); // TODO
