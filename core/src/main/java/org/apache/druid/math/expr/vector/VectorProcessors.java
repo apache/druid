@@ -157,6 +157,55 @@ public class VectorProcessors
     };
   }
 
+  public static ExprVectorProcessor<?> identifier(Expr.VectorInputBindingInspector inspector, String binding)
+  {
+    ExpressionType inputType = inspector.getType(binding);
+
+    if (inputType == null) {
+      // nil column, we can be anything, so be a string because it's the most flexible
+      // (numbers will be populated with default values in default mode and non-null)
+      return new IdentifierVectorProcessor<Object[]>(ExpressionType.STRING)
+      {
+        @Override
+        public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
+        {
+          return new ExprEvalObjectVector(bindings.getObjectVector(binding));
+        }
+      };
+    }
+    switch (inputType.getType()) {
+      case LONG:
+        return new IdentifierVectorProcessor<long[]>(inputType)
+        {
+          @Override
+          public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+          {
+            return new ExprEvalLongVector(bindings.getLongVector(binding), bindings.getNullVector(binding));
+          }
+        };
+      case DOUBLE:
+        return new IdentifierVectorProcessor<double[]>(inputType)
+        {
+          @Override
+          public ExprEvalVector<double[]> evalVector(Expr.VectorInputBinding bindings)
+          {
+            return new ExprEvalDoubleVector(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
+          }
+        };
+      case STRING:
+        return new IdentifierVectorProcessor<Object[]>(inputType)
+        {
+          @Override
+          public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
+          {
+            return new ExprEvalObjectVector(bindings.getObjectVector(binding));
+          }
+        };
+      default:
+        throw Exprs.cannotVectorize("[" + binding + "]");
+    }
+  }
+
   public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingInspector inspector, Expr arg, int radix)
   {
     final ExprVectorProcessor<?> processor = new LongOutObjectInFunctionVectorProcessor(
@@ -888,5 +937,21 @@ public class VectorProcessors
   private VectorProcessors()
   {
     // No instantiation
+  }
+
+  abstract static class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>
+  {
+    private final ExpressionType outputType;
+
+    public IdentifierVectorProcessor(ExpressionType outputType)
+    {
+      this.outputType = outputType;
+    }
+
+    @Override
+    public ExpressionType getOutputType()
+    {
+      return outputType;
+    }
   }
 }

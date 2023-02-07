@@ -54,6 +54,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -103,6 +104,7 @@ public class SegmentMetadataCache
   private static final EmittingLogger log = new EmittingLogger(SegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
+  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final SegmentMetadataCacheConfig config;
@@ -118,8 +120,6 @@ public class SegmentMetadataCache
    * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
   private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
-
-  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -798,7 +798,20 @@ public class SegmentMetadataCache
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
-            columnTypes.putIfAbsent(column, columnType);
+            columnTypes.compute(column, (c, existingType) -> {
+              if (existingType == null) {
+                return columnType;
+              }
+              if (columnType == null) {
+                return existingType;
+              }
+              // if any are json, are all json
+              if (NestedDataComplexTypeSerde.TYPE.equals(columnType) || NestedDataComplexTypeSerde.TYPE.equals(existingType)) {
+                return NestedDataComplexTypeSerde.TYPE;
+              }
+              // "existing type" is the 'newest' type, since we iterate the segments list by newest start time
+              return existingType;
+            });
           }
         }
       }
