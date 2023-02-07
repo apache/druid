@@ -1670,7 +1670,7 @@ public class HttpRemoteTaskRunnerTest
 
   }
 
-  @Test
+  @Test(timeout = 60_000L)
   public void testSyncMonitoring_finiteIteration()
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -1711,7 +1711,9 @@ public class HttpRemoteTaskRunnerTest
     taskRunner.addWorker(createWorker("abc"));
     taskRunner.addWorker(createWorker("xyz"));
     taskRunner.addWorker(createWorker("lol"));
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
     taskRunner.syncMonitoring();
+    Assert.assertEquals(3, taskRunner.getWorkerSyncerDebugInfo().size());
   }
 
   public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(
