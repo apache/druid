@@ -200,11 +200,32 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // This is necessary to handle the virtual columns on the unnestProject
     // Also create the unnest datasource to be used by the partial query
     PartialDruidQuery partialDruidQuery = unnestProjectNeeded ? partialQuery.withUnnest(unnestProject) : partialQuery;
+    String outputColName = unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0);
+    /* In case of nested queries like this which plans to
+    186:LogicalCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{0}])
+      178:LogicalProject(subset=[rel#179:Subset#6.NONE.[]], dim2=[$2], d3=[$17])
+        176:LogicalCorrelate(subset=[rel#177:Subset#5.NONE.[]], correlation=[$cor0], joinType=[inner], requiredColumns=[{3}])
+          13:LogicalTableScan(subset=[rel#168:Subset#0.NONE.[]], table=[[druid, numfoo]])
+          172:Uncollect(subset=[rel#173:Subset#3.NONE.[]])
+            170:LogicalProject(subset=[rel#171:Subset#2.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor0.dim3)])
+              14:LogicalValues(subset=[rel#169:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
+      182:Uncollect(subset=[rel#183:Subset#8.NONE.[]])
+        180:LogicalProject(subset=[rel#181:Subset#7.NONE.[]], EXPR$0=[MV_TO_ARRAY($cor1.dim2)])
+          14:LogicalValues(subset=[rel#169:Subset#1.NONE.[0]], tuples=[[{ 0 }]])
+
+     the column name cannot be EXPR$0 for both inner and outer. The inner one which gets executed first gets the name
+     EXPR$0 and as we move up the tree we add a 0 at the end to make the top level EXPR$00.
+     Ideally these names should be replaced by the alias names specified in the query. Any future developer if
+     able to find these alias names should replace EXPR$0 by dim3 and EXPR$00 by dim2, i.e use the correct name from Calcite
+     */
+    if (druidQueryRel instanceof DruidCorrelateUnnestRel) {
+      outputColName = outputColName + "0";
+    }
     return partialDruidQuery.build(
         UnnestDataSource.create(
             leftDataSource,
             dimOrExpToUnnest,
-            unnestDatasourceRel.getUnnestProject().getRowType().getFieldNames().get(0),
+            outputColName,
             null
         ),
         rowSignature,

@@ -3316,4 +3316,91 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestRecursive()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "with t AS (select * from druid.numfoo, unnest(MV_TO_ARRAY(dim3)) as unnested (d3))"
+        + " select d4,d3 from t, UNNEST(MV_TO_ARRAY(dim4)) as unnested(d4) ",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      UnnestDataSource.create(
+                          new QueryDataSource(
+                              newScanQueryBuilder()
+                                  .dataSource(
+                                      UnnestDataSource.create(
+                                          new TableDataSource(CalciteTests.DATASOURCE3),
+                                          "dim3",
+                                          "EXPR$0",
+                                          null
+                                      )
+                                  )
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .legacy(false)
+                                  .columns(
+                                      "EXPR$0",
+                                      "__time",
+                                      "cnt",
+                                      "d1",
+                                      "d2",
+                                      "dim1",
+                                      "dim2",
+                                      "dim3",
+                                      "dim4",
+                                      "dim5",
+                                      "dim6",
+                                      "f1",
+                                      "f2",
+                                      "l1",
+                                      "l2",
+                                      "m1",
+                                      "m2",
+                                      "unique_dim1"
+                                  )
+                                  .context(QUERY_CONTEXT_DEFAULT)
+                                  .build()
+                          ),
+                          "dim4",
+                          "EXPR$00",
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0",
+                      "EXPR$00"
+                  ))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a", "a"},
+            new Object[]{"a", "b"},
+            new Object[]{"a", "b"},
+            new Object[]{"a", "c"},
+            new Object[]{"a", "d"},
+            new Object[]{"b", ""},
+            new Object[]{"b", ""},
+            new Object[]{"b", ""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a", "a"},
+            new Object[]{"a", "b"},
+            new Object[]{"a", "b"},
+            new Object[]{"a", "c"},
+            new Object[]{"a", "d"},
+            new Object[]{"b", ""},
+            new Object[]{"b", null},
+            new Object[]{"b", null}
+        )
+    );
+  }
 }
