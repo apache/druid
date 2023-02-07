@@ -105,9 +105,7 @@ public class HllSketchHolder
   {
     if (union == null) {
       union = new Union(sketchToAdd.getLgConfigK());
-      if (sketch != null) {
-        union.update(this.sketch);
-      }
+      union.update(this.sketch);
     }
 
     union.update(sketchToAdd);
@@ -151,17 +149,17 @@ public class HllSketchHolder
     // if it's not.  But, we check ourselves first because callers would tend to expect that the object they are
     // calling a method on is more likely to get mutated, so we prefer to check and merge into this object if
     // possible first.
-    if (union != null) {
+    if (union == null) {
+      if (other.union == null) {
+        add(other.getSketch());
+        return this;
+      } else {
+        other.add(sketch);
+        return other;
+      }
+    } else {
       add(other.getSketch());
       return this;
     }
-
-    if (other.union != null) {
-      other.add(sketch);
-      return other;
-    }
-
-    add(other.getSketch());
-    return this;
   }
 }
