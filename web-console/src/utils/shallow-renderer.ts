@@ -16,22 +16,26 @@
  * limitations under the License.
  */
 
-import React from 'react';
+import type React from 'react';
+import ShallowRenderer from 'react-shallow-renderer';
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
-import { SegmentsView } from '../segments-view/segments-view';
+/**
+ * Shallowly renders a React element for the purpose snapshot testing.
+ *
+ * @param node - The React element to render.
+ * @returns - An opaque object that can be serialized to a snapshot.
+ */
+export function shallow(node: React.ReactElement): object {
+  const renderer = new ShallowRenderer();
+  renderer.render(node);
 
-describe('SegmentsView', () => {
-  it('matches snapshot', () => {
-    const segmentsView = shallow(
-      <SegmentsView
-        datasource="test"
-        onlyUnavailable={false}
-        goToQuery={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(segmentsView).toMatchSnapshot();
-  });
-});
+  const instance = renderer.getMountedInstance();
+  if (instance?.componentDidMount) {
+    // Call componentDidMount if it exists -- this isn't done by default
+    // because DOM refs are not available in shallow rendering, but we
+    // don't rely on those in our tests.
+    instance.componentDidMount();
+  }
+
+  return renderer.getRenderOutput();
+}

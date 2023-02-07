@@ -20,20 +20,11 @@ import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import {
-  C,
-  Column,
-  F,
-  QueryResult,
-  SqlAlias,
-  SqlExpression,
-  SqlFunction,
-  SqlLiteral,
-  SqlQuery,
-  SqlStar,
-} from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../components';
@@ -45,6 +36,7 @@ import {
   TIME_COLUMN,
 } from '../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
+import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
   columnToWidth,
@@ -54,9 +46,7 @@ import {
   formatNumber,
   getNumericColumnBraces,
   oneOf,
-  Pagination,
   prettyPrintSql,
-  QueryAction,
   timeFormatToSql,
 } from '../../../utils';
 import { ExpressionEditorDialog } from '../../sql-data-loader-view/expression-editor-dialog/expression-editor-dialog';
@@ -616,7 +606,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row) {
+              Cell(row: RowRenderProps) {
                 const value = row.value;
                 return (
                   <div>

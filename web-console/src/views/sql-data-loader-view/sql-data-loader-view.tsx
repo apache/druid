@@ -16,20 +16,20 @@
  * limitations under the License.
  */
 
-import { Card, Icon, IconName, Intent } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlQuery } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
+import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
 import {
   Execution,
-  ExternalConfig,
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
-  QueryContext,
-  QueryWithContext,
 } from '../../druid-models';
-import { Capabilities, maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
+import type { Capabilities } from '../../helpers';
+import { maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';

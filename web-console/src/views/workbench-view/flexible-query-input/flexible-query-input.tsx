@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { ResizeEntry } from '@blueprintjs/core';
+import type { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
@@ -34,7 +34,8 @@ import {
 } from '../../../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
-import { ColumnMetadata, RowColumn, uniq } from '../../../utils';
+import type { ColumnMetadata, RowColumn } from '../../../utils';
+import { uniq } from '../../../utils';
 
 import './flexible-query-input.scss';
 
