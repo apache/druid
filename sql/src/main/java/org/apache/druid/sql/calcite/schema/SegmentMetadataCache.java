@@ -44,6 +44,8 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
@@ -114,6 +116,7 @@ public class SegmentMetadataCache
   private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
+  private final ServiceEmitter emitter;
 
   /**
    * Map of DataSource -> DruidTable.
@@ -217,7 +220,8 @@ public class SegmentMetadataCache
       final JoinableFactory joinableFactory,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig
+      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final ServiceEmitter emitter
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -229,6 +233,7 @@ public class SegmentMetadataCache
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
     this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.emitter = emitter;
 
     initServerViewTimelineCallback(serverView);
   }
@@ -378,10 +383,15 @@ public class SegmentMetadataCache
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startNanos = System.nanoTime();
-      log.debug("%s waiting for initialization.", getClass().getSimpleName());
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
+      final long endMillis = System.currentTimeMillis();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      emitter.emit(ServiceMetricEvent.builder().build(
+          "init/metadatacache/time",
+          endMillis - startMillis
+      ));
     }
   }
 
