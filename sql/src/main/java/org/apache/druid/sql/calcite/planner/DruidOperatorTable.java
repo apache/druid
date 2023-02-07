@@ -414,6 +414,7 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private final Map<OperatorKey, SqlAggregator> aggregators;
   private final Map<OperatorKey, SqlOperatorConversion> operatorConversions;
+
   @Inject
   public DruidOperatorTable(
       final Set<SqlAggregator> aggregators,
