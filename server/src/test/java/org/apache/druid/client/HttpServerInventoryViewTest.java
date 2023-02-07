@@ -274,7 +274,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test
-  public void testSyncMonitoring() throws Exception
+  public void testSyncMonitoring()
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -285,13 +285,6 @@ public class HttpServerInventoryViewTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     TestHttpClient httpClient = new TestHttpClient(ImmutableList.of());
-    DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", false, 8080, null, true, false),
-        NodeRole.HISTORICAL,
-        ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
-        )
-    );
 
     HttpServerInventoryView httpServerInventoryView = new HttpServerInventoryView(
         jsonMapper,
@@ -318,6 +311,7 @@ public class HttpServerInventoryViewTest
     EasyMock.expect(server.getHostAndPort()).andReturn(host).anyTimes();
     EasyMock.expect(server.getHostAndTlsPort()).andReturn(host).anyTimes();
     EasyMock.expect(server.getTier()).andReturn("__default_tier").anyTimes();
+    EasyMock.expect(server.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
     EasyMock.expect(server.getMaxSize()).andReturn(100000000L).anyTimes();
     EasyMock.expect(server.getPriority()).andReturn(50).anyTimes();
     EasyMock.replay(server);
