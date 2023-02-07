@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -32,6 +33,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
@@ -133,6 +135,7 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
+  private static final Logger LOG = new Logger(DruidOperatorTable.class);
   // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
@@ -411,15 +414,19 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private final Map<OperatorKey, SqlAggregator> aggregators;
   private final Map<OperatorKey, SqlOperatorConversion> operatorConversions;
+  private final PlannerOperatorConversionConfig plannerOperatorConversionConfig;
 
   @Inject
   public DruidOperatorTable(
       final Set<SqlAggregator> aggregators,
-      final Set<SqlOperatorConversion> operatorConversions
+      final Set<SqlOperatorConversion> operatorConversions,
+      final PlannerOperatorConversionConfig plannerOperatorConversionConfig
   )
   {
     this.aggregators = new HashMap<>();
     this.operatorConversions = new HashMap<>();
+    this.plannerOperatorConversionConfig = plannerOperatorConversionConfig;
+    Set<String> operationConversionDenySet = ImmutableSet.copyOf(plannerOperatorConversionConfig.getDenyList());
 
     for (SqlAggregator aggregator : aggregators) {
       final OperatorKey operatorKey = OperatorKey.of(aggregator.calciteFunction());
@@ -437,6 +444,11 @@ public class DruidOperatorTable implements SqlOperatorTable
 
     for (SqlOperatorConversion operatorConversion : operatorConversions) {
       final OperatorKey operatorKey = OperatorKey.of(operatorConversion.calciteOperator());
+      if (operationConversionDenySet.contains(operatorKey.name)) {
+        LOG.info(
+            "operatorKey '%s' not being added to available operatorConversions as it was found in deny list.",
+            operatorKey.name);
+      }
       if (this.aggregators.containsKey(operatorKey)
           || this.operatorConversions.put(operatorKey, operatorConversion) != null) {
         throw new ISE("Cannot have two operators with key [%s]", operatorKey);
