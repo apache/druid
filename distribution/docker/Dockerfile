@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=8
+ARG JDK_VERSION=11
 FROM alpine as extractor
 
 ARG VERSION=
@@ -30,7 +30,7 @@ RUN tar -zxf /src/apache-druid-${VERSION}-bin.tar.gz -C /opt \
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 
-FROM gcr.io/distroless/java:$JDK_VERSION
+FROM gcr.io/distroless/java$JDK_VERSION-debian11
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
