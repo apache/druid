@@ -48,7 +48,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   private final RowIngestionMeters rowIngestionMeters;
   private final Map<String, String[]> dimensions;
   @Nullable
-  private final Map<String, Object> metricMetadata;
+  private final Map<String, Object> metricTags;
 
   private FireDepartmentMetrics previousFireDepartmentMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
@@ -57,13 +57,13 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
       FireDepartment fireDepartment,
       RowIngestionMeters rowIngestionMeters,
       Map<String, String[]> dimensions,
-      @Nullable Map<String, Object> metricMetadata
+      @Nullable Map<String, Object> metricTags
   )
   {
     this.fireDepartment = fireDepartment;
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.metricMetadata = metricMetadata;
+    this.metricTags = metricTags;
     previousFireDepartmentMetrics = new FireDepartmentMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
@@ -85,7 +85,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
           thrownAway
       );
     }
-    builder.setDimensionIfNotNull(DruidMetrics.INGEST_METADATA, metricMetadata);
+    builder.setDimensionIfNotNull(DruidMetrics.TAGS, metricTags);
     emitter.emit(builder.build("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()

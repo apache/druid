@@ -692,7 +692,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               .setDimension("dataSource", getDataSource())
               .setDimension("taskType", getType())
               .setDimension("taskId", getId())
-              .setDimensionIfNotNull(DruidMetrics.INGEST_METADATA, getContextValue("metricMetadata"))
+              .setDimensionIfNotNull(DruidMetrics.TAGS, getContextValue(DruidMetrics.TAGS))
               .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
               .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
       );

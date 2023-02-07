@@ -122,8 +122,8 @@ public class IndexTaskUtils
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, task.getDataSource());
     metricBuilder.setDimension(DruidMetrics.TASK_INGESTION_MODE, task.getIngestionMode());
     metricBuilder.setDimensionIfNotNull(
-        DruidMetrics.INGEST_METADATA,
-        task.<Map<String, Object>>getContextValue("metricMetadata")
+        DruidMetrics.TAGS,
+        task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
     );
   }
 

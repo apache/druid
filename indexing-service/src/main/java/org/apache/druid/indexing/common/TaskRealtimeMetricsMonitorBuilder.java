@@ -60,7 +60,7 @@ public class TaskRealtimeMetricsMonitorBuilder
             DruidMetrics.TASK_ID, new String[]{task.getId()},
             DruidMetrics.TASK_TYPE, new String[]{task.getType()}
             ),
-        (Map<String, Object>) task.getContext().get("metricMetadata")
+        task.getContextValue(DruidMetrics.TAGS)
     );
   }
 }

@@ -133,7 +133,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return context;
   }
 
-  @JsonIgnore
   @Nullable
   public <ContextValueType> ContextValueType getContextValue(String key)
   {
