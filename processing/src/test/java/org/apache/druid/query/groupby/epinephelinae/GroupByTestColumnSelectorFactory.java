@@ -29,7 +29,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
-public class TestColumnSelectorFactory implements ColumnSelectorFactory
+public class GroupByTestColumnSelectorFactory implements ColumnSelectorFactory
 {
   private ThreadLocal<Row> row = new ThreadLocal<>();
 
