@@ -22,7 +22,6 @@ module.exports = Object.assign(common, {
   moduleNameMapper: {
     '\\.s?css$': 'identity-obj-proxy',
   },
-  snapshotSerializers: ['enzyme-to-json/serializer'],
   setupFilesAfterEnv: ['<rootDir>src/setup-tests.ts'],
   testMatch: ['**/src/**/?(*.)+(spec).(ts|tsx)'],
 });

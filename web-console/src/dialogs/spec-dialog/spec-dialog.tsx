@@ -26,7 +26,7 @@ import { validJson } from '../../utils';
 import './spec-dialog.scss';
 
 export interface SpecDialogProps {
-  onSubmit: (spec: JSON) => void;
+  onSubmit: (spec: JSON) => void | Promise<void>;
   onClose: () => void;
   title: string;
   initSpec?: any;
@@ -40,7 +40,7 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
 
   function postSpec(): void {
     if (!validJson(spec)) return;
-    onSubmit(JSON.parse(spec));
+    void onSubmit(JSON.parse(spec));
     onClose();
   }
 

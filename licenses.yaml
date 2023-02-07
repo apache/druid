@@ -6537,6 +6537,16 @@ license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
+name: "use-sync-external-store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 1.2.0
+license_file_path: licenses/bin/use-sync-external-store.MIT
+
+---
+
 name: "value-equal"
 license_category: binary
 module: web-console
@@ -6572,6 +6582,6 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Paul Henschel
-version: 3.7.2
+version: 4.3.2
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

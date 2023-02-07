@@ -16,22 +16,10 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
-import { SegmentsView } from '../segments-view/segments-view';
-
-describe('SegmentsView', () => {
-  it('matches snapshot', () => {
-    const segmentsView = shallow(
-      <SegmentsView
-        datasource="test"
-        onlyUnavailable={false}
-        goToQuery={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(segmentsView).toMatchSnapshot();
-  });
-});
+declare module 'react-shallow-renderer' {
+  export default class ShallowRenderer {
+    render(element: React.ReactElement): void;
+    getRenderOutput(): object;
+    getMountedInstance(): React.Component | null;
+  }
+}
