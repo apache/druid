@@ -125,7 +125,7 @@ public class CoordinatorServerView implements InventoryView
       final long endMillis = System.currentTimeMillis();
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
       emitter.emit(ServiceMetricEvent.builder().build(
-          "coordinator/serverview/init/time",
+          "init/serverview/time",
           endMillis - startMillis
       ));
     }

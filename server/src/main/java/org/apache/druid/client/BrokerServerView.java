@@ -188,7 +188,7 @@ public class BrokerServerView implements TimelineServerView
       final long endMillis = System.currentTimeMillis();
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
       emitter.emit(ServiceMetricEvent.builder().build(
-          "broker/serverview/init/time",
+          "init/serverview/time",
           endMillis - startMillis
       ));
     }

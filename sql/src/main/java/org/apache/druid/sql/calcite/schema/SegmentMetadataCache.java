@@ -389,7 +389,7 @@ public class SegmentMetadataCache
       final long endMillis = System.currentTimeMillis();
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
       emitter.emit(ServiceMetricEvent.builder().build(
-          "segment/metadatacache/init/time",
+          "init/metadatacache/time",
           endMillis - startMillis
       ));
     }
