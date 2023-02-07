@@ -160,7 +160,11 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn("nest", "$.x", "x"),
                                                  new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
                                                  new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1"),
-                                                 new NestedFieldVirtualColumn("nester", "$.", "nester_root")
+                                                 new NestedFieldVirtualColumn("nester", "$.", "nester_root"),
+                                                 new NestedFieldVirtualColumn("dim", "$", "dim_root"),
+                                                 new NestedFieldVirtualColumn("dim", "$.x", "dim_path"),
+                                                 new NestedFieldVirtualColumn("count", "$", "count_root"),
+                                                 new NestedFieldVirtualColumn("count", "$.x", "count_path")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
