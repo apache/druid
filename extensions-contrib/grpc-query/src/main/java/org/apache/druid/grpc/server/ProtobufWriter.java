@@ -23,7 +23,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
@@ -31,14 +30,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ProtobufWriter implements ResultFormat.Writer
 {
-  private static final Logger log = new Logger(ProtobufWriter.class);
-
   private final OutputStream outputStream;
   private final GeneratedMessageV3 message;
   private Message.Builder rowBuilder;
+  private Map<String, Method> methods = new HashMap<>();
+
 
   public ProtobufWriter(OutputStream outputStream, Class<GeneratedMessageV3> clazz)
   {
@@ -76,25 +77,29 @@ public class ProtobufWriter implements ResultFormat.Writer
   @Override
   public void writeRowField(String name, @Nullable Object value)
   {
-    try {
-      final Descriptors.FieldDescriptor fieldDescriptor =
+    final Descriptors.FieldDescriptor fieldDescriptor =
               message.getDescriptorForType().findFieldByName(name);
       // we should throw an exception if fieldDescriptor is null
       // this means the .proto fields don't match returned column names
-      if (fieldDescriptor == null) {
-        throw new IllegalStateException(
+    if (fieldDescriptor == null) {
+      throw new IllegalStateException(
                 String.format("Field %s not found in Protobuf %s", name, message.getClass()));
+    }
+    final Method method = methods.computeIfAbsent("setField", k -> {
+      try {
+        return rowBuilder
+                .getClass()
+                .getMethod(
+                        "setField", new Class<?>[]{Descriptors.FieldDescriptor.class, Object.class});
       }
-      final Method method =
-              rowBuilder
-                      .getClass()
-                      .getMethod(
-                              "setField", new Class<?>[]{Descriptors.FieldDescriptor.class, Object.class});
+      catch (NoSuchMethodException e) {
+        throw new RuntimeException(e);
+      }
+    });
+    try {
       method.invoke(rowBuilder, fieldDescriptor, value);
     }
-    catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-      log.info("name>> " + name + " " + value.getClass().getName()
-      );
+    catch (IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException(e);
     }
   }

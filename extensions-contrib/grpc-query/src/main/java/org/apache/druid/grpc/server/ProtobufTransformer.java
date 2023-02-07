@@ -36,7 +36,6 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.TimeZone;
 
@@ -71,20 +70,12 @@ public class ProtobufTransformer
 
     if (druidType == ColumnType.STRING) {
       return row[i];
-    } else if (druidType == ColumnType.STRING_ARRAY) {
-      return Arrays.asList(row[i]);
     } else if (druidType == ColumnType.LONG) {
       return row[i];
-    } else if (druidType == ColumnType.LONG_ARRAY) {
-      return Arrays.asList(row[i]);
     } else if (druidType == ColumnType.FLOAT) {
       return row[i];
-    } else if (druidType == ColumnType.FLOAT_ARRAY) {
-      return Arrays.asList(row[i]);
     } else if (druidType == ColumnType.DOUBLE) {
       return row[i];
-    } else if (druidType == ColumnType.DOUBLE_ARRAY) {
-      return Arrays.asList(row[i]);
     } else {
       return convertComplexType(row[i]);
     }

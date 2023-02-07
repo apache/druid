@@ -24,7 +24,7 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryRequest;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
-import org.apache.druid.grpc.proto.Results;
+import org.apache.druid.grpc.proto.TestResults;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.junit.AfterClass;
@@ -100,18 +100,23 @@ public class GrpcQueryTest
     QueryResponse response = client.client.submitQuery(request);
     assertEquals(QueryStatus.OK, response.getStatus());
   }
-
+  /**
+   * Do a very basic query that output protobuf.
+   */
   @Test
   public void testGRPCBasics()
   {
     QueryRequest request = QueryRequest.newBuilder()
             .setQuery("SELECT dim1, dim2, dim3, cnt, m1, m2, unique_dim1, __time AS \"date\" FROM foo")
-            .setProtobufMessageName(Results.QueryResult.class.getName())
+             .setProtobufMessageName(TestResults.QueryResult.class.getName())
             .setResultFormat(QueryResultFormat.PROTOBUF_INLINE)
             .build();
+
     QueryResponse response = client.client.submitQuery(request);
-    GrpcResponseHandler<Results.QueryResult> handler = GrpcResponseHandler.of(Results.QueryResult.class);
-    List<Results.QueryResult> queryResults = handler.get(response.getData());
+    GrpcResponseHandler<TestResults.QueryResult> handler = GrpcResponseHandler.of(TestResults.QueryResult.class);
+    List<TestResults.QueryResult> queryResults = handler.get(response.getData());
+
+    assertEquals(6, queryResults.size());
     assertEquals(QueryStatus.OK, response.getStatus());
   }
 }
