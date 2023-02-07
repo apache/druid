@@ -10,13 +10,8 @@ public class PlannerOperatorConversionConfig
 {
   private static final List<String> DEFAULT_DENY_LIST = ImmutableList.of();
   @JsonProperty
-  private final List<String> denyList;
+  private List<String> denyList = DEFAULT_DENY_LIST;
 
-  public PlannerOperatorConversionConfig(
-      @JsonProperty final List<String> denyList
-  ) {
-    this.denyList = null != denyList ? ImmutableList.copyOf(denyList): DEFAULT_DENY_LIST;
-  }
 
   public List<String> getDenyList()
   {
@@ -55,7 +50,7 @@ public class PlannerOperatorConversionConfig
 
   public static Builder builder()
   {
-    return new PlannerOperatorConversionConfig(DEFAULT_DENY_LIST).toBuilder();
+    return new PlannerOperatorConversionConfig().toBuilder();
   }
 
   public Builder toBuilder()
@@ -71,7 +66,7 @@ public class PlannerOperatorConversionConfig
    */
   public static class Builder
   {
-    private List<String> denyList;
+    private List<String> denyList = DEFAULT_DENY_LIST;
 
     public Builder(PlannerOperatorConversionConfig base)
     {
@@ -86,7 +81,9 @@ public class PlannerOperatorConversionConfig
 
     public PlannerOperatorConversionConfig build()
     {
-      return new PlannerOperatorConversionConfig(denyList);
+      PlannerOperatorConversionConfig config = new PlannerOperatorConversionConfig();
+      config.denyList = denyList;
+      return config;
     }
   }
 }

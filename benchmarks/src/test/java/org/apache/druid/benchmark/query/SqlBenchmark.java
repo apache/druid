@@ -531,7 +531,7 @@ public class SqlBenchmark
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
       aggregators.add(new CountSqlAggregator(countDistinctSqlAggregator));
       aggregators.add(countDistinctSqlAggregator);
-      return new DruidOperatorTable(aggregators, extractionOperators, new PlannerOperatorConversionConfig(null));
+      return new DruidOperatorTable(aggregators, extractionOperators, new PlannerOperatorConversionConfig());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
