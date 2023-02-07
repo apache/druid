@@ -73,7 +73,7 @@ module.exports={
           "position": "left"
         },
         {
-          "to": "docs/design/index",
+          "to": "docs/design/",
           "label": "Docs",
           "position": "left"
         },
