@@ -157,7 +157,10 @@ public class DruidUnnestDatasourceRel extends DruidRel<DruidUnnestDatasourceRel>
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return super.explainTerms(pw);
+    return super.explainTerms(pw)
+                .item("Uncollect", uncollect)
+                .item("druidQueryRel", druidQueryRel)
+                .item("unnestProject", unnestProject);
   }
 
   @Override
