@@ -1599,10 +1599,14 @@ public class ControllerImpl implements Controller
       final DataSchema dataSchema =
           generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
 
+      final long maxInputBytesPerWorker =
+          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getQuery().context());
+
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
                          .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
                          .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                         .maxInputBytesPerWorker(maxInputBytesPerWorker)
                          .processorFactory(
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
