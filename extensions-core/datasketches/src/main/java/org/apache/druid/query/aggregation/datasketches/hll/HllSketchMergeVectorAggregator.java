@@ -70,7 +70,9 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
 
     final Union union = Union.writableWrap(mem);
     for (int i = startRow; i < endRow; i++) {
-      union.update(((HllSketchHolder) vector[i]).getSketch());
+      if (vector[i] != null) {
+        union.update(((HllSketchHolder) vector[i]).getSketch());
+      }
     }
   }
 
