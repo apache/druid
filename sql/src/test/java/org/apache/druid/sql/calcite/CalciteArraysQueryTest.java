@@ -3324,7 +3324,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQuery(
         "with t AS (select * from druid.numfoo, unnest(MV_TO_ARRAY(dim3)) as unnested (d3))"
-        + " select d4,d3 from t, UNNEST(MV_TO_ARRAY(dim4)) as unnested(d4) ",
+        + " select d4,d3 from t, UNNEST(MV_TO_ARRAY(dim4)) as foo(d4) ",
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
