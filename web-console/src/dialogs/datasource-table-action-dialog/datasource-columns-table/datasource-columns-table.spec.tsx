@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
 import { QueryState } from '../../../utils';
+import { shallow } from '../../../utils/shallow-renderer';
 
 import type { DatasourceColumnsTableRow } from './datasource-columns-table';
 import { DatasourceColumnsTable } from './datasource-columns-table';

@@ -17,10 +17,10 @@
  */
 
 import { SqlQuery } from 'druid-query-toolkit';
-import { shallow } from 'enzyme';
 import React from 'react';
 
 import type { ColumnMetadata } from '../../../utils';
+import { shallow } from '../../../utils/shallow-renderer';
 
 import { ColumnTree } from './column-tree';
 
