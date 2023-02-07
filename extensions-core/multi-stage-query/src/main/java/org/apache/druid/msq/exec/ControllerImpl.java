@@ -1249,7 +1249,7 @@ public class ControllerImpl implements Controller
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
+    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));

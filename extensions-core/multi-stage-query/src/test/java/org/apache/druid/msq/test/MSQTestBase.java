@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -183,6 +184,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1136,17 +1138,26 @@ public class MSQTestBase extends BaseCalciteQueryTest
             Assert.assertTrue(segmentIdVsOutputRowsMap.get(diskSegment).contains(Arrays.asList(row)));
           }
         }
+        
+        // Assert on the tombstone intervals
+        // Tombstone segments are only published, but since they donot have any data, they are not pushed by the
+        // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
+        // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
-          Set<SegmentId> expectedPublishedSegmentIds = segmentManager.getAllDataSegments()
-                                                                     .stream()
-                                                                     .map(DataSegment::getId)
-                                                                     .collect(Collectors.toSet());
+          Set<SegmentId> publishedSegmentIds = testTaskActionClient.getPublishedSegments()
+                                                                   .stream()
+                                                                   .map(DataSegment::getId)
+                                                                   .collect(Collectors.toSet());
+          Set<SegmentId> nonEmptySegmentIds = segmentIdVsOutputRowsMap.keySet();
+          Set<SegmentId> tombstoneSegmentIds = Sets.difference(publishedSegmentIds, nonEmptySegmentIds);
+
+          // Generate the expected tombstone segment ids
           Map<String, Object> tombstoneLoadSpec = new HashMap<>();
           tombstoneLoadSpec.put("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE);
           tombstoneLoadSpec.put("path", null); // tombstones do not have any backing file
-
+          Set<SegmentId> expectedTombstoneSegmentIds = new HashSet<>();
           if (expectedTombstoneIntervals != null) {
-            expectedPublishedSegmentIds.addAll(
+            expectedTombstoneSegmentIds.addAll(
                 expectedTombstoneIntervals.stream()
                                           .map(interval -> DataSegment.builder()
                                                                       .dataSource(expectedDataSource)
@@ -1160,10 +1171,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                           .collect(Collectors.toSet())
             );
           }
-          Assert.assertEquals(
-              expectedPublishedSegmentIds,
-              testTaskActionClient.getPublishedSegments().stream().map(DataSegment::getId).collect(Collectors.toSet())
-          );
+          Assert.assertEquals(expectedTombstoneSegmentIds, tombstoneSegmentIds);
         }
         // assert results
         assertResultsEquals(sql, expectedResultRows, transformedOutputRows);
