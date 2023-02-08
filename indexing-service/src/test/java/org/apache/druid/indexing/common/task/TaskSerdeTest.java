@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -43,13 +46,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -64,7 +65,6 @@ import java.io.File;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Rule
@@ -74,7 +74,6 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
@@ -402,7 +401,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                new MockFirehoseFactory(),
                 (schema, config, metrics) -> null
             ),
 
