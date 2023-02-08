@@ -19,12 +19,14 @@ on:
     inputs:
       runtime_jdk:
         description: 'Which JDK version to use at runtime'
-        required: true
+        required: false
         type: string
+        default: 8
       use_indexer:
         description: 'Which indexer to use'
-        required: true
+        required: false
         type: string
+        default: indexer
       override_config_path:
         description: 'Existing Druid configuration (using Docker) can be overridden or new config vars can be set e.g. when using cloud storage'
         required: false
