@@ -96,15 +96,25 @@ SELECT column_alias_name FROM datasource, UNNEST(source_expression) AS table_ali
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
   * A table, such as  `FROM a_table`.
   * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
-  * An inline array, which is treated as the `datasource` and the `source_expression`, such as `FROM UNNEST(ARRAY[1,2,3])`.
 * The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you cancall UNNEST on the following:
   * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
   * `ARRAY_CONCAT(dim1,dim2)` if you have to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
 
-Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+Keep these two things in mind when writing your query:
+
+- Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+- An exception to the preceding format is if you want to unnest an inline constant datasource, such as the array `[1,2,3]`. In cases like that, the query would resemble the following: `SELECT * FROM UNNEST(ARRAY[1,2,3])`. 
 
 For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arrays.md).
+
+The UNNEST function has the following limitations:
+
+- The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created
+- The [`unnest` datasource for native queries](./datasource.md#unnest) has the option to specify an `allowList`.  There is no equivalent in the UNNEST function.
+- Arrays inside complex JSON types are not supported.
+- You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
+- UNNEST preserves the ordering in the source array that is being unnested.
 
 ## WHERE
 
