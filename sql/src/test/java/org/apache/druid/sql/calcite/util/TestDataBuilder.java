@@ -351,6 +351,100 @@ public class TestDataBuilder
   public static final List<InputRow> ROWS1 =
       RAW_ROWS1.stream().map(TestDataBuilder::createRow).collect(Collectors.toList());
 
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS_FOR_UNNEST = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2000-01-01")
+                  .put("m1", "1.0")
+                  .put("m2", "1.0")
+                  .put("d1", 1.0)
+                  .put("f1", 1.0f)
+                  .put("l1", 7L)
+                  .put("dim1", "")
+                  .put("dim3", ImmutableList.of("a", ImmutableList.of("b", "c")))
+                  .put("dim5", ImmutableList.of("a5", "b5"))
+                  .put("dim6", "1")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2000-01-01")
+                  .put("m1", "1.0")
+                  .put("m2", "1.0")
+                  .put("d1", 1.0)
+                  .put("f1", 1.0f)
+                  .put("l1", 7L)
+                  .put("dim1", "")
+                  .put("dim2", ImmutableList.of("a", "b"))
+                  .put("dim3", ImmutableList.of("a", ImmutableList.of("b", "c")))
+                  .put("dim4", ImmutableList.of("x", "y"))
+                  .put("dim5", ImmutableList.of("c5", "d5"))
+                  .put("dim6", "1")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2000-01-02")
+                  .put("m1", "2.0")
+                  .put("m2", "2.0")
+                  .put("d1", 1.7)
+                  .put("d2", 1.7)
+                  .put("f1", 0.1f)
+                  .put("f2", 0.1f)
+                  .put("l1", 325323L)
+                  .put("l2", 325323L)
+                  .put("dim1", "10.1")
+                  .put("dim2", ImmutableList.of())
+                  .put("dim3", ImmutableList.of("b", "c"))
+                  .put("dim4", ImmutableList.of("p", "q"))
+                  .put("dim5", ImmutableList.of("e5", "f5"))
+                  .put("dim6", "2")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2000-01-03")
+                  .put("m1", "3.0")
+                  .put("m2", "3.0")
+                  .put("d1", 0.0)
+                  .put("d2", 0.0)
+                  .put("f1", 0.0)
+                  .put("f2", 0.0)
+                  .put("l1", 0)
+                  .put("l2", 0)
+                  .put("dim1", "2")
+                  .put("dim2", ImmutableList.of(""))
+                  .put("dim3", ImmutableList.of("d"))
+                  .put("dim4", ImmutableList.of("", "null", ""))
+                  .put("dim5", ImmutableList.of("a5", "b5"))
+                  .put("dim6", "3")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2001-01-01")
+                  .put("m1", "4.0")
+                  .put("m2", "4.0")
+                  .put("dim1", "1")
+                  .put("dim2", ImmutableList.of("a"))
+                  .put("dim3", ImmutableList.of(""))
+                  .put("dim4", "b")
+                  .put("dim5", "a5")
+                  .put("dim6", "4")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2001-01-02")
+                  .put("m1", "5.0")
+                  .put("m2", "5.0")
+                  .put("dim1", "def")
+                  .put("dim2", ImmutableList.of("abc"))
+                  .put("dim3", ImmutableList.of())
+                  .put("dim4", "b")
+                  .put("dim5", "b5")
+                  .put("dim6", "5")
+                  .build(),
+      ImmutableMap.<String, Object>builder()
+                  .put("t", "2001-01-03")
+                  .put("m1", "6.0")
+                  .put("m2", "6.0")
+                  .put("dim1", "abc")
+                  .put("dim4", "b")
+                  .put("dim5", "ab5")
+                  .put("dim6", "6")
+                  .build()
+  );
+
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
@@ -434,6 +528,9 @@ public class TestDataBuilder
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
       RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
+
+  public static final List<InputRow> ROWS_WITH_NUMERIC_DIMS_FOR_UNNEST =
+      RAW_ROWS_FOR_UNNEST.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -811,6 +908,14 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
+    final QueryableIndex unnestIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA_NUMERIC_DIMS)
+        .rows(ROWS_WITH_NUMERIC_DIMS_FOR_UNNEST)
+        .buildMMappedIndex();
+
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
         injector.getInstance(LookupExtractorFactoryContainerProvider.class),
@@ -906,6 +1011,15 @@ public class TestDataBuilder
                    .size(0)
                    .build(),
         userVisitIndex
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.DATASOURCE6)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        unnestIndex
     ).add(
         DataSegment.builder()
                    .dataSource("wikipedia")

@@ -3403,4 +3403,53 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestFirstRowNull()
+  {
+    skipVectorize();
+
+    cannotVectorize();
+    testQuery(
+        "SELECT h FROM druid.unnestnumfoo, UNNEST(MV_TO_ARRAY(dim2)) as unnested (h)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE6),
+                      "dim2",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"abc"},
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{null},
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"abc"},
+            new Object[]{null}
+        )
+    );
+  }
 }
