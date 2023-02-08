@@ -419,12 +419,12 @@ public class DruidOperatorTable implements SqlOperatorTable
   public DruidOperatorTable(
       final Set<SqlAggregator> aggregators,
       final Set<SqlOperatorConversion> operatorConversions,
-      final PlannerOperatorConversionConfig plannerOperatorConversionConfig
+      final PlannerOperatorConfig plannerOperatorConfig
   )
   {
     this.aggregators = new HashMap<>();
     this.operatorConversions = new HashMap<>();
-    Set<String> operationConversionDenySet = ImmutableSet.copyOf(plannerOperatorConversionConfig.getDenyList());
+    Set<String> operationConversionDenySet = ImmutableSet.copyOf(plannerOperatorConfig.getDenyList());
 
     for (SqlAggregator aggregator : aggregators) {
       final OperatorKey operatorKey = OperatorKey.of(aggregator.calciteFunction());
@@ -444,7 +444,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final OperatorKey operatorKey = OperatorKey.of(operatorConversion.calciteOperator());
       if (operationConversionDenySet.contains(operatorKey.name)) {
         LOG.info(
-            "operatorKey '%s' not being added to available operatorConversions as it was found in deny list.",
+            "Operator %s is not available as it is in the deny list.",
             operatorKey.name);
         continue;
       }

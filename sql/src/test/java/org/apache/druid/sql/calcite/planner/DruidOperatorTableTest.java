@@ -70,9 +70,7 @@ public class DruidOperatorTableTest
             inlineOperatorConversion,
             localOperatorConversion
         ),
-        PlannerOperatorConversionConfig.builder()
-            .denyList(ImmutableList.of("extern", "http", "inline", "localfiles"))
-            .build()
+        PlannerOperatorConfig.newInstance(ImmutableList.of("extern", "http", "inline", "localfiles"))
     );
 
     SqlOperatorConversion operatorConversion =
@@ -110,7 +108,7 @@ public class DruidOperatorTableTest
             inlineOperatorConversion,
             localOperatorConversion
         ),
-        new PlannerOperatorConversionConfig()
+        new PlannerOperatorConfig()
     );
 
     SqlOperatorConversion operatorConversion =

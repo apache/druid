@@ -22,19 +22,21 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 
-public class PlannerOperatorConversionConfig
+public class PlannerOperatorConfig
 {
-  private static final List<String> DEFAULT_DENY_LIST = ImmutableList.of();
+  public static final String CONFIG_PATH = "druid.sql.planner.operator";
   @JsonProperty
-  private List<String> denyList = DEFAULT_DENY_LIST;
+  private List<String> denyList;
 
 
+  @NotNull
   public List<String> getDenyList()
   {
-    return denyList;
+    return denyList == null ? ImmutableList.of() : denyList;
   }
 
   @Override
@@ -46,7 +48,7 @@ public class PlannerOperatorConversionConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final PlannerOperatorConversionConfig that = (PlannerOperatorConversionConfig) o;
+    final PlannerOperatorConfig that = (PlannerOperatorConfig) o;
     return denyList.equals(that.denyList);
   }
 
@@ -54,55 +56,21 @@ public class PlannerOperatorConversionConfig
   public int hashCode()
   {
 
-    return Objects.hash(
-        denyList
-    );
+    return Objects.hash(denyList);
   }
 
   @Override
   public String toString()
   {
-    return "PlannerOperatorConversionConfig{" +
+    return "PlannerOperatorConfig{" +
            "denyList=" + denyList +
            '}';
   }
 
-  public static Builder builder()
+  public static PlannerOperatorConfig newInstance(List<String> denyList)
   {
-    return new PlannerOperatorConversionConfig().toBuilder();
-  }
-
-  public Builder toBuilder()
-  {
-    return new Builder(this);
-  }
-
-  /**
-   * Builder for {@link PlannerConfig}, primarily for use in tests to
-   * allow setting options programmatically rather than from the command
-   * line or a properties file. Starts with values from an existing
-   * (typically default) config.
-   */
-  public static class Builder
-  {
-    private List<String> denyList = DEFAULT_DENY_LIST;
-
-    public Builder(PlannerOperatorConversionConfig base)
-    {
-      this.denyList = base.denyList;
-    }
-
-    public Builder denyList(List<String> denyList)
-    {
-      this.denyList = denyList;
-      return this;
-    }
-
-    public PlannerOperatorConversionConfig build()
-    {
-      PlannerOperatorConversionConfig config = new PlannerOperatorConversionConfig();
-      config.denyList = denyList;
-      return config;
-    }
+    PlannerOperatorConfig config = new PlannerOperatorConfig();
+    config.denyList = denyList;
+    return config;
   }
 }
