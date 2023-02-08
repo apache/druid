@@ -62,6 +62,13 @@ jobs:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
 
+      - name: Restore targets
+        id: targets-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ./**/target
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ github.sha }}
+
       - name: Retrieve cached docker image
         id: docker-image-restore
         uses: actions/cache/restore@v3
@@ -72,21 +79,16 @@ jobs:
             ./integration-tests-ex/image/target/env.sh
 
       - name: Maven build
-        if: steps.maven-restore.outputs.cache-hit != 'true'
+        if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-image-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
         run: |
           ./it.sh ci
 
-      - name: Container build
+      - name: Create docker image
         if: steps.docker-image-restore.outputs.cache-hit != 'true'
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
-
-      - name: Save docker container to archive
-        if: steps.docker-image-restore.outputs.cache-hit != 'true'
-        run: |
-          source ./integration-tests-ex/image/target/env.sh
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
