@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -145,6 +146,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         null,
         null,
         true,
+        null,
         null,
         null,
         null,
@@ -327,7 +329,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
         Period lateMessageRejectionPeriod,
         Period earlyMessageRejectionPeriod,
         @Nullable AutoScalerConfig autoScalerConfig,
-        DateTime lateMessageRejectionStartDateTime
+        DateTime lateMessageRejectionStartDateTime,
+        @Nullable IdleConfig idleConfig
     )
     {
       super(
@@ -343,7 +346,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           lateMessageRejectionPeriod,
           earlyMessageRejectionPeriod,
           autoScalerConfig,
-          lateMessageRejectionStartDateTime
+          lateMessageRejectionStartDateTime,
+          idleConfig
       );
     }
   }

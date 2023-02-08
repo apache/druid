@@ -32,6 +32,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -213,6 +214,12 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           entityIterator.close();
         }
       };
+    }
+
+    @Override
+    public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
+    {
+      return null;
     }
 
     @Override
