@@ -18,7 +18,6 @@ set -e
 
 export DRUID_OPERATOR_VERSION=0.0.3
 export KUBECTL="/usr/local/bin/kubectl"
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # Prepare For Druid-Operator
 rm -rf druid-operator

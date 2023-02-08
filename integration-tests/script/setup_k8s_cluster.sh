@@ -16,11 +16,13 @@
 
 set -e
 
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 export INSTALL_K3S_VERSION=v1.21.14+k3s1
+export KUBECONFIG=$HOME/.kube/config
+
 # Launch K8S cluster
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.18.1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 curl -sfL https://get.k3s.io | sh -
-sudo sudo chown $USER: $KUBECONFIG 
-
+mkdir -p $HOME/.kube
+sudo cp /etc/rancher/k3s/k3s.yaml $KUBECONFIG
+sudo chmod 777 $KUBECONFIG
 echo "Setup K8S Cluster Done!"
