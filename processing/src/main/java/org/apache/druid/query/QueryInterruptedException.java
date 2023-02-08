@@ -70,18 +70,6 @@ public class QueryInterruptedException extends QueryException
     super(cause, getErrorCodeFromThrowable(cause), getErrorClassFromThrowable(cause), host);
   }
 
-  @Override
-  public String toString()
-  {
-    return StringUtils.format(
-        "QueryInterruptedException{msg=%s, code=%s, class=%s, host=%s}",
-        getMessage(),
-        getErrorCode(),
-        getErrorClass(),
-        getHost()
-    );
-  }
-
   private static String getErrorCodeFromThrowable(Throwable e)
   {
     if (e instanceof QueryInterruptedException) {
