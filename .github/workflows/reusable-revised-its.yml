@@ -73,7 +73,7 @@ jobs:
         id: docker-restore
         uses: actions/cache/restore@v3
         with:
-          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz-${{ github.sha }}
           path: |
             ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
