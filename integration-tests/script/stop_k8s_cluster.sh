@@ -21,7 +21,15 @@ if ($BUILD_DRUID_CLSUTER); then
   DRUID_HOME=$(dirname `pwd`)
   echo "SET DRUID_HOME: $DRUID_HOME"
 
-  k3s-uninstall.sh
+  minikubeFile="/usr/local/bin/minikube*"
+  minikubeFile2="/usr/local/bin/minikube"
+
+  if [ -f "$minikubeFile" ] || [ -f "$minikubeFile2" ]; then
+    /usr/local/bin/minikube delete
+  else
+    /usr/local/bin/k3s-uninstall.sh
+  fi
+
   sudo rm -rf $DRUID_HOME/tmp
   sudo rm -rf $DRUID_HOME/druid-operator
   docker ps
