@@ -224,10 +224,9 @@ class BaseTemplate:
         pass
 
     def add_depends(self, service, items):
-        if items is None or len(items) == 0:
-            return
-        depends = service.setdefault('depends_on', [])
-        depends += items
+        if items is not None and len(items) > 0:
+            depends = service.setdefault('depends_on', [])
+            depends += items
 
     def define_master_service(self, name, base):
         service = self.define_druid_service(name, base)
