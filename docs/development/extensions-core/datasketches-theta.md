@@ -113,7 +113,7 @@ You can use the constant theta sketch post aggregator to add a Base64-encoded co
 
 Assume you have a datasource with a variety of a variety of users. Using `filters` and `aggregation`, you generate a theta sketch of all `football fans`.  
 
-A third-party provider has provided a constant theta sketch of all `cricket fans` and you want to `INTERSECT` both cricket fans and football fans in a `post-aggregation` stage to identify users who are interested in both `cricket`. The you want to use `thetaSketchEstimate` to calculate the number of unique users.
+A third-party provider has provided a constant theta sketch of all `cricket fans` and you want to `INTERSECT` both cricket fans and football fans in a `post-aggregation` stage to identify users who are interested in both `cricket`. Then you want to use `thetaSketchEstimate` to calculate the number of unique users.
 
 ```json
 {
