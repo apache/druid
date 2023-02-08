@@ -31,6 +31,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -98,6 +99,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
   public IncrementalIndexStorageAdapterTest(String indexType) throws JsonProcessingException
   {
+    NestedDataModule.registerHandlersAndSerde();
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(1_000)

@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -50,7 +51,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -133,7 +133,7 @@ public class ChainedExecutionQueryRunnerTest
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
-    Future resultFuture = Executors.newFixedThreadPool(1).submit(
+    Future resultFuture = Execs.multiThreaded(1, "ChainedExecutionQueryRunnerTest-%d").submit(
         new Runnable()
         {
           @Override
@@ -258,7 +258,7 @@ public class ChainedExecutionQueryRunnerTest
                                   .build();
     final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
-    Future resultFuture = Executors.newFixedThreadPool(1).submit(
+    Future resultFuture = Execs.multiThreaded(1, "ChainedExecutionQueryRunnerTest-%d").submit(
         new Runnable()
         {
           @Override

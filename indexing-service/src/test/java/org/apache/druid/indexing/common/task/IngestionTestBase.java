@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.RegexParseSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
@@ -219,7 +220,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null
+        null,
+        objectMapper
     );
   }
 
@@ -370,24 +372,25 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
+        final TaskConfig config = new TaskConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            null,
+            false,
+            false,
+            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+            null,
+            false,
+            null
+        );
         final TaskToolbox box = new TaskToolbox.Builder()
-            .config(
-                new TaskConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    false,
-                    null,
-                    null,
-                    null,
-                    false,
-                    false,
-                    TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                    null
-                )
-            )
+            .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
             .taskActionClient(taskActionClient)
             .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
@@ -403,7 +406,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .chatHandlerProvider(new NoopChatHandlerProvider())
             .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
             .appenderatorsManager(new TestAppenderatorsManager())
+            .taskLogPusher(null)
+            .attemptId("1")
+            .dirTracker(new TaskStorageDirTracker(config))
             .build();
+
 
         if (task.isReady(box.getTaskActionClient())) {
           return Futures.immediateFuture(task.run(box));

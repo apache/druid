@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.lookup.namespace;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.java.util.common.ISE;
@@ -105,7 +106,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       );
       final long duration = System.nanoTime() - startNs;
       LOG.info(
-          "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
+          "Finished loading %d values (%d bytes) for [%s] in %d ns",
           populateResult.getEntries(),
           populateResult.getBytes(),
           entryId,
@@ -151,7 +152,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final String keyColumn = namespace.getKeyColumn();
 
     return handle.createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
-            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(keyColumn), r1.getString(valueColumn)))
+            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(1), r1.getString(2)))
             .iterator();
   }
 
@@ -160,21 +161,27 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (Strings.isNullOrEmpty(filter)) {
       return StringUtils.format(
           "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
-          keyColumn,
-          valueColumn,
-          table,
-          valueColumn
+          toDoublyQuotedEscapedIdentifier(keyColumn),
+          toDoublyQuotedEscapedIdentifier(valueColumn),
+          toDoublyQuotedEscapedIdentifier(table),
+          toDoublyQuotedEscapedIdentifier(valueColumn)
       );
     }
 
     return StringUtils.format(
         "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
-        keyColumn,
-        valueColumn,
-        table,
+        toDoublyQuotedEscapedIdentifier(keyColumn),
+        toDoublyQuotedEscapedIdentifier(valueColumn),
+        toDoublyQuotedEscapedIdentifier(table),
         filter,
-        valueColumn
+        toDoublyQuotedEscapedIdentifier(valueColumn)
     );
+  }
+
+  @VisibleForTesting
+  public static String toDoublyQuotedEscapedIdentifier(String identifier)
+  {
+    return "\"" + StringUtils.replace(identifier, "\"", "\"\"") + "\"";
   }
 
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> key, JdbcExtractionNamespace namespace)
@@ -208,7 +215,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         handle -> {
           final String query = StringUtils.format(
               "SELECT MAX(%s) FROM %s",
-              tsColumn, table
+              toDoublyQuotedEscapedIdentifier(tsColumn), toDoublyQuotedEscapedIdentifier(table)
           );
           return handle
               .createQuery(query)

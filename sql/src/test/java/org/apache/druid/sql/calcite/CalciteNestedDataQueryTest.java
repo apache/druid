@@ -19,32 +19,29 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -58,33 +55,34 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
-import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "nested";
+  private static final String DATA_SOURCE_MIXED = "nested_mix";
+  private static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
 
   private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "aaa")
+                  .put("string_sparse", "zzz")
                   .put("nest", ImmutableMap.of("x", 100L, "y", 2.02, "z", "300", "mixed", 1L, "mixed2", "1"))
                   .put(
                       "nester",
@@ -107,6 +105,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "ddd")
+                  .put("string_sparse", "yyy")
                   .put("long", 2L)
                   .build(),
       ImmutableMap.<String, Object>builder()
@@ -130,38 +129,55 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "iso", null),
-          DimensionsSpec.builder().setDimensions(
-              ImmutableList.<DimensionSchema>builder()
-                           .add(new StringDimensionSchema("string"))
-                           .add(new NestedDataDimensionSchema("nest"))
-                           .add(new NestedDataDimensionSchema("nester"))
-                           .add(new LongDimensionSchema("long"))
-                           .build()
-          ).build()
-      ));
+  private static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
+      new TimestampSpec("t", "iso", null),
+      DimensionsSpec.builder().setDimensions(
+          ImmutableList.<DimensionSchema>builder()
+                       .add(new NestedDataDimensionSchema("string"))
+                       .add(new NestedDataDimensionSchema("nest"))
+                       .add(new NestedDataDimensionSchema("nester"))
+                       .add(new NestedDataDimensionSchema("long"))
+                       .add(new NestedDataDimensionSchema("string_sparse"))
+                       .build()
+      ).build(),
+      null
+  );
 
+  private static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
+      new TimestampSpec("t", "iso", null),
+      DimensionsSpec.builder().setDimensions(
+          ImmutableList.<DimensionSchema>builder()
+                       .add(new StringDimensionSchema("string"))
+                       .add(new NestedDataDimensionSchema("nest"))
+                       .add(new NestedDataDimensionSchema("nester"))
+                       .add(new LongDimensionSchema("long"))
+                       .add(new StringDimensionSchema("string_sparse"))
+                       .build()
+      ).build(),
+      null
+  );
   private static final List<InputRow> ROWS =
-      RAW_ROWS.stream().map(raw -> CalciteTests.createRow(raw, PARSER)).collect(Collectors.toList());
+      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
 
-  private ExprMacroTable macroTable;
+  private static final List<InputRow> ROWS_MIX =
+      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    return Iterables.concat(
-        super.getJacksonModules(),
-        NestedDataModule.getJacksonModulesList()
-    );
+    super.configureGuice(builder);
+    builder.addModule(new NestedDataModule());
   }
 
+  @SuppressWarnings("resource")
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
+  ) throws IOException
   {
     NestedDataModule.registerHandlersAndSerde();
-    macroTable = createMacroTable();
     final QueryableIndex index =
         IndexBuilder.create()
                     .tmpDir(temporaryFolder.newFolder())
@@ -171,14 +187,79 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .withMetrics(
                                 new CountAggregatorFactory("cnt")
                             )
-                            .withDimensionsSpec(PARSER)
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
                             .withRollup(false)
                             .build()
                     )
                     .rows(ROWS)
                     .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final QueryableIndex indexMix11 =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(ROWS)
+                    .buildMMappedIndex();
+
+    final QueryableIndex indexMix12 =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(ROWS_MIX)
+                    .buildMMappedIndex();
+
+    final QueryableIndex indexMix21 =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withDimensionsSpec(JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(ROWS_MIX)
+                    .buildMMappedIndex();
+
+    final QueryableIndex indexMix22 =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withDimensionsSpec(ALL_JSON_COLUMNS.getDimensionsSpec())
+                            .withRollup(false)
+                            .build()
+                    )
+                    .rows(ROWS)
+                    .buildMMappedIndex();
+
+    SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    walker.add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -187,19 +268,45 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                    .size(0)
                    .build(),
         index
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexMix11
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexMix12
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED_2)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexMix21
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_MIXED_2)
+                   .interval(index.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexMix22
     );
-  }
 
-  @Override
-  public ExprMacroTable createMacroTable()
-  {
-    ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
-    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
-    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(CalciteTests.INJECTOR.getInstance(clazz));
-    }
-    exprMacros.add(CalciteTests.INJECTOR.getInstance(LookupExprMacro.class));
-    return new ExprMacroTable(exprMacros);
+    return walker;
   }
 
   @Test
@@ -382,6 +489,290 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeLong()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L},
+            new Object[]{2L, 2L},
+            new Object[]{3L, 1L},
+            new Object[]{4L, 1L},
+            new Object[]{5L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeString()
+  {
+    testQuery(
+        "SELECT "
+        + "string, "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"aaa", 2L},
+            new Object[]{"bbb", 1L},
+            new Object[]{"ccc", 1L},
+            new Object[]{"ddd", 2L},
+            new Object[]{"eee", 1L}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeLongMixed1()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L},
+            new Object[]{2L, 4L},
+            new Object[]{3L, 2L},
+            new Object[]{4L, 2L},
+            new Object[]{5L, 4L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1()
+  {
+    testQuery(
+        "SELECT "
+        + "string, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"aaa", 4L},
+            new Object[]{"bbb", 2L},
+            new Object[]{"ccc", 2L},
+            new Object[]{"ddd", 4L},
+            new Object[]{"eee", 2L}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1Sparse()
+  {
+    testQuery(
+        "SELECT "
+        + "string_sparse, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string_sparse", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{"yyy", 2L},
+            new Object[]{"zzz", 2L}
+        ),
+        RowSignature.builder()
+                    .add("string_sparse", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeLongMixed2()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L},
+            new Object[]{2L, 4L},
+            new Object[]{3L, 2L},
+            new Object[]{4L, 2L},
+            new Object[]{5L, 4L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed2()
+  {
+    testQuery(
+        "SELECT "
+        + "string, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"aaa", 4L},
+            new Object[]{"bbb", 2L},
+            new Object[]{"ccc", 2L},
+            new Object[]{"ddd", 4L},
+            new Object[]{"eee", 2L}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed2Sparse()
+  {
+    testQuery(
+        "SELECT "
+        + "string_sparse, "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string_sparse", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{"yyy", 2L},
+            new Object[]{"zzz", 2L}
+        ),
+        RowSignature.builder()
+                    .add("string_sparse", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
@@ -1952,6 +2343,35 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testReturningAndSumPathWithMaths()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.x' RETURNING BIGINT) / 100) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"v1\" / 100)", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.LONG)
+                  )
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testReturningAndSumPathDouble()
   {
     testQuery(
@@ -2004,6 +2424,35 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testReturningAndSumPathDecimalWithMaths()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(JSON_VALUE(nest, '$.x' RETURNING DECIMAL) / 100.0) "
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(\"v1\" / 100.0)", ColumnType.DOUBLE),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.DOUBLE)
+                  )
+                  .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "v0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4.0}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
   public void testReturningAndSumPathStrings()
   {
     testQuery(
@@ -2048,7 +2497,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 "v0",
                                 "json_keys(\"nester\",'$')",
                                 ColumnType.STRING_ARRAY,
-                                macroTable
+                                queryFramework().macroTable()
                             )
                         )
                         .setDimensions(
@@ -2090,7 +2539,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 "v0",
                                 "json_keys(\"nester\",'$.')",
                                 ColumnType.STRING_ARRAY,
-                                macroTable
+                                queryFramework().macroTable()
                             )
                         )
                         .setDimensions(
@@ -2132,7 +2581,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 "v0",
                                 "json_keys(\"nest\",'$')",
                                 ColumnType.STRING_ARRAY,
-                                macroTable
+                                queryFramework().macroTable()
                             )
                         )
                         .setDimensions(
@@ -2175,7 +2624,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 "v0",
                                 "json_paths(\"nester\")",
                                 ColumnType.STRING_ARRAY,
-                                macroTable
+                                queryFramework().macroTable()
                             )
                         )
                         .setDimensions(
@@ -2189,7 +2638,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"[\"$\"]", 5L},
-            new Object[]{"[\"$.n.x\",\"$.array[0]\",\"$.array[1]\"]", 2L}
+            new Object[]{"[\"$.array[1]\",\"$.array[0]\",\"$.n.x\"]", 2L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING_ARRAY)
@@ -2317,7 +2766,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           "v0",
                           "json_object('n',\"v1\",'x',\"v2\")",
                           NestedDataComplexTypeSerde.TYPE,
-                          macroTable
+                          queryFramework().macroTable()
                       ),
                       new NestedFieldVirtualColumn(
                           "nester",
@@ -2366,7 +2815,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           "v0",
                           "json_value(json_object('x',\"v1\"),'$.x', 'LONG')",
                           ColumnType.LONG,
-                          macroTable
+                          queryFramework().macroTable()
                       ),
                       new NestedFieldVirtualColumn(
                           "nest",
@@ -2401,6 +2850,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testToJsonAndParseJson()
   {
+    ExprMacroTable macroTable = queryFramework().macroTable();
     testQuery(
         "SELECT string, TRY_PARSE_JSON(TO_JSON_STRING(string)), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
         + "FROM druid.nested",

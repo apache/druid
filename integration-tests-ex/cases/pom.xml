@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -122,22 +122,18 @@
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-core</artifactId>
-            <version>3.2.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-api</artifactId>
-            <version>3.2.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-transport-netty</artifactId>
-            <version>3.2.11</version>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java</artifactId>
-            <version>3.2.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.github.docker-java</groupId>
@@ -150,6 +146,63 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-core</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>${com.google.apis.client.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-storage</artifactId>
+            <version>${com.google.apis.storage.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.api-client</groupId>
+                    <artifactId>google-api-client</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-storage</artifactId>
+            <version>8.6.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client</artifactId>
+            <version>${com.google.apis.client.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-jackson2</artifactId>
+            <version>${com.google.apis.client.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.version}</version>
@@ -159,7 +212,7 @@
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
         </dependency>
-       <dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>mysql-metadata-storage</artifactId>
             <version>${project.parent.version}</version>
@@ -167,6 +220,18 @@
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-azure-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>${aws.sdk.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -184,8 +249,33 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-google-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+         <dependency>
+             <groupId>org.apache.druid</groupId>
+             <artifactId>druid-gcp-common</artifactId>
+             <version>${project.parent.version}</version>
+             <scope>provided</scope>
+         </dependency>
+
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-sql</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
             <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-catalog</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -214,6 +304,15 @@
             <groupId>pl.pragmatists</groupId>
             <artifactId>JUnitParams</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-client</artifactId>
+            <version>5.4.0</version>
         </dependency>
     </dependencies>
 
@@ -276,13 +375,22 @@
         </properties>
         </profile>
         <profile>
-          <id>IT-InputFormat</id>
+          <id>IT-InputSource</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
         <properties>
-          <it.category>InputFormat</it.category>
+          <it.category>InputSource</it.category>
         </properties>
+        </profile>
+        <profile>
+            <id>IT-InputFormat</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>InputFormat</it.category>
+            </properties>
         </profile>
         <profile>
             <id>IT-AzureDeepStorage</id>
@@ -300,6 +408,42 @@
             </activation>
             <properties>
                 <it.category>MultiStageQuery</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-MultiStageQueryWithMM</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>MultiStageQueryWithMM</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-Catalog</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>Catalog</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-S3DeepStorage</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>S3DeepStorage</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-GcsDeepStorage</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>GcsDeepStorage</it.category>
             </properties>
         </profile>
         <profile>
@@ -329,8 +473,8 @@
                                 <goal>integration-test</goal>
                             </goals>
                             <configuration>
-                                <!-- our tests are very verbose, let's keep the volume down -->
-                                <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                                <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
+                                <redirectTestOutputToFile>False</redirectTestOutputToFile>
                                 <!-- Can run only one test category per Maven run. -->
                                 <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
                              </configuration>

@@ -60,7 +60,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -147,9 +146,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
     isPrepared = true;
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
+    handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
     final RelDataType parameterTypes = validator.getParameterRowType(validatedQueryNode);
+    handlerContext.hook().captureParameterTypes(parameterTypes);
     final RelDataType returnedRowType;
 
     if (explain != null) {
@@ -292,6 +293,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
     }
 
+    handlerContext.hook().captureBindableRel(bindableRel);
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (explain != null) {
       return planExplanation(bindableRel, false);
@@ -467,6 +469,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   protected PlannerResult planWithDruidConvention() throws ValidationException
   {
     final RelRoot possiblyLimitedRoot = possiblyWrapRootWithOuterLimitFromContext(rootQueryRel);
+    handlerContext.hook().captureQueryRel(possiblyLimitedRoot);
     final QueryMaker queryMaker = buildQueryMaker(possiblyLimitedRoot);
     PlannerContext plannerContext = handlerContext.plannerContext();
     plannerContext.setQueryMaker(queryMaker);
@@ -491,6 +494,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                .plus(rootQueryRel.collation),
         parameterized
     );
+    handlerContext.hook().captureDruidRel(druidRel);
 
     if (explain != null) {
       return planExplanation(druidRel, true);
@@ -537,8 +541,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   @Nullable
   private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
   {
-    Object outerLimitObj = handlerContext.queryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
-    Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
+    Long outerLimit = handlerContext.queryContext().getLong(PlannerContext.CTX_SQL_OUTER_LIMIT);
     if (outerLimit == null) {
       return root;
     }

@@ -34,12 +34,14 @@ public class FileWriteOutBytesTest
 {
   private FileWriteOutBytes fileWriteOutBytes;
   private FileChannel mockFileChannel;
+  private File mockFile;
 
   @Before
   public void setUp()
   {
     mockFileChannel = EasyMock.mock(FileChannel.class);
-    fileWriteOutBytes = new FileWriteOutBytes(EasyMock.mock(File.class), mockFileChannel);
+    mockFile = EasyMock.mock(File.class);
+    fileWriteOutBytes = new FileWriteOutBytes(mockFile, mockFileChannel);
   }
 
   @Test
@@ -191,5 +193,19 @@ public class FileWriteOutBytesTest
     destination.position(0);
     Assert.assertThrows(IAE.class, () -> fileWriteOutBytes.readFully(5000, destination));
     EasyMock.verify(mockFileChannel);
+  }
+
+  @Test
+  public void testIOExceptionHasFileInfo() throws Exception
+  {
+    IOException cause = new IOException("Too many bytes");
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class))).andThrow(cause);
+    EasyMock.expect(mockFile.getAbsolutePath()).andReturn("/tmp/file");
+    EasyMock.replay(mockFileChannel, mockFile);
+    fileWriteOutBytes.writeInt(10);
+    fileWriteOutBytes.write(new byte[30]);
+    IOException actual = Assert.assertThrows(IOException.class, () -> fileWriteOutBytes.flush());
+    Assert.assertEquals(String.valueOf(actual.getCause()), actual.getCause(), cause);
+    Assert.assertEquals(actual.getMessage(), actual.getMessage(), "Failed to write to file: /tmp/file. Current size of file: 34");
   }
 }

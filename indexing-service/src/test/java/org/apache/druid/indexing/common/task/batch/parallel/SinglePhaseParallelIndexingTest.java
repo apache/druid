@@ -48,7 +48,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -239,7 +239,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         : getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", inputInterval, Segments.ONLY_VISIBLE);
     Assert.assertFalse(newSegments.isEmpty());
     allSegments.addAll(newSegments);
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
 
     final Interval timelineInterval = inputInterval == null ? Intervals.ETERNITY : inputInterval;
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(
@@ -435,6 +435,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList()
     );
     Map<String, Object> actualReports = task.doGetLiveReports("full");
+    final long processedBytes = useInputFormatApi ? 335 : 0;
     Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
@@ -451,11 +452,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(
-            10,
-            1,
-            1,
-            1)
+        new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1)
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -490,12 +487,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
     Map<String, Object> actualReports = executedTask.doGetLiveReports("full");
 
-    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(
-        10,
-        1,
-        1,
-        1
-    );
+    final long processedBytes = useInputFormatApi ? 335 : 0;
+    RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, processedBytes, 1, 1, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -516,7 +509,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),
           expectedUnparseableEvents,
-          new RowIngestionMetersTotals(0, 0, 0, 0),
+          new RowIngestionMetersTotals(0, 0, 0, 0, 0),
           expectedTotals
       );
     } else {
@@ -530,7 +523,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     }
 
     compareTaskReports(expectedReports, actualReports);
-    System.out.println(actualReports);
   }
 
   @Test
@@ -604,7 +596,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final Collection<DataSegment> newSegments =
         getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(newSegments.containsAll(oldSegments));
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(newSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(newSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
@@ -661,8 +653,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final Collection<DataSegment> afterAppendSegments =
         getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", interval, Segments.ONLY_VISIBLE);
     Assert.assertTrue(afterAppendSegments.containsAll(beforeAppendSegments));
-    final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline
-        .forSegments(afterAppendSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(afterAppendSegments);
     final Set<DataSegment> visibles = timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
     Assert.assertEquals(new HashSet<>(afterAppendSegments), visibles);
   }
@@ -883,17 +874,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       Granularity segmentGranularity,
       boolean appendToExisting,
       boolean splittableInputSource
-  )
-  {
-    return newTask(interval, segmentGranularity, appendToExisting, splittableInputSource, false);
-  }
-
-  private ParallelIndexSupervisorTask newTask(
-      @Nullable Interval interval,
-      Granularity segmentGranularity,
-      boolean appendToExisting,
-      boolean splittableInputSource,
-      boolean isReplace
   )
   {
     return newTask(

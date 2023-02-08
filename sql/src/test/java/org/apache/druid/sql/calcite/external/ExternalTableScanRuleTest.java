@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -38,6 +37,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Collections;
 
 public class ExternalTableScanRuleTest
 {
@@ -62,7 +63,8 @@ public class ExternalTableScanRuleTest
             )
         ),
         engine,
-        new QueryContext()
+        Collections.emptyMap(),
+        CalciteTests.createJoinableFactoryWrapper()
     );
     plannerContext.setQueryMaker(
         engine.buildQueryMakerForSelect(EasyMock.createMock(RelRoot.class), plannerContext)

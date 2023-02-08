@@ -19,19 +19,28 @@
 
 package org.apache.druid.storage.local;
 
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that its not visible
+ * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
  * to the users of this class.
  */
 public class LocalFileStorageConnector implements StorageConnector
@@ -51,18 +60,30 @@ public class LocalFileStorageConnector implements StorageConnector
     return fileWithBasePath(path).exists();
   }
 
-  /**
-   * Reads the file present as basePath + path. Will throw an IO exception in case the file is not present.
-   * Closing of the stream is the responsibility of the caller.
-   *
-   * @param path
-   * @return
-   * @throws IOException
-   */
   @Override
   public InputStream read(String path) throws IOException
   {
     return Files.newInputStream(fileWithBasePath(path).toPath());
+  }
+
+  @Override
+  public InputStream readRange(String path, long from, long size) throws IOException
+  {
+    if (!pathExists(path)) {
+      throw new FileNotFoundException("Unable to find file " + fileWithBasePath(path).toPath() + " for reading");
+    }
+    long length = fileWithBasePath(path).length();
+    if (from < 0 || size < 0 || (from + size) > length) {
+      throw new IAE(
+          "Invalid arguments for reading %s. from = %d, readSize = %d, fileSize = %d",
+          fileWithBasePath(path).toPath(),
+          from,
+          size,
+          length
+      );
+    }
+    FileChannel fileChannel = FileChannel.open(fileWithBasePath(path).toPath(), StandardOpenOption.READ);
+    return new BoundedInputStream(Channels.newInputStream(fileChannel.position(from)), size);
   }
 
   /**
@@ -109,6 +130,23 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
+  }
+
+  @Override
+  public List<String> listDir(String dirName)
+  {
+    File directory = fileWithBasePath(dirName);
+    if (!directory.exists()) {
+      throw new IAE("No directory exists on path [%s]", dirName);
+    }
+    if (!directory.isDirectory()) {
+      throw new IAE("Cannot list contents of [%s] since it is not a directory", dirName);
+    }
+    File[] files = directory.listFiles();
+    if (files == null) {
+      throw new ISE("Unable to fetch the file list from the path [%s]", dirName);
+    }
+    return Arrays.stream(files).map(File::getName).collect(Collectors.toList());
   }
 
   public File getBasePath()

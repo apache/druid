@@ -24,16 +24,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
@@ -41,13 +41,14 @@ import org.apache.druid.server.coordinator.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -78,7 +79,7 @@ public class CoordinatorSimulationBuilder
           )
       );
 
-  private BalancerStrategyFactory balancerStrategyFactory;
+  private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig =
       CoordinatorDynamicConfig.builder()
                               .withUseBatchedSegmentSampler(true)
@@ -94,9 +95,9 @@ public class CoordinatorSimulationBuilder
    * <p>
    * Default: "cost" ({@link CostBalancerStrategyFactory})
    */
-  public CoordinatorSimulationBuilder withBalancer(BalancerStrategyFactory strategyFactory)
+  public CoordinatorSimulationBuilder withBalancer(String balancerStrategy)
   {
-    this.balancerStrategyFactory = strategyFactory;
+    this.balancerStrategy = balancerStrategy;
     return this;
   }
 
@@ -175,35 +176,28 @@ public class CoordinatorSimulationBuilder
     final TestServerInventoryView serverInventoryView = new TestServerInventoryView();
     servers.forEach(serverInventoryView::addServer);
 
-    final TestSegmentsMetadataManager segmentManager = new TestSegmentsMetadataManager();
-    if (segments != null) {
-      segments.forEach(segmentManager::addSegment);
-    }
-
-    final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
-    datasourceRules.forEach(
-        (datasource, rules) ->
-            ruleManager.overrideRule(datasource, rules, null)
-    );
-
     final Environment env = new Environment(
         serverInventoryView,
-        segmentManager,
-        ruleManager,
         dynamicConfig,
         loadImmediately,
         autoSyncInventory
     );
 
+    if (segments != null) {
+      segments.forEach(env.segmentManager::addSegment);
+    }
+    datasourceRules.forEach(
+        (datasource, rules) ->
+            env.ruleManager.overrideRule(datasource, rules, null)
+    );
+
     // Build the coordinator
     final DruidCoordinator coordinator = new DruidCoordinator(
         env.coordinatorConfig,
-        new ZkPathsConfig(),
         env.jacksonConfigManager,
         env.segmentManager,
         env.coordinatorInventoryView,
         env.ruleManager,
-        () -> null,
         env.serviceEmitter,
         env.executorFactory,
         null,
@@ -213,15 +207,33 @@ public class CoordinatorSimulationBuilder
         Collections.emptySet(),
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
-        balancerStrategyFactory != null ? balancerStrategyFactory
-                                        : new CostBalancerStrategyFactory(),
+        createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        OBJECT_MAPPER,
-        ZkEnablementConfig.ENABLED
+        OBJECT_MAPPER
     );
 
     return new SimulationImpl(coordinator, env);
+  }
+
+  private BalancerStrategyFactory createBalancerStrategy(Environment env)
+  {
+    if (balancerStrategy == null) {
+      return new CostBalancerStrategyFactory();
+    }
+
+    switch (balancerStrategy) {
+      case "cost":
+        return new CostBalancerStrategyFactory();
+      case "cachingCost":
+        return buildCachingCostBalancerStrategy(env);
+      case "diskNormalized":
+        return new DiskNormalizedCostBalancerStrategyFactory();
+      case "random":
+        return new RandomBalancerStrategyFactory();
+      default:
+        throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
+    }
   }
 
   private BalancerStrategyFactory buildCachingCostBalancerStrategy(Environment env)
@@ -309,7 +321,7 @@ public class CoordinatorSimulationBuilder
           !env.autoSyncInventory,
           "Cannot invoke syncInventoryView as simulation is running in auto-sync mode."
       );
-      env.coordinatorInventoryView.sync(env.historicalInventoryView);
+      env.coordinatorInventoryView.sync(env.inventory);
     }
 
     @Override
@@ -346,6 +358,26 @@ public class CoordinatorSimulationBuilder
       }
     }
 
+    @Override
+    public void removeServer(DruidServer server)
+    {
+      env.inventory.removeServer(server);
+    }
+
+    @Override
+    public void addServer(DruidServer server)
+    {
+      env.inventory.addServer(server);
+    }
+
+    @Override
+    public void addSegments(List<DataSegment> segments)
+    {
+      if (segments != null) {
+        segments.forEach(env.segmentManager::addSegment);
+      }
+    }
+
     private void verifySimulationRunning()
     {
       if (!running.get()) {
@@ -360,9 +392,9 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
-    public List<ServiceMetricEvent> getMetricEvents()
+    public MetricsVerifier getMetricsVerifier()
     {
-      return new ArrayList<>(env.serviceEmitter.getMetricEvents());
+      return env.serviceEmitter;
     }
   }
 
@@ -372,24 +404,35 @@ public class CoordinatorSimulationBuilder
   private static class Environment
   {
     private final Lifecycle lifecycle = new Lifecycle("coord-sim");
-
-    // Executors
-    private final ExecutorFactory executorFactory;
-
-    private final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
-    private final TestSegmentsMetadataManager segmentManager;
-    private final TestMetadataRuleManager ruleManager;
-    private final TestServerInventoryView historicalInventoryView;
-
-    private final LoadQueueTaskMaster loadQueueTaskMaster;
     private final StubServiceEmitter serviceEmitter
         = new StubServiceEmitter("coordinator", "coordinator");
+    private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig
+        = new AtomicReference<>();
+    private final TestDruidLeaderSelector leaderSelector
+        = new TestDruidLeaderSelector();
+
+    private final ExecutorFactory executorFactory;
+    private final TestSegmentsMetadataManager segmentManager = new TestSegmentsMetadataManager();
+    private final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
+
+    private final LoadQueueTaskMaster loadQueueTaskMaster;
+
+    /**
+     * Represents the current inventory of all servers (typically historicals)
+     * actually present in the cluster.
+     */
+    private final TestServerInventoryView inventory;
+
+    /**
+     * Represents the view of the cluster inventory as seen by the coordinator.
+     * When {@code autoSyncInventory=true}, this is the same as {@link #inventory}.
+     */
     private final TestServerInventoryView coordinatorInventoryView;
 
-    private final AtomicReference<CoordinatorDynamicConfig> dynamicConfig = new AtomicReference<>();
     private final JacksonConfigManager jacksonConfigManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
+
     private final boolean loadImmediately;
     private final boolean autoSyncInventory;
 
@@ -397,16 +440,12 @@ public class CoordinatorSimulationBuilder
 
     private Environment(
         TestServerInventoryView clusterInventory,
-        TestSegmentsMetadataManager segmentManager,
-        TestMetadataRuleManager ruleManager,
         CoordinatorDynamicConfig dynamicConfig,
         boolean loadImmediately,
         boolean autoSyncInventory
     )
     {
-      this.historicalInventoryView = clusterInventory;
-      this.segmentManager = segmentManager;
-      this.ruleManager = ruleManager;
+      this.inventory = clusterInventory;
       this.loadImmediately = loadImmediately;
       this.autoSyncInventory = autoSyncInventory;
 
@@ -414,7 +453,6 @@ public class CoordinatorSimulationBuilder
           .withCoordinatorStartDelay(new Duration(1L))
           .withCoordinatorPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
           .withCoordinatorKillPeriod(new Duration(DEFAULT_COORDINATOR_PERIOD))
-          .withLoadQueuePeonRepeatDelay(new Duration("PT0S"))
           .withLoadQueuePeonType("http")
           .withCoordinatorKillIgnoreDurationToRetain(false)
           .build();
@@ -450,7 +488,7 @@ public class CoordinatorSimulationBuilder
     private void setUp() throws Exception
     {
       EmittingLogger.registerEmitter(serviceEmitter);
-      historicalInventoryView.setUp();
+      inventory.setUp();
       coordinatorInventoryView.setUp();
       lifecycle.start();
       executorFactory.setUp();

@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -42,6 +43,10 @@ public class DistinctKeyCollectorTest
   private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new SortColumn("x", false)), 0);
   private final Comparator<RowKey> comparator = clusterBy.keyComparator();
   private final int numKeys = 500_000;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void test_empty()
@@ -127,11 +132,11 @@ public class DistinctKeyCollectorTest
             // Intentionally empty loop body.
           }
 
-          Assert.assertEquals(DistinctKeyCollector.SMALLEST_MAX_KEYS, collector.getMaxKeys());
+          Assert.assertTrue(DistinctKeyCollector.SMALLEST_MAX_BYTES >= collector.getMaxBytes());
           MatcherAssert.assertThat(
               testName,
-              collector.estimatedRetainedKeys(),
-              Matchers.lessThanOrEqualTo(DistinctKeyCollector.SMALLEST_MAX_KEYS)
+              (int) collector.estimatedRetainedBytes(),
+              Matchers.lessThanOrEqualTo(DistinctKeyCollector.SMALLEST_MAX_BYTES)
           );
 
           // Don't use verifyCollector, since this collector is downsampled so aggressively that it can't possibly
@@ -230,8 +235,7 @@ public class DistinctKeyCollectorTest
       final NavigableMap<RowKey, List<Integer>> sortedKeyWeights
   )
   {
-    Assert.assertEquals(collector.getRetainedKeys().size(), collector.estimatedRetainedKeys());
-    MatcherAssert.assertThat(collector.getRetainedKeys().size(), Matchers.lessThan(collector.getMaxKeys()));
+    MatcherAssert.assertThat((int) collector.estimatedRetainedBytes(), Matchers.lessThan(collector.getMaxBytes()));
 
     KeyCollectorTestUtils.verifyCollector(
         collector,

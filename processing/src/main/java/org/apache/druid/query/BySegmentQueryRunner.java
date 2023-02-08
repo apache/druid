@@ -35,7 +35,7 @@ import java.util.List;
  *
  * Note that despite the type parameter "T", this runner may not actually return sequences with type T. They
  * may really be of type {@code Result<BySegmentResultValue<T>>}, if "bySegment" is set. Downstream consumers
- * of the returned sequence must be aware of this, and can use {@link QueryContexts#isBySegment(Query)} to
+ * of the returned sequence must be aware of this, and can use {@link QueryContext#isBySegment()} to
  * know what to expect.
  */
 public class BySegmentQueryRunner<T> implements QueryRunner<T>
@@ -55,7 +55,7 @@ public class BySegmentQueryRunner<T> implements QueryRunner<T>
   @SuppressWarnings("unchecked")
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+    if (queryPlus.getQuery().context().isBySegment()) {
       final Sequence<T> baseSequence = base.run(queryPlus, responseContext);
       final List<T> results = baseSequence.toList();
       return Sequences.simple(

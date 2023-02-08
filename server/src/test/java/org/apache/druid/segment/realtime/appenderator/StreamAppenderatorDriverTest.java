@@ -50,7 +50,9 @@ import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -100,14 +102,21 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private StreamAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   static {
     NullHandling.initializeForTests();
   }
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
-    streamAppenderatorTester = new StreamAppenderatorTester(MAX_ROWS_IN_MEMORY);
+    streamAppenderatorTester =
+        new StreamAppenderatorTester.Builder()
+            .maxRowsInMemory(MAX_ROWS_IN_MEMORY)
+            .basePersistDirectory(temporaryFolder.newFolder())
+            .build();
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
     dataSegmentKiller = createStrictMock(DataSegmentKiller.class);

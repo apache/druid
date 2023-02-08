@@ -23,9 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,7 +65,7 @@ public enum MSQMode
     return value;
   }
 
-  public static void populateDefaultQueryContext(final String modeStr, final QueryContext originalQueryContext)
+  public static void populateDefaultQueryContext(final String modeStr, final Map<String, Object> originalQueryContext)
   {
     MSQMode mode = MSQMode.fromString(modeStr);
     if (mode == null) {
@@ -74,8 +75,7 @@ public enum MSQMode
           Arrays.stream(MSQMode.values()).map(m -> m.value).collect(Collectors.toList())
       );
     }
-    Map<String, Object> defaultQueryContext = mode.defaultQueryContext;
-    log.debug("Populating default query context with %s for the %s multi stage query mode", defaultQueryContext, mode);
-    originalQueryContext.addDefaultParams(defaultQueryContext);
+    log.debug("Populating default query context with %s for the %s multi stage query mode", mode.defaultQueryContext, mode);
+    QueryContexts.addDefaults(originalQueryContext, mode.defaultQueryContext);
   }
 }

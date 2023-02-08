@@ -91,7 +91,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
   @Override
   public boolean doMergeResults(final GroupByQuery query)
   {
-    return query.getContextBoolean(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, true);
+    return query.context().getBoolean(GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, true);
   }
 
   @Override

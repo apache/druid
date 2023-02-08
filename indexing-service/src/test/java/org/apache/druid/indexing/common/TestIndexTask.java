@@ -105,7 +105,7 @@ public class TestIndexTask extends IndexTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox)
+  public TaskStatus runTask(TaskToolbox toolbox)
   {
     return status;
   }

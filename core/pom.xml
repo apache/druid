@@ -29,7 +29,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>25.0.0-SNAPSHOT</version>
+    <version>26.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -190,6 +190,10 @@
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>it.unimi.dsi</groupId>
+      <artifactId>fastutil-extra</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>

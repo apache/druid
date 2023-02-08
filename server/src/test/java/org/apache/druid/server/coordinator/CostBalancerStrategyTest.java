@@ -26,6 +26,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -42,7 +43,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -138,7 +138,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "CostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -152,7 +152,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     BalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
+        MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "CostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
@@ -163,9 +163,6 @@ public class CostBalancerStrategyTest
   public void testComputeJointSegmentCost()
   {
     DateTime referenceTime = DateTimes.of("2014-01-01T00:00:00");
-    CostBalancerStrategy strategy = new CostBalancerStrategy(
-        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
-    );
     double segmentCost = CostBalancerStrategy.computeJointSegmentsCost(
         getSegment(
             100,

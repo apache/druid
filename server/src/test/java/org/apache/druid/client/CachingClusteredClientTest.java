@@ -72,6 +72,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -2297,12 +2298,13 @@ public class CachingClusteredClientTest
       for (Capture queryCapture : queryCaptures) {
         QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
         Query capturedQuery = capturedQueryPlus.getQuery();
+        final QueryContext queryContext = capturedQuery.context();
         if (expectBySegment) {
-          Assert.assertEquals(true, capturedQuery.getQueryContext().getAsBoolean(QueryContexts.BY_SEGMENT_KEY));
+          Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY));
         } else {
           Assert.assertTrue(
-              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY) == null ||
-              capturedQuery.getQueryContext().getAsBoolean(QueryContexts.BY_SEGMENT_KEY).equals(false)
+              queryContext.get(QueryContexts.BY_SEGMENT_KEY) == null ||
+              !queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY)
           );
         }
       }

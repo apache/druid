@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,12 +33,14 @@ import java.util.Map;
 public class ObjectFlattenersTest
 {
   private static final String SOME_JSON = "{\"foo\": null, \"bar\": 1}";
+
+  private static final ObjectFlatteners.FlattenerMaker FLATTENER_MAKER = new JSONFlattenerMaker(true, false);
   private static final ObjectFlattener FLATTENER = ObjectFlatteners.create(
       new JSONPathSpec(
           true,
           ImmutableList.of(new JSONPathFieldSpec(JSONPathFieldType.PATH, "extract", "$.bar"))
       ),
-      new JSONFlattenerMaker(true)
+      FLATTENER_MAKER
   );
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -61,5 +64,14 @@ public class ObjectFlattenersTest
     Map<String, Object> flat = FLATTENER.toMap(node);
     Assert.assertNull(flat.get("foo"));
     Assert.assertEquals(1, flat.get("bar"));
+  }
+
+  @Test
+  public void testToMapNull() throws JsonProcessingException
+  {
+    JsonNode node = OBJECT_MAPPER.readTree("null");
+    Map<String, Object> flat = FLATTENER.toMap(node);
+    Assert.assertNull(FLATTENER_MAKER.toPlainJavaType(node));
+    Assert.assertEquals(ImmutableMap.of(), flat);
   }
 }

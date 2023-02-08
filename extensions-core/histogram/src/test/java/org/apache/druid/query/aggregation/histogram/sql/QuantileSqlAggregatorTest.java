@@ -19,15 +19,15 @@
 
 package org.apache.druid.query.aggregation.histogram.sql;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -48,13 +48,14 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
@@ -64,19 +65,19 @@ import java.util.List;
 
 public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new QuantileSqlAggregator()),
-      ImmutableSet.of()
-  );
-
   @Override
-  public Iterable<? extends Module> getJacksonModules()
+  public void configureGuice(DruidInjectorBuilder builder)
   {
-    return Iterables.concat(super.getJacksonModules(), new ApproximateHistogramDruidModule().getJacksonModules());
+    super.configureGuice(builder);
+    builder.addModule(new ApproximateHistogramDruidModule());
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
+  ) throws IOException
   {
     ApproximateHistogramDruidModule.registerSerde();
 
@@ -101,7 +102,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                                                      .withRollup(false)
                                                      .build()
                                              )
-                                             .rows(CalciteTests.ROWS1)
+                                             .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
@@ -114,12 +115,6 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                    .build(),
         index
     );
-  }
-
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return OPERATOR_TABLE;
   }
 
   @Test

@@ -28,7 +28,6 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
@@ -38,26 +37,26 @@ import java.util.Comparator;
 public class QuantilesSketchKeyCollectorFactory
     implements KeyCollectorFactory<QuantilesSketchKeyCollector, QuantilesSketchKeyCollectorSnapshot>
 {
-  // smallest value with normalized rank error < 0.1%; retain up to ~86k elements
+  // Maximum value of K possible.
   @VisibleForTesting
-  static final int SKETCH_INITIAL_K = 1 << 12;
+  static final int SKETCH_INITIAL_K = 1 << 15;
 
-  private final Comparator<RowKey> comparator;
+  private final Comparator<byte[]> comparator;
 
-  private QuantilesSketchKeyCollectorFactory(final Comparator<RowKey> comparator)
+  private QuantilesSketchKeyCollectorFactory(final Comparator<byte[]> comparator)
   {
     this.comparator = comparator;
   }
 
   static QuantilesSketchKeyCollectorFactory create(final ClusterBy clusterBy)
   {
-    return new QuantilesSketchKeyCollectorFactory(clusterBy.keyComparator());
+    return new QuantilesSketchKeyCollectorFactory(clusterBy.byteKeyComparator());
   }
 
   @Override
   public QuantilesSketchKeyCollector newKeyCollector()
   {
-    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(SKETCH_INITIAL_K, comparator));
+    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(SKETCH_INITIAL_K, comparator), 0);
   }
 
   @Override
@@ -78,8 +77,8 @@ public class QuantilesSketchKeyCollectorFactory
   public QuantilesSketchKeyCollectorSnapshot toSnapshot(QuantilesSketchKeyCollector collector)
   {
     final String encodedSketch =
-        StringUtils.encodeBase64String(collector.getSketch().toByteArray(RowKeySerde.INSTANCE));
-    return new QuantilesSketchKeyCollectorSnapshot(encodedSketch);
+        StringUtils.encodeBase64String(collector.getSketch().toByteArray(ByteRowKeySerde.INSTANCE));
+    return new QuantilesSketchKeyCollectorSnapshot(encodedSketch, collector.getAverageKeyLength());
   }
 
   @Override
@@ -87,26 +86,26 @@ public class QuantilesSketchKeyCollectorFactory
   {
     final String encodedSketch = snapshot.getEncodedSketch();
     final byte[] bytes = StringUtils.decodeBase64String(encodedSketch);
-    final ItemsSketch<RowKey> sketch =
-        ItemsSketch.getInstance(Memory.wrap(bytes), comparator, RowKeySerde.INSTANCE);
-    return new QuantilesSketchKeyCollector(comparator, sketch);
+    final ItemsSketch<byte[]> sketch =
+        ItemsSketch.getInstance(Memory.wrap(bytes), comparator, ByteRowKeySerde.INSTANCE);
+    return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 
-  private static class RowKeySerde extends ArrayOfItemsSerDe<RowKey>
+  private static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
   {
-    private static final RowKeySerde INSTANCE = new RowKeySerde();
+    private static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
 
-    private RowKeySerde()
+    private ByteRowKeySerde()
     {
     }
 
     @Override
-    public byte[] serializeToByteArray(final RowKey[] items)
+    public byte[] serializeToByteArray(final byte[][] items)
     {
       int serializedSize = Integer.BYTES * items.length;
 
-      for (final RowKey key : items) {
-        serializedSize += key.array().length;
+      for (final byte[] key : items) {
+        serializedSize += key.length;
       }
 
       final byte[] serializedBytes = new byte[serializedSize];
@@ -114,8 +113,7 @@ public class QuantilesSketchKeyCollectorFactory
       long keyWritePosition = (long) Integer.BYTES * items.length;
 
       for (int i = 0; i < items.length; i++) {
-        final RowKey key = items[i];
-        final byte[] keyBytes = key.array();
+        final byte[] keyBytes = items[i];
 
         writableMemory.putInt((long) Integer.BYTES * i, keyBytes.length);
         writableMemory.putByteArray(keyWritePosition, keyBytes, 0, keyBytes.length);
@@ -128,9 +126,9 @@ public class QuantilesSketchKeyCollectorFactory
     }
 
     @Override
-    public RowKey[] deserializeFromMemory(final Memory mem, final int numItems)
+    public byte[][] deserializeFromMemory(final Memory mem, final int numItems)
     {
-      final RowKey[] keys = new RowKey[numItems];
+      final byte[][] keys = new byte[numItems][];
       long keyPosition = (long) Integer.BYTES * numItems;
 
       for (int i = 0; i < numItems; i++) {
@@ -138,7 +136,7 @@ public class QuantilesSketchKeyCollectorFactory
         final byte[] keyBytes = new byte[keyLength];
 
         mem.getByteArray(keyPosition, keyBytes, 0, keyLength);
-        keys[i] = RowKey.wrap(keyBytes);
+        keys[i] = keyBytes;
 
         keyPosition += keyLength;
       }

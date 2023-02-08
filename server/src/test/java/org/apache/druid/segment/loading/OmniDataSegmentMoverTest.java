@@ -21,16 +21,20 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
+import java.util.Map;
 
 public class OmniDataSegmentMoverTest
 {
@@ -62,6 +66,21 @@ public class OmniDataSegmentMoverTest
     );
   }
 
+  @Test
+  public void testBadSegmentMoverAccessException()
+  {
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+
+    final Injector injector = createInjector(null);
+    final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
+    Assert.assertThrows(
+        "BadSegmentMover must not have been initialized",
+        RuntimeException.class,
+        () -> segmentMover.move(segment, null)
+    );
+  }
+
   private static Injector createInjector(@Nullable DataSegmentMover mover)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
@@ -71,8 +90,29 @@ public class OmniDataSegmentMoverTest
               if (mover != null) {
                 mapBinder.addBinding("sane").toInstance(mover);
               }
+            },
+            binder -> {
+              MapBinder<String, DataSegmentMover> mapBinder = Binders.dataSegmentMoverBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentMover.class);
             }
         )
     );
+  }
+
+  @LazySingleton
+  private static class BadSegmentMover implements DataSegmentMover
+  {
+
+    @Inject
+    BadSegmentMover()
+    {
+      throw new RuntimeException("BadSegmentMover must not have been initialized");
+    }
+
+    @Override
+    public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
+    {
+      return null;
+    }
   }
 }

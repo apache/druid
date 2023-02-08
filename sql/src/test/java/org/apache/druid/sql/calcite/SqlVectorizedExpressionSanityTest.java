@@ -31,13 +31,13 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -60,8 +60,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
@@ -139,6 +141,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
@@ -148,7 +151,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper
     );
   }
 
@@ -181,17 +185,13 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
       throws ValidationException
   {
-    final QueryContext vector = new QueryContext(
-        ImmutableMap.of(
+    final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",
             QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
-        )
     );
-    final QueryContext nonvector = new QueryContext(
-        ImmutableMap.of(
+    final Map<String, Object> nonvector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "false",
             QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
-        )
     );
 
     try (

@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.264
+version: 1.12.317
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -722,7 +722,7 @@ name: Apache Commons Text
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.9
+version: 1.10.0
 libraries:
   - org.apache.commons: commons-text
 notices:
@@ -897,6 +897,16 @@ libraries:
 
 ---
 
+name: kubernetes fabric java client
+license_category: binary
+module: extensions-contrib/kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 5.12.2
+libraries:
+  - io.fabric8: kubernetes-client
+
+---
+
 name: io.prometheus simpleclient_common
 license_category: binary
 module: extensions/druid-kubernetes-extensions
@@ -954,6 +964,16 @@ license_name: Apache License version 2.0
 version: 1.6.2
 libraries:
   - io.swagger: swagger-annotations
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.8.6
+libraries:
+  - com.google.code.gson: gson
 
 ---
 
@@ -1249,7 +1269,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.68.Final
+version: 4.1.86.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1262,6 +1282,7 @@ libraries:
   - io.netty: netty-resolver
   - io.netty: netty-resolver-dns
   - io.netty: netty-transport
+  - io.netty: netty-transport-classes-epoll
   - io.netty: netty-transport-native-epoll
   - io.netty: netty-transport-native-unix-common
 notice: |
@@ -1659,7 +1680,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.0
+version: 5.4.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -3778,7 +3799,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.2.0
+version: 3.3.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3787,7 +3808,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3869,9 +3890,19 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.8.9
 libraries:
   - com.google.code.gson: gson
+
+---
+
+name: j2objc
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -3986,7 +4017,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -4175,7 +4206,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4687,13 +4718,13 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.2.0
+version: 3.3.2
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
       Apache Kafka
-      Copyright 2020 The Apache Software Foundation.
+      Copyright 2022 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -5494,7 +5525,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 2.3.3
+version: 2.12.1
 license_file_path: licenses/bin/d3-array.BSD3
 
 ---
@@ -5504,7 +5535,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.0.12
+version: 2.1.0
 license_file_path: licenses/bin/d3-axis.BSD3
 
 ---
@@ -5514,7 +5545,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-color.BSD3
 
 ---
@@ -5534,7 +5565,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.3.2
+version: 2.0.1
 license_file_path: licenses/bin/d3-interpolate.BSD3
 
 ---
@@ -5544,7 +5575,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 3.2.0
+version: 3.3.0
 license_file_path: licenses/bin/d3-scale.BSD3
 
 ---
@@ -5554,7 +5585,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Mike Bostock
-version: 1.4.0
+version: 2.0.0
 license_file_path: licenses/bin/d3-selection.BSD3
 
 ---
@@ -5653,7 +5684,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.14.24
+version: 0.17.2
 
 ---
 
@@ -5722,7 +5753,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.14.7
+version: 1.15.1
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -5834,6 +5865,16 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 3.3.0
 license_file_path: licenses/bin/import-fresh.MIT
+
+---
+
+name: "internmap"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 1.0.1
+license_file_path: licenses/bin/internmap.ISC
 
 ---
 
@@ -6496,6 +6537,16 @@ license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
+name: "use-sync-external-store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Facebook, Inc. and its affiliates.
+version: 1.2.0
+license_file_path: licenses/bin/use-sync-external-store.MIT
+
+---
+
 name: "value-equal"
 license_category: binary
 module: web-console
@@ -6531,6 +6582,6 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Paul Henschel
-version: 3.7.2
+version: 4.3.2
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

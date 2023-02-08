@@ -74,6 +74,7 @@ public abstract class IngestHandler extends QueryHandler
   {
     super(handlerContext, queryNode, explain);
     this.ingestionGranularity = ingestNode.getPartitionedBy();
+    handlerContext.hook().captureInsert(ingestNode);
   }
 
   protected static SqlNode convertQuery(DruidSqlIngest sqlNode) throws ValidationException
@@ -122,7 +123,7 @@ public abstract class IngestHandler extends QueryHandler
     try {
       PlannerContext plannerContext = handlerContext.plannerContext();
       if (ingestionGranularity != null) {
-        plannerContext.getQueryContext().addSystemParam(
+        plannerContext.queryContextMap().put(
             DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
             plannerContext.getJsonMapper().writeValueAsString(ingestionGranularity)
         );
@@ -134,7 +135,7 @@ public abstract class IngestHandler extends QueryHandler
     super.validate();
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
-    if (handlerContext.queryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+    if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
       throw new ValidationException(
           StringUtils.format(
               "%s cannot be provided with %s.",
@@ -336,7 +337,7 @@ public abstract class IngestHandler extends QueryHandler
           handlerContext.timeZone());
       super.validate();
       if (replaceIntervals != null) {
-        handlerContext.queryContext().addSystemParam(
+        handlerContext.queryContextMap().put(
             DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
             String.join(",", replaceIntervals)
         );

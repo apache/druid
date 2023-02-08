@@ -43,7 +43,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -91,7 +90,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -119,6 +118,8 @@ public class MSQTaskReportTest
     Assert.assertEquals(TASK_ID, report2.getTaskId());
     Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
     Assert.assertNull(report2.getPayload().getStatus().getErrorReport());
+    Assert.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
+    Assert.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
     Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
 
     Yielder<Object[]> yielder = report2.getPayload().getResults().getResultYielder();
@@ -142,7 +143,7 @@ public class MSQTaskReportTest
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -173,13 +174,12 @@ public class MSQTaskReportTest
   }
 
   @Test
-  @Ignore("requires https://github.com/apache/druid/pull/12938")
   public void testWriteTaskReport() throws Exception
   {
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -202,7 +202,9 @@ public class MSQTaskReportTest
 
     final Map<String, TaskReport> reportMap = mapper.readValue(
         reportFile,
-        new TypeReference<Map<String, TaskReport>>() {}
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
     );
 
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);

@@ -39,20 +39,20 @@ import java.util.Objects;
 
 public class JsonInputFormat extends NestedInputFormat
 {
+  public static final String TYPE_KEY = "json";
+
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;
 
   /**
-   *
-   * This parameter indicates whether or not the given InputEntity should be split by lines before parsing it.
+   * Indicates whether or not the given InputEntity should be split by lines before parsing it.
    * If it is set to true, the InputEntity must be split by lines first.
    * If it is set to false, unlike what you could imagine, it means that the InputEntity doesn't have to be split by lines first, but it can still contain multiple lines.
    * A created InputEntityReader from this format will determine by itself if line splitting is necessary.
    *
    * This parameter should always be true for batch ingestion and false for streaming ingestion.
    * For more information, see: https://github.com/apache/druid/pull/10383.
-   *
    */
   private final boolean lineSplittable;
 

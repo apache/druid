@@ -34,7 +34,6 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
@@ -74,6 +74,7 @@ import java.util.stream.Collectors;
 
 class ExpressionTestHelper
 {
+  private static final JoinableFactoryWrapper JOINABLE_FACTORY_WRAPPER = CalciteTests.createJoinableFactoryWrapper();
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       "SELECT 1", // The actual query isn't important for this test
       CalciteTests.createOperatorTable(),
@@ -87,8 +88,9 @@ class ExpressionTestHelper
               NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
           )
       ),
-      null /* Don't need engine */,
-      new QueryContext()
+      null, /* Don't need engine */
+      Collections.emptyMap(),
+      JOINABLE_FACTORY_WRAPPER
   );
 
   private final RowSignature rowSignature;

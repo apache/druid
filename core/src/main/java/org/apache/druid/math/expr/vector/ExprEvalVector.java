@@ -29,7 +29,7 @@ import java.lang.reflect.Array;
  * Result of {@link ExprVectorProcessor#evalVector} which wraps the actual evaluated results of the operation over the
  * input vector(s). Methods to get actual results mirror vectorized value and object selectors.
  *
- * The generic parameter T should be the native java array type of the vector result (long[], String[], etc.)
+ * The generic parameter T should be the native java array type of the vector result (long[], Object[], etc.)
  */
 public abstract class ExprEvalVector<T>
 {

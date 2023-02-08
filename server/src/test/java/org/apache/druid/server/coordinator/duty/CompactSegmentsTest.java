@@ -86,6 +86,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -176,7 +177,7 @@ public class CompactSegmentsTest
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
 
-  private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+  private Map<String, SegmentTimeline> dataSources;
   Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
 
   public CompactSegmentsTest(PartitionsSpec partitionsSpec, BiFunction<Integer, Integer, ShardSpec> shardSpecFactory)

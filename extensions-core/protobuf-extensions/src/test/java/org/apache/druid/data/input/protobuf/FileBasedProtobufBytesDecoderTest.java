@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.google.protobuf.Descriptors;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Rule;
 import org.junit.Test;
@@ -72,5 +74,23 @@ public class FileBasedProtobufBytesDecoderTest
     @SuppressWarnings("unused") // expected to create parser without exception
     FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
     decoder.initDescriptor();
+  }
+
+  @Test
+  public void testEquals()
+  {
+    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder.initDescriptor();
+    Descriptors.Descriptor descriptorA = decoder.getDescriptor();
+
+    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent.Foo");
+    decoder.initDescriptor();
+    Descriptors.Descriptor descriptorB = decoder.getDescriptor();
+
+    EqualsVerifier.forClass(FileBasedProtobufBytesDecoder.class)
+                  .usingGetClass()
+                  .withIgnoredFields("descriptor")
+                  .withPrefabValues(Descriptors.Descriptor.class, descriptorA, descriptorB)
+                  .verify();
   }
 }

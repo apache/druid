@@ -23,7 +23,7 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 
-public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<String[]>
+public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<Object[]>
 {
   public CastToStringVectorProcessor(ExprVectorProcessor<?> delegate)
   {
@@ -31,15 +31,15 @@ public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor
   }
 
   @Override
-  public ExprEvalVector<String[]> evalVector(Expr.VectorInputBinding bindings)
+  public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
   {
     ExprEvalVector<?> result = delegate.evalVector(bindings);
     final Object[] objects = result.getObjectVector();
-    final String[] output = new String[objects.length];
+    final Object[] output = new String[objects.length];
     for (int i = 0; i < objects.length; i++) {
       output[i] = Evals.asString(objects[i]);
     }
-    return new ExprEvalStringVector(output);
+    return new ExprEvalObjectVector(output);
   }
 
   @Override

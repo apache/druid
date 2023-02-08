@@ -48,10 +48,21 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testBalancingWithSyncedInventory()
+  public void testBalancingDoesNotOverReplicate()
   {
-    // maxSegmentsToMove = 10, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 10);
+    testBalancingWithAutoSyncInventory(true);
+  }
+
+  @Test
+  public void testBalancingWithStaleViewDoesNotOverReplicate()
+  {
+    testBalancingWithAutoSyncInventory(false);
+  }
+
+  private void testBalancingWithAutoSyncInventory(boolean autoSyncInventory)
+  {
+    // maxSegmentsToMove = 10, unlimited load queue, no replication
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
 
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
@@ -60,13 +71,16 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withDynamicConfig(dynamicConfig)
-                             .withAutoInventorySync(true)
+                             .withAutoInventorySync(autoSyncInventory)
                              .build();
 
     // Put all the segments on histT11
     segments.forEach(historicalT11::addDataSegment);
 
     startSimulation(sim);
+    if (!autoSyncInventory) {
+      syncInventoryView();
+    }
     runCoordinatorCycle();
 
     // Verify that segments have been chosen for balancing
@@ -77,6 +91,38 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     // Verify that segments have now been balanced out
     Assert.assertEquals(5, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
+    verifyDatasourceIsFullyLoaded(datasource);
+  }
+
+  @Test
+  public void testDropDoesNotHappenWhenLoadFails()
+  {
+    // maxSegmentsToMove = 10, unlimited load queue, no replication
+    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
+
+    // historicals = 2(T1), replicas = 1(T1)
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withDynamicConfig(dynamicConfig)
+                             .build();
+
+    // Put all the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    startSimulation(sim);
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    // Remove histT12 from cluster so that the move fails
+    removeServer(historicalT12);
+    loadQueuedSegments();
+
+    // Verify that no segment has been loaded or dropped
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(0, historicalT12.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
   }
 

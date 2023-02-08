@@ -23,10 +23,16 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.IAE;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Replaces all {@link SqlDynamicParam} encountered in an {@link SqlNode} tree
@@ -84,6 +90,9 @@ public class SqlParameterizerShuttle extends SqlShuttle
       );
     }
 
+    if (typeName == SqlTypeName.ARRAY) {
+      return createArrayLiteral(paramBinding.value);
+    }
     try {
       // This throws ClassCastException for a DATE parameter given as
       // an Integer. The parameter is left in place and is replaced
@@ -94,5 +103,43 @@ public class SqlParameterizerShuttle extends SqlShuttle
       // suppress
       return param;
     }
+  }
+
+  /**
+   * Convert an ARRAY parameter to the equivalent of the ARRAY[a, b, ...]
+   * syntax. This is not well-supported in the present version of Calcite,
+   * so we have to do a bit of roll-our-own code to create the required
+   * structure. Supports a limited set of member types. Does not attempt
+   * to enforce that all elements have the same type.
+   */
+  private SqlNode createArrayLiteral(Object value)
+  {
+    List<?> list = Arrays.asList((Object[]) value);
+    List<SqlNode> args = new ArrayList<>(list.size());
+    for (Object element : list) {
+      if (element == null) {
+        throw new IAE("An array parameter cannot contain null values");
+      }
+      SqlNode node;
+      if (element instanceof String) {
+        node = SqlLiteral.createCharString((String) element, SqlParserPos.ZERO);
+      } else if (element instanceof Integer || element instanceof Long) {
+        // No direct way to create a literal from an Integer or Long, have
+        // to parse a string, sadly.
+        node = SqlLiteral.createExactNumeric(element.toString(), SqlParserPos.ZERO);
+      } else if (element instanceof Boolean) {
+        node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
+      } else {
+        throw new IAE(
+            "An array parameter does not allow values of type %s",
+            value.getClass().getSimpleName()
+        );
+      }
+      args.add(node);
+    }
+    return SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR.createCall(
+        SqlParserPos.ZERO,
+        args
+    );
   }
 }

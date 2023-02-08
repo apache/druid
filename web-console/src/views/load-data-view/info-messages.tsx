@@ -20,7 +20,8 @@ import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { ExternalLink, LearnMore } from '../../components';
-import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
+import type { DimensionMode, IngestionSpec } from '../../druid-models';
+import { getIngestionDocLink } from '../../druid-models';
 import { getLink } from '../../links';
 import { deepGet, deepSet } from '../../utils';
 
@@ -57,30 +58,37 @@ export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectM
 });
 
 export interface ParserMessageProps {
-  canFlatten: boolean;
+  canHaveNestedData: boolean;
 }
 
 export const ParserMessage = React.memo(function ParserMessage(props: ParserMessageProps) {
-  const { canFlatten } = props;
+  const { canHaveNestedData } = props;
 
   return (
     <FormGroup>
       <Callout>
         <p>
-          Druid requires flat data (non-nested, non-hierarchical). Each row should represent a
-          discrete event.
+          Druid needs to parse data as columns. Determine the format of your data and ensure that
+          the columns are accurately parsed.
         </p>
-        {canFlatten && (
-          <p>
-            If you have nested data, you can{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
-              flatten
-            </ExternalLink>{' '}
-            it here. If the provided flattening capabilities are not sufficient, please pre-process
-            your data before ingesting it into Druid.
-          </p>
+        {canHaveNestedData && (
+          <>
+            <p>
+              If you have nested data, you can ingest it into{' '}
+              <ExternalLink href={`${getLink('DOCS')}/querying/nested-columns.html`}>
+                COMPLEX&lt;json&gt;
+              </ExternalLink>{' '}
+              columns.
+            </p>
+            <p>
+              Alternatively, you can explicitly{' '}
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
+                flatten
+              </ExternalLink>{' '}
+              it here.
+            </p>
+          </>
         )}
-        <p>Ensure that your data appears correctly in a row/column orientation.</p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
       </Callout>
     </FormGroup>

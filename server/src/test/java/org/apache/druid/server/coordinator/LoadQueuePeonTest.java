@@ -90,7 +90,6 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.singleThreaded("test_load_queue_peon-%d"),
         new TestDruidCoordinatorConfig.Builder()
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(Duration.millis(0))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
@@ -206,14 +205,14 @@ public class LoadQueuePeonTest extends CuratorTestBase
     for (final DataSegment segment : segmentToDrop) {
       loadQueuePeon.dropSegment(
           segment,
-          () -> segmentDroppedSignals.get(segment.getId()).countDown()
+          success -> segmentDroppedSignals.get(segment.getId()).countDown()
       );
     }
 
     for (final DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
           segment,
-          () -> segmentLoadedSignals.get(segment.getId()).countDown()
+          success -> segmentLoadedSignals.get(segment.getId()).countDown()
       );
     }
 
@@ -281,7 +280,6 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new TestDruidCoordinatorConfig.Builder()
             .withLoadTimeoutDelay(new Duration(1))
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
@@ -292,14 +290,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-          }
-        }
+        success -> segmentLoadedSignal.countDown()
     );
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
@@ -325,11 +316,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
-        // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
+        // The timeout here was set to 1ms, when this test was acting flakey.  A cursory glance makes me wonder if
+        // there's a race where the timeout actually happens before other code can run.  1ms timeout seems aggressive.
+        // 100ms is a great price to pay if it removes the flakeyness
         new TestDruidCoordinatorConfig.Builder()
-            .withLoadTimeoutDelay(new Duration(1))
+            .withLoadTimeoutDelay(new Duration(100))
             .withCoordinatorKillMaxSegments(10)
-            .withLoadQueuePeonRepeatDelay(new Duration("PT1s"))
             .withCoordinatorKillIgnoreDurationToRetain(false)
             .build()
     );
@@ -359,14 +351,9 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     loadQueuePeon.loadSegment(
         segment,
-        new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-            segmentLoadedSignal.countDown();
-            delayedSegmentLoadedSignal.countDown();
-          }
+        success -> {
+          segmentLoadedSignal.countDown();
+          delayedSegmentLoadedSignal.countDown();
         }
     );
 

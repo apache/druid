@@ -129,12 +129,12 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("json_paths(nest)", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.y", "$.z", "$.x"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x", "$.y", "$.z"}, (Object[]) eval.value());
 
     expr = Parser.parse("json_paths(nester)", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.x[1]", "$.x[2]", "$.y.b", "$.y.a"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.y.a", "$.x[1]", "$.y.b", "$.x[2]"}, (Object[]) eval.value());
   }
 
   @Test

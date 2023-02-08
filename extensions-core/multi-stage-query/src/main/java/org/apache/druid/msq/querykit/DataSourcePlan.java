@@ -51,6 +51,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -67,6 +68,16 @@ import java.util.stream.Collectors;
  */
 public class DataSourcePlan
 {
+  /**
+   * A map with {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} set to null, so we can clear it from the context
+   * of subqueries.
+   */
+  private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
+
+  static {
+    CONTEXT_MAP_NO_SEGMENT_GRANULARITY.put(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, null);
+  }
+
   private final DataSource newDataSource;
   private final List<InputSpec> inputSpecs;
   private final IntSet broadcastInputs;
@@ -247,7 +258,10 @@ public class DataSourcePlan
   {
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
-        dataSource.getQuery(),
+
+        // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
+        // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
+        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         queryKit,
         ShuffleSpecFactories.subQueryWithMaxWorkerCount(maxWorkerCount),
         maxWorkerCount,
@@ -275,7 +289,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder();
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);
+    final DataSourceAnalysis analysis = dataSource.getAnalysis();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKit,
@@ -315,9 +329,9 @@ public class DataSourcePlan
           clause.getPrefix(),
           clause.getCondition(),
           clause.getJoinType(),
-
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
-          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null
+          i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
+          dataSource.getJoinableFactoryWrapper()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));

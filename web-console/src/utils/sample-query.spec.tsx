@@ -48,13 +48,13 @@ describe('sample-query', () => {
 
     expect(sampleDataToQuery(result).toString()).toEqual(sane`
       SELECT
-        CAST(c0 AS TIMESTAMP) AS "__time",
-        CAST(c1 AS VARCHAR) AS "host",
-        CAST(c2 AS VARCHAR) AS "service",
-        PARSE_JSON(c3) AS "msg"
+        CAST("c0" AS TIMESTAMP) AS "__time",
+        CAST("c1" AS VARCHAR) AS "host",
+        CAST("c2" AS VARCHAR) AS "service",
+        PARSE_JSON("c3") AS "msg"
       FROM (VALUES
       ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '"{\\"type\\":\\"sys\\",\\"swap/free\\":1223334,\\"swap/max\\":3223334}"'),
-      ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '"{\\"type\\":\\"query\\",\\"time\\":1223,\\"bytes\\":2434234}"')) AS t ("c0", "c1", "c2", "c3")
+      ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '"{\\"type\\":\\"query\\",\\"time\\":1223,\\"bytes\\":2434234}"')) AS "t" ("c0", "c1", "c2", "c3")
     `);
   });
 });

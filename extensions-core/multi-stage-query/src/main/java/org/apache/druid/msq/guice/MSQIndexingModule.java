@@ -55,7 +55,10 @@ import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
+import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
@@ -113,13 +116,16 @@ public class MSQIndexingModule implements DruidModule
       RowTooLargeFault.class,
       TaskStartTimeoutFault.class,
       TooManyBucketsFault.class,
+      TooManyClusteredByColumnsFault.class,
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
+      TooManyAttemptsForJob.class,
       UnknownFault.class,
       WorkerFailedFault.class,
+      TooManyAttemptsForWorker.class,
       WorkerRpcFailedFault.class
   );
 
@@ -188,7 +194,7 @@ public class MSQIndexingModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self final Set<NodeRole> nodeRoles)
+  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
       // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected

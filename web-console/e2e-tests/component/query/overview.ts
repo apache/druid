@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { clickButton, clickText } from '../../util/playwright';
 import { extractTable } from '../../util/table';
@@ -30,27 +30,27 @@ export class QueryOverview {
 
   constructor(page: playwright.Page, unifiedConsoleUrl: string) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#query';
+    this.baseUrl = unifiedConsoleUrl + '#workbench';
   }
 
   async runQuery(query: string): Promise<string[][]> {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.query-input textarea');
+    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
     await input.fill(query);
 
     await clickButton(this.page, 'Run');
-    await this.page.waitForSelector('div.query-info');
+    await this.page.waitForSelector('div.result-table-pane');
 
-    return await extractTable(this.page, 'div.query-output div.rt-tr-group', 'div.rt-td');
+    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
   }
 
   async cancelQuery(query: string): Promise<number> {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const input = await this.page.waitForSelector('div.query-input textarea');
+    const input = await this.page.waitForSelector('div.flexible-query-input textarea');
     await input.fill(query);
 
     await Promise.all([

@@ -32,6 +32,7 @@ import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -111,11 +112,14 @@ public class ShuffleDataSegmentPusherTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
         null
     );
     final OverlordClient overlordClient = new NoopOverlordClient();
+    final TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(taskConfig);
     if (LOCAL.equals(intermediateDataStore)) {
-      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
+      intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient, dirTracker);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
       localDeepStore = temporaryFolder.newFolder("localStorage");
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(

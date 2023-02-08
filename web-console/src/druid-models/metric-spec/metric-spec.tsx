@@ -19,10 +19,11 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { filterMap, typeIs } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleHeaderAndRows } from '../../utils/sampler';
 import { guessColumnTypeFromHeaderAndRows } from '../ingestion-spec/ingestion-spec';
 
 export interface MetricSpec {
@@ -78,6 +79,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       // Should the first / last aggregators become usable at ingestion time, reverse the changes made in:
       // https://github.com/apache/druid/pull/10794
       'thetaSketch',
+      'arrayOfDoublesSketch',
       {
         group: 'HLLSketch',
         suggestions: ['HLLSketchBuild', 'HLLSketchMerge'],
@@ -104,6 +106,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       'doubleMax',
       'floatMax',
       'thetaSketch',
+      'arrayOfDoublesSketch',
       'HLLSketchBuild',
       'HLLSketchMerge',
       'quantilesDoublesSketch',
@@ -177,6 +180,47 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         to produce the data that you are ingesting into Druid
       </>
     ),
+  },
+  // arrayOfDoublesSketch
+  {
+    name: 'nominalEntries',
+    type: 'number',
+    defined: typeIs('arrayOfDoublesSketch'),
+    defaultValue: 16384,
+    info: (
+      <>
+        <p>
+          Parameter that determines the accuracy and size of the sketch. Higher k means higher
+          accuracy but more space to store sketches.
+        </p>
+        <p>Must be a power of 2.</p>
+        <p>
+          See the{' '}
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaErrorTable">
+            Theta sketch accuracy
+          </ExternalLink>{' '}
+          for details.
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'metricColumns',
+    type: 'string-array',
+    defined: typeIs('arrayOfDoublesSketch'),
+    info: (
+      <>
+        If building sketches from raw data, an array of names of the input columns containing
+        numeric values to be associated with each distinct key.
+      </>
+    ),
+  },
+  {
+    name: 'numberOfValues',
+    type: 'number',
+    defined: typeIs('arrayOfDoublesSketch'),
+    placeholder: 'metricColumns length or 1',
+    info: <>Number of values associated with each distinct key.</>,
   },
   // HLLSketchBuild & HLLSketchMerge
   {

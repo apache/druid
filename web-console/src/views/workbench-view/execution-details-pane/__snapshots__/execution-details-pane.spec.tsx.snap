@@ -38,7 +38,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
 >
   <div>
     <p>
-      General info for query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb ingesting into "kttm_simple"
+      General info for query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a ingesting into "kttm_simple"
     </p>
     <Memo(ExecutionErrorPane)
       execution={
@@ -50,10 +50,10 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm_simple",
-              "groupId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
-              "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "groupId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
+              "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "resource": Object {
-                "availabilityGroup": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                "availabilityGroup": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -88,21 +88,20 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxParseExceptions": 10,
+                    "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                    "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                    "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
                     "inputFormat": Object {
-                      "featureSpec": Object {},
-                      "flattenSpec": null,
+                      "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
+                      "useJsonNodeReader": false,
                     },
                     "inputSource": Object {
-                      "httpAuthenticationPassword": null,
-                      "httpAuthenticationUsername": null,
                       "type": "http",
                       "uris": Array [
                         "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -161,8 +160,9 @@ PARTITIONED BY ALL",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxParseExceptions": 10,
+                "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "sqlReplaceTimeChunks": "all",
               },
               "sqlTypeNames": Array [
@@ -171,8 +171,9 @@ PARTITIONED BY ALL",
               ],
               "type": "query_controller",
             },
-            "task": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "task": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           },
+          "capacityInfo": undefined,
           "destination": Object {
             "dataSource": "kttm_simple",
             "replaceTimeChunks": Array [
@@ -183,7 +184,7 @@ PARTITIONED BY ALL",
             },
             "type": "dataSource",
           },
-          "duration": 20813,
+          "duration": 7229,
           "engine": "sql-msq-task",
           "error": Object {
             "error": Object {
@@ -193,9 +194,9 @@ PARTITIONED BY ALL",
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           },
-          "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+          "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
@@ -206,21 +207,20 @@ PARTITIONED BY ALL",
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxParseExceptions": 10,
+              "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
               "inputFormat": Object {
-                "featureSpec": Object {},
-                "flattenSpec": null,
+                "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
+                "useJsonNodeReader": false,
               },
               "inputSource": Object {
-                "httpAuthenticationPassword": null,
-                "httpAuthenticationUsername": null,
                 "type": "http",
                 "uris": Array [
                   "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -281,7 +281,7 @@ PARTITIONED BY ALL",
                 "0": Object {
                   "input0": Object {
                     "rows": Array [
-                      200322,
+                      237883,
                     ],
                     "totalFiles": Array [
                       1,
@@ -317,18 +317,16 @@ PARTITIONED BY ALL",
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_0",
+                  "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
-                        "featureSpec": Object {},
-                        "flattenSpec": null,
+                        "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
+                        "useJsonNodeReader": false,
                       },
                       "inputSource": Object {
-                        "httpAuthenticationPassword": null,
-                        "httpAuthenticationUsername": null,
                         "type": "http",
                         "uris": Array [
                           "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -360,9 +358,10 @@ PARTITIONED BY ALL",
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxParseExceptions": 10,
+                        "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                        "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                        "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
@@ -419,16 +418,16 @@ PARTITIONED BY ALL",
                     },
                   ],
                 },
-                "duration": 18414,
+                "duration": 5013,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2022-08-25T18:00:05.539Z",
+                "startTime": "2022-10-31T16:16:24.680Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_1",
+                  "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_1",
                   "input": Array [
                     Object {
                       "stage": 0,
@@ -497,8 +496,12 @@ PARTITIONED BY ALL",
               },
             ],
           },
-          "startTime": 2022-08-25T18:00:03.140Z,
+          "startTime": 2022-10-31T16:16:22.464Z,
           "status": "FAILED",
+          "usageInfo": Object {
+            "pendingTasks": 0,
+            "runningTasks": 2,
+          },
           "warnings": Array [
             Object {
               "error": Object {
@@ -515,14 +518,14 @@ PARTITIONED BY ALL",
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -541,9 +544,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -560,14 +563,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -586,9 +589,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -605,14 +608,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -631,9 +634,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -650,14 +653,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -676,9 +679,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -695,14 +698,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -721,9 +724,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
           ],
         }
@@ -739,10 +742,10 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm_simple",
-              "groupId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
-              "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "groupId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
+              "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "resource": Object {
-                "availabilityGroup": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                "availabilityGroup": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -777,21 +780,20 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxParseExceptions": 10,
+                    "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                    "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                    "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
                     "inputFormat": Object {
-                      "featureSpec": Object {},
-                      "flattenSpec": null,
+                      "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
+                      "useJsonNodeReader": false,
                     },
                     "inputSource": Object {
-                      "httpAuthenticationPassword": null,
-                      "httpAuthenticationUsername": null,
                       "type": "http",
                       "uris": Array [
                         "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -850,8 +852,9 @@ PARTITIONED BY ALL",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxParseExceptions": 10,
+                "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                 "sqlReplaceTimeChunks": "all",
               },
               "sqlTypeNames": Array [
@@ -860,8 +863,9 @@ PARTITIONED BY ALL",
               ],
               "type": "query_controller",
             },
-            "task": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "task": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           },
+          "capacityInfo": undefined,
           "destination": Object {
             "dataSource": "kttm_simple",
             "replaceTimeChunks": Array [
@@ -872,7 +876,7 @@ PARTITIONED BY ALL",
             },
             "type": "dataSource",
           },
-          "duration": 20813,
+          "duration": 7229,
           "engine": "sql-msq-task",
           "error": Object {
             "error": Object {
@@ -882,9 +886,9 @@ PARTITIONED BY ALL",
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           },
-          "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+          "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
@@ -895,21 +899,20 @@ PARTITIONED BY ALL",
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxParseExceptions": 10,
+              "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
               "inputFormat": Object {
-                "featureSpec": Object {},
-                "flattenSpec": null,
+                "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
+                "useJsonNodeReader": false,
               },
               "inputSource": Object {
-                "httpAuthenticationPassword": null,
-                "httpAuthenticationUsername": null,
                 "type": "http",
                 "uris": Array [
                   "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -970,7 +973,7 @@ PARTITIONED BY ALL",
                 "0": Object {
                   "input0": Object {
                     "rows": Array [
-                      200322,
+                      237883,
                     ],
                     "totalFiles": Array [
                       1,
@@ -1006,18 +1009,16 @@ PARTITIONED BY ALL",
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_0",
+                  "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
-                        "featureSpec": Object {},
-                        "flattenSpec": null,
+                        "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
+                        "useJsonNodeReader": false,
                       },
                       "inputSource": Object {
-                        "httpAuthenticationPassword": null,
-                        "httpAuthenticationUsername": null,
                         "type": "http",
                         "uris": Array [
                           "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -1049,9 +1050,10 @@ PARTITIONED BY ALL",
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxParseExceptions": 10,
+                        "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                        "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                        "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
@@ -1108,16 +1110,16 @@ PARTITIONED BY ALL",
                     },
                   ],
                 },
-                "duration": 18414,
+                "duration": 5013,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2022-08-25T18:00:05.539Z",
+                "startTime": "2022-10-31T16:16:24.680Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_1",
+                  "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_1",
                   "input": Array [
                     Object {
                       "stage": 0,
@@ -1186,8 +1188,12 @@ PARTITIONED BY ALL",
               },
             ],
           },
-          "startTime": 2022-08-25T18:00:03.140Z,
+          "startTime": 2022-10-31T16:16:22.464Z,
           "status": "FAILED",
+          "usageInfo": Object {
+            "pendingTasks": 0,
+            "runningTasks": 2,
+          },
           "warnings": Array [
             Object {
               "error": Object {
@@ -1204,14 +1210,14 @@ PARTITIONED BY ALL",
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1230,9 +1236,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -1249,14 +1255,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1275,9 +1281,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -1294,14 +1300,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1320,9 +1326,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -1339,14 +1345,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1365,9 +1371,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
             Object {
               "error": Object {
@@ -1384,14 +1390,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1410,9 +1416,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-              "host": "localhost:8101",
+              "host": "localhost:8091",
               "stageNumber": 0,
-              "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+              "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
             },
           ],
         }
@@ -1471,10 +1477,10 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
               "useLineageBasedSegmentAllocation": true,
             },
             "dataSource": "kttm_simple",
-            "groupId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
-            "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "groupId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
+            "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
             "resource": Object {
-              "availabilityGroup": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "availabilityGroup": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "requiredCapacity": 1,
             },
             "spec": Object {
@@ -1509,21 +1515,20 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
                   "finalizeAggregations": false,
                   "groupByEnableMultiValueUnnesting": false,
                   "maxParseExceptions": 10,
+                  "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                   "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                   "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                  "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                  "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                   "sqlReplaceTimeChunks": "all",
                 },
                 "dataSource": Object {
                   "inputFormat": Object {
-                    "featureSpec": Object {},
-                    "flattenSpec": null,
+                    "assumeNewlineDelimited": false,
                     "keepNullColumns": false,
                     "type": "json",
+                    "useJsonNodeReader": false,
                   },
                   "inputSource": Object {
-                    "httpAuthenticationPassword": null,
-                    "httpAuthenticationUsername": null,
                     "type": "http",
                     "uris": Array [
                       "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -1582,8 +1587,9 @@ PARTITIONED BY ALL",
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxParseExceptions": 10,
+              "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+              "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
               "sqlReplaceTimeChunks": "all",
             },
             "sqlTypeNames": Array [
@@ -1592,8 +1598,9 @@ PARTITIONED BY ALL",
             ],
             "type": "query_controller",
           },
-          "task": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+          "task": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
         },
+        "capacityInfo": undefined,
         "destination": Object {
           "dataSource": "kttm_simple",
           "replaceTimeChunks": Array [
@@ -1604,7 +1611,7 @@ PARTITIONED BY ALL",
           },
           "type": "dataSource",
         },
-        "duration": 20813,
+        "duration": 7229,
         "engine": "sql-msq-task",
         "error": Object {
           "error": Object {
@@ -1614,9 +1621,9 @@ PARTITIONED BY ALL",
             "rootErrorCode": "CannotParseExternalData",
           },
           "host": "localhost",
-          "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+          "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
         },
-        "id": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+        "id": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
         "nativeQuery": Object {
           "columns": Array [
             "agent_type",
@@ -1627,21 +1634,20 @@ PARTITIONED BY ALL",
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxParseExceptions": 10,
+            "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
             "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
             "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-            "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+            "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
             "sqlReplaceTimeChunks": "all",
           },
           "dataSource": Object {
             "inputFormat": Object {
-              "featureSpec": Object {},
-              "flattenSpec": null,
+              "assumeNewlineDelimited": false,
               "keepNullColumns": false,
               "type": "json",
+              "useJsonNodeReader": false,
             },
             "inputSource": Object {
-              "httpAuthenticationPassword": null,
-              "httpAuthenticationUsername": null,
               "type": "http",
               "uris": Array [
                 "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -1702,7 +1708,7 @@ PARTITIONED BY ALL",
               "0": Object {
                 "input0": Object {
                   "rows": Array [
-                    200322,
+                    237883,
                   ],
                   "totalFiles": Array [
                     1,
@@ -1738,18 +1744,16 @@ PARTITIONED BY ALL",
           "stages": Array [
             Object {
               "definition": Object {
-                "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_0",
+                "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_0",
                 "input": Array [
                   Object {
                     "inputFormat": Object {
-                      "featureSpec": Object {},
-                      "flattenSpec": null,
+                      "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
+                      "useJsonNodeReader": false,
                     },
                     "inputSource": Object {
-                      "httpAuthenticationPassword": null,
-                      "httpAuthenticationUsername": null,
                       "type": "http",
                       "uris": Array [
                         "https://static.imply.io/example-data/kttm/kttm-2019-08-25.json.gz",
@@ -1781,9 +1785,10 @@ PARTITIONED BY ALL",
                       "finalizeAggregations": false,
                       "groupByEnableMultiValueUnnesting": false,
                       "maxParseExceptions": 10,
+                      "queryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                       "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                       "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                      "sqlQueryId": "c6bffa9d-43c4-45a0-95f8-0c8c453655fb",
+                      "sqlQueryId": "955fa5a2-0ae6-4912-bc39-cc9fc012de5a",
                       "sqlReplaceTimeChunks": "all",
                     },
                     "dataSource": Object {
@@ -1840,16 +1845,16 @@ PARTITIONED BY ALL",
                   },
                 ],
               },
-              "duration": 18414,
+              "duration": 5013,
               "phase": "FAILED",
               "sort": true,
               "stageNumber": 0,
-              "startTime": "2022-08-25T18:00:05.539Z",
+              "startTime": "2022-10-31T16:16:24.680Z",
               "workerCount": 1,
             },
             Object {
               "definition": Object {
-                "id": "47e8d8a9-80ed-4b71-adcb-44dc5b1dace3_1",
+                "id": "fc6c3715-9211-4f6e-9d7a-a7e6a8e6b297_1",
                 "input": Array [
                   Object {
                     "stage": 0,
@@ -1918,8 +1923,12 @@ PARTITIONED BY ALL",
             },
           ],
         },
-        "startTime": 2022-08-25T18:00:03.140Z,
+        "startTime": 2022-10-31T16:16:22.464Z,
         "status": "FAILED",
+        "usageInfo": Object {
+          "pendingTasks": 0,
+          "runningTasks": 2,
+        },
         "warnings": Array [
           Object {
             "error": Object {
@@ -1936,14 +1945,14 @@ PARTITIONED BY ALL",
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -1962,9 +1971,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-            "host": "localhost:8101",
+            "host": "localhost:8091",
             "stageNumber": 0,
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
           },
           Object {
             "error": Object {
@@ -1981,14 +1990,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -2007,9 +2016,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-            "host": "localhost:8101",
+            "host": "localhost:8091",
             "stageNumber": 0,
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
           },
           Object {
             "error": Object {
@@ -2026,14 +2035,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -2052,9 +2061,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-            "host": "localhost:8101",
+            "host": "localhost:8091",
             "stageNumber": 0,
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
           },
           Object {
             "error": Object {
@@ -2071,14 +2080,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -2097,9 +2106,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-            "host": "localhost:8101",
+            "host": "localhost:8091",
             "stageNumber": 0,
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
           },
           Object {
             "error": Object {
@@ -2116,14 +2125,14 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:251)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:182)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:111)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:148)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:245)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:172)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:164)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:137)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:70)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
 	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:634)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:666)
 	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
 	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
@@ -2142,9 +2151,9 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
 	... 22 more
 ",
-            "host": "localhost:8101",
+            "host": "localhost:8091",
             "stageNumber": 0,
-            "taskId": "query-c6bffa9d-43c4-45a0-95f8-0c8c453655fb-worker0",
+            "taskId": "query-955fa5a2-0ae6-4912-bc39-cc9fc012de5a-worker0",
           },
         ],
       }

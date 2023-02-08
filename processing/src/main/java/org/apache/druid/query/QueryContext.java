@@ -19,235 +19,562 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContexts.Vectorize;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
-
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
 /**
- * Holder for query context parameters. There are 3 ways to set context params today.
- *
- * - Default parameters. These are set mostly via {@link DefaultQueryConfig#context}.
- *   Auto-generated queryId or sqlQueryId are also set as default parameters. These default parameters can
- *   be overridden by user or system parameters.
- * - User parameters. These are the params set by the user. User params override default parameters but
- *   are overridden by system parameters.
- * - System parameters. These are the params set by the Druid query engine for internal use only.
- *
- * You can use {@code getX} methods or {@link #getMergedParams()} to compute the context params
- * merging 3 types of params above.
- *
- * Currently, this class is mainly used for query context parameter authorization,
- * such as HTTP query endpoints or JDBC endpoint. Its usage can be expanded in the future if we
- * want to track user parameters and separate them from others during query processing.
+ * Immutable holder for query context parameters with typed access methods.
+ * Code builds up a map of context values from serialization or during
+ * planning. Once that map is handed to the {@code QueryContext}, that map
+ * is effectively immutable.
+ * <p>
+ * The implementation uses a {@link TreeMap} so that the serialized form of a query
+ * lists context values in a deterministic order. Jackson will call
+ * {@code getContext()} on the query, which will call {@link #asMap()} here,
+ * which returns the sorted {@code TreeMap}.
+ * <p>
+ * The {@code TreeMap} is a mutable class. We'd prefer an immutable class, but
+ * we can choose either ordering or immutability. Since the semantics of the context
+ * is that it is immutable once it is placed in a query. Code should NEVER get the
+ * context map from a query and modify it, even if the actual implementation
+ * allows it.
  */
 public class QueryContext
 {
-  private final Map<String, Object> defaultParams;
-  private final Map<String, Object> userParams;
-  private final Map<String, Object> systemParams;
+  private static final QueryContext EMPTY = new QueryContext(null);
 
-  /**
-   * Cache of params merged.
-   */
-  @Nullable
-  private Map<String, Object> mergedParams;
+  private final Map<String, Object> context;
 
-  public QueryContext()
+  public QueryContext(Map<String, Object> context)
   {
-    this(null);
+    // There is no semantic difference between an empty and a null context.
+    // Ensure that a context always exists to avoid the need to check for
+    // a null context. Jackson serialization will omit empty contexts.
+    this.context = context == null
+        ? Collections.emptyMap()
+        : Collections.unmodifiableMap(new TreeMap<>(context));
   }
 
-  public QueryContext(@Nullable Map<String, Object> userParams)
+  public static QueryContext empty()
   {
-    this(
-        new TreeMap<>(),
-        userParams == null ? new TreeMap<>() : new TreeMap<>(userParams),
-        new TreeMap<>()
-    );
+    return EMPTY;
   }
 
-  private QueryContext(
-      final Map<String, Object> defaultParams,
-      final Map<String, Object> userParams,
-      final Map<String, Object> systemParams
-  )
+  public static QueryContext of(Map<String, Object> context)
   {
-    this.defaultParams = defaultParams;
-    this.userParams = userParams;
-    this.systemParams = systemParams;
-    this.mergedParams = null;
-  }
-
-  private void invalidateMergedParams()
-  {
-    this.mergedParams = null;
+    return new QueryContext(context);
   }
 
   public boolean isEmpty()
   {
-    return defaultParams.isEmpty() && userParams.isEmpty() && systemParams.isEmpty();
+    return context.isEmpty();
   }
 
-  public void addDefaultParam(String key, Object val)
+  public Map<String, Object> asMap()
   {
-    invalidateMergedParams();
-    defaultParams.put(key, val);
-  }
-
-  public void addDefaultParams(Map<String, Object> defaultParams)
-  {
-    invalidateMergedParams();
-    this.defaultParams.putAll(defaultParams);
-  }
-
-  public void addSystemParam(String key, Object val)
-  {
-    invalidateMergedParams();
-    this.systemParams.put(key, val);
-  }
-
-  public Object removeUserParam(String key)
-  {
-    invalidateMergedParams();
-    return userParams.remove(key);
+    return context;
   }
 
   /**
-   * Returns only the context parameters the user sets.
-   * The returned map does not include the parameters that have been removed via {@link #removeUserParam}.
-   *
-   * Callers should use {@code getX} methods or {@link #getMergedParams()} instead to use the whole context params.
+   * Check if the given key is set. If the client will then fetch the value,
+   * consider using one of the {@code get<Type>(String key)} methods instead:
+   * they each return {@code null} if the value is not set.
    */
-  public Map<String, Object> getUserParams()
-  {
-    return userParams;
-  }
-
-  public boolean isDebug()
-  {
-    return getAsBoolean(QueryContexts.ENABLE_DEBUG, QueryContexts.DEFAULT_ENABLE_DEBUG);
-  }
-
-  public boolean isEnableJoinLeftScanDirect()
-  {
-    return getAsBoolean(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
-    );
-  }
-
-  @SuppressWarnings("unused")
   public boolean containsKey(String key)
   {
-    return get(key) != null;
+    return context.containsKey(key);
   }
 
+  /**
+   * Return a value as a generic {@code Object}, returning {@code null} if the
+   * context value is not set.
+   */
   @Nullable
   public Object get(String key)
   {
-    Object val = systemParams.get(key);
-    if (val != null) {
-      return val;
-    }
-    val = userParams.get(key);
-    return val == null ? defaultParams.get(key) : val;
+    return context.get(key);
   }
 
-  @SuppressWarnings("unused")
-  public Object getOrDefault(String key, Object defaultValue)
+  /**
+   * Return a value as a generic {@code Object}, returning the default value if the
+   * context value is not set.
+   */
+  public Object get(String key, Object defaultValue)
   {
     final Object val = get(key);
     return val == null ? defaultValue : val;
   }
 
+  /**
+   * Return a value as an {@code String}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
   @Nullable
-  public String getAsString(String key)
+  public String getString(String key)
   {
-    Object val = get(key);
-    return val == null ? null : val.toString();
+    return getString(key, null);
   }
 
-  public String getAsString(String key, String defaultValue)
+  public String getString(String key, String defaultValue)
   {
-    Object val = get(key);
-    return val == null ? defaultValue : val.toString();
+    return QueryContexts.parseString(context, key, defaultValue);
   }
 
-  @Nullable
-  public Boolean getAsBoolean(String key)
+  /**
+   * Return a value as an {@code Boolean}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public Boolean getBoolean(final String key)
   {
     return QueryContexts.getAsBoolean(key, get(key));
   }
 
-  public boolean getAsBoolean(
-      final String key,
-      final boolean defaultValue
-  )
+  /**
+   * Return a value as an {@code boolean}, returning the default value if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public boolean getBoolean(final String key, final boolean defaultValue)
   {
-    return QueryContexts.getAsBoolean(key, get(key), defaultValue);
+    return QueryContexts.parseBoolean(context, key, defaultValue);
   }
 
-  public Integer getAsInt(final String key)
+  /**
+   * Return a value as an {@code Integer}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public Integer getInt(final String key)
   {
     return QueryContexts.getAsInt(key, get(key));
   }
 
-  public int getAsInt(
-      final String key,
-      final int defaultValue
-  )
+  /**
+   * Return a value as an {@code int}, returning the default value if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public int getInt(final String key, final int defaultValue)
   {
-    return QueryContexts.getAsInt(key, get(key), defaultValue);
+    return QueryContexts.parseInt(context, key, defaultValue);
   }
 
-  public Long getAsLong(final String key)
+  /**
+   * Return a value as an {@code Long}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public Long getLong(final String key)
   {
     return QueryContexts.getAsLong(key, get(key));
   }
 
-  public long getAsLong(final String key, final long defaultValue)
+  /**
+   * Return a value as an {@code long}, returning the default value if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public long getLong(final String key, final long defaultValue)
   {
-    return QueryContexts.getAsLong(key, get(key), defaultValue);
+    return QueryContexts.parseLong(context, key, defaultValue);
   }
 
-  public HumanReadableBytes getAsHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
+  /**
+   * Return a value as an {@code Float}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  @SuppressWarnings("unused")
+  public Float getFloat(final String key)
   {
-    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+    return QueryContexts.getAsFloat(key, get(key));
   }
 
-  public float getAsFloat(final String key, final float defaultValue)
+  /**
+   * Return a value as an {@code float}, returning the default value if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   */
+  public float getFloat(final String key, final float defaultValue)
   {
     return QueryContexts.getAsFloat(key, get(key), defaultValue);
   }
 
-  public <E extends Enum<E>> E getAsEnum(String key, Class<E> clazz, E defaultValue)
+  public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+  }
+
+  public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
   {
     return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
   }
 
-  public Map<String, Object> getMergedParams()
+  public Granularity getGranularity(String key, ObjectMapper jsonMapper)
   {
-    if (mergedParams == null) {
-      final Map<String, Object> merged = new TreeMap<>(defaultParams);
-      merged.putAll(userParams);
-      merged.putAll(systemParams);
-      mergedParams = Collections.unmodifiableMap(merged);
+    final String granularityString = getString(key);
+    if (granularityString == null) {
+      return null;
     }
-    return mergedParams;
+
+    try {
+      return jsonMapper.readValue(granularityString, Granularity.class);
+    }
+    catch (IOException e) {
+      throw QueryContexts.badTypeException(key, "a Granularity", granularityString);
+    }
   }
 
-  public QueryContext copy()
+  public boolean isDebug()
   {
-    return new QueryContext(
-        new TreeMap<>(defaultParams),
-        new TreeMap<>(userParams),
-        new TreeMap<>(systemParams)
+    return getBoolean(QueryContexts.ENABLE_DEBUG, QueryContexts.DEFAULT_ENABLE_DEBUG);
+  }
+
+  public boolean isBySegment()
+  {
+    return isBySegment(QueryContexts.DEFAULT_BY_SEGMENT);
+  }
+
+  public boolean isBySegment(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.BY_SEGMENT_KEY, defaultValue);
+  }
+
+  public boolean isPopulateCache()
+  {
+    return isPopulateCache(QueryContexts.DEFAULT_POPULATE_CACHE);
+  }
+
+  public boolean isPopulateCache(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.POPULATE_CACHE_KEY, defaultValue);
+  }
+
+  public boolean isUseCache()
+  {
+    return isUseCache(QueryContexts.DEFAULT_USE_CACHE);
+  }
+
+  public boolean isUseCache(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.USE_CACHE_KEY, defaultValue);
+  }
+
+  public boolean isPopulateResultLevelCache()
+  {
+    return isPopulateResultLevelCache(QueryContexts.DEFAULT_POPULATE_RESULTLEVEL_CACHE);
+  }
+
+  public boolean isPopulateResultLevelCache(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+  }
+
+  public boolean isUseResultLevelCache()
+  {
+    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
+  }
+
+  public boolean isUseResultLevelCache(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+  }
+
+  public boolean isFinalize(boolean defaultValue)
+
+  {
+    return getBoolean(QueryContexts.FINALIZE_KEY, defaultValue);
+  }
+
+  public boolean isSerializeDateTimeAsLong(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_KEY, defaultValue);
+  }
+
+  public boolean isSerializeDateTimeAsLongInner(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY, defaultValue);
+  }
+
+  public Vectorize getVectorize()
+  {
+    return getVectorize(QueryContexts.DEFAULT_VECTORIZE);
+  }
+
+  public Vectorize getVectorize(Vectorize defaultValue)
+  {
+    return getEnum(QueryContexts.VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public Vectorize getVectorizeVirtualColumns()
+  {
+    return getVectorizeVirtualColumns(QueryContexts.DEFAULT_VECTORIZE_VIRTUAL_COLUMN);
+  }
+
+  public Vectorize getVectorizeVirtualColumns(Vectorize defaultValue)
+  {
+    return getEnum(
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY,
+        Vectorize.class,
+        defaultValue
     );
+  }
+
+  public int getVectorSize()
+  {
+    return getVectorSize(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+  }
+
+  public int getVectorSize(int defaultSize)
+  {
+    return getInt(QueryContexts.VECTOR_SIZE_KEY, defaultSize);
+  }
+
+  public int getMaxSubqueryRows(int defaultSize)
+  {
+    return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
+  }
+
+  public int getUncoveredIntervalsLimit()
+  {
+    return getUncoveredIntervalsLimit(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT);
+  }
+
+  public int getUncoveredIntervalsLimit(int defaultValue)
+  {
+    return getInt(QueryContexts.UNCOVERED_INTERVALS_LIMIT_KEY, defaultValue);
+  }
+
+  public int getPriority()
+  {
+    return getPriority(QueryContexts.DEFAULT_PRIORITY);
+  }
+
+  public int getPriority(int defaultValue)
+  {
+    return getInt(QueryContexts.PRIORITY_KEY, defaultValue);
+  }
+
+  public String getLane()
+  {
+    return getString(QueryContexts.LANE_KEY);
+  }
+
+  public boolean getEnableParallelMerges()
+  {
+    return getBoolean(
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY,
+        QueryContexts.DEFAULT_ENABLE_PARALLEL_MERGE
+    );
+  }
+
+  public int getParallelMergeInitialYieldRows(int defaultValue)
+  {
+    return getInt(QueryContexts.BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+  }
+
+  public int getParallelMergeSmallBatchRows(int defaultValue)
+  {
+    return getInt(QueryContexts.BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+  }
+
+  public int getParallelMergeParallelism(int defaultValue)
+  {
+    return getInt(QueryContexts.BROKER_PARALLELISM, defaultValue);
+  }
+
+  public long getJoinFilterRewriteMaxSize()
+  {
+    return getLong(
+        QueryContexts.JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+    );
+  }
+
+  public boolean getEnableJoinFilterPushDown()
+  {
+    return getBoolean(
+        QueryContexts.JOIN_FILTER_PUSH_DOWN_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+    );
+  }
+
+  public boolean getEnableJoinFilterRewrite()
+  {
+    return getBoolean(
+        QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE
+    );
+  }
+
+  public boolean isSecondaryPartitionPruningEnabled()
+  {
+    return getBoolean(
+        QueryContexts.SECONDARY_PARTITION_PRUNING_KEY,
+        QueryContexts.DEFAULT_SECONDARY_PARTITION_PRUNING
+    );
+  }
+
+  public long getMaxQueuedBytes(long defaultValue)
+  {
+    return getLong(QueryContexts.MAX_QUEUED_BYTES_KEY, defaultValue);
+  }
+
+  public long getMaxScatterGatherBytes()
+  {
+    return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
+  }
+
+  public boolean hasTimeout()
+  {
+    return getTimeout() != QueryContexts.NO_TIMEOUT;
+  }
+
+  public long getTimeout()
+  {
+    return getTimeout(getDefaultTimeout());
+  }
+
+  public long getTimeout(long defaultTimeout)
+  {
+    final long timeout = getLong(QueryContexts.TIMEOUT_KEY, defaultTimeout);
+    if (timeout >= 0) {
+      return timeout;
+    }
+    throw new BadQueryContextException(
+        StringUtils.format(
+            "Timeout [%s] must be a non negative value, but was %d",
+            QueryContexts.TIMEOUT_KEY,
+            timeout
+        )
+    );
+  }
+
+  public long getDefaultTimeout()
+  {
+    final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    if (defaultTimeout >= 0) {
+      return defaultTimeout;
+    }
+    throw new BadQueryContextException(
+        StringUtils.format(
+            "Timeout [%s] must be a non negative value, but was %d",
+            QueryContexts.DEFAULT_TIMEOUT_KEY,
+            defaultTimeout
+        )
+    );
+  }
+
+  public void verifyMaxQueryTimeout(long maxQueryTimeout)
+  {
+    long timeout = getTimeout();
+    if (timeout > maxQueryTimeout) {
+      throw new BadQueryContextException(
+          StringUtils.format(
+              "Configured %s = %d is more than enforced limit of %d.",
+              QueryContexts.TIMEOUT_KEY,
+              timeout,
+              maxQueryTimeout
+          )
+      );
+    }
+  }
+
+  public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
+  {
+    long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
+    if (curr > maxScatterGatherBytesLimit) {
+      throw new BadQueryContextException(
+          StringUtils.format(
+            "Configured %s = %d is more than enforced limit of %d.",
+            QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY,
+            curr,
+            maxScatterGatherBytesLimit
+          )
+      );
+    }
+  }
+
+  public int getNumRetriesOnMissingSegments(int defaultValue)
+  {
+    return getInt(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
+  }
+
+  public boolean allowReturnPartialResults(boolean defaultValue)
+  {
+    return getBoolean(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, defaultValue);
+  }
+
+  public boolean getEnableJoinFilterRewriteValueColumnFilters()
+  {
+    return getBoolean(
+        QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
+  }
+
+  public boolean getEnableRewriteJoinToFilter()
+  {
+    return getBoolean(
+        QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY,
+        QueryContexts.DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER
+    );
+  }
+
+  public boolean getEnableJoinLeftScanDirect()
+  {
+    return getBoolean(
+        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
+        QueryContexts.DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT
+    );
+  }
+
+  public int getInSubQueryThreshold()
+  {
+    return getInSubQueryThreshold(QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD);
+  }
+
+  public int getInSubQueryThreshold(int defaultValue)
+  {
+    return getInt(
+        QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY,
+        defaultValue
+    );
+  }
+
+  public boolean isTimeBoundaryPlanningEnabled()
+  {
+    return getBoolean(
+        QueryContexts.TIME_BOUNDARY_PLANNING_KEY,
+        QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
+    );
+  }
+
+  public String getBrokerServiceName()
+  {
+    return getString(QueryContexts.BROKER_SERVICE_NAME);
   }
 
   @Override
@@ -259,23 +586,21 @@ public class QueryContext
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    QueryContext context = (QueryContext) o;
-    return getMergedParams().equals(context.getMergedParams());
+    QueryContext other = (QueryContext) o;
+    return context.equals(other.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getMergedParams());
+    return Objects.hash(context);
   }
 
   @Override
   public String toString()
   {
     return "QueryContext{" +
-           "defaultParams=" + defaultParams +
-           ", userParams=" + userParams +
-           ", systemParams=" + systemParams +
+           "context=" + context +
            '}';
   }
 }

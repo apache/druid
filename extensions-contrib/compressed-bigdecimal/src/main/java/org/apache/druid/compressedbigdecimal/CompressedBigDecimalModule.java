@@ -36,12 +36,17 @@ import java.util.List;
 public class CompressedBigDecimalModule implements DruidModule
 {
   public static final String COMPRESSED_BIG_DECIMAL = "compressedBigDecimal";
+  public static final String COMPRESSED_BIG_DECIMAL_SUM = "compressedBigDecimalSum";
+  public static final String COMPRESSED_BIG_DECIMAL_MAX = "compressedBigDecimalMax";
+  public static final String COMPRESSED_BIG_DECIMAL_MIN = "compressedBigDecimalMin";
 
   @Override
   public void configure(Binder binder)
   {
     registerSerde();
-    SqlBindings.addAggregator(binder, CompressedBigDecimalSqlAggregator.class);
+    SqlBindings.addAggregator(binder, CompressedBigDecimalSumSqlAggregator.class);
+    SqlBindings.addAggregator(binder, CompressedBigDecimalMaxSqlAggregator.class);
+    SqlBindings.addAggregator(binder, CompressedBigDecimalMinSqlAggregator.class);
   }
 
   public static void registerSerde()
@@ -56,13 +61,10 @@ public class CompressedBigDecimalModule implements DruidModule
   {
     return ImmutableList.of(
         new SimpleModule("CompressedBigDecimalModule")
-            .registerSubtypes(
-                new NamedType(CompressedBigDecimalAggregatorFactory.class, COMPRESSED_BIG_DECIMAL)
-            )
-            .addSerializer(
-                CompressedBigDecimal.class,
-                new CompressedBigDecimalJsonSerializer()
-            )
+            .registerSubtypes(new NamedType(CompressedBigDecimalSumAggregatorFactory.class, COMPRESSED_BIG_DECIMAL_SUM))
+            .registerSubtypes(new NamedType(CompressedBigDecimalMaxAggregatorFactory.class, COMPRESSED_BIG_DECIMAL_MAX))
+            .registerSubtypes(new NamedType(CompressedBigDecimalMinAggregatorFactory.class, COMPRESSED_BIG_DECIMAL_MIN))
+            .addSerializer(CompressedBigDecimal.class, new CompressedBigDecimalJsonSerializer())
     );
   }
 }

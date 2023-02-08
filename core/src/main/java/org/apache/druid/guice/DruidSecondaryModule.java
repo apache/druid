@@ -22,7 +22,6 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -37,6 +36,7 @@ import org.skife.config.ConfigurationObjectFactory;
 import javax.validation.Validator;
 import java.util.Properties;
 
+@LazySingleton
 public class DruidSecondaryModule implements Module
 {
   private final Properties properties;
@@ -96,14 +96,12 @@ public class DruidSecondaryModule implements Module
     return smileMapper;
   }
 
-  @VisibleForTesting
   public static void setupJackson(Injector injector, final ObjectMapper mapper)
   {
     mapper.setInjectableValues(new GuiceInjectableValues(injector));
     setupAnnotationIntrospector(mapper, new GuiceAnnotationIntrospector());
   }
 
-  @VisibleForTesting
   public static void setupAnnotationIntrospector(
       final ObjectMapper mapper,
       final AnnotationIntrospector annotationIntrospector

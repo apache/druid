@@ -24,10 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -52,6 +49,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
+import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -404,7 +402,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new MockFirehoseFactory(),
+                new LocalFirehoseFactory(new File("lol"), "rofl", null),
                 (schema, config, metrics) -> null
             ),
 
@@ -434,9 +432,6 @@ public class TaskSerdeTest
         null
     );
 
-    jsonMapper.registerSubtypes(
-        new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
-    );
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
@@ -600,5 +595,53 @@ public class TaskSerdeTest
     {
       return null;
     }
+  }
+
+  @Test
+  public void testHadoopIndexTaskWithContextSerde() throws Exception
+  {
+    final HadoopIndexTask task = new HadoopIndexTask(
+        null,
+        new HadoopIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                ),
+                null,
+                null,
+                jsonMapper
+            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
+        ),
+        null,
+        null,
+        "blah",
+        jsonMapper,
+        ImmutableMap.of("userid", 12345, "username", "bob"),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null
+    );
+
+    final String json = jsonMapper.writeValueAsString(task);
+
+    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(
+        task.getSpec().getTuningConfig().getJobProperties(),
+        task2.getSpec().getTuningConfig().getJobProperties()
+    );
+    Assert.assertEquals("blah", task.getClasspathPrefix());
+    Assert.assertEquals("blah", task2.getClasspathPrefix());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getContext());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getSpec().getContext());
   }
 }

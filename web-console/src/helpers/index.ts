@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+export * from './capabilities';
+export * from './capacity';
 export * from './execution/general';
 export * from './execution/sql-task-execution';
 export * from './spec-conversion';

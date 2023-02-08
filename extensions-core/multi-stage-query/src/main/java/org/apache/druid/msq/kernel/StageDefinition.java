@@ -33,6 +33,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -48,33 +49,32 @@ import java.util.function.Supplier;
 
 /**
  * Definition of a stage in a multi-stage {@link QueryDefinition}.
- *
+ * <p>
  * Each stage has a list of {@link InputSpec} describing its inputs. The position of each spec within the list is
  * its "input number". Some inputs are broadcast to all workers (see {@link #getBroadcastInputNumbers()}). Other,
  * non-broadcast inputs are split up across workers.
- *
+ * <p>
  * The number of workers in a stage is at most {@link #getMaxWorkerCount()}. It may be less, depending on the
  * {@link WorkerAssignmentStrategy} in play and depending on the number of distinct inputs available. (For example:
  * if there is only one input file, then there can be only one worker.)
- *
+ * <p>
  * Each stage has a {@link FrameProcessorFactory} describing the work it does. Output frames written by these
  * processors have the signature given by {@link #getSignature()}.
- *
+ * <p>
  * Each stage has a {@link ShuffleSpec} describing the shuffle that occurs as part of the stage. The shuffle spec is
  * optional: if none is provided, then the {@link FrameProcessorFactory} directly writes to output partitions. If a
  * shuffle spec is provided, then the {@link FrameProcessorFactory} is expected to sort each output frame individually
  * according to {@link ShuffleSpec#getClusterBy()}. The execution system handles the rest, including sorting data across
  * frames and producing the appropriate output partitions.
- *
+ * <p>
  * The rarely-used parameter {@link #getShuffleCheckHasMultipleValues()} controls whether the execution system
  * checks, while shuffling, if the key used for shuffling has any multi-value fields. When this is true, the method
  * {@link ClusterByStatisticsCollector#hasMultipleValues} is enabled on collectors
- * {@link #createResultKeyStatisticsCollector()}. Its primary purpose is to allow ingestion jobs to detect whether the
+ * {@link #createResultKeyStatisticsCollector}. Its primary purpose is to allow ingestion jobs to detect whether the
  * secondary partitioning (CLUSTERED BY) key is multivalued or not.
  */
 public class StageDefinition
 {
-  private static final int PARTITION_STATS_MAX_KEYS = 2 << 15; // Avoid immediate downsample of single-bucket collectors
   private static final int PARTITION_STATS_MAX_BUCKETS = 5_000; // Limit for TooManyBuckets
   private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
 
@@ -86,6 +86,7 @@ public class StageDefinition
   private final FrameProcessorFactory processorFactory;
   private final RowSignature signature;
   private final int maxWorkerCount;
+  private final long maxInputBytesPerWorker;
   private final boolean shuffleCheckHasMultipleValues;
 
   @Nullable
@@ -103,7 +104,8 @@ public class StageDefinition
       @JsonProperty("signature") final RowSignature signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
-      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues
+      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues,
+      @JsonProperty("maxInputBytesPerWorker") final Long maxInputBytesPerWorker
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -123,6 +125,8 @@ public class StageDefinition
     this.maxWorkerCount = maxWorkerCount;
     this.shuffleCheckHasMultipleValues = shuffleCheckHasMultipleValues;
     this.frameReader = Suppliers.memoize(() -> FrameReader.create(signature))::get;
+    this.maxInputBytesPerWorker = maxInputBytesPerWorker == null ?
+                                  Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER : maxInputBytesPerWorker;
 
     if (shuffleSpec != null && shuffleSpec.needsStatistics() && shuffleSpec.getClusterBy().getColumns().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
@@ -242,6 +246,12 @@ public class StageDefinition
     return maxWorkerCount;
   }
 
+  @JsonProperty
+  public long getMaxInputBytesPerWorker()
+  {
+    return maxInputBytesPerWorker;
+  }
+
   @JsonProperty("shuffleCheckHasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   boolean getShuffleCheckHasMultipleValues()
@@ -260,6 +270,19 @@ public class StageDefinition
     return id.getStageNumber();
   }
 
+  /**
+   * Returns true, if the shuffling stage requires key statistics from the workers.
+   * <br></br>
+   * Returns false, if the stage does not shuffle.
+   * <br></br>
+   * <br></br>
+   * It's possible we're shuffling using partition boundaries that are known ahead of time
+   * For eg: we know there's exactly one partition in query shapes like `select with limit`.
+   * <br></br>
+   * In such cases, we return a false.
+   *
+   * @return
+   */
   public boolean mustGatherResultKeyStatistics()
   {
     return shuffleSpec != null && shuffleSpec.needsStatistics();
@@ -270,17 +293,17 @@ public class StageDefinition
   )
   {
     if (shuffleSpec == null) {
-      throw new ISE("No shuffle");
+      throw new ISE("No shuffle for stage[%d]", getStageNumber());
     } else if (mustGatherResultKeyStatistics() && collector == null) {
-      throw new ISE("Statistics required, but not gathered");
+      throw new ISE("Statistics required, but not gathered for stage[%d]", getStageNumber());
     } else if (!mustGatherResultKeyStatistics() && collector != null) {
-      throw new ISE("Statistics gathered, but not required");
+      throw new ISE("Statistics gathered, but not required for stage[%d]", getStageNumber());
     } else {
       return shuffleSpec.generatePartitions(collector, MAX_PARTITIONS);
     }
   }
 
-  public ClusterByStatisticsCollector createResultKeyStatisticsCollector()
+  public ClusterByStatisticsCollector createResultKeyStatisticsCollector(final int maxRetainedBytes)
   {
     if (!mustGatherResultKeyStatistics()) {
       throw new ISE("No statistics needed");
@@ -289,7 +312,7 @@ public class StageDefinition
     return ClusterByStatisticsCollectorImpl.create(
         shuffleSpec.getClusterBy(),
         signature,
-        PARTITION_STATS_MAX_KEYS,
+        maxRetainedBytes,
         PARTITION_STATS_MAX_BUCKETS,
         shuffleSpec.doesAggregateByClusterKey(),
         shuffleCheckHasMultipleValues
@@ -318,7 +341,8 @@ public class StageDefinition
            && Objects.equals(broadcastInputNumbers, that.broadcastInputNumbers)
            && Objects.equals(processorFactory, that.processorFactory)
            && Objects.equals(signature, that.signature)
-           && Objects.equals(shuffleSpec, that.shuffleSpec);
+           && Objects.equals(shuffleSpec, that.shuffleSpec)
+           && Objects.equals(maxInputBytesPerWorker, that.maxInputBytesPerWorker);
   }
 
   @Override
@@ -332,7 +356,8 @@ public class StageDefinition
         signature,
         maxWorkerCount,
         shuffleCheckHasMultipleValues,
-        shuffleSpec
+        shuffleSpec,
+        maxInputBytesPerWorker
     );
   }
 
@@ -348,6 +373,7 @@ public class StageDefinition
            ", maxWorkerCount=" + maxWorkerCount +
            ", shuffleSpec=" + shuffleSpec +
            (shuffleCheckHasMultipleValues ? ", shuffleCheckHasMultipleValues=" + shuffleCheckHasMultipleValues : "") +
+           ", maxInputBytesPerWorker=" + maxInputBytesPerWorker +
            '}';
   }
 }

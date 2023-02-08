@@ -40,10 +40,11 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   public DoublesSketchMergeAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("k") @Nullable final Integer k,
-      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength
+      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength,
+      @JsonProperty("shouldFinalize") @Nullable final Boolean shouldFinalize
   )
   {
-    super(name, name, k, maxStreamLength, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, name, k, maxStreamLength, shouldFinalize, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
   }
 
   @VisibleForTesting
@@ -52,7 +53,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
       @Nullable final Integer k
   )
   {
-    this(name, k, null);
+    this(name, k, null, null);
   }
 
   @Override
@@ -78,6 +79,6 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new DoublesSketchMergeAggregatorFactory(newName, getK(), getMaxStreamLength());
+    return new DoublesSketchMergeAggregatorFactory(newName, getK(), getMaxStreamLength(), isShouldFinalize());
   }
 }

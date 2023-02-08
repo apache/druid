@@ -63,10 +63,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -1210,10 +1210,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
   {
-    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEvents(
-        "true",
-        true
-    );
+    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents =
+        doGetRowStatsAndUnparseableEvents("true", true);
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
@@ -1534,6 +1532,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
       return new RowIngestionMetersTotals(
           ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
@@ -1549,7 +1548,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+    final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
 
     List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
@@ -1590,7 +1589,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> completedSubtaskReports =
           (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
-      final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+      final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
@@ -1621,7 +1620,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+    final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
         final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
@@ -1686,7 +1685,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return totals;
   }
 
-  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
+  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(
+      String full,
+      boolean includeUnparseable
+  )
   {
     if (currentSubTaskHolder == null) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());

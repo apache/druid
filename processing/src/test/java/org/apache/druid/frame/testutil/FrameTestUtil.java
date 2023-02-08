@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFileWriter;
@@ -75,7 +76,12 @@ public class FrameTestUtil
 
   public static File writeFrameFile(final Sequence<Frame> frames, final File file) throws IOException
   {
-    try (final FrameFileWriter writer = FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null)) {
+    try (
+        final FileOutputStream fos = new FileOutputStream(file);
+        final FrameFileWriter writer = FrameFileWriter.open(
+            Channels.newChannel(fos), null, ByteTracker.unboundedTracker()
+        )
+    ) {
       frames.forEach(
           frame -> {
             try {
@@ -96,7 +102,7 @@ public class FrameTestUtil
       final File file
   ) throws IOException
   {
-    try (final FrameFileWriter writer = FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null)) {
+    try (final FrameFileWriter writer = FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null, ByteTracker.unboundedTracker())) {
       framesWithPartitions.forEach(
           frameWithPartition -> {
             try {

@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -167,14 +166,40 @@ public abstract class ExprEval<T>
           array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.LONG, o).value();
         }
         return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
+      } else if (coercedType == Float.class || coercedType == Double.class) {
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
           array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.DOUBLE, o).value();
         }
         return new NonnullPair<>(ExpressionType.DOUBLE_ARRAY, array);
+      } else if (coercedType == Object.class) {
+        // object, fall back to "best effort"
+        ExprEval<?>[] evals = new ExprEval[val.size()];
+        Object[] array = new Object[val.size()];
+        int i = 0;
+        ExpressionType elementType = null;
+        for (Object o : val) {
+          if (o != null) {
+            ExprEval<?> eval = ExprEval.bestEffortOf(o);
+            elementType = ExpressionTypeConversion.coerceArrayTypes(elementType, eval.type());
+            evals[i++] = eval;
+          } else {
+            evals[i++] = null;
+          }
+        }
+        i = 0;
+        for (ExprEval<?> eval : evals) {
+          if (eval != null) {
+            array[i++] = eval.castTo(elementType).value();
+          } else {
+            array[i++] = null;
+          }
+        }
+        ExpressionType arrayType = elementType == null
+                                   ? ExpressionType.STRING_ARRAY
+                                   : ExpressionTypeFactory.getInstance().ofArray(elementType);
+        return new NonnullPair<>(arrayType, array);
       }
       // default to string
       Object[] array = new Object[val.size()];
@@ -192,31 +217,6 @@ public abstract class ExprEval<T>
       }
       return null;
     }
-  }
-
-  @Nullable
-  public static ExpressionType findArrayType(@Nullable Object[] val)
-  {
-    // if value is not null and has at least 1 element, conversion is unambigous regardless of the selector
-    if (val != null && val.length > 0) {
-      Class<?> coercedType = null;
-
-      for (Object elem : val) {
-        if (elem != null) {
-          coercedType = convertType(coercedType, elem.getClass());
-        }
-      }
-
-      if (coercedType == Long.class || coercedType == Integer.class) {
-        return ExpressionType.LONG_ARRAY;
-      }
-      if (coercedType == Float.class || coercedType == Double.class) {
-        return ExpressionType.DOUBLE_ARRAY;
-      }
-      // default to string
-      return ExpressionType.STRING_ARRAY;
-    }
-    return null;
   }
 
   /**
@@ -266,7 +266,8 @@ public abstract class ExprEval<T>
       // otherwise double
       return Double.class;
     }
-    throw new UOE("Invalid array expression type: %s", next);
+    // its complicated, call it object
+    return Object.class;
   }
 
   public static ExprEval of(long longValue)
@@ -409,6 +410,22 @@ public abstract class ExprEval<T>
       }
       return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
     }
+    if (val instanceof Integer[]) {
+      final Integer[] inputArray = (Integer[]) val;
+      final Object[] array = new Object[inputArray.length];
+      for (int i = 0; i < inputArray.length; i++) {
+        array[i] = inputArray[i] == null ? null : inputArray[i].longValue();
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
+    }
+    if (val instanceof int[]) {
+      final int[] longArray = (int[]) val;
+      final Object[] array = new Object[longArray.length];
+      for (int i = 0; i < longArray.length; i++) {
+        array[i] = (long) longArray[i];
+      }
+      return new ArrayExprEval(ExpressionType.LONG_ARRAY, array);
+    }
     if (val instanceof Double[]) {
       final Double[] inputArray = (Double[]) val;
       final Object[] array = new Object[inputArray.length];
@@ -437,7 +454,7 @@ public abstract class ExprEval<T>
       final float[] inputArray = (float[]) val;
       final Object[] array = new Object[inputArray.length];
       for (int i = 0; i < inputArray.length; i++) {
-        array[i] = inputArray[i];
+        array[i] = (double) inputArray[i];
       }
       return new ArrayExprEval(ExpressionType.DOUBLE_ARRAY, array);
     }
@@ -460,6 +477,13 @@ public abstract class ExprEval<T>
         return bestEffortOf(null);
       }
       return ofArray(coerced.lhs, coerced.rhs);
+    }
+
+    // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
+    // knowledge, so lets turn it into a base64 encoded string so at least something downstream can use it by decoding
+    // back into bytes
+    if (val instanceof byte[]) {
+      return new StringExprEval(StringUtils.encodeBase64String((byte[]) val));
     }
 
     if (val != null) {
@@ -519,9 +543,18 @@ public abstract class ExprEval<T>
         }
         return ofDouble(null);
       case COMPLEX:
+        // json isn't currently defined in druid-core, this can be reworked once
+        // https://github.com/apache/druid/pull/13698 is merged (or COMPLEX<json> is promoted to a real built-in type(s)
+        if ("json".equals(type.getComplexTypeName())) {
+          return ofComplex(type, value);
+        }
         byte[] bytes = null;
         if (value instanceof String) {
-          bytes = StringUtils.decodeBase64String((String) value);
+          try {
+            bytes = StringUtils.decodeBase64String((String) value);
+          }
+          catch (IllegalArgumentException ignored) {
+          }
         } else if (value instanceof byte[]) {
           bytes = (byte[]) value;
         }

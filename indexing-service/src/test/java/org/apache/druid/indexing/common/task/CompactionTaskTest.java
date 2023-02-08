@@ -57,6 +57,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -118,8 +119,8 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -152,7 +153,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -903,7 +903,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchema() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchema() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -940,7 +940,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException
   {
     final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         100000,
@@ -1015,7 +1015,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException
   {
     final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         null,
@@ -1090,7 +1090,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithNumShards() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithNumShards() throws IOException
   {
     final CompactionTask.CompactionTuningConfig tuningConfig = new CompactionTask.CompactionTuningConfig(
         null,
@@ -1165,7 +1165,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithCustomDimensionsSpec() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithCustomDimensionsSpec() throws IOException
   {
     final DimensionsSpec customSpec = new DimensionsSpec(
         Lists.newArrayList(
@@ -1230,7 +1230,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithCustomMetricsSpec() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithCustomMetricsSpec() throws IOException
   {
     final AggregatorFactory[] customMetricsSpec = new AggregatorFactory[]{
         new CountAggregatorFactory("custom_count"),
@@ -1275,7 +1275,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithCustomSegments() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1312,7 +1312,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithDifferentSegmentSet() throws IOException, SegmentLoadingException
+  public void testCreateIngestionSchemaWithDifferentSegmentSet() throws IOException
   {
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
@@ -1338,7 +1338,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testMissingMetadata() throws IOException, SegmentLoadingException
+  public void testMissingMetadata() throws IOException
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(CoreMatchers.startsWith("Index metadata doesn't exist for segment"));
@@ -1381,7 +1381,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testSegmentGranularityAndNullQueryGranularity() throws IOException, SegmentLoadingException
+  public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1420,7 +1420,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testQueryGranularityAndNullSegmentGranularity() throws IOException, SegmentLoadingException
+  public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1457,7 +1457,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException, SegmentLoadingException
+  public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1500,7 +1500,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testNullGranularitySpec() throws IOException, SegmentLoadingException
+  public void testNullGranularitySpec() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1538,7 +1538,7 @@ public class CompactionTaskTest
 
   @Test
   public void testGranularitySpecWithNullQueryGranularityAndNullSegmentGranularity()
-      throws IOException, SegmentLoadingException
+      throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1576,7 +1576,7 @@ public class CompactionTaskTest
 
   @Test
   public void testGranularitySpecWithNotNullRollup()
-      throws IOException, SegmentLoadingException
+      throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1601,7 +1601,7 @@ public class CompactionTaskTest
 
   @Test
   public void testGranularitySpecWithNullRollup()
-      throws IOException, SegmentLoadingException
+      throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
@@ -1775,7 +1775,7 @@ public class CompactionTaskTest
   {
     SettableSupplier<Granularity> queryGranularity = new SettableSupplier<>();
     for (Granularity current : granularities) {
-      queryGranularity.set(CompactionTask.compareWithCurrent(queryGranularity.get(), current));
+      queryGranularity.set(CompactionTask.ExistingSegmentAnalyzer.compareWithCurrent(queryGranularity.get(), current));
     }
     return queryGranularity.get();
   }
@@ -1976,14 +1976,8 @@ public class CompactionTaskTest
       Map<DataSegment, File> segments
   )
   {
-    final SegmentCacheManager segmentCacheManager = new SegmentCacheManager()
+    final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
-      @Override
-      public boolean isSegmentCached(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
       @Override
       public File getSegmentFiles(DataSegment segment)
       {
@@ -1991,48 +1985,31 @@ public class CompactionTaskTest
       }
 
       @Override
-      public boolean reserve(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public boolean release(DataSegment segment)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public void cleanup(DataSegment segment)
       {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
-      {
-        throw new UnsupportedOperationException();
+        // Do nothing.
       }
     };
 
+    final TaskConfig config = new TaskConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        null,
+        null,
+        false,
+        false,
+        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
+        null
+    );
     return new TaskToolbox.Builder()
-        .config(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
-            )
-        )
+        .config(config)
         .taskActionClient(taskActionClient)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .indexIO(indexIO)
@@ -2049,6 +2026,9 @@ public class CompactionTaskTest
         .appenderatorsManager(new TestAppenderatorsManager())
         .coordinatorClient(COORDINATOR_CLIENT)
         .segmentCacheManager(segmentCacheManager)
+        .taskLogPusher(null)
+        .attemptId("1")
+        .dirTracker(new TaskStorageDirTracker(config))
         .build();
   }
 
@@ -2268,7 +2248,14 @@ public class CompactionTaskTest
         @JacksonInject AppenderatorsManager appenderatorsManager
     )
     {
-      super(getOrMakeId(id, "compact", dataSource), null, taskResource, dataSource, context, IngestionMode.REPLACE_LEGACY);
+      super(
+          getOrMakeId(id, "compact", dataSource),
+          null,
+          taskResource,
+          dataSource,
+          context,
+          IngestionMode.REPLACE_LEGACY
+      );
       this.interval = interval;
       this.segments = segments;
       this.dimensionsSpec = dimensionsSpec;
@@ -2344,7 +2331,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       throw new UnsupportedOperationException();
     }

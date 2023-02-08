@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryStats;
@@ -95,10 +94,13 @@ public class SqlExecutionReporter
         metricBuilder.setDimension("id", plannerContext.getSqlQueryId());
         metricBuilder.setDimension("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      if (stmt.fullResourceActions != null) {
+      if (stmt.authResult != null) {
+        // Note: the dimension is "dataSource" (sic), so we log only the SQL resource
+        // actions. Even here, for external tables, those actions are not always
+        // datasources.
         metricBuilder.setDimension(
             "dataSource",
-            stmt.fullResourceActions
+            stmt.authResult.sqlResourceActions
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())
@@ -123,16 +125,12 @@ public class SqlExecutionReporter
       statsMap.put("sqlQuery/planningTimeMs", TimeUnit.NANOSECONDS.toMillis(planningTimeNanos));
       statsMap.put("sqlQuery/bytes", bytesWritten);
       statsMap.put("success", success);
-      QueryContext queryContext;
-      if (plannerContext == null) {
-        queryContext = stmt.queryPlus.context();
-      } else {
+      Map<String, Object> queryContext = stmt.queryContext;
+      if (plannerContext != null) {
         statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
-        queryContext = stmt.queryPlus.context();
-        queryContext.addSystemParam("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
+        queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      final Map<String, Object> context = queryContext.getMergedParams();
-      statsMap.put("context", context);
+      statsMap.put("context", queryContext);
       if (e != null) {
         statsMap.put("exception", e.toString());
 
@@ -145,7 +143,7 @@ public class SqlExecutionReporter
       stmt.sqlToolbox.requestLogger.logSqlQuery(
           RequestLogLine.forSql(
               stmt.queryPlus.sql(),
-              context,
+              queryContext,
               DateTimes.utc(startMs),
               remoteAddress,
               new QueryStats(statsMap)

@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>26.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -271,6 +271,10 @@
             <artifactId>guice</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-multibindings</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
@@ -338,7 +342,6 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
-            <!--<classifier>osx-aarch_64</classifier> - Use for M1 Macs -->
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -406,7 +409,6 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.11.0</version>
         </dependency>
 
         <!-- Tests -->

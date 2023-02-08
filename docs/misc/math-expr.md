@@ -289,10 +289,10 @@ For the IPv4 address functions, the `address` argument accepts either an IPv4 do
 | human_readable_decimal_format(value[, precision]) | Format a number in human-readable SI format. `precision` must be in the range of [0,3] (default: 2). For example:<li>human_readable_decimal_format(1000000) returns `1.00 M`</li><li>human_readable_decimal_format(1000000, 3) returns `1.000 M`</li>  |
 
 
-## Vectorization Support
+## Vectorization support
 A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
 
-supported features:
+Supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types

@@ -43,6 +43,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestFirehose;
@@ -899,6 +900,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         false,
         false,
         TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
+        null,
+        false,
         null
     );
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, mdc);
@@ -914,7 +917,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         taskStorage,
         mdc,
         EMITTER,
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new DefaultObjectMapper()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
@@ -1009,7 +1013,10 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1",
+        new TaskStorageDirTracker(taskConfig)
     );
 
     return toolboxFactory.build(task);

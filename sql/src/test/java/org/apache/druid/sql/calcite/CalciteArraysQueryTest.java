@@ -29,9 +29,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -51,14 +53,15 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -2222,7 +2225,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfLongsFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
@@ -2295,7 +2298,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfStringsFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
@@ -2361,7 +2364,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery() throws IOException
+  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
     requireMergeBuffers(3);
     cannotVectorize();
@@ -2613,5 +2616,704 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     } else {
       Assert.assertEquals(path, expected, actual);
     }
+  }
+
+  @Test
+  public void testUnnestInline()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT * FROM UNNEST(ARRAY[1,2,3])",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      UnnestDataSource.create(
+                          InlineDataSource.fromIterable(
+                              ImmutableList.of(new Object[]{new Object[]{1L, 2L, 3L}}),
+                              RowSignature.builder().add("inline", ColumnType.LONG_ARRAY).build()
+                          ),
+                          "inline",
+                          "EXPR$0",
+                          null
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnest()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupBy()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) GROUP BY d3 ",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            "dim3",
+                            "EXPR$0",
+                            null
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"}
+        ) :
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{""},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByOrderBy()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 DESC ",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            "dim3",
+                            "EXPR$0",
+                            null
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(new OrderByColumnSpec(
+                                    "_d0",
+                                    OrderByColumnSpec.Direction.DESCENDING,
+                                    StringComparators.LEXICOGRAPHIC
+                                ))
+                                .build()
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"d", 1L},
+            new Object[]{"c", 1L},
+            new Object[]{"b", 2L},
+            new Object[]{"a", 1L},
+            new Object[]{"", 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"d", 1L},
+            new Object[]{"c", 1L},
+            new Object[]{"b", 2L},
+            new Object[]{"a", 1L},
+            new Object[]{"", 1L},
+            new Object[]{null, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByOrderByWithLimit()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(UnnestDataSource.create(
+                    new TableDataSource(CalciteTests.DATASOURCE3),
+                    "dim3",
+                    "EXPR$0",
+                    null
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(4)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"", 3L},
+            new Object[]{"a", 1L},
+            new Object[]{"b", 2L},
+            new Object[]{"c", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{null, 2L},
+            new Object[]{"", 1L},
+            new Object[]{"a", 1L},
+            new Object[]{"b", 2L}
+        )
+    );
+  }
+
+
+  @Test
+  public void testUnnestWithLimit()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) LIMIT 3",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .limit(3)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestFirstQueryOnSelect()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM (select dim1, dim2, dim3 from druid.numfoo), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{"c"},
+            new Object[]{"d"},
+            new Object[]{""},
+            new Object[]{null},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithFilters()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new QueryDataSource(
+                          newScanQueryBuilder()
+                              .dataSource(
+                                  new TableDataSource(CalciteTests.DATASOURCE3)
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .virtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .filters(new SelectorDimFilter("dim2", "a", null))
+                              .columns(
+                                  "__time",
+                                  "cnt",
+                                  "d1",
+                                  "d2",
+                                  "dim1",
+                                  "dim3",
+                                  "dim4",
+                                  "dim5",
+                                  "dim6",
+                                  "f1",
+                                  "f2",
+                                  "l1",
+                                  "l2",
+                                  "m1",
+                                  "m2",
+                                  "unique_dim1",
+                                  "v0"
+                              )
+                              .context(QUERY_CONTEXT_DEFAULT)
+                              .build()
+                      ),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithInFilters()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 FROM (select * from druid.numfoo where dim2 IN ('a','b','ab','abc')), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new QueryDataSource(
+                          newScanQueryBuilder()
+                              .dataSource(
+                                  new TableDataSource(CalciteTests.DATASOURCE3)
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .filters(new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null))
+                              .columns(
+                                  "__time",
+                                  "cnt",
+                                  "d1",
+                                  "d2",
+                                  "dim1",
+                                  "dim2",
+                                  "dim3",
+                                  "dim4",
+                                  "dim5",
+                                  "dim6",
+                                  "f1",
+                                  "f2",
+                                  "l1",
+                                  "l2",
+                                  "m1",
+                                  "m2",
+                                  "unique_dim1"
+                              )
+                              .context(QUERY_CONTEXT_DEFAULT)
+                              .build()
+                      ),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""},
+            useDefault ?
+            new Object[]{""} : new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestVirtualWithColumns()
+  {
+    // This tells the test to skip generating (vectorize = force) path
+    // Generates only 1 native query with vectorize = false
+    skipVectorize();
+    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
+    // Generates 2 native queries with 2 different values of vectorize
+    cannotVectorize();
+    testQuery(
+        "SELECT strings FROM druid.numfoo, UNNEST(ARRAY[dim4, dim5]) as unnested (strings)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      "v0",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "array(\"dim4\",\"dim5\")", ColumnType.STRING_ARRAY))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"aa"},
+            new Object[]{"a"},
+            new Object[]{"ab"},
+            new Object[]{"a"},
+            new Object[]{"ba"},
+            new Object[]{"b"},
+            new Object[]{"ad"},
+            new Object[]{"b"},
+            new Object[]{"aa"},
+            new Object[]{"b"},
+            new Object[]{"ab"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByOrderByOnVirtualColumn()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d24, COUNT(*) FROM druid.numfoo, UNNEST(ARRAY[dim2, dim4]) AS unnested(d24) GROUP BY d24 ORDER BY d24 DESC ",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            "v0",
+                            "EXPR$0",
+                            null
+                        ))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array(\"dim2\",\"dim4\")",
+                            ColumnType.STRING_ARRAY
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setDimensions(new DefaultDimensionSpec("EXPR$0", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(new OrderByColumnSpec(
+                                    "_d0",
+                                    OrderByColumnSpec.Direction.DESCENDING,
+                                    StringComparators.LEXICOGRAPHIC
+                                ))
+                                .build()
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"b", 3L},
+            new Object[]{"abc", 1L},
+            new Object[]{"a", 5L},
+            new Object[]{"", 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"b", 3L},
+            new Object[]{"abc", 1L},
+            new Object[]{"a", 5L},
+            new Object[]{"", 1L},
+            new Object[]{null, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithJoinOnTheLeft()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT d3 from (SELECT * from druid.numfoo JOIN (select dim2 as t from druid.numfoo where dim2 IN ('a','b','ab','abc')) ON dim2=t), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          new QueryDataSource(
+                              newScanQueryBuilder()
+                                  .dataSource(
+                                      new TableDataSource(CalciteTests.DATASOURCE3)
+                                  )
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .legacy(false)
+                                  .filters(new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null))
+                                  .columns(
+                                      "dim2"
+                                  )
+                                  .context(QUERY_CONTEXT_DEFAULT)
+                                  .build()
+                          ),
+                          "j0.",
+                          "(\"dim2\" == \"j0.dim2\")",
+                          JoinType.INNER
+                      ),
+                      "dim3",
+                      "EXPR$0",
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
+        ) :
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithConstant()
+  {
+    // Since there is a constant on the right,
+    // Druid will plan this as a join query
+    // as there is nothing to correlate between left and right
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT longs FROM druid.numfoo, UNNEST(ARRAY[1,2,3]) as unnested (longs)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          new QueryDataSource(
+                              newScanQueryBuilder()
+                                  .dataSource(
+                                      UnnestDataSource.create(
+                                          InlineDataSource.fromIterable(
+                                              ImmutableList.of(new Object[]{new Object[]{1L, 2L, 3L}}),
+                                              RowSignature.builder().add("inline", ColumnType.LONG_ARRAY).build()
+                                          ),
+                                          "inline",
+                                          "EXPR$0",
+                                          null
+                                      )
+                                  )
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .legacy(false)
+                                  .context(QUERY_CONTEXT_DEFAULT)
+                                  .columns(ImmutableList.of(
+                                      "EXPR$0"
+                                  ))
+                                  .build()
+                          ),
+                          "j0.",
+                          "1",
+                          JoinType.INNER
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of(
+                      "j0.EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3},
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3},
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3},
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3},
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3},
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3}
+        )
+    );
   }
 }

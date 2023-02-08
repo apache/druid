@@ -26,7 +26,7 @@ description: Describes time chunk and secondary partitioning in Druid. Provides 
 
 You can use segment partitioning and sorting within your Druid datasources to reduce the size of your data and increase performance.
 
-One way to partition is to load data into separate datasources. This is a perfectly viable approach that works very well when the number of datasources does not lead to excessive per-datasource overheads. 
+One way to partition is to load data into separate datasources. This is a perfectly viable approach that works very well when the number of datasources does not lead to excessive per-datasource overheads.
 
 This topic describes how to set up partitions within a single datasource. It does not cover how to use multiple datasources. See [Multitenancy considerations](../querying/multitenancy.md) for more details on splitting data into separate datasources and potential operational considerations.
 
@@ -72,9 +72,9 @@ The following table shows how each ingestion method handles partitioning:
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Kafka topic partitioning defines how Druid partitions the datasource. You can also [reindex](../data-management/update.md#reindex) or [compact](../data-management/compaction.md) to repartition after initial ingestion.|
 |[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Kinesis stream sharding defines how Druid partitions the datasource. You can also [reindex](../data-management/update.md#reindex) or [compact](../data-management/compaction.md) to repartition after initial ingestion.|
 
-
 ## Learn more
+
 See the following topics for more information:
+
 * [`partitionsSpec`](native-batch.md#partitionsspec) for more detail on partitioning with Native Batch ingestion.
 * [Reindexing](../data-management/update.md#reindex) and [Compaction](../data-management/compaction.md) for information on how to repartition existing data in Druid.
-

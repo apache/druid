@@ -34,7 +34,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
@@ -55,6 +55,7 @@ import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Collections;
 import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
@@ -79,6 +80,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private QueryLifecycleFactory queryLifecycleFactory;
   @Mock
   private ExprMacroTable macroTable;
+  @Mock
+  private JoinableFactoryWrapper joinableFactoryWrapper;
   @Mock
   private AuthorizerMapper authorizerMapper;
   @Mock
@@ -124,6 +127,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
           binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
         },
         target,
         binder -> {
@@ -174,7 +178,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         injector.getInstance(PlannerConfig.class),
         rootSchema,
         null,
-        new QueryContext()
+        Collections.emptyMap(),
+        joinableFactoryWrapper
     );
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)

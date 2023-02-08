@@ -20,6 +20,8 @@
 package org.apache.druid.compressedbigdecimal;
 
 
+import com.google.common.base.Preconditions;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -28,10 +30,13 @@ import java.math.BigInteger;
  */
 public class ArrayCompressedBigDecimal extends CompressedBigDecimal
 {
+  public static final CompressedBigDecimal ZERO_COMPRESSED_BIG_DECIMAL =
+      new ArrayCompressedBigDecimal(BigDecimal.ZERO);
 
   private static final int BYTE_MASK = 0xff;
 
   private final int[] array;
+
 
   /**
    * Construct an AccumulatingBigDecimal using the referenced initial
@@ -73,9 +78,9 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal
     for (int ii = 0; ii < arrayLen; ++ii) {
       this.array[ii] =
           (BYTE_MASK & bytes[--bytesIdx]) |
-              (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 8 |
-              (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 16 |
-              (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 24;
+          (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 8 |
+          (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 16 |
+          (bytesIdx != 0 ? (BYTE_MASK & bytes[--bytesIdx]) : (((int) bytes[0]) >> 8)) << 24;
     }
   }
 
@@ -121,16 +126,51 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal
   }
 
   /**
-   * Allocate a new CompressedBigDecimal with the specified size and scale.
+   * Allocate a new CompressedBigDecimal with the specified size and scale and a value of 0
    *
    * @param size  size of the int array used for calculations
    * @param scale scale of the number
    * @return CompressedBigDecimal
    */
-  public static ArrayCompressedBigDecimal allocate(int size, int scale)
+  public static ArrayCompressedBigDecimal allocateZero(int size, int scale)
   {
     int[] arr = new int[size];
+
     return new ArrayCompressedBigDecimal(arr, scale);
+  }
+
+  /**
+   * Allocate a new CompressedBigDecimal with the specified size and scale and a value of "MIN_VALUE"
+   *
+   * @param size  size of the int array used for calculations
+   * @param scale scale of the number
+   * @return CompressedBigDecimal
+   */
+  public static ArrayCompressedBigDecimal allocateMin(int size, int scale)
+  {
+    int[] arr = new int[size];
+    ArrayCompressedBigDecimal result = new ArrayCompressedBigDecimal(arr, scale);
+
+    result.setMinValue();
+
+    return result;
+  }
+
+  /**
+   * Allocate a new CompressedBigDecimal with the specified size and scale and a value of "MAX_VALUE"
+   *
+   * @param size  size of the int array used for calculations
+   * @param scale scale of the number
+   * @return CompressedBigDecimal
+   */
+  public static ArrayCompressedBigDecimal allocateMax(int size, int scale)
+  {
+    int[] arr = new int[size];
+    ArrayCompressedBigDecimal result = new ArrayCompressedBigDecimal(arr, scale);
+
+    result.setMaxValue();
+
+    return result;
   }
 
   @Override
@@ -182,4 +222,29 @@ public class ArrayCompressedBigDecimal extends CompressedBigDecimal
     array[idx] = val;
   }
 
+  @Override
+  protected void setValue(CompressedBigDecimal rhs)
+  {
+    Preconditions.checkArgument(
+        rhs.getArraySize() <= array.length,
+        "lhs too small to store entry: lhs [%s] vs rhs [%s]",
+        getArraySize(),
+        rhs.getArraySize()
+    );
+
+    long extension = rhs.getArrayEntry(rhs.getArraySize() - 1) < 0 ? INT_MASK : 0L;
+
+    for (int i = 0; i < array.length; i++) {
+      long rhsElement;
+
+      if (i < rhs.getArraySize()) {
+        rhsElement = INT_MASK & rhs.getArrayEntry(i);
+      } else {
+        rhsElement = extension;
+      }
+
+      array[i] = (int) rhsElement;
+    }
+
+  }
 }

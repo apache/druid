@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.SortColumn;
@@ -37,7 +38,6 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -57,6 +57,13 @@ import java.util.Optional;
 
 public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
+  private final ObjectMapper jsonMapper;
+
+  public GroupByQueryKit(ObjectMapper jsonMapper)
+  {
+    this.jsonMapper = jsonMapper;
+  }
+
   @Override
   public QueryDefinition makeQueryDefinition(
       final String queryId,
@@ -86,7 +93,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final GroupByQuery queryToRun = (GroupByQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
 
-    final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(queryToRun.getContext());
+    final Granularity segmentGranularity =
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
     final ClusterBy resultClusterBy =
         QueryKitUtils.clusterByWithSegmentGranularity(computeClusterByForResults(queryToRun), segmentGranularity);
@@ -205,7 +213,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   static boolean isFinalize(final GroupByQuery query)
   {
-    return QueryContexts.isFinalize(query, true);
+    return query.context().isFinalize(true);
   }
 
   /**

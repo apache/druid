@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -118,7 +117,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
   {
     return (queryPlus, responseContext) -> {
-      if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+      if (queryPlus.getQuery().context().isBySegment()) {
         return runner.run(queryPlus, responseContext);
       }
 
@@ -304,7 +303,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> finalizeSubqueryResults(Sequence<ResultRow> subqueryResult, GroupByQuery subquery)
   {
     final Sequence<ResultRow> finalizingResults;
-    if (QueryContexts.isFinalize(subquery, false)) {
+    if (subquery.context().isFinalize(false)) {
       finalizingResults = new MappedSequence<>(
           subqueryResult,
           makePreComputeManipulatorFn(
@@ -321,7 +320,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static boolean isNestedQueryPushDown(GroupByQuery q, GroupByStrategy strategy)
   {
     return q.getDataSource() instanceof QueryDataSource
-           && q.getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
+           && q.context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
            && q.getSubtotalsSpec() == null
            && strategy.supportsNestedQueryPushDown();
   }
@@ -418,7 +417,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final GroupByQuery query)
   {
-    final boolean resultAsArray = query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
 
     if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
       // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
