@@ -107,5 +107,5 @@ jobs:
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile } ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}"
+          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile }} ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile }} ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}
