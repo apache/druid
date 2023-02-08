@@ -31,6 +31,7 @@ import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testsEx.categories.Query;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
@@ -55,6 +56,9 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
 
   @Inject
   CoordinatorResourceTestClient coordinatorClient;
+
+  @Inject
+  SqlTestQueryHelper queryHelper;
 
   @Inject
   DataLoaderHelper dataLoaderHelper;
