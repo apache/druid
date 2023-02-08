@@ -99,7 +99,7 @@ broker:
     # -- Create a service account for the broker
     create: true
     # -- Service Account name
-    name: druid-broker
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account
@@ -154,7 +154,7 @@ coordinator:
     # -- Create a service account for the coordinator
     create: true
     # -- Service Account name
-    name: druid-coordinator
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account
@@ -200,7 +200,7 @@ overlord:
     # -- Create a service account for the overlord
     create: true
     # -- Service Account name
-    name: druid-overlord
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account
@@ -277,7 +277,7 @@ historical:
     # -- Create a service account for the overlord
     create: true
     # -- Service Account name
-    name: druid-historical
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account
@@ -374,7 +374,7 @@ middleManager:
     # -- Create a service account for the overlord
     create: true
     # -- Service Account name
-    name: druid-middlemanager
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account
@@ -432,7 +432,7 @@ router:
     # -- Create a service account for the overlord
     create: true
     # -- Service Account name
-    name: druid-router
+    name:
     # -- Annotations applied to created service account
     annotations: {}
     # -- Labels applied to created service account

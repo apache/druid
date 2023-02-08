@@ -53,7 +53,7 @@ spec:
         {{- end }}
     spec:
       {{- if .Values.router.serviceAccount.create }}
-      serviceAccountName: "{{ .Values.router.serviceAccount.name }}"
+      serviceAccountName: {{ include "druid.router.serviceAccountName" . }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}

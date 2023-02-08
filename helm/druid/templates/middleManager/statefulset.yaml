@@ -98,7 +98,7 @@ spec:
 {{ toYaml .Values.image.pullSecrets | indent 8 }}
 {{- end }}
       {{- if .Values.middleManager.serviceAccount.create }}
-      serviceAccountName: "{{ .Values.middleManager.serviceAccount.name }}"
+      serviceAccountName: {{ include "druid.middleManager.serviceAccountName" . }}
       {{- end }}
       containers:
       - name: druid

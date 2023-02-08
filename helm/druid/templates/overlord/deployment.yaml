@@ -53,7 +53,7 @@ spec:
         {{- end }}
     spec:
       {{- if .Values.overlord.serviceAccount.create }}
-      serviceAccountName: "{{ .Values.overlord.serviceAccount.name }}"
+      serviceAccountName: {{ include "druid.overlord.serviceAccountName" . }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}

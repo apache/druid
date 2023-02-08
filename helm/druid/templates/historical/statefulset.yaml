@@ -98,7 +98,7 @@ spec:
 {{ toYaml .Values.image.pullSecrets | indent 8 }}
 {{- end }}
       {{- if .Values.historical.serviceAccount.create }}
-      serviceAccountName: "{{ .Values.historical.serviceAccount.name }}"
+      serviceAccountName: {{ include "druid.historical.serviceAccountName" . }}
       {{- end }}
       containers:
       - name: druid
