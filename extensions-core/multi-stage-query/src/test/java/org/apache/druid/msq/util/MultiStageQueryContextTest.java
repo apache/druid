@@ -101,6 +101,16 @@ public class MultiStageQueryContextTest
   }
 
   @Test
+  public void testGetMaxInputBytesPerWorker()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_BYTES_PER_WORKER, 1024);
+
+    Assert.assertEquals(
+        1024,
+        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap)));
+  }
+
+  @Test
   public void getAssignmentStrategy_parameterSetReturnsCorrectValue()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_TASK_ASSIGNMENT_STRATEGY, "AUTO");

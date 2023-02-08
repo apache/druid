@@ -17,10 +17,10 @@
  */
 
 import { Classes, Dialog } from '@blueprintjs/core';
-import { SqlExpression } from 'druid-query-toolkit';
+import type { SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
-import { ExternalConfig, InputFormat, InputSource } from '../../../druid-models';
+import type { ExternalConfig, InputFormat, InputSource } from '../../../druid-models';
 import { InputFormatStep } from '../input-format-step/input-format-step';
 import { InputSourceStep } from '../input-source-step/input-source-step';
 

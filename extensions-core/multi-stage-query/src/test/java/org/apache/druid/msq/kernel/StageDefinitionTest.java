@@ -25,6 +25,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
@@ -55,7 +56,8 @@ public class StageDefinitionTest
         RowSignature.empty(),
         null,
         0,
-        false
+        false,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
@@ -72,7 +74,8 @@ public class StageDefinitionTest
         RowSignature.empty(),
         new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 1), 2, false),
         1,
-        false
+        false,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionsForShuffle(null));
@@ -90,7 +93,8 @@ public class StageDefinitionTest
         RowSignature.empty(),
         new MaxCountShuffleSpec(new ClusterBy(ImmutableList.of(new SortColumn("test", false)), 0), 1, false),
         1,
-        false
+        false,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertThrows(

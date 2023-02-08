@@ -474,7 +474,7 @@ Returns an automatic compaction config of a dataSource.
 
 Returns the history of the automatic compaction config for a dataSource. Optionally accepts `interval` and  `count`
 query string parameters to filter by interval and limit the number of results respectively. If the dataSource does not
-exist or there is no compaction history for the dataSource, a 404 response is returned.
+exist or there is no compaction history for the dataSource, an empty list is returned.
 
 The response contains a list of objects with the following keys:
 * `globalConfig`: A json object containing automatic compaction config that applies to the entire cluster. 

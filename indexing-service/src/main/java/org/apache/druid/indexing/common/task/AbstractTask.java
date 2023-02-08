@@ -142,7 +142,7 @@ public abstract class AbstractTask implements Task
   public String setup(TaskToolbox toolbox) throws Exception
   {
     if (toolbox.getConfig().isEncapsulatedTask()) {
-      File taskDir = toolbox.getConfig().getTaskDir(getId());
+      File taskDir = toolbox.getDirTracker().getTaskDir(getId());
       FileUtils.mkdirp(taskDir);
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);
@@ -166,7 +166,11 @@ public abstract class AbstractTask implements Task
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
         return TaskStatus.failure(getId(), errorMessage);
       }
-      return runTask(taskToolbox);
+      TaskStatus taskStatus = runTask(taskToolbox);
+      if (taskStatus.isFailure()) {
+        failure = true;
+      }
+      return taskStatus;
     }
     catch (Exception e) {
       failure = true;

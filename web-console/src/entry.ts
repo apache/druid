@@ -27,7 +27,8 @@ import ReactDOM from 'react-dom';
 import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
-import { Links, setLinkOverrides } from './links';
+import type { Links } from './links';
+import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
 import { setLocalStorageNamespace } from './utils';
 
@@ -84,7 +85,7 @@ if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
   apiConfig.headers![consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
-  Object.assign(apiConfig.headers, consoleConfig.customHeaders);
+  Object.assign(apiConfig.headers!, consoleConfig.customHeaders);
 }
 
 Api.initialize(apiConfig);
