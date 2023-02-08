@@ -85,20 +85,22 @@ documentation.
 
 ## UNNEST
 
-The UNNEST clause unnests values arrays. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
+The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
 ```sql
-SELECT target_column FROM datasource, UNNEST(source_expression) AS table_alias_name(column_alias_name)
+SELECT column_alias_name FROM datasource, UNNEST(source_expression) AS table_alias_name(column_alias_name)
 ```
 
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
-  * A table, such as  `FROM a_table`
-  * A subset of a table based on a query, such as `FROM (SELECT columnA,columnB,columnC from a_table)`, a filter, or a JOIN.
-  * An inline array, which is treated as the `datasource` and the `source`, such as `FROM UNNEST(ARRAY[1,2,3])`
-* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY<> type. You can also specify any expression that has an SQL array datatype. For example, use `ARRAY[dim1,dim2]` if you want to make an array out of 2 dimensions or `ARRAY_CONCAT(dim1,dim2)` if you have to concatenate two multi-value dimensions. 
-* The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. If you don't provide this, Druid uses an nondescriptive name, such as `EXPR$0`.
+  * A table, such as  `FROM a_table`.
+  * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
+  * An inline array, which is treated as the `datasource` and the `source_expression`, such as `FROM UNNEST(ARRAY[1,2,3])`.
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you cancall UNNEST on the following:
+  * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
+  * `ARRAY_CONCAT(dim1,dim2)` if you have to concatenate two multi-value dimensions. 
+* The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
 
 Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 

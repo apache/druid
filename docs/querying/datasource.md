@@ -373,8 +373,6 @@ always be correct.
 
 ### `unnest`
 
-> The unnest datasource is currently only available as part of a native query.
-
 Use the `unnest` datasource to unnest a column with multiple values in an array. 
 For example, you have a source column that looks like this:
 
@@ -423,4 +421,4 @@ The `unnest` datasource uses the following syntax:
 * `dataSource.outputName`: The name you want to assign to the column that will contain the unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
 * `dataSource.allowList`: Optional. The subset of values you want to unnest.
 
-To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).

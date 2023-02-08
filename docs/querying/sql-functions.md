@@ -1363,7 +1363,7 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 Unnests a source column that includes arrays into a target column.
 
-For more information, see [UNNEST](./sql.md#unnest)
+For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 
