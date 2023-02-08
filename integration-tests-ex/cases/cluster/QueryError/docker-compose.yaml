@@ -93,7 +93,7 @@ services:
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
     env_file:
       - ../Common/environment-configs/common.env
-      - ../Common/environment-configs/historical-for-query-error-test.env
+      - ../Common/environment-configs/historical-for-query-retry-error-test.env
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}

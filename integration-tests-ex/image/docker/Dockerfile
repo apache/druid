@@ -59,6 +59,7 @@ COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
 COPY test-setup.sh /
 COPY druid.sh /
 COPY launch.sh /
+ADD  tls /tls
 
 # Do the setup tasks. The tasks are done within a script, rather than
 # here, so they are easier to describe and debug. Turn on the "-x" flag

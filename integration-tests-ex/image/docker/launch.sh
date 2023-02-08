@@ -23,7 +23,7 @@
 set -e
 
 # Enable for tracing
-#set -x
+set -x
 
 # Dump the environment for debugging.
 #env
@@ -32,7 +32,7 @@ set -e
 cd /
 
 # TODO: enable only for security-related tests?
-#/tls/generate-server-certs-and-keystores.sh
+/tls/generate-server-certs-and-keystores.sh
 
 # The image contains both the MySQL and MariaDB JDBC drivers.
 # The MySQL driver is selected by the Docker Compose file.

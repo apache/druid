@@ -32,7 +32,7 @@ druid:
   router:
     instances:
       - port: 8888
-  historical:
+  historical-for-query-error-test:
     instances:
       - port: 8083
   middlemanager:

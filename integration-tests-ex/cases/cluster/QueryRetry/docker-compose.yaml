@@ -66,7 +66,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - zookeeper
-      - druid-historical-for-query-retry-test
+      - historical-for-query-retry-test
 
   router:
     extends:
@@ -77,9 +77,9 @@ services:
     depends_on:
       - zookeeper
 
-  druid-historical-for-query-retry-test:
-    image: druid/cluster
-    container_name: druid-historical-for-query-retry-test
+  historical-for-query-retry-test:
+    image: ${DRUID_IT_IMAGE_NAME}
+    container_name: historical-for-query-retry-test
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.14
@@ -93,7 +93,7 @@ services:
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
     env_file:
       - ../Common/environment-configs/common.env
-      - ../Common/environment-configs/historical-for-query-error-test.env
+      - ../Common/environment-configs/historical-for-query-retry-error-test.env
       - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
