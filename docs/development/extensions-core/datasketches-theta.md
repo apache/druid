@@ -99,7 +99,7 @@ This returns a summary of the sketch that can be used for debugging. This is the
 
 ### Constant Theta Sketch 
 
-You can use the constant theta sketch post aggregator to add a Base64-encoded constant theta sketch value for use in other post-aggregators. For example,  `thetaSketchSetOp` 
+You can use the constant theta sketch post aggregator to add a Base64-encoded constant theta sketch value for use in other post-aggregators. For example,  `thetaSketchSetOp`.
 
 ```json
 {
