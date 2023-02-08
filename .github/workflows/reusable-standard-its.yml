@@ -104,8 +104,8 @@ jobs:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
           TEST_ARGS: |
             ${{ inputs.test_profile == 'integration-tests' &&
-            '-Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} -Doverride.config.path=${{ inputs.override_config_path }}' ||
-            '-Dpod.name=${{ inputs.pod_name }} -Dpod.namespace=${{ inputs.pod_namespace}} -Dbuild.druid.cluster=${{ inputs.build_druid_cluster }}' }}
+            format('-Djvm.runtime={0} -Dit.indexer={1} -Doverride.config.path={2}', inputs.runtime_jdk, inputs.use_indexer, inputs.override_config_path) ||
+            format('-Dpod.name={0} -Dpod.namespace={1} -Dbuild.druid.cluster={2}',  inputs.pod_name, inputs.pod_namespace, inputs.build_druid_cluster) }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
