@@ -70,7 +70,7 @@ jobs:
           key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ github.sha }}
 
       - name: Retrieve cached docker image
-        id: docker-image-restore
+        id: docker-restore
         uses: actions/cache/restore@v3
         with:
           key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz
@@ -79,13 +79,14 @@ jobs:
             ./integration-tests-ex/image/target/env.sh
 
       - name: Maven build
-        if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-image-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
+        if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
         run: |
           ./it.sh ci
 
       - name: Create docker image
-        if: steps.docker-image-restore.outputs.cache-hit != 'true'
+        if: steps.docker-restore.outputs.cache-hit != 'true'
         run: |
+          echo "docker-restore.outputs - ${{ steps.docker-restore.outputs }}"
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
