@@ -120,6 +120,7 @@ jobs:
       build_jdk: 8
       config_file: k8s_run_config_file.json
       testing_groups: -Dit.test=ITNestedQueryPushDownTest
+      test_profile: int-tests-config-file
       pod_name: int-test
       pod_namespace: default
       build_druid_cluster: true
