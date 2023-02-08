@@ -48,6 +48,9 @@ public class SegmentToRowsAndColumnsOperator implements Operator
       }
 
       RowsAndColumns rac = shifty.as(RowsAndColumns.class);
+      if (shifty instanceof RowsAndColumns) {
+        rac = (RowsAndColumns) shifty;
+      }
       if (rac == null) {
         throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
       }

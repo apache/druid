@@ -26,6 +26,9 @@ import org.apache.druid.frame.write.columnar.FloatFrameMaker;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
+import org.apache.druid.query.rowsandcols.column.accessor.FloatColumnAccessorBase;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -46,6 +49,18 @@ public class FloatFrameColumnReader implements FrameColumnReader
   FloatFrameColumnReader(final int columnNumber)
   {
     this.columnNumber = columnNumber;
+  }
+
+  @Override
+  public Column readRACColumn(Frame frame)
+  {
+    final Memory memory = frame.region(columnNumber);
+    validate(memory, frame.numRows());
+
+    final boolean hasNulls = getHasNulls(memory);
+    final FloatFrameColumn frameCol = new FloatFrameColumn(frame, hasNulls, memory);
+
+    return new ColumnAccessorBasedColumn(frameCol);
   }
 
   @Override
@@ -92,7 +107,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
     return memory.getByte(Byte.BYTES) != 0;
   }
 
-  private static class FloatFrameColumn implements NumericColumn
+  private static class FloatFrameColumn extends FloatColumnAccessorBase implements NumericColumn
   {
     private final Frame frame;
     private final boolean hasNulls;
@@ -122,13 +137,13 @@ public class FloatFrameColumnReader implements FrameColumnReader
         public float getFloat()
         {
           assert NullHandling.replaceWithDefault() || !isNull();
-          return FloatFrameColumn.this.getFloat(frame.physicalRow(offset.getOffset()));
+          return FloatFrameColumn.this.getFloatInternal(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
         public boolean isNull()
         {
-          return FloatFrameColumn.this.isNull(frame.physicalRow(offset.getOffset()));
+          return FloatFrameColumn.this.isNullInternal(frame.physicalRow(offset.getOffset()));
         }
 
         @Override
@@ -182,10 +197,10 @@ public class FloatFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(i + start);
-              floatVector[i] = getFloat(physicalRow);
+              floatVector[i] = getFloatInternal(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullInternal(physicalRow);
               }
             }
           } else {
@@ -193,10 +208,10 @@ public class FloatFrameColumnReader implements FrameColumnReader
 
             for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
               final int physicalRow = frame.physicalRow(offsets[i]);
-              floatVector[i] = getFloat(physicalRow);
+              floatVector[i] = getFloatInternal(physicalRow);
 
               if (hasNulls) {
-                nullVector[i] = isNull(physicalRow);
+                nullVector[i] = isNullInternal(physicalRow);
               }
             }
           }
@@ -222,7 +237,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
         throw new ISE("Row [%d] out of bounds", rowNum);
       }
 
-      return (long) getFloat(frame.physicalRow(rowNum));
+      return (long) getFloatInternal(frame.physicalRow(rowNum));
     }
 
     @Override
@@ -237,7 +252,25 @@ public class FloatFrameColumnReader implements FrameColumnReader
       // Do nothing.
     }
 
-    private boolean isNull(final int physicalRow)
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    public boolean isNull(int rowNum)
+    {
+      return isNullInternal(frame.physicalRow(rowNum));
+    }
+
+    @Override
+    public float getFloat(int rowNum)
+    {
+      return getFloatInternal(frame.physicalRow(rowNum));
+    }
+
+    private boolean isNullInternal(final int physicalRow)
     {
       if (hasNulls) {
         final long rowPosition = memoryPosition + (long) sz * physicalRow;
@@ -247,7 +280,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
       }
     }
 
-    private float getFloat(final int physicalRow)
+    private float getFloatInternal(final int physicalRow)
     {
       final long rowPosition = memoryPosition + (long) sz * physicalRow;
 
