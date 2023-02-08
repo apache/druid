@@ -674,14 +674,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(ingestionSchema);
 
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
-            .andReturn(mapper.convertValue(ImmutableMap.of("lagCollectionIntervalMillis",
-                                                           "1",
-                                                           "enableTaskAutoScaler",
-                                                           true,
-                                                           "taskCountMax",
-                                                           "4",
-                                                           "taskCountMin",
-                                                           "1"
+            .andReturn(mapper.convertValue(ImmutableMap.of(
+                "lagCollectionIntervalMillis",
+                "1",
+                "enableTaskAutoScaler",
+                true,
+                "taskCountMax",
+                "4",
+                "taskCountMin",
+                "1"
             ), AutoScalerConfig.class))
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
@@ -931,7 +932,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         null,
         null,
         new IdleConfig(true, null)
-    ){
+    )
+    {
     };
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -986,20 +988,20 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   {
     mockIngestionSchema();
     TestSeekableStreamSupervisorSpec spec = new TestSeekableStreamSupervisorSpec(
-      ingestionSchema,
-      null,
-      false,
-      taskStorage,
-      taskMaster,
-      indexerMetadataStorageCoordinator,
-      indexTaskClientFactory,
-      mapper,
-      emitter,
-      monitorSchedulerConfig,
-      rowIngestionMetersFactory,
-      supervisorStateManagerConfig,
-      supervisor4,
-      "id1"
+        ingestionSchema,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        "id1"
     );
     Assert.assertNull(spec.getContextValue("key"));
   }
@@ -1057,6 +1059,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
     EasyMock.replay(ingestionSchema);
   }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();
