@@ -668,6 +668,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
+    brokerServerView.start();
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)

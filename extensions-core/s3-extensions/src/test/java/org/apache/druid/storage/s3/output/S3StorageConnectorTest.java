@@ -24,6 +24,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
@@ -104,9 +105,15 @@ public class S3StorageConnectorTest
   public void pathRead() throws IOException
   {
     EasyMock.reset(S3_CLIENT);
+    ObjectMetadata objectMetadata = new ObjectMetadata();
+    long contentLength = "test".getBytes(StandardCharsets.UTF_8).length;
+    objectMetadata.setContentLength(contentLength);
     S3Object s3Object = new S3Object();
     s3Object.setObjectContent(new ByteArrayInputStream("test".getBytes(StandardCharsets.UTF_8)));
-    EasyMock.expect(S3_CLIENT.getObject(new GetObjectRequest(BUCKET, PREFIX + "/" + TEST_FILE))).andReturn(s3Object);
+    EasyMock.expect(S3_CLIENT.getObjectMetadata(EasyMock.anyObject())).andReturn(objectMetadata);
+    EasyMock.expect(S3_CLIENT.getObject(
+        new GetObjectRequest(BUCKET, PREFIX + "/" + TEST_FILE).withRange(0, contentLength - 1))
+    ).andReturn(s3Object);
     EasyMock.replay(S3_CLIENT);
 
     String readText = new BufferedReader(
@@ -141,8 +148,8 @@ public class S3StorageConnectorTest
 
         InputStream is = storageConnector.readRange(TEST_FILE, start, length);
         byte[] dataBytes = new byte[length];
-        Assert.assertEquals(is.read(dataBytes), length);
-        Assert.assertEquals(is.read(), -1); // reading further produces no data
+        Assert.assertEquals(length, is.read(dataBytes));
+        Assert.assertEquals(-1, is.read()); // reading further produces no data
         Assert.assertEquals(dataQueried, new String(dataBytes, StandardCharsets.UTF_8));
         EasyMock.reset(S3_CLIENT);
       }
