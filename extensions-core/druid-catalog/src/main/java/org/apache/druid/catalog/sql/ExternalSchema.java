@@ -123,7 +123,7 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
     if (!fn.parameters().isEmpty()) {
       throw new IAE(
           "Table %s is a function: use TABLE(ext.%s(...)) and provide values for the parameters",
-          name,
+          TableId.of(schemaName, name).unquoted(),
           name
       );
     }
@@ -172,7 +172,10 @@ public class ExternalSchema extends AbstractTableSchema implements NamedSchema
       return Collections.emptyList();
     }
     return Collections.singletonList(
-      new ExternalTableMacro(name, externalTable)
+      new ExternalTableMacro(
+          name,
+          externalTable
+      )
     );
   }
 

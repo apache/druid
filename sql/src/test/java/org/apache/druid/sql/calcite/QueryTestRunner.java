@@ -397,7 +397,7 @@ public class QueryTestRunner
         expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query, queryJsonMapper));
       }
 
-      final List<Query> recordedQueries = queryResults.recordedQueries
+      final List<Query<?>> recordedQueries = queryResults.recordedQueries
           .stream()
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
@@ -418,6 +418,9 @@ public class QueryTestRunner
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
+          // The writeValueAsString() requires that all objects in the query tree have a useful toString() method,
+          // Else you may get a false failure because the Object.toString() reports objects with different ids:
+          // MyClass@012ab vs. MyClass@234cd.
           final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
           final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));

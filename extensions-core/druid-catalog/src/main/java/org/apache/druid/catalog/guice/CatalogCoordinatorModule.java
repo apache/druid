@@ -19,6 +19,7 @@
 
 package org.apache.druid.catalog.guice;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.SchemaRegistry;
@@ -35,6 +36,9 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.metadata.input.InputSourceModule;
+
+import java.util.List;
 
 /**
  * Configures the catalog database on the Coordinator, along
@@ -78,5 +82,17 @@ public class CatalogCoordinatorModule implements DruidModule
 
     // Public REST API and private cache sync API.
     Jerseys.addResource(binder, CatalogResource.class);
+
+    // The HTTP input source requires a HttpInputSourceConfig instance
+    // which is defined by the InputSourceModule. Note that MSQ also includes
+    // this module, but MSQ is not included in the Coordinator.
+    binder.install(new InputSourceModule());
+  }
+
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    // We want this module to bring input sources along for the ride.
+    return new InputSourceModule().getJacksonModules();
   }
 }

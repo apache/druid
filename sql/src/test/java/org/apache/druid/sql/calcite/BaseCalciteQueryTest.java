@@ -844,14 +844,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     public CalciteTestConfig()
     {
-
     }
 
     public CalciteTestConfig(boolean isRunningMSQ)
     {
       this.isRunningMSQ = isRunningMSQ;
     }
-
 
     @Override
     public QueryLogHook queryLogHook()
@@ -1035,12 +1033,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     );
   }
 
-
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
    * @return
    */
-  public static <T> Query recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
+  public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
     try {
       Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));

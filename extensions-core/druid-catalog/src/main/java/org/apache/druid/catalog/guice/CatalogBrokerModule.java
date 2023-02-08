@@ -51,7 +51,7 @@ public class CatalogBrokerModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // The Broker (client) uses a cached metadata catalog.
+    // The Broker (catalog client) uses a cached metadata catalog.
     binder
         .bind(CachedMetadataCatalog.class)
         .in(LazySingleton.class);
@@ -70,8 +70,7 @@ public class CatalogBrokerModule implements DruidModule
         .to(CatalogClient.class)
         .in(LazySingleton.class);
 
-    // The cached metadata catalog is the listener for
-    // "push" events.
+    // The cached metadata catalog is the listener for"push" events.
     binder
         .bind(CatalogUpdateListener.class)
         .to(CachedMetadataCatalog.class)

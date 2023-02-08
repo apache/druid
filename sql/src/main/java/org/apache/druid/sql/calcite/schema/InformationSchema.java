@@ -142,8 +142,8 @@ public class InformationSchema extends AbstractSchema
   // MySQL Reference: https://dev.mysql.com/doc/mysql-infoschema-excerpt/5.7/en/information-schema-parameters-table.html
   // Adapted for Druid
   private static final RelDataType PARAMETERS_SIGNATURE = new RowTypeBuilder()
-      .add("FUNCTION_CATALOG", SqlTypeName.VARCHAR)
-      .add("FUNCTION_SCHEMA", SqlTypeName.VARCHAR)
+      .add("CATALOG_NAME", SqlTypeName.VARCHAR)
+      .add("SCHEMA_NAME", SqlTypeName.VARCHAR)
       .add("FUNCTION_NAME", SqlTypeName.VARCHAR)
       .add("PARAMETER_NAME", SqlTypeName.VARCHAR)
       .add("ORDINAL_POSITION", SqlTypeName.BIGINT)

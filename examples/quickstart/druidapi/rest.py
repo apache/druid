@@ -16,6 +16,7 @@
 import requests
 from .util import dict_get, is_blank
 from urllib.parse import quote
+from .error import ClientError
 
 def check_error(response):
     """
@@ -32,11 +33,13 @@ def check_error(response):
     json = None
     try:
         json = response.json()
-        msg = dict_get(json, 'error')
-        if not is_blank(msg):
-            error = msg
-    except Exception:
+    except Exception: 
         pass
+    msg = dict_get(json, 'errorMessage')
+    if msg is None:
+        msg = dict_get(json, 'error')
+    if not is_blank(msg):
+        raise ClientError(msg)
     if code == requests.codes.not_found and error is None:
         error = "Not found"
     if error is not None:
@@ -45,6 +48,7 @@ def check_error(response):
         response.raise_for_status()
     except Exception as e:
         e.json = json
+        raise e
 
 class DruidRestClient:
     '''

@@ -822,7 +822,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
         dataSegment ->
-            Pair.of(
+            Pair.<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>of(
                 dataSegment,
                 () -> {
                   try {

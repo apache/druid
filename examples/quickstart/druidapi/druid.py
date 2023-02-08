@@ -18,6 +18,7 @@ from .status import StatusClient
 from .catalog import CatalogClient
 from .sql import QueryClient
 from .tasks import TaskClient
+from .datasource import DatasourceClient
 
 class DruidClient:
 
@@ -27,6 +28,10 @@ class DruidClient:
         self.catalog_client = None
         self.sql_client = None
         self.tasks_client = None
+        self.datasource_client = None
+
+    def trace(self, enable=True):
+        self.rest_client.enable_trace(enable)
     
     def status(self, endpoint=None) -> StatusClient:
         '''
@@ -55,3 +60,8 @@ class DruidClient:
         if self.tasks_client is None:
             self.tasks_client = TaskClient(self.rest_client)
         return self.tasks_client
+
+    def datasources(self):
+        if self.datasource_client is None:
+            self.datasource_client = DatasourceClient(self.rest_client)
+        return self.datasource_client

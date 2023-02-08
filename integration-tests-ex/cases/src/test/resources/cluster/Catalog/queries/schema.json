@@ -307,30 +307,12 @@
         "IS_NULLABLE": "YES",
         "DATA_TYPE": "VARCHAR"
       },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "isUnpatrolled",
-        "ORDINAL_POSITION": 5,
-        "IS_NULLABLE": "NO",
-        "DATA_TYPE": "BIGINT"
-      },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "isAnonymous",
-        "ORDINAL_POSITION": 6,
-        "IS_NULLABLE": "NO",
-        "DATA_TYPE": "BIGINT"
-      },
-      {
+       {
         "TABLE_CATALOG": "druid",
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "user",
-        "ORDINAL_POSITION": 7,
+        "ORDINAL_POSITION": 5,
         "IS_NULLABLE": "YES",
         "DATA_TYPE": "VARCHAR"
       },
@@ -339,7 +321,7 @@
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "countryName",
-        "ORDINAL_POSITION": 8,
+        "ORDINAL_POSITION": 6,
         "IS_NULLABLE": "YES",
         "DATA_TYPE": "VARCHAR"
       },
@@ -348,7 +330,7 @@
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "isRobot",
-        "ORDINAL_POSITION": 9,
+        "ORDINAL_POSITION": 7,
         "IS_NULLABLE": "NO",
         "DATA_TYPE": "BIGINT"
       },
@@ -356,17 +338,8 @@
         "TABLE_CATALOG": "druid",
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "diffUrl",
-        "ORDINAL_POSITION": 10,
-        "IS_NULLABLE": "YES",
-        "DATA_TYPE": "VARCHAR"
-      },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "added",
-        "ORDINAL_POSITION": 11,
+        "ORDINAL_POSITION": 8,
         "IS_NULLABLE": "NO",
         "DATA_TYPE": "BIGINT"
       },
@@ -375,7 +348,7 @@
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "delta",
-        "ORDINAL_POSITION": 12,
+        "ORDINAL_POSITION": 9,
         "IS_NULLABLE": "NO",
         "DATA_TYPE": "DOUBLE"
       },
@@ -384,16 +357,16 @@
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "isNew",
-        "ORDINAL_POSITION": 13,
-        "IS_NULLABLE": "YES",
-        "DATA_TYPE": "VARCHAR"
+        "ORDINAL_POSITION": 10,
+        "IS_NULLABLE": "NO",
+        "DATA_TYPE": "BIGINT"
       },
       {
         "TABLE_CATALOG": "druid",
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "deltaBucket",
-        "ORDINAL_POSITION": 14,
+        "ORDINAL_POSITION": 11,
         "IS_NULLABLE": "NO",
         "DATA_TYPE": "DOUBLE"
       },
@@ -401,35 +374,8 @@
         "TABLE_CATALOG": "druid",
         "TABLE_SCHEMA": "druid",
         "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "isMinor",
-        "ORDINAL_POSITION": 15,
-        "IS_NULLABLE": "NO",
-        "DATA_TYPE": "BIGINT"
-      },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
         "COLUMN_NAME": "deleted",
-        "ORDINAL_POSITION": 16,
-        "IS_NULLABLE": "NO",
-        "DATA_TYPE": "BIGINT"
-      },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "comment",
-        "ORDINAL_POSITION": 17,
-        "IS_NULLABLE": "YES",
-        "DATA_TYPE": "VARCHAR"
-      },
-      {
-        "TABLE_CATALOG": "druid",
-        "TABLE_SCHEMA": "druid",
-        "TABLE_NAME": "testWiki",
-        "COLUMN_NAME": "commentLength",
-        "ORDINAL_POSITION": 18,
+        "ORDINAL_POSITION": 12,
         "IS_NULLABLE": "NO",
         "DATA_TYPE": "BIGINT"
       }
@@ -442,8 +388,8 @@
     },
     "expectedResults": [
       {
-        "FUNCTION_CATALOG": "druid",
-        "FUNCTION_SCHEMA": "ext",
+        "CATALOG_NAME": "druid",
+        "SCHEMA_NAME": "ext",
         "FUNCTION_NAME": "sampleWiki",
         "PARAMETER_NAME": "files",
         "ORDINAL_POSITION": 1,
@@ -460,8 +406,8 @@
         "JDBC_TYPE": 2003
       },
       {
-        "FUNCTION_CATALOG": "druid",
-        "FUNCTION_SCHEMA": "ext",
+        "CATALOG_NAME": "druid",
+        "SCHEMA_NAME": "ext",
         "FUNCTION_NAME": "sampleWiki",
         "PARAMETER_NAME": "filter",
         "ORDINAL_POSITION": 2,

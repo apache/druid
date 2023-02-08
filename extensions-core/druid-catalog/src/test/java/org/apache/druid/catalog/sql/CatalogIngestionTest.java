@@ -303,6 +303,29 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
   }
 
   /**
+   * Sanity check to ensure REPLACE goes down the same validation path.
+   */
+  @Test
+  public void testReplaceHourGrain()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("hourDs", FOO_SIGNATURE)
+        .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "extra1", "extra2", "extra3", "m1", "m2")
+                .context(queryContextWithGranularity(Granularities.HOUR))
+                .build()
+         )
+        .verify();
+  }
+
+  /**
    * Partition grain comes from both the catalog and redundant query
    * PARITIONED BY. The two sources agree, which is odd, but legal.
    */
@@ -579,18 +602,18 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
          )
         .expectValidationError(
             SqlPlanningException.class,
-            "Table localBaseDirNoSchema is a function: use " +
+            "Table ext.localBaseDirNoSchema is a function: use " +
             "TABLE(ext.localBaseDirNoSchema(...)) and provide values for the parameters"
          )
         .verify();
   }
 
-  @Test
-  public void testInsertFromCatalogLocalTableWithoutSchema()
+  public void doInsertFromCatalogLocalTableTest(String tableName, String sql)
   {
     RowSignature targetRowSignature = RowSignature.builder()
         .add("__time", ColumnType.LONG)
         .add("y", ColumnType.STRING)
+        .add("z", ColumnType.LONG)
         .build();
     ExternalDataSource expectedDatasource = new ExternalDataSource(
         new LocalInputSource(
@@ -598,29 +621,22 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
             null,
             Collections.singletonList(new File("/tmp/foo.csv"))
         ),
-        new CsvInputFormat(ImmutableList.of("x", "y"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
+                    .add("z", ColumnType.LONG)
                     .build()
     );
     testIngestionQuery()
-        .sql(
-            "INSERT INTO dst\n"
-            + "SELECT TIME_PARSE(x) AS __time, y\n"
-            + "FROM TABLE(ext.localBaseDirNoSchema(\n"
-            + "    files => ARRAY['foo.csv'],\n"
-            + "    format => 'csv'))\n"
-            + "  (x VARCHAR, y VARCHAR)\n"
-            + "PARTITIONED BY DAY"
-         )
+        .sql(sql)
         .expectTarget("dst", targetRowSignature)
-        .expectResources(Externals.externalRead("localBaseDirNoSchema"), dataSourceWrite("dst"))
+        .expectResources(Externals.externalRead(tableName), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(expectedDatasource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("v0", "y")
+                .columns("v0", "y", "z")
                 .virtualColumns(
                     expressionVirtualColumn("v0", "timestamp_parse(\"x\",null,'UTC')", ColumnType.LONG)
                  )
@@ -630,9 +646,114 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
-  // Test a partial table with schema with a query schema
-  // Test a complete table as a table function
-  // Test a partial table as a FROM table
+  @Test
+  public void testInsertFromCatalogLocalTableWithoutSchema()
+  {
+    doInsertFromCatalogLocalTableTest(
+        "localBaseDirNoSchema",
+        "INSERT INTO dst\n" +
+        "SELECT TIME_PARSE(x) AS __time, y, z\n" +
+        "FROM TABLE(ext.localBaseDirNoSchema(\n" +
+        "    files => ARRAY['foo.csv'],\n" +
+        "    format => 'csv'))\n" +
+        "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+        "PARTITIONED BY DAY"
+    );
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalTableWithoutSchemaNoQuerySchema()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst\n"
+            + "SELECT TIME_PARSE(x) AS __time, y\n"
+            + "FROM TABLE(ext.localBaseDirNoSchema(\n"
+            + "    files => ARRAY['foo.csv'],\n"
+            + "    format => 'csv'))\n"
+            + "PARTITIONED BY DAY"
+         )
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Function requires a schema: TABLE(localBaseDirNoSchema(...)) (<col> <type>...)"
+         )
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalTableWithoutSchemaMissingFormat()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst\n"
+            + "SELECT TIME_PARSE(x) AS __time, y\n"
+            + "FROM TABLE(ext.localBaseDirNoSchema(\n"
+            + "    files => ARRAY['foo.csv']))\n"
+            + "  (x VARCHAR, y VARCHAR)\n"
+            + "PARTITIONED BY DAY"
+         )
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Must provide a value for the [format] parameter"
+         )
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalTableWithSchema()
+  {
+    doInsertFromCatalogLocalTableTest(
+        "localBaseDirWithSchema",
+        "INSERT INTO dst\n" +
+        "SELECT TIME_PARSE(x) AS __time, y, z\n" +
+        "FROM TABLE(ext.localBaseDirWithSchema(\n" +
+        "    files => ARRAY['foo.csv']))\n" +
+        "PARTITIONED BY DAY"
+    );
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalTableWithSchemaWithQuerySchema()
+  {
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst\n"
+            + "SELECT TIME_PARSE(x) AS __time, y\n"
+            + "FROM TABLE(ext.localBaseDirWithSchema(\n"
+            + "    files => ARRAY['foo.csv']))\n"
+            + "  (x VARCHAR, y VARCHAR)\n"
+            + "PARTITIONED BY DAY"
+         )
+        .expectValidationError(
+            SqlPlanningException.class,
+            "Catalog definition for the local input source already contains column definitions"
+         )
+        .verify();
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalCompleteTable()
+  {
+    doInsertFromCatalogLocalTableTest(
+        "localComplete",
+        "INSERT INTO dst\n" +
+        "SELECT TIME_PARSE(x) AS __time, y, z\n" +
+        "FROM ext.localComplete\n" +
+        "PARTITIONED BY DAY"
+    );
+  }
+
+  @Test
+  public void testInsertFromCatalogLocalCompleteTableAsFn()
+  {
+    doInsertFromCatalogLocalTableTest(
+        "localComplete",
+        "INSERT INTO dst\n" +
+        "SELECT TIME_PARSE(x) AS __time, y, z\n" +
+        "FROM TABLE(ext.localComplete())\n" +
+        "PARTITIONED BY DAY"
+    );
+  }
 
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
@@ -754,7 +875,20 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
         .inputSource(ImmutableMap.of("type", LocalInputSource.TYPE_KEY, "baseDir", "/tmp"))
         .inputFormat(ImmutableMap.of("type", CsvInputFormat.TYPE_KEY))
         .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("y", Columns.VARCHAR)
+        .column("z", Columns.BIGINT)
+        .build();
+    createTableMetadata(spec);
+
+    spec = TableBuilder.external("localComplete")
+        .inputSource(ImmutableMap.of(
+            "type", LocalInputSource.TYPE_KEY,
+            "files", Collections.singletonList("/tmp/foo.csv"))
+         )
+        .inputFormat(ImmutableMap.of("type", CsvInputFormat.TYPE_KEY))
+        .column("x", Columns.VARCHAR)
+        .column("y", Columns.VARCHAR)
+        .column("z", Columns.BIGINT)
         .build();
     createTableMetadata(spec);
   }

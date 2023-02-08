@@ -47,12 +47,12 @@ class Display:
         object_to_table(self.table(), obj, labels)
 
     def show_error(self, msg):
-        if self.format == HTML_TABLE:
-            from .html_table import html_error
-            html_error("<b>ERROR: " + msg + "</b")
-        else:
-            from IPython.display import display as ipy_display
-            ipy_display("ERROR: " + msg)
+        from .html_table import html_error
+        html_error("<b>ERROR: " + msg + "</b")
+    
+    def show_message(self, msg):
+        from .html_table import html
+        html("<b>" + msg + "</b")
 
 def list_to_table(table, objects, cols):
     cols = infer_keys(objects) if cols is None else cols

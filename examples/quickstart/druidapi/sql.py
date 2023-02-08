@@ -16,7 +16,7 @@
 import time, requests
 from . import consts, display
 from .consts import ROUTER_BASE
-from .util import is_blank
+from .util import is_blank, dict_get
 from .error import DruidError, ClientError
 
 REQ_ROUTER_QUERY = ROUTER_BASE
@@ -25,8 +25,8 @@ REQ_ROUTER_SQL_TASK = REQ_ROUTER_SQL + '/task'
 
 class SqlRequest:
 
-    def __init__(self, druid, sql):
-        self.druid_client = druid
+    def __init__(self, query_client, sql):
+        self.query_client = query_client
         self.sql = sql
         self.context = None
         self.params = None
@@ -54,11 +54,38 @@ class SqlRequest:
         return self
     
     def with_parameters(self, params):
+        '''
+        Set the array of parameters. Parameters must each be a map of 'type'/'value' pairs:
+        {'type': the_type, 'value': the_value}. The type must be a valid SQL type
+        (in upper case). See the consts module for a list.
+        '''
         if self.params is None:
             self.params = params
         else:
             self.params.update(params)
         return self
+    
+    def add_parameter(self, value):
+        '''
+        Add one parameter value. Infers the type of the parameter from the Python type.
+        '''
+        if value is None:
+            raise ClientError("Druid does not support null parameter values")
+        data_type = None
+        value_type = type(value)
+        if value_type is str:
+            data_type = consts.SQL_VARCHAR_TYPE
+        elif value_type is int:
+            data_type = consts.SQL_BIGINT_TYPE
+        elif value_type is float:
+            data_type = consts.SQL_DOUBLE_TYPE
+        elif value_type is list:
+            data_type = consts.SQL_ARRAY_TYPE
+        else:
+            raise ClientError("Unsupported value type")
+        if self.params is None:
+            self.params = []
+        self.params.append({'type': data_type, 'value': value})
 
     def response_header(self):
         self.header = True
@@ -88,7 +115,7 @@ class SqlRequest:
         return self.format.lower()
 
     def run(self):
-        return self.druid_client.sql().sql_query(self)
+        return self.query_client.sql_query(self)
 
 def parse_rows(fmt, context, results):
     if fmt == consts.SQL_ARRAY_WITH_TRAILER:
@@ -334,6 +361,9 @@ class SqlQueryResult:
             data = self.non_null()
         if data is None:
             data = self.as_array()
+        if data is None or len(data) == 0:
+            display.display.show_message("Query returned no results")
+            return
         disp = display.display.table()
         disp.headers([c.name for c in self.schema()])
         disp.show(data)
@@ -390,7 +420,7 @@ class QueryTaskResult:
         return self._id
 
     def _tasks(self):
-        return self._request.druid_client.tasks()
+        return self._request.query_client.druid_client.tasks()
 
     def status(self):
         """
@@ -442,8 +472,8 @@ class QueryTaskResult:
             return "unknown"
         if type(err) is str:
             return err
-        msg = err.get("error")
-        text = err.get("errorMessage")
+        msg = dict_get(err, "error")
+        text = dict_get(err, "errorMessage")
         if msg is None and text is None:
             return "unknown"
         if text is not None:
@@ -468,7 +498,7 @@ class QueryTaskResult:
 
     def wait_done(self):
         if not self.join():
-            raise DruidError("Query failed: " + self._error)
+            raise DruidError("Query failed: " + self.error_msg())
 
     def wait(self):
         self.wait_done()
@@ -514,11 +544,12 @@ class QueryTaskResult:
 
 class QueryClient:
     
-    def __init__(self, druid):
+    def __init__(self, druid, rest_client=None):
         self.druid_client = druid
+        self._rest_client = druid.rest_client if rest_client is None else rest_client
 
     def rest_client(self):
-        return self.druid_client.rest_client
+        return self._rest_client
         
     def _prepare_query(self, request):
         if request is None:
@@ -578,8 +609,14 @@ class QueryClient:
 
     def task(self, request):
         request, query_obj = self._prepare_query(request)
-        r = self.rest_client().post_only_json(REQ_ROUTER_SQL, query_obj, headers=request.headers)
+        r = self.rest_client().post_only_json(REQ_ROUTER_SQL_TASK, query_obj, headers=request.headers)
         return QueryTaskResult(request, r)
+
+    def run_task(self, request):
+        resp = self.task(request)
+        if not resp.ok():
+            raise ClientError(resp.error_msg())
+        resp.wait_done()
 
     def _tables_query(self, schema):
         return self.sql_query('''
@@ -595,6 +632,16 @@ class QueryClient:
     def show_tables(self, schema=consts.DRUID_SCHEMA):
         self._tables_query(schema).show()
 
+    def _schemas_query(self):
+        return self.sql_query('''
+            SELECT SCHEMA_NAME AS SchemaName
+            FROM INFORMATION_SCHEMA.SCHEMATA
+            ORDER BY SCHEMA_NAME
+            ''')
+
+    def show_schemas(self):
+        self._schemas_query().show()
+
     def describe_table(self, part1, part2=None):
         if part2 is None:
             schema = consts.DRUID_SCHEMA
@@ -608,6 +655,26 @@ class QueryClient:
               COLUMN_NAME AS "Name",
               DATA_TYPE AS "Type"
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = '{}' AND TABLE_NAME = '{}'
+            WHERE TABLE_SCHEMA = '{}'
+              AND TABLE_NAME = '{}'
+            ORDER BY ORDINAL_POSITION
+            '''.format(schema, table))
+    
+    def describe_function(self,  part1, part2=None):
+        if part2 is None:
+            schema = consts.EXT_SCHEMA
+            table = part1
+        else:
+            schema = part1
+            table = part2
+        self.show('''
+            SELECT
+              ORDINAL_POSITION AS "Position",
+              PARAMETER_NAME AS "Parameter",
+              DATA_TYPE AS "Type",
+              IS_OPTIONAL AS "Optional"
+            FROM INFORMATION_SCHEMA.PARAMETERS
+            WHERE SCHEMA_NAME = '{}'
+              AND FUNCTION_NAME = '{}'
             ORDER BY ORDINAL_POSITION
             '''.format(schema, table))

@@ -13,11 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 STATUS_BASE = "/status"
 REQ_STATUS = STATUS_BASE
 REQ_HEALTH = STATUS_BASE + "/health"
 REQ_PROPERTIES = STATUS_BASE + "/properties"
 REQ_IN_CLUSTER = STATUS_BASE + "/selfDiscovered/status"
+
+ROUTER_BASE = '/druid/router/v1'
+REQ_BROKERS = ROUTER_BASE + '/brokers'
 
 class StatusClient:
     '''
@@ -55,6 +60,10 @@ class StatusClient:
         except Exception:
             return False
     
+    def wait_until_ready(self):
+        while not self.is_healthy():
+            time.sleep(0.1)
+    
     def properties(self) -> map:
         """
         Returns the effective set of Java properties used by the service, including
@@ -85,3 +94,6 @@ class StatusClient:
 
     def version(self):
         return self.status().get('version')
+
+    def brokers(self):
+        return self.client.get_json(REQ_BROKERS)

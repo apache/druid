@@ -78,7 +78,6 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       "{\"type\":\"all\"}"
   );
 
-
   protected static final RowSignature FOO_TABLE_SIGNATURE =
       RowSignature.builder()
                   .addTimeColumn()

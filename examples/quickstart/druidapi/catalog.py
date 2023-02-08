@@ -15,6 +15,7 @@
 
 import requests
 from .consts import COORD_BASE
+from .rest import check_error
 
 # Catalog (new feature in Druid 26)
 CATALOG_BASE = COORD_BASE + '/catalog'
@@ -37,6 +38,9 @@ class CatalogClient:
             params['overwrite'] = overwrite
         return self.client.post_json(REQ_CAT_SCHEMA_TABLE, table_spec, args=[schema, table_name], params=params)
 
+    def create(self, schema, table_name, table_spec):
+        self.post_table(schema, table_name, table_spec)
+   
     def table(self, schema, table_name):
         return self.client.get_json(REQ_CAT_SCHEMA_TABLE, args=[schema, table_name])
 
@@ -44,7 +48,7 @@ class CatalogClient:
         r = self.client.delete(REQ_CAT_SCHEMA_TABLE, args=[schema, table_name])
         if ifExists and r.status_code == requests.codes.not_found:
             return
-        self.client.check_error(r)
+        check_error(r)
         
     def edit_table(self, schema, table_name, action):
         return self.client.post_json(REQ_CAT_SCHEMA_TABLE_EDIT, action, args=[schema, table_name])

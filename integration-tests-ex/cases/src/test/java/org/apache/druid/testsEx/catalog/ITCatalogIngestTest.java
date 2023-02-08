@@ -73,10 +73,10 @@ public class ITCatalogIngestTest
   @Test
   public void testIngestSanity() throws IOException, Exception
   {
-    //cleanUp();
+    cleanUp();
 
-    //defineExternalTable();
-    //defineTargetTable();
+    defineExternalTable();
+    defineTargetTable();
     verifySchema();
     //    loadDataViaMsq();
     //    verifySchema();
@@ -143,20 +143,14 @@ public class ITCatalogIngestTest
         .column("namespace", Columns.VARCHAR)
         .column("page", Columns.VARCHAR)
         .column("channel", Columns.VARCHAR)
-        .column("isUnpatrolled", Columns.BIGINT) // 0 = false, 1 = true
-        .column("isAnonymous", Columns.BIGINT) // 0 = false, 1 = true
         .column("user", Columns.VARCHAR)
         .column("countryName", Columns.VARCHAR)
         .column("isRobot", Columns.BIGINT) // 0 = false, 1 = true
-        .column("diffUrl", Columns.VARCHAR)
         .column("added", Columns.BIGINT)
         .column("delta", Columns.DOUBLE) // Silly, just to test
         .column("isNew", Columns.BIGINT) // 0 = false, 1 = true
         .column("deltaBucket", Columns.DOUBLE)
-        .column("isMinor", Columns.BIGINT) // 0 = false, 1 = true
         .column("deleted", Columns.BIGINT)
-        .column("comment", Columns.VARCHAR)
-        .column("commentLength", Columns.BIGINT)
         .build();
     client.createTable(table, true);
   }
