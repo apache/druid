@@ -109,7 +109,7 @@ You can use the constant theta sketch post aggregator to add a Base64-encoded co
 }
 ```
 
-### Example of Constant Theta Sketch 
+### Example using a constant Theta Sketch 
 
 Assume you have a datasource with a variety of a variety of users. Using `filters` and `aggregation`, you generate a theta sketch of all `football fans`.  
 
