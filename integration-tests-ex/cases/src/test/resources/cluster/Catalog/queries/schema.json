@@ -37,7 +37,7 @@
          "TABLE_SCHEMA": "druid",
          "TABLE_NAME": "testWiki",
          "TABLE_TYPE": "TABLE",
-         "IS_JOINABLE": "YES",
+         "IS_JOINABLE": "NO",
          "IS_BROADCAST": "NO"}
     ]
   },

@@ -488,7 +488,7 @@ class QueryTaskResult:
         if not self.done():
             self.status()
             while not self.done():
-                time.sleep(0.1)
+                time.sleep(0.5)
                 self.status()
         return self.succeeded()
 
@@ -678,3 +678,16 @@ class QueryClient:
               AND FUNCTION_NAME = '{}'
             ORDER BY ORDINAL_POSITION
             '''.format(schema, table))
+    
+    def wait_until_ready(self, ds_name):
+        '''
+        Wait for a datasource to be loaded in the cluster, and to become available in SQL.
+        '''
+        self.druid_client.datasources().wait_until_ready(ds_name)
+        while True:
+            try:
+                self.sql('SELECT 1 FROM "{}" LIMIT 1'.format(ds_name));
+                return
+            except Exception:
+                time.sleep(0.5)
+

@@ -230,7 +230,8 @@ public class DatasourceTable extends DruidTable
     this(
         physicalMetadata.rowSignature(),
         physicalMetadata,
-        physicalMetadata.toEffectiveMetadata());
+        physicalMetadata.toEffectiveMetadata()
+    );
   }
 
   public DatasourceTable(
@@ -293,7 +294,7 @@ public class DatasourceTable extends DruidTable
   @Override
   public int hashCode()
   {
-    return physicalMetadata == null ? 0 : physicalMetadata.hashCode();
+    return physicalMetadata.hashCode();
   }
 
   @Override

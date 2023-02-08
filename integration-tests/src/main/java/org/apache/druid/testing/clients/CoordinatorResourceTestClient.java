@@ -199,9 +199,9 @@ public class CoordinatorResourceTestClient
     }
   }
 
-  private Map<String, Integer> getLoadStatus(String dataSorce)
+  private Map<String, Integer> getLoadStatus(String dataSource)
   {
-    String url = getLoadStatusURL(dataSorce);
+    String url = getLoadStatusURL(dataSource);
     Map<String, Integer> status;
     try {
       StatusResponseHolder response = httpClient.go(

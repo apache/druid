@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
+import requests, time
 from .consts import COORD_BASE
 from .rest import check_error
+from .util import dict_get
 
 REQ_DATASOURCES = COORD_BASE + '/datasources'
 REQ_DATASOURCE = REQ_DATASOURCES + '/{}'
+
+# Segment load status
+REQ_DATASOURCES = COORD_BASE + '/datasources'
+REQ_DS_LOAD_STATUS = REQ_DATASOURCES + '{}/loadstatus'
 
 class DatasourceClient:
     '''
@@ -57,3 +62,19 @@ class DatasourceClient:
         if ifExists and r.status_code == requests.codes.not_found:
             return
         check_error(r)
+
+    def load_status_req(self, ds_name, params=None):
+        return self.rest_client.get_json(REQ_DS_LOAD_STATUS, args=[ds_name], params=params)
+    
+    def load_status(self, ds_name):
+        return self.load_status_req(ds_name, {
+            'forceMetadataRefresh': 'true', 
+            'interval': '1970-01-01/2999-01-01'})
+
+    def wait_until_ready(self, ds_name):
+        while True:
+            resp = self.load_status(ds_name)
+            if dict_get(resp, ds_name) == 100.0:
+                return
+            time.sleep(0.5)
+            

@@ -117,7 +117,7 @@ public class LiveCatalogResolver implements CatalogResolver
     final PhysicalDatasourceMetadata mergedMetadata = new PhysicalDatasourceMetadata(
           new TableDataSource(name),
           builder.build(),
-          true, // Can join to an empty table
+          false, // Cannot join to an empty table
           false // Cannot broadcast an empty table
     );
     return new DatasourceTable(

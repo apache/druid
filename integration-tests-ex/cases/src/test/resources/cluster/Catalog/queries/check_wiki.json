@@ -1,0 +1,11 @@
+[
+  {
+    "description": "Verify that the all three files (10 rows) were loaded",
+    "query": {
+      "query": "SELECT COUNT(*) AS cnt FROM testWiki"
+    },
+    "expectedResults": [
+        {"cnt": 10}
+    ]
+  }
+]

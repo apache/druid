@@ -62,12 +62,10 @@ import java.util.concurrent.TimeoutException;
  */
 public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResults>
 {
-
   private final ObjectMapper jsonMapper;
   private final IntegrationTestingConfig config;
   private final MsqOverlordResourceTestClient overlordClient;
   private final SqlResourceTestClient msqClient;
-
 
   @Inject
   MsqTestQueryHelper(
@@ -272,7 +270,11 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       throws Exception
   {
     SqlTaskStatus sqlTaskStatus = submitMsqTask(sqlQueryString, context);
+    waitForCompletion(sqlTaskStatus);
+  }
 
+  public void waitForCompletion(SqlTaskStatus sqlTaskStatus) throws Exception
+  {
     LOG.info("Sql Task submitted with task Id - %s", sqlTaskStatus.getTaskId());
 
     if (sqlTaskStatus.getState().isFailure()) {
@@ -286,6 +288,5 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
   private static class TaskStillRunningException extends Exception
   {
-
   }
 }

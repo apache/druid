@@ -62,7 +62,7 @@ class StatusClient:
     
     def wait_until_ready(self):
         while not self.is_healthy():
-            time.sleep(0.1)
+            time.sleep(0.5)
     
     def properties(self) -> map:
         """

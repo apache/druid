@@ -19,26 +19,36 @@
 
 package org.apache.druid.testsEx.catalog;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.TableBuilder;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.sql.SqlTaskStatus;
+import org.apache.druid.sql.http.SqlParameter;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.utils.DataLoaderHelper;
+import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testsEx.categories.Catalog;
 import org.apache.druid.testsEx.cluster.CatalogClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.config.Initializer;
-import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.util.List;
+
+import static org.junit.Assert.fail;
 
 /**
  * Tests the full integration of the catalog and MSQ ingestion.
@@ -59,8 +69,6 @@ import java.io.IOException;
 @Category(Catalog.class)
 public class ITCatalogIngestTest
 {
-  private static final String SCHEMA_QUERY_RESOURCE = Initializer.queryFile(Catalog.class, "schema.json");
-
   @Inject
   private DruidClusterClient clusterClient;
 
@@ -70,6 +78,12 @@ public class ITCatalogIngestTest
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
 
+  @Inject
+  private MsqTestQueryHelper msqHelper;
+
+  @Inject
+  private DataLoaderHelper dataLoaderHelper;
+
   @Test
   public void testIngestSanity() throws IOException, Exception
   {
@@ -78,9 +92,9 @@ public class ITCatalogIngestTest
     defineExternalTable();
     defineTargetTable();
     verifySchema();
-    //    loadDataViaMsq();
-    //    verifySchema();
-    //    verifyTargetTableData();
+    loadDataViaMsq();
+    verifySchema();
+    verifyTargetTableData();
   }
 
   private void cleanUp()
@@ -157,18 +171,63 @@ public class ITCatalogIngestTest
 
   private void verifySchema() throws IOException, Exception
   {
-    queryHelper.testQueriesFromString(AbstractIndexerTest.getResourceAsString(SCHEMA_QUERY_RESOURCE));
+    queryHelper.testQueriesFromString(
+        StringUtils.getResource(
+            this,
+            Initializer.queryFile(Catalog.class, "schema.json")
+        )
+    );
   }
 
   private void loadDataViaMsq()
   {
-    // TODO Auto-generated method stub
-
+    submitMSQTask(
+        "testWiki",
+        StringUtils.getResource(
+            this,
+            Initializer.queryFile(Catalog.class, "ingestWiki.sql")
+        ),
+        ImmutableList.of(
+            new SqlParameter(
+                SqlType.ARRAY,
+                ImmutableList.of(
+                    "wikipedia_index_data1.json",
+                    "wikipedia_index_data2.json",
+                    "wikipedia_index_data3.json"
+                )
+            )
+        )
+    );
   }
 
-  private void verifyTargetTableData()
+  private void verifyTargetTableData() throws IOException, Exception
   {
-    // TODO Auto-generated method stub
+    queryHelper.testQueriesFromString(
+        StringUtils.getResource(
+            this,
+            Initializer.queryFile(Catalog.class, "check_wiki.json")
+        )
+    );
+  }
 
+  /**
+   * Submits a sqlTask, waits for task completion.
+   */
+  protected void submitMSQTask(
+      String datasource,
+      String sql,
+      List<SqlParameter> parameters
+  )
+  {
+    SqlQuery query = new SqlQuery(sql, null, false, false, false, null, parameters);
+    try {
+      SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(query);
+      msqHelper.waitForCompletion(sqlTaskStatus);
+    }
+    catch (Exception e) {
+      fail(e.getMessage());
+    }
+
+    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
   }
 }
