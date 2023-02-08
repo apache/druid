@@ -94,34 +94,34 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
-    Assert.assertEquals(276, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(168, key.getEffectiveSizeBytes());
+    Assert.assertEquals(6, indexer.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
-    Assert.assertEquals(56, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(104, key.getEffectiveSizeBytes());
+    Assert.assertEquals(6, indexer.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
-    Assert.assertEquals(286, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(166, key.getEffectiveSizeBytes());
+    Assert.assertEquals(6, indexer.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
-    Assert.assertEquals(118, key.getEffectiveSizeBytes());
-    Assert.assertEquals(5, indexer.getCardinality());
+    Assert.assertEquals(166, key.getEffectiveSizeBytes());
+    Assert.assertEquals(6, indexer.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(6, indexer.getCardinality());
+      Assert.assertEquals(7, indexer.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(6, indexer.getCardinality());
+      Assert.assertEquals(7, indexer.getCardinality());
     }
   }
 
@@ -364,7 +364,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"a"}), valueSelector.getObject());
+    Assert.assertArrayEquals(new Object[]{"a"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
@@ -372,8 +372,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"b", "c"}), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertArrayEquals(new Object[]{"b", "c"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
@@ -381,9 +380,7 @@ public class NestedDataColumnIndexerTest extends InitializedNullHandlingTest
         UnsupportedOperationException.class,
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
-    // raw data is left as is, so is currently still a list while in incremental index...
-    Assert.assertEquals(StructuredData.wrap(ImmutableList.of("d", "e")), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertArrayEquals(new Object[]{"d", "e"}, (Object[]) valueSelector.getObject());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);

@@ -41,6 +41,14 @@ public class JsonInputFormat extends NestedInputFormat
 {
   public static final String TYPE_KEY = "json";
 
+  public static final JsonInputFormat DEFAULT = new JsonInputFormat(
+      JSONPathSpec.DEFAULT,
+      null,
+      null,
+      null,
+      null
+  );
+
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
   private final boolean keepNullColumns;

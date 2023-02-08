@@ -1081,7 +1081,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     eval = ExprEval.bestEffortOf(new Object[] {1L, 2L, null, 3L});
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[] {1L, 2L, null, 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[] {1L, 2L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
 
     eval = ExprEval.bestEffortOf(ImmutableList.of(1L, 2L, 3L));
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());

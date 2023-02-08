@@ -27,12 +27,9 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-/**
- * Literal field writer for mixed type nested columns of {@link NestedDataColumnSerializer}
- */
-public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
+public class ArrayOfLiteralsFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
-  public VariantLiteralFieldColumnWriter(
+  protected ArrayOfLiteralsFieldColumnWriter(
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -43,9 +40,8 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
     super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
   }
 
-
   @Override
-  Object processValue(Object value)
+  int[] processValue(Object value)
   {
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
@@ -66,24 +62,13 @@ public final class VariantLiteralFieldColumnWriter extends GlobalDictionaryEncod
       }
       return newIdsWhoDis;
     }
-    return super.processValue(value);
+    return null;
   }
 
   @Override
-  int lookupGlobalId(Object value)
+  int lookupGlobalId(int[] value)
   {
-    if (value == null) {
-      return 0;
-    }
-    if (value instanceof Long) {
-      return globalDictionaryIdLookup.lookupLong((Long) value);
-    } else if (value instanceof Double) {
-      return globalDictionaryIdLookup.lookupDouble((Double) value);
-    } else if (value instanceof int[]) {
-      return globalDictionaryIdLookup.lookupArray((int[]) value);
-    } else {
-      return globalDictionaryIdLookup.lookupString(String.valueOf(value));
-    }
+    return globalDictionaryIdLookup.lookupArray(value);
   }
 
   @Override

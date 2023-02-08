@@ -480,10 +480,24 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
           return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
+        }
+
+        @Nullable
+        @Override
+        public ProcessedLiteral<?> processArrayOfLiteralsField(
+            ArrayList<NestedPathPart> fieldPath,
+            @Nullable Object maybeArrayOfLiterals
+        )
+        {
+          ExprEval<?> eval = ExprEval.bestEffortOf(maybeArrayOfLiterals);
+          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+            return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
+          }
+          return null;
         }
       };
 

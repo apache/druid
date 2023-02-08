@@ -134,6 +134,11 @@ public class SegmentAnalyzer
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
           break;
+        case ARRAY:
+          // todo (clint): this is wack, but works for now because arrays are always nested complex columns...
+          final ColumnHolder arrayHolder = index != null ? index.getColumnHolder(columnName) : null;
+          analysis = analyzeComplexColumn(capabilities, numRows, arrayHolder);
+          break;
         case COMPLEX:
           final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
           analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);

@@ -163,7 +163,7 @@ public abstract class ExprEval<T>
         Object[] array = new Object[val.size()];
         int i = 0;
         for (Object o : val) {
-          array[i++] = o == null ? null : ExprEval.ofType(ExpressionType.LONG, o).value();
+          array[i++] = ExprEval.ofType(ExpressionType.LONG, o).value();
         }
         return new NonnullPair<>(ExpressionType.LONG_ARRAY, array);
       } else if (coercedType == Float.class || coercedType == Double.class) {

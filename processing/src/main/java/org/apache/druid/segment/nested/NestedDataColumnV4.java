@@ -57,6 +57,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
+        null,
         fileMapper,
         NestedPathFinder.JSON_PATH_ROOT
     );

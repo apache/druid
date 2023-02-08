@@ -34,11 +34,11 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * {@link Indexed} specialized for storing variable-width binary values (such as utf8 encoded strings), which must be
- * sorted and unique, using 'front coding'. Front coding is a type of delta encoding for byte arrays, where sorted
- * values are grouped into buckets. The first value of the bucket is written entirely, and remaining values are stored
- * as a pair of an integer which indicates how much of the first byte array of the bucket to use as a prefix, followed
- * by the remaining bytes after the prefix to complete the value.
+ * {@link Indexed} specialized for storing int arrays, which must be sorted and unique, using 'front coding'.
+ *
+ * Front coding is a type of delta encoding, where sorted values are grouped into buckets. The first value of the bucket
+ * is written entirely, and remaining values are stored as a pair of an integer which indicates how much of the first
+ * int array of the bucket to use as a prefix, followed by the remaining ints after the prefix to complete the value.
  *
  * front coded indexed layout:
  * | version | bucket size | has null? | number of values | size of "offsets" + "buckets" | "offsets" | "buckets" |
@@ -50,12 +50,12 @@ import java.util.NoSuchElementException;
  * bucket layout:
  * | first value | prefix length | fragment | ... | prefix length | fragment |
  * | ----------- | ------------- | -------- | --- | ------------- | -------- |
- * |        blob |     vbyte int |     blob | ... |     vbyte int |     blob |
+ * |       int[] |     vbyte int |    int[] | ... |     vbyte int |    int[] |
  *
- * blob layout:
- * | blob length | blob bytes |
- * | ----------- | ---------- |
- * |   vbyte int |     byte[] |
+ * int array layout:
+ * | length      |  ints |
+ * | ----------- | ----- |
+ * |   vbyte int | int[] |
  *
  *
  * Getting a value first picks the appropriate bucket, finds its offset in the underlying buffer, then scans the bucket
@@ -71,9 +71,9 @@ import java.util.NoSuchElementException;
  *
  * This class is not thread-safe since during operation modifies positions of a shared buffer.
  */
-public final class FrontCodedIndexed implements Indexed<ByteBuffer>
+public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
 {
-  public static Supplier<FrontCodedIndexed> read(ByteBuffer buffer, ByteOrder ordering)
+  public static Supplier<FrontCodedIntArrayIndexed> read(ByteBuffer buffer, ByteOrder ordering)
   {
     final ByteBuffer orderedBuffer = buffer.asReadOnlyBuffer().order(ordering);
     final byte version = orderedBuffer.get();
@@ -87,7 +87,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     // move position to end of buffer
     buffer.position(offsetsPosition + size);
 
-    return () -> new FrontCodedIndexed(
+    return () -> new FrontCodedIntArrayIndexed(
         buffer,
         ordering,
         bucketSize,
@@ -109,7 +109,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   private final boolean hasNull;
   private final int lastBucketNumValues;
 
-  private FrontCodedIndexed(
+  private FrontCodedIntArrayIndexed(
       ByteBuffer buffer,
       ByteOrder order,
       int bucketSize,
@@ -143,7 +143,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 
   @Nullable
   @Override
-  public ByteBuffer get(int index)
+  public int[] get(int index)
   {
     if (hasNull && index == 0) {
       return null;
@@ -162,7 +162,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   }
 
   @Override
-  public int indexOf(@Nullable ByteBuffer value)
+  public int indexOf(@Nullable int[] value)
   {
     // performs binary search using the first values of each bucket to locate the appropriate bucket, and then does
     // a linear scan to find the value within the bucket
@@ -189,13 +189,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       // save the length of the shared prefix with the first value of the bucket and the value to match so we
       // can use it later to skip over all values in the bucket that share a longer prefix with the first value
       // (the bucket is sorted, so the prefix length gets smaller as values increase)
-      final int sharedPrefix = buffer.position() - firstOffset;
+      final int sharedPrefix = (buffer.position() - firstOffset) / Integer.BYTES;
       if (comparison == 0) {
-        if (firstLength == value.remaining()) {
+        if (firstLength == value.length) {
           // it turns out that the first value in current bucket is what we are looking for, short circuit
           return currBucketFirstValueIndex + adjustIndex;
         } else {
-          comparison = Integer.compare(firstLength, value.remaining());
+          comparison = Integer.compare(firstLength, value.length);
         }
       }
 
@@ -206,19 +206,19 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       final int nextLength = VByte.readInt(buffer);
       int comparisonNext = compareBucketFirstValue(buffer, nextLength, value);
       if (comparisonNext == 0) {
-        if (nextLength == value.remaining()) {
+        if (nextLength == value.length) {
           // it turns out that the first value in next bucket is what we are looking for, go ahead and short circuit
           // for that as well, even though we weren't going to scan that bucket on this iteration...
           return (currBucketFirstValueIndex + adjustIndex) + bucketSize;
         } else {
-          comparisonNext = Integer.compare(nextLength, value.remaining());
+          comparisonNext = Integer.compare(nextLength, value.length);
         }
       }
 
       if (comparison < 0 && comparisonNext > 0) {
         // this is exactly the right bucket
         // find the value in the bucket (or where it would be if it were present)
-        buffer.position(firstOffset + firstLength);
+        buffer.position(firstOffset + (firstLength * Integer.BYTES));
 
         return findValueInBucket(value, currBucketFirstValueIndex, bucketSize, sharedPrefix);
       } else if (comparison < 0) {
@@ -243,13 +243,13 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
     final int firstLength = VByte.readInt(buffer);
     final int firstOffset = buffer.position();
     int comparison = compareBucketFirstValue(buffer, firstLength, value);
-    final int sharedPrefix = buffer.position() - firstOffset;
+    final int sharedPrefix = (buffer.position() - firstOffset) / Integer.BYTES;
     if (comparison == 0) {
-      if (firstLength == value.remaining()) {
+      if (firstLength == value.length) {
         // it turns out that the first value in current bucket is what we are looking for, short circuit
         return bucketIndexBase + adjustIndex;
       } else {
-        comparison = Integer.compare(firstLength, value.remaining());
+        comparison = Integer.compare(firstLength, value.length);
       }
     }
 
@@ -258,7 +258,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       return -(bucketIndexBase + adjustIndex) - 1;
     }
 
-    buffer.position(firstOffset + firstLength);
+    buffer.position(firstOffset + (firstLength * Integer.BYTES));
 
     return findValueInBucket(value, bucketIndexBase, numValuesInBucket, sharedPrefix);
   }
@@ -271,23 +271,24 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
   }
 
   @Override
-  public Iterator<ByteBuffer> iterator()
+  public Iterator<int[]> iterator()
   {
     if (adjustedNumValues == 0) {
       return Collections.emptyIterator();
     }
     if (hasNull && adjustedNumValues == 1) {
-      return Collections.<ByteBuffer>singletonList(null).iterator();
+      return Collections.<int[]>singletonList(null).iterator();
     }
+
     ByteBuffer copy = buffer.asReadOnlyBuffer().order(buffer.order());
     copy.position(bucketsPosition);
-    final ByteBuffer[] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);
+    final int[][] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);
     // iterator decodes and buffers a bucket at a time, paging through buckets as the iterator is consumed
-    return new Iterator<ByteBuffer>()
+    return new Iterator<int[]>()
     {
       private int currIndex = 0;
       private int currentBucketIndex = 0;
-      private ByteBuffer[] currentBucket = firstBucket;
+      private int[][] currentBucket = firstBucket;
 
       @Override
       public boolean hasNext()
@@ -296,7 +297,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       }
 
       @Override
-      public ByteBuffer next()
+      public int[] next()
       {
         // null is handled special
         if (hasNull && currIndex == 0) {
@@ -356,19 +357,19 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    * Bytes are compared using {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte, byte)}. Therefore, when the
    * values are UTF-8 encoded strings, the ordering is compatible with {@link String#compareTo(String)}.
    */
-  private static int compareBucketFirstValue(ByteBuffer bucketBuffer, int length, ByteBuffer value)
+  private static int compareBucketFirstValue(ByteBuffer bucketBuffer, int length, int[] value)
   {
     final int startOffset = bucketBuffer.position();
-    final int commonLength = Math.min(length, value.remaining());
+    final int commonLength = Math.min(length, value.length);
     // save the length of the shared prefix with the first value of the bucket and the value to match so we
     // can use it later to skip over all values in the bucket that share a longer prefix with the first value
     // (the bucket is sorted, so the prefix length gets smaller as values increase)
     int sharedPrefix;
     int comparison = 0;
     for (sharedPrefix = 0; sharedPrefix < commonLength; sharedPrefix++) {
-      comparison = StringUtils.compareUtf8UsingJavaStringOrdering(bucketBuffer.get(), value.get(sharedPrefix));
+      comparison = Integer.compare(bucketBuffer.getInt(), value[sharedPrefix]);
       if (comparison != 0) {
-        bucketBuffer.position(startOffset + sharedPrefix);
+        bucketBuffer.position(startOffset + (sharedPrefix * Integer.BYTES));
         break;
       }
     }
@@ -390,7 +391,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    * this method modifies the position of {@link #buffer}
    */
   private int findValueInBucket(
-      ByteBuffer value,
+      int[] value,
       int currBucketFirstValueIndex,
       int bucketSize,
       int sharedPrefix
@@ -404,32 +405,32 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       prefixLength = VByte.readInt(buffer);
       if (prefixLength > sharedPrefix) {
         final int skip = VByte.readInt(buffer);
-        buffer.position(buffer.position() + skip);
+        buffer.position(buffer.position() + (skip * Integer.BYTES));
         insertionPoint++;
       } else if (prefixLength < sharedPrefix) {
         // prefix is smaller, that means this value sorts ahead of it
         break;
       } else {
         final int fragmentLength = VByte.readInt(buffer);
-        final int common = Math.min(fragmentLength, value.remaining() - prefixLength);
+        final int common = Math.min(fragmentLength, value.length - prefixLength);
         int fragmentComparison = 0;
         for (int i = 0; i < common; i++) {
-          fragmentComparison = StringUtils.compareUtf8UsingJavaStringOrdering(
-              buffer.get(buffer.position() + i),
-              value.get(prefixLength + i)
+          fragmentComparison = Integer.compare(
+              buffer.getInt(buffer.position() + (i * Integer.BYTES)),
+              value[prefixLength + i]
           );
           if (fragmentComparison != 0) {
             break;
           }
         }
         if (fragmentComparison == 0) {
-          fragmentComparison = Integer.compare(prefixLength + fragmentLength, value.remaining());
+          fragmentComparison = Integer.compare(prefixLength + fragmentLength, value.length);
         }
 
         if (fragmentComparison == 0) {
           return (currBucketFirstValueIndex + adjustIndex) + relativePosition;
         } else if (fragmentComparison < 0) {
-          buffer.position(buffer.position() + fragmentLength);
+          buffer.position(buffer.position() + (fragmentLength * Integer.BYTES));
           insertionPoint++;
         } else {
           break;
@@ -445,18 +446,20 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    *
    * This method modifies the position of the buffer.
    */
-  static ByteBuffer getFromBucket(ByteBuffer buffer, int offset)
+  static int[] getFromBucket(ByteBuffer buffer, int offset)
   {
     int prefixPosition;
     if (offset == 0) {
       final int length = VByte.readInt(buffer);
-      final ByteBuffer firstValue = buffer.asReadOnlyBuffer().order(buffer.order());
-      firstValue.limit(firstValue.position() + length);
+      final int[] firstValue = new int[length];
+      for (int i = 0; i < length; i++) {
+        firstValue[i] = buffer.getInt();
+      }
       return firstValue;
     } else {
       final int firstLength = VByte.readInt(buffer);
       prefixPosition = buffer.position();
-      buffer.position(buffer.position() + firstLength);
+      buffer.position(buffer.position() + (firstLength * Integer.BYTES));
     }
     int pos = 0;
     int prefixLength;
@@ -468,7 +471,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       if (++pos < offset) {
         // not there yet, no need to read anything other than the length to skip ahead
         final int skipLength = VByte.readInt(buffer);
-        buffer.position(buffer.position() + skipLength);
+        buffer.position(buffer.position() + (skipLength * Integer.BYTES));
       } else {
         // we've reached our destination
         fragmentLength = VByte.readInt(buffer);
@@ -477,15 +480,14 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
       }
     } while (true);
     final int valueLength = prefixLength + fragmentLength;
-    ByteBuffer value = ByteBuffer.allocate(valueLength);
+    final int[] value = new int[valueLength];
     for (int i = 0; i < valueLength; i++) {
       if (i < prefixLength) {
-        value.put(buffer.get(prefixPosition + i));
+        value[i] = buffer.getInt(prefixPosition + (i * Integer.BYTES));
       } else {
-        value.put(buffer.get(fragmentPosition + i - prefixLength));
+        value[i] = buffer.getInt(fragmentPosition + ((i - prefixLength) * Integer.BYTES));
       }
     }
-    value.flip();
     return value;
   }
 
@@ -495,25 +497,28 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
    *
    * This method modifies the position of the buffer.
    */
-  private static ByteBuffer[] readBucket(ByteBuffer bucket, int numValues)
+  private static int[][] readBucket(ByteBuffer bucket, int numValues)
   {
     final int length = VByte.readInt(bucket);
-    final byte[] prefixBytes = new byte[length];
-    bucket.get(prefixBytes, 0, length);
-    final ByteBuffer[] bucketBuffers = new ByteBuffer[numValues];
-    bucketBuffers[0] = ByteBuffer.wrap(prefixBytes);
+    final int[] prefix = new int[length];
+    for (int i = 0; i < length; i++) {
+      prefix[i] = bucket.getInt();
+    }
+    final int[][] bucketValues = new int[numValues][];
+    bucketValues[0] = prefix;
     int pos = 1;
     while (pos < numValues) {
       final int prefixLength = VByte.readInt(bucket);
       final int fragmentLength = VByte.readInt(bucket);
-      final byte[] fragment = new byte[fragmentLength];
-      bucket.get(fragment, 0, fragmentLength);
-      final ByteBuffer value = ByteBuffer.allocate(prefixLength + fragmentLength);
-      value.put(prefixBytes, 0, prefixLength);
-      value.put(fragment);
-      value.flip();
-      bucketBuffers[pos++] = value;
+      final int[] value = new int[prefixLength + fragmentLength];
+      for (int i = 0; i < prefixLength; i++) {
+        value[i] = prefix[i];
+      }
+      for (int i = prefixLength; i < value.length; i++) {
+        value[i] = bucket.getInt();
+      }
+      bucketValues[pos++] = value;
     }
-    return bucketBuffers;
+    return bucketValues;
   }
 }

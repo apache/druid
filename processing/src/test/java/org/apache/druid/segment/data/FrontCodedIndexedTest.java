@@ -294,6 +294,32 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFrontCodedEmpty() throws IOException
+  {
+    ByteBuffer buffer = ByteBuffer.allocate(1 << 6).order(order);
+    List<String> theList = Collections.emptyList();
+    fillBuffer(buffer, theList, 4);
+
+    buffer.position(0);
+    FrontCodedIndexed codedUtf8Indexed = FrontCodedIndexed.read(
+        buffer,
+        buffer.order()
+    ).get();
+
+    Assert.assertEquals(0, codedUtf8Indexed.size());
+    Throwable t = Assert.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
+    Assert.assertEquals("Index[0] >= size[0]", t.getMessage());
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+
+    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(null));
+    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+
+    Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
+    Assert.assertFalse(utf8Iterator.hasNext());
+  }
+
+  @Test
   public void testBucketSizes() throws IOException
   {
     final int numValues = 10000;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -31,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -42,6 +44,12 @@ public class NestedLiteralTypeInfo
   private static final byte STRING_MASK = 1;
   private static final byte LONG_MASK = 1 << 2;
   private static final byte DOUBLE_MASK = 1 << 3;
+
+  private static final byte STRING_ARRAY_MASK = 1 << 4;
+
+  private static final byte LONG_ARRAY_MASK = 1 << 5;
+
+  private static final byte DOUBLE_ARRAY_MASK = 1 << 6;
 
   public static NestedLiteralTypeInfo read(ByteBuffer buffer, int length)
   {
@@ -92,6 +100,25 @@ public class NestedLiteralTypeInfo
     {
       return convertToSet(types).toString();
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TypeSet typeSet = (TypeSet) o;
+      return types == typeSet.types;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(types);
+    }
   }
 
   public static class MutableTypeSet
@@ -119,6 +146,22 @@ public class NestedLiteralTypeInfo
           break;
         case DOUBLE:
           types |= DOUBLE_MASK;
+          break;
+        case ARRAY:
+          Preconditions.checkNotNull(type.getElementType(), "ElementType must not be null");
+          switch (type.getElementType().getType()) {
+            case STRING:
+              types |= STRING_ARRAY_MASK;
+              break;
+            case LONG:
+              types |= LONG_ARRAY_MASK;
+              break;
+            case DOUBLE:
+              types |= DOUBLE_ARRAY_MASK;
+              break;
+            default:
+              throw new ISE("Unsupported nested array type: [%s]", type.asTypeString());
+          }
           break;
         default:
           throw new ISE("Unsupported nested type: [%s]", type.asTypeString());
@@ -153,6 +196,25 @@ public class NestedLiteralTypeInfo
     public String toString()
     {
       return convertToSet(types).toString();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      MutableTypeSet typeSet = (MutableTypeSet) o;
+      return types == typeSet.types;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(types);
     }
   }
 
@@ -209,6 +271,18 @@ public class NestedLiteralTypeInfo
       singleType = ColumnType.DOUBLE;
       count++;
     }
+    if ((types & STRING_ARRAY_MASK) > 0) {
+      singleType = ColumnType.STRING_ARRAY;
+      count++;
+    }
+    if ((types & LONG_ARRAY_MASK) > 0) {
+      singleType = ColumnType.LONG_ARRAY;
+      count++;
+    }
+    if ((types & DOUBLE_ARRAY_MASK) > 0) {
+      singleType = ColumnType.DOUBLE_ARRAY;
+      count++;
+    }
     return count == 1 ? singleType : null;
   }
 
@@ -223,6 +297,15 @@ public class NestedLiteralTypeInfo
     }
     if ((types & DOUBLE_MASK) > 0) {
       theTypes.add(ColumnType.DOUBLE);
+    }
+    if ((types & STRING_ARRAY_MASK) > 0) {
+      theTypes.add(ColumnType.STRING_ARRAY);
+    }
+    if ((types & DOUBLE_ARRAY_MASK) > 0) {
+      theTypes.add(ColumnType.DOUBLE_ARRAY);
+    }
+    if ((types & LONG_ARRAY_MASK) > 0) {
+      theTypes.add(ColumnType.LONG_ARRAY);
     }
     return theTypes;
   }

@@ -251,10 +251,8 @@ public class Expressions
     // and throw an exception while returning false from isValidDruidQuery() method
     if (index < 0) {
       throw new CannotBuildQueryException(StringUtils.format(
-          "Expression referred to nonexistent index[%d] in row[%s]",
-          index,
-          rowSignature
-      ));
+          "Cannot build query as column name [%s] does not exist in row [%s]", ref.getField().getName(), rowSignature)
+      );
     }
     
     final Optional<ColumnType> columnType = rowSignature.getColumnType(index);

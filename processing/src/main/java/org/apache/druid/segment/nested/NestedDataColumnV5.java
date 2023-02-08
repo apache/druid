@@ -21,21 +21,21 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuffer>>
+public class NestedDataColumnV5<TStringDictionary extends Indexed<ByteBuffer>>
     extends CompressedNestedDataComplexColumn<TStringDictionary>
 {
-  public NestedDataColumnV3(
+  public NestedDataColumnV5(
       NestedDataColumnMetadata metadata,
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
@@ -45,6 +45,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
+      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper
   )
   {
@@ -58,27 +59,30 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
-        null,
+        arrayDictionarySupplier,
         fileMapper,
-        NestedPathFinder.JQ_PATH_ROOT
+        NestedPathFinder.JSON_PATH_ROOT
     );
   }
 
   @Override
   public List<NestedPathPart> parsePath(String path)
   {
-    return NestedPathFinder.parseJqPath(path);
+    return NestedPathFinder.parseJsonPath(path);
   }
 
   @Override
   public String getFieldFileName(String fileNameBase, String field, int fieldIndex)
   {
-    return StringUtils.format("%s_%s", fileNameBase, field);
+    return NestedDataColumnSerializer.getInternalFileName(
+        fileNameBase,
+        NestedDataColumnSerializer.NESTED_FIELD_PREFIX + fieldIndex
+    );
   }
 
   @Override
   public String getField(List<NestedPathPart> path)
   {
-    return NestedPathFinder.toNormalizedJqPath(path);
+    return NestedPathFinder.toNormalizedJsonPath(path);
   }
 }

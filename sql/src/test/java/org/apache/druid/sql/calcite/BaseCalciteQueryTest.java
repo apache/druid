@@ -708,6 +708,23 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final String sql,
       final Map<String, Object> queryContext,
       final List<Query<?>> expectedQueries,
+      final List<Object[]> expectedResults,
+      final RowSignature expectedResultSignature
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .queryContext(queryContext)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .expectedSignature(expectedResultSignature)
+        .run();
+  }
+
+  public void testQuery(
+      final String sql,
+      final Map<String, Object> queryContext,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults
   )
   {

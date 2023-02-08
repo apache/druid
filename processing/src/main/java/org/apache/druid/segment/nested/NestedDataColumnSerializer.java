@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -46,11 +47,13 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -67,6 +70,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
   public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
   public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
+  public static final String ARRAY_DICTIONARY_FILE_NAME = "__arrayDictionary";
   public static final String RAW_FILE_NAME = "__raw";
   public static final String NULL_BITMAP_FILE_NAME = "__nullIndex";
 
@@ -81,7 +85,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private final StructuredDataProcessor fieldProcessor = new StructuredDataProcessor()
   {
     @Override
-    public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+    public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
     {
       final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
           NestedPathFinder.toNormalizedJsonPath(fieldPath)
@@ -104,6 +108,32 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       }
       return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
     }
+
+    @Nullable
+    @Override
+    public ProcessedLiteral<?> processArrayOfLiteralsField(
+        ArrayList<NestedPathPart> fieldPath,
+        @Nullable Object maybeArrayOfLiterals
+    )
+    {
+      ExprEval<?> eval = ExprEval.bestEffortOf(maybeArrayOfLiterals);
+      if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+        final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
+            NestedPathFinder.toNormalizedJsonPath(fieldPath)
+        );
+        if (writer != null) {
+          try {
+            writer.addValue(rowCount, eval.value());
+            // serializer doesn't use size estimate
+            return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
+          }
+          catch (IOException e) {
+            throw new RuntimeException(":(");
+          }
+        }
+      }
+      return null;
+    }
   };
 
   private byte[] metadataBytes;
@@ -114,12 +144,18 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   private DictionaryWriter<String> dictionaryWriter;
   private FixedIndexedWriter<Long> longDictionaryWriter;
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
+  private FrontCodedIntArrayIndexedWriter arrayDictionaryWriter;
   private CompressedVariableSizedBlobColumnSerializer rawWriter;
   private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
   private MutableBitmap nullRowsBitmap;
   private Map<String, GlobalDictionaryEncodedFieldColumnWriter<?>> fieldWriters;
   private int rowCount = 0;
   private boolean closedForWrite = false;
+
+  private boolean stringDictionarySerialized = false;
+  private boolean longDictionarySerialized = false;
+  private boolean doubleDictionarySerialized = false;
+  private boolean arrayDictionarySerialized = false;
 
   public NestedDataColumnSerializer(
       String name,
@@ -134,6 +170,11 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     this.indexSpec = indexSpec;
     this.closer = closer;
     this.globalDictionaryIdLookup = new GlobalDictionaryIdLookup();
+  }
+
+  public GlobalDictionaryIdLookup getGlobalLookup()
+  {
+    return globalDictionaryIdLookup;
   }
 
   @Override
@@ -169,6 +210,13 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
         true
     );
     doubleDictionaryWriter.open();
+
+    arrayDictionaryWriter = new FrontCodedIntArrayIndexedWriter(
+        segmentWriteOutMedium,
+        ByteOrder.nativeOrder(),
+        4
+    );
+    arrayDictionaryWriter.open();
 
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
         getInternalFileName(name, RAW_FILE_NAME),
@@ -215,7 +263,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
               indexSpec,
               globalDictionaryIdLookup
           );
-        } else {
+        } else if (Types.is(type, ValueType.DOUBLE)) {
           writer = new DoubleFieldColumnWriter(
               name,
               fieldFileName,
@@ -223,6 +271,16 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
               indexSpec,
               globalDictionaryIdLookup
           );
+        } else if (Types.is(type, ValueType.ARRAY)) {
+          writer = new ArrayOfLiteralsFieldColumnWriter(
+              name,
+              fieldFileName,
+              segmentWriteOutMedium,
+              indexSpec,
+              globalDictionaryIdLookup
+          );
+        } else {
+          throw new IllegalArgumentException("wtf");
         }
       } else {
         writer = new VariantLiteralFieldColumnWriter(
@@ -240,6 +298,10 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
 
   public void serializeStringDictionary(Iterable<String> dictionaryValues) throws IOException
   {
+    if (stringDictionarySerialized) {
+      throw new ISE("String dictionary already serialized for column [%s], cannot serialize again", name);
+    }
+    // null is always 0
     dictionaryWriter.write(null);
     globalDictionaryIdLookup.addString(null);
     for (String value : dictionaryValues) {
@@ -251,10 +313,17 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       dictionaryWriter.write(value);
       globalDictionaryIdLookup.addString(value);
     }
+    stringDictionarySerialized = true;
   }
 
   public void serializeLongDictionary(Iterable<Long> dictionaryValues) throws IOException
   {
+    if (!stringDictionarySerialized) {
+      throw new ISE("Must serialize string value dictionary before serializing long dictionary for column [%s]", name);
+    }
+    if (longDictionarySerialized) {
+      throw new ISE("Long dictionary already serialized for column [%s], cannot serialize again", name);
+    }
     for (Long value : dictionaryValues) {
       if (value == null) {
         continue;
@@ -262,10 +331,20 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       longDictionaryWriter.write(value);
       globalDictionaryIdLookup.addLong(value);
     }
+    longDictionarySerialized = true;
   }
 
   public void serializeDoubleDictionary(Iterable<Double> dictionaryValues) throws IOException
   {
+    if (!stringDictionarySerialized) {
+      throw new ISE("Must serialize string value dictionary before serializing double dictionary for column [%s]", name);
+    }
+    if (!longDictionarySerialized) {
+      throw new ISE("Must serialize long value dictionary before serializing double dictionary for column [%s]", name);
+    }
+    if (doubleDictionarySerialized) {
+      throw new ISE("Double dictionary already serialized for column [%s], cannot serialize again", name);
+    }
     for (Double value : dictionaryValues) {
       if (value == null) {
         continue;
@@ -273,11 +352,39 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
       doubleDictionaryWriter.write(value);
       globalDictionaryIdLookup.addDouble(value);
     }
+    doubleDictionarySerialized = true;
+  }
+
+  public void serializeArrayDictionary(Iterable<int[]> dictionaryValues) throws IOException
+  {
+    if (!stringDictionarySerialized) {
+      throw new ISE("Must serialize string value dictionary before serializing array dictionary for column [%s]", name);
+    }
+    if (!longDictionarySerialized) {
+      throw new ISE("Must serialize long value dictionary before serializing array dictionary for column [%s]", name);
+    }
+    if (!doubleDictionarySerialized) {
+      throw new ISE("Must serialize double value dictionary before serializing array dictionary for column [%s]", name);
+    }
+    if (arrayDictionarySerialized) {
+      throw new ISE("Array dictionary already serialized for column [%s], cannot serialize again", name);
+    }
+    for (int[] value : dictionaryValues) {
+      if (value == null) {
+        continue;
+      }
+      arrayDictionaryWriter.write(value);
+      globalDictionaryIdLookup.addArray(value);
+    }
+    arrayDictionarySerialized = true;
   }
 
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
+    if (!arrayDictionarySerialized) {
+      throw new ISE("Must serialize value dictionaries before serializing values for column [%s]", name);
+    }
     StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
@@ -330,8 +437,8 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
     Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
-    // version 4
-    channel.write(ByteBuffer.wrap(new byte[]{0x04}));
+    // version 5
+    channel.write(ByteBuffer.wrap(new byte[]{0x05}));
     channel.write(ByteBuffer.wrap(metadataBytes));
     fieldsWriter.writeTo(channel, smoosher);
     fieldsInfoWriter.writeTo(channel, smoosher);
@@ -340,6 +447,7 @@ public class NestedDataColumnSerializer implements GenericColumnSerializer<Struc
     writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+    writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, rawWriter, RAW_FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
       writeInternal(smoosher, nullBitmapWriter, NULL_BITMAP_FILE_NAME);

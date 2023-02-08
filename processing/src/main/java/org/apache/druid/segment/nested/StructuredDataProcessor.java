@@ -31,7 +31,28 @@ import java.util.Set;
 
 public abstract class StructuredDataProcessor
 {
-  public abstract ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue);
+  protected StructuredDataProcessor()
+  {
+  }
+
+  /**
+   * process a literal value that is definitely not a {@link Map}, {@link List}, or {@link Object[]}
+   */
+  public abstract ProcessedLiteral<?> processLiteralField(
+      ArrayList<NestedPathPart> fieldPath,
+      @Nullable Object fieldValue
+  );
+
+  /**
+   * process a {@link List} or {@link Object[]} that might be an array of literals. If the object was an array of
+   * literals, returns a {@link ProcessedLiteral}, else returns null.
+   */
+  @Nullable
+  public abstract ProcessedLiteral<?> processArrayOfLiteralsField(
+      ArrayList<NestedPathPart> fieldPath,
+      @Nullable Object maybeArrayOfLiterals
+  );
+
 
   /**
    * Process fields, returning a list of all paths to literal fields, represented as an ordered sequence of
@@ -46,6 +67,8 @@ public abstract class StructuredDataProcessor
       toProcess.add(new MapField(newPath, (Map<String, ?>) raw));
     } else if (raw instanceof List) {
       toProcess.add(new ListField(newPath, (List<?>) raw));
+    } else if (raw instanceof Object[]) {
+      toProcess.add(new ArrayField(newPath, (Object[]) raw));
     } else {
       return new ProcessResults().addLiteralField(newPath, processLiteralField(newPath, raw).getSize());
     }
@@ -58,6 +81,8 @@ public abstract class StructuredDataProcessor
         accumulator.merge(processMapField(toProcess, (MapField) next));
       } else if (next instanceof ListField) {
         accumulator.merge(processListField(toProcess, (ListField) next));
+      } else if (next instanceof ArrayField) {
+        accumulator.merge(processArrayField(toProcess, (ArrayField) next));
       }
     }
     return accumulator;
@@ -92,24 +117,62 @@ public abstract class StructuredDataProcessor
     // start with object reference, is probably a bit bigger than this...
     final ProcessResults results = new ProcessResults().withSize(8);
     final List<?> theList = list.getList();
-    for (int i = 0; i < theList.size(); i++) {
-      final ArrayList<NestedPathPart> newPath = new ArrayList<>(list.getPath());
-      newPath.add(new NestedPathArrayElement(i));
-      final Object element = StructuredData.unwrap(theList.get(i));
-      // maps and lists go back into the queue
-      if (element instanceof Map) {
-        toProcess.add(new MapField(newPath, (Map<String, ?>) element));
-      } else if (element instanceof List) {
-        toProcess.add(new ListField(newPath, (List<?>) element));
-      } else {
-        // literals get processed
-        results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
+    // check to see if the processor treats arrays of literals as literals, if so we can stop processing here
+    ProcessedLiteral<?> maybeArrayOfLiterals = processArrayOfLiteralsField(list.getPath(), theList);
+    if (maybeArrayOfLiterals != null) {
+      results.addLiteralField(list.getPath(), maybeArrayOfLiterals.getSize());
+    } else {
+      // else we have to dig into the list and process each element
+      for (int i = 0; i < theList.size(); i++) {
+        final ArrayList<NestedPathPart> newPath = new ArrayList<>(list.getPath());
+        newPath.add(new NestedPathArrayElement(i));
+        final Object element = StructuredData.unwrap(theList.get(i));
+        // maps and lists go back into the queue
+        if (element instanceof Map) {
+          toProcess.add(new MapField(newPath, (Map<String, ?>) element));
+        } else if (element instanceof List) {
+          toProcess.add(new ListField(newPath, (List<?>) element));
+        } else if (element instanceof Object[]) {
+          toProcess.add(new ArrayField(newPath, (Object[]) element));
+        } else {
+          results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
+        }
       }
     }
     return results;
   }
 
-  abstract static class Field
+  private ProcessResults processArrayField(Queue<Field> toProcess, ArrayField array)
+  {
+    // start with object reference, is probably a bit bigger than this...
+    final ProcessResults results = new ProcessResults().withSize(8);
+    final Object[] theArray = array.getArray();
+    // check to see if the processor treats arrays of literals as literals, if so we can stop processing here
+    ProcessedLiteral<?> maybeArrayOfLiterals = processArrayOfLiteralsField(array.getPath(), theArray);
+    if (maybeArrayOfLiterals != null) {
+      results.addLiteralField(array.getPath(), maybeArrayOfLiterals.getSize());
+    } else {
+      // else we have to dig into the list and process each element
+      for (int i = 0; i < theArray.length; i++) {
+        final ArrayList<NestedPathPart> newPath = new ArrayList<>(array.getPath());
+        newPath.add(new NestedPathArrayElement(i));
+        final Object element = StructuredData.unwrap(theArray[i]);
+        // maps and lists go back into the queue
+        if (element instanceof Map) {
+          toProcess.add(new MapField(newPath, (Map<String, ?>) element));
+        } else if (element instanceof List) {
+          toProcess.add(new ListField(newPath, (List<?>) element));
+        } else if (element instanceof Object[]) {
+          toProcess.add(new ArrayField(newPath, (Object[]) element));
+        } else {
+          results.addLiteralField(newPath, processLiteralField(newPath, element).getSize());
+        }
+      }
+    }
+    return results;
+  }
+
+  private abstract static class Field
   {
     private final ArrayList<NestedPathPart> path;
 
@@ -137,6 +200,22 @@ public abstract class StructuredDataProcessor
     public List<?> getList()
     {
       return list;
+    }
+  }
+
+  static class ArrayField extends Field
+  {
+    private final Object[] array;
+
+    ArrayField(ArrayList<NestedPathPart> path, Object[] array)
+    {
+      super(path);
+      this.array = array;
+    }
+
+    public Object[] getArray()
+    {
+      return array;
     }
   }
 

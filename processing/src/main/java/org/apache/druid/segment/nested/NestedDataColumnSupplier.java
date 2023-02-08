@@ -36,6 +36,7 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 
 import javax.annotation.Nullable;
@@ -72,7 +73,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   {
     final byte version = bb.get();
 
-    if (version == 0x03 || version == 0x04) {
+    if (version == 0x03 || version == 0x04 || version == 0x05) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final NestedDataColumnMetadata metadata;
@@ -84,6 +85,8 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+        final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
+
         ColumnType simpleType;
 
         metadata = jsonMapper.readValue(
@@ -99,7 +102,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
           simpleType = ColumnType.STRING;
         } else if (fields.size() == 1 &&
                    ((version == 0x03 && NestedPathFinder.JQ_PATH_ROOT.equals(fields.get(0))) ||
-                    (version == 0x04 && NestedPathFinder.JSON_PATH_ROOT.equals(fields.get(0))))
+                    ((version == 0x04 || version == 0x05) && NestedPathFinder.JSON_PATH_ROOT.equals(fields.get(0))))
         ) {
           simpleType = fieldInfo.getTypes(0).getSingleType();
         } else {
@@ -162,6 +165,19 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             metadata.getByteOrder(),
             Double.BYTES
         );
+        if (version == 0x05) {
+          final ByteBuffer arrayDictionarybuffer = loadInternalFile(
+              mapper,
+              metadata,
+              NestedDataColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
+          );
+          arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
+              arrayDictionarybuffer,
+              metadata.getByteOrder()
+          );
+        } else {
+          arrayDictionarySupplier = null;
+        }
         final ByteBuffer rawBuffer = loadInternalFile(mapper, metadata, NestedDataColumnSerializer.RAW_FILE_NAME);
         compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
             NestedDataColumnSerializer.getInternalFileName(
@@ -194,6 +210,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
             frontCodedStringDictionarySupplier,
             longDictionarySupplier,
             doubleDictionarySupplier,
+            arrayDictionarySupplier,
             columnConfig,
             mapper,
             simpleType
@@ -217,6 +234,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+  private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
   private final ColumnConfig columnConfig;
   private final SmooshedFileMapper fileMapper;
 
@@ -234,6 +252,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
       Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
+      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       ColumnConfig columnConfig,
       SmooshedFileMapper fileMapper,
       @Nullable ColumnType simpleType
@@ -249,6 +268,7 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
     this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
     this.doubleDictionarySupplier = doubleDictionarySupplier;
+    this.arrayDictionarySupplier = arrayDictionarySupplier;
     this.columnConfig = columnConfig;
     this.fileMapper = fileMapper;
     this.simpleType = simpleType;
@@ -259,8 +279,10 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
   {
     if (version == 0x03) {
       return makeV3();
+    } else if (version == 0x04) {
+      return makeV4();
     }
-    return makeV4();
+    return makeV5();
   }
 
   @Nullable
@@ -325,6 +347,38 @@ public class NestedDataColumnSupplier implements Supplier<ComplexColumn>
         stringDictionary::singleThreaded,
         longDictionarySupplier,
         doubleDictionarySupplier,
+        fileMapper
+    );
+  }
+
+  private NestedDataColumnV5 makeV5()
+  {
+    if (frontCodedStringDictionarySupplier != null) {
+      return new NestedDataColumnV5<>(
+          metadata,
+          columnConfig,
+          compressedRawColumnSupplier,
+          nullValues,
+          fields,
+          fieldInfo,
+          frontCodedStringDictionarySupplier,
+          longDictionarySupplier,
+          doubleDictionarySupplier,
+          arrayDictionarySupplier,
+          fileMapper
+      );
+    }
+    return new NestedDataColumnV5<>(
+        metadata,
+        columnConfig,
+        compressedRawColumnSupplier,
+        nullValues,
+        fields,
+        fieldInfo,
+        stringDictionary::singleThreaded,
+        longDictionarySupplier,
+        doubleDictionarySupplier,
+        arrayDictionarySupplier,
         fileMapper
     );
   }

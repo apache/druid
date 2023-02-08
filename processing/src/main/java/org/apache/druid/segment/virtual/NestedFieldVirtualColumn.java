@@ -655,12 +655,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (capabilities.is(ValueType.COMPLEX) &&
           capabilities.getComplexTypeName().equals(NestedDataComplexTypeSerde.TYPE_NAME) &&
           capabilities.isDictionaryEncoded().isTrue()) {
+        final boolean useDictionary = parts.isEmpty() || !(parts.get(parts.size() - 1) instanceof NestedPathArrayElement);
         return ColumnCapabilitiesImpl.createDefault()
                                      .setType(expectedType != null ? expectedType : ColumnType.STRING)
-                                     .setDictionaryEncoded(true)
-                                     .setDictionaryValuesSorted(true)
-                                     .setDictionaryValuesUnique(true)
-                                     .setHasBitmapIndexes(true)
+                                     .setDictionaryEncoded(useDictionary)
+                                     .setDictionaryValuesSorted(useDictionary)
+                                     .setDictionaryValuesUnique(useDictionary)
+                                     .setHasBitmapIndexes(useDictionary)
                                      .setHasNulls(expectedType == null || (expectedType.isNumeric()
                                                                            && NullHandling.sqlCompatible()));
       }
