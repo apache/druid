@@ -25,6 +25,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.Segment;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 public class SegmentToRowsAndColumnsOperator implements Operator
@@ -39,7 +40,7 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   }
 
   @Override
-  public void go(Receiver receiver)
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
     try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
       if (shifty == null) {
@@ -50,11 +51,14 @@ public class SegmentToRowsAndColumnsOperator implements Operator
       if (rac == null) {
         throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
       }
+
+      // After pushing in a single object, we are done, so ignore the signal and call completed()
       receiver.push(rac);
       receiver.completed();
     }
     catch (IOException e) {
       throw new RE(e, "Problem closing resources for segment[%s]", segment.getId());
     }
+    return null;
   }
 }

@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator;
+package org.apache.druid.query.operator.window;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.query.operator.window.Processor;
+import org.apache.druid.query.operator.Operator;
+import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.WindowProcessorOperator;
 
 public class WindowOperatorFactory implements OperatorFactory
 {

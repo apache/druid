@@ -18,7 +18,8 @@
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import { Loader, TableFilterableCell } from '../../components';
 import { useQueryManager } from '../../hooks';

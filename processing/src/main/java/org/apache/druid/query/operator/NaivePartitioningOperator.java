@@ -23,6 +23,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
+import java.io.Closeable;
 import java.util.Iterator;
 import java.util.List;
 
@@ -52,13 +53,14 @@ public class NaivePartitioningOperator implements Operator
   }
 
   @Override
-  public void go(Receiver receiver)
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    child.go(
+    return child.goOrContinue(
+        continuation,
         new Receiver()
         {
           @Override
-          public boolean push(RowsAndColumns rac)
+          public Signal push(RowsAndColumns rac)
           {
             ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
             if (groupPartitioner == null) {
@@ -67,8 +69,8 @@ public class NaivePartitioningOperator implements Operator
 
             partitionsIter = groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
 
-            boolean keepItGoing = true;
-            while (keepItGoing && partitionsIter.hasNext()) {
+            Signal keepItGoing = Signal.GO;
+            while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
               keepItGoing = receiver.push(partitionsIter.next());
             }
             return keepItGoing;

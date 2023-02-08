@@ -16,14 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, ButtonProps, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import type { ButtonProps } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
 import { useInterval } from '../../hooks';
-import { isInBackground, localStorageGet, LocalStorageKeys, localStorageSet } from '../../utils';
+import type { LocalStorageKeys } from '../../utils';
+import { isInBackground, localStorageGet, localStorageSet } from '../../utils';
 
 export interface DelayLabel {
   label: string;

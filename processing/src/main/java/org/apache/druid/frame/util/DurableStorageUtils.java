@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.shuffle;
+package org.apache.druid.frame.util;
 
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -100,6 +100,25 @@ public class DurableStorageUtils
         "%s/part_%d",
         getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
         partitionNumber
+    );
+  }
+
+  /**
+   * Fetches the file location where a particular worker writes the data corresponding to a particular stage
+   * and a custom path name
+   */
+  public static String getOutputsFileNameForPath(
+      final String controllerTaskId,
+      final int stageNumber,
+      final int workerNumber,
+      final String taskId,
+      final String path
+  )
+  {
+    return StringUtils.format(
+        "%s/%s",
+        getTaskIdOutputsFolderName(controllerTaskId, stageNumber, workerNumber, taskId),
+        path
     );
   }
 }

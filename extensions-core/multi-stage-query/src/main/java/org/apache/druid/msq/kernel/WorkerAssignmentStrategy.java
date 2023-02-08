@@ -57,7 +57,7 @@ public enum WorkerAssignmentStrategy
 
   /**
    * Use the lowest possible number of tasks, while keeping each task's workload under
-   * {@link Limits#MAX_INPUT_FILES_PER_WORKER} files and {@link Limits#MAX_INPUT_BYTES_PER_WORKER} bytes.
+   * {@link Limits#MAX_INPUT_FILES_PER_WORKER} files and {@link StageDefinition#getMaxInputBytesPerWorker()} bytes.
    *
    * Implemented using {@link InputSpecSlicer#sliceDynamic} whenever possible.
    */
@@ -75,7 +75,7 @@ public enum WorkerAssignmentStrategy
             inputSpec,
             stageDef.getMaxWorkerCount(),
             Limits.MAX_INPUT_FILES_PER_WORKER,
-            Limits.MAX_INPUT_BYTES_PER_WORKER
+            stageDef.getMaxInputBytesPerWorker()
         );
       } else {
         // In auto mode, if we can't slice inputs dynamically, we instead carry forwards the number of workers from

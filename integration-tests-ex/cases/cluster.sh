@@ -165,20 +165,31 @@ function docker_file {
 # Print environment for debugging
 #env
 
+# Determine if docker-compose is available. If not, assume Docker supports
+# the compose subcommand
+set +e
+if which docker-compose > /dev/null
+then
+  DOCKER_COMPOSE='docker-compose'
+else
+  DOCKER_COMPOSE='docker compose'
+fi
+set -e
+
 case $CMD in
 	"-h" )
 		usage
 		;;
 	"help" )
 		usage
-		docker-compose help
+		$DOCKER_COMPOSE help
 		;;
 	"up" )
 		category $*
 		echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
 		build_shared_dir
 	    cd $CLUSTER_DIR
-		docker-compose `docker_file` up -d
+		$DOCKER_COMPOSE `docker_file` up -d
 		# Enable the following for debugging
 		#show_status
 		;;
@@ -192,12 +203,11 @@ case $CMD in
 		# Enable the following for debugging
 		#show_status
 	    cd $CLUSTER_DIR
-		echo docker-compose `docker_file` $CMD
-		docker-compose `docker_file` $CMD
+		$DOCKER_COMPOSE `docker_file` $CMD
 		;;
 	"*" )
 		category $*
 	    cd $CLUSTER_DIR
-		docker-compose `docker_file` $CMD
+		$DOCKER_COMPOSE `docker_file` $CMD
 		;;
 esac

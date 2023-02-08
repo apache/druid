@@ -22,14 +22,24 @@ package org.apache.druid.query.rowsandcols;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 {
+  public static MapOfColumnsRowsAndColumns.Builder builder()
+  {
+    return new Builder();
+  }
+
   public static MapOfColumnsRowsAndColumns of(String name, Column col)
   {
     return fromMap(ImmutableMap.of(name, col));
@@ -107,6 +117,42 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
       return (T) new AppendableMapOfColumns(this);
     }
     return null;
+  }
+
+  public static class Builder
+  {
+    public LinkedHashMap<String, Column> cols = new LinkedHashMap<>();
+
+    public Builder add(String name, int[] vals)
+    {
+      return add(name, new IntArrayColumn(vals));
+    }
+
+    public Builder add(String name, double[] vals)
+    {
+      return add(name, new DoubleArrayColumn(vals));
+    }
+
+    public Builder add(String name, ColumnType type, Object... vals)
+    {
+      return add(name, vals, type);
+    }
+
+    public Builder add(String name, Object[] vals, ColumnType type)
+    {
+      return add(name, new ObjectArrayColumn(vals, type));
+    }
+
+    public Builder add(String name, Column col)
+    {
+      cols.put(name, col);
+      return this;
+    }
+
+    public MapOfColumnsRowsAndColumns build()
+    {
+      return MapOfColumnsRowsAndColumns.fromMap(cols);
+    }
   }
 
 }

@@ -35,7 +35,7 @@ import { JsonInput } from '../json-input/json-input';
 import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
-import { Suggestion } from '../suggestion-menu/suggestion-menu';
+import type { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 

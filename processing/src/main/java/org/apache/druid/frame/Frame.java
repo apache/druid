@@ -25,6 +25,7 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -357,7 +358,8 @@ public class Frame
   public long writeTo(
       final WritableByteChannel channel,
       final boolean compress,
-      @Nullable final ByteBuffer compressionBuffer
+      @Nullable final ByteBuffer compressionBuffer,
+      ByteTracker byteTracker
   ) throws IOException
   {
     if (compress) {
@@ -408,10 +410,12 @@ public class Frame
                                   .xxHash64(0, COMPRESSED_FRAME_HEADER_SIZE + compressedFrameLength, CHECKSUM_SEED);
 
       compressionBuffer.putLong(COMPRESSED_FRAME_HEADER_SIZE + compressedFrameLength, checksum);
+      byteTracker.reserve(compressionBuffer.remaining());
       Channels.writeFully(channel, compressionBuffer);
 
       return COMPRESSED_FRAME_ENVELOPE_SIZE + compressedFrameLength;
     } else {
+      byteTracker.reserve(numBytes);
       memory.writeTo(0, numBytes, channel);
       return numBytes;
     }

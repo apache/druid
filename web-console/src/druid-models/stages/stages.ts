@@ -20,8 +20,8 @@ import { max, sum } from 'd3-array';
 import hasOwnProp from 'has-own-prop';
 
 import { deleteKeys, filterMap, oneOf, zeroDivide } from '../../utils';
-import { InputFormat } from '../input-format/input-format';
-import { InputSource } from '../input-source/input-source';
+import type { InputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
 
 const SORT_WEIGHT = 0.5;
 const READING_INPUT_WITH_SORT_WEIGHT = 1 - SORT_WEIGHT;

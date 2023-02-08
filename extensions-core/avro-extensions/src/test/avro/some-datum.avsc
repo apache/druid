@@ -33,10 +33,14 @@
       },
       {
         "name": "someStringArray",
-        "type": {
-          "type": "array",
-          "items": "string"
-        }
+        "type": [
+          "null",
+          {
+            "type": "array",
+            "items": ["null","string"]
+          }
+        ],
+        "default":null
       },
       {
         "name": "someIntValueMap",
