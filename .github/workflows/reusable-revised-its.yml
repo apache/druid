@@ -85,8 +85,11 @@ jobs:
 
       - name: Create docker image
         if: steps.docker-restore.outputs.cache-hit != 'true'
+        env:
+          docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
         run: |
-          echo "docker-restore.outputs - ${{ steps.docker-restore.outputs }}"
+          echo "docker-restore.outputs - ${docker-restore}"
+          echo "docker-restore.outputs.cache-hit - ${{ steps.docker-restore.outputs.cache-hit }}"
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
