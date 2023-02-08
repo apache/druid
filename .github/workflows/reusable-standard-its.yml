@@ -103,7 +103,7 @@ jobs:
           TEST_ARGS: |
             ${{ inputs.test_profile == 'integration-tests' &&
             '-Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} -Doverride.config.path=${{ inputs.override_config_path }}' ||
-            $-Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER} }}
+            '-Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}' }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
