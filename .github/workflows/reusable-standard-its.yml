@@ -45,6 +45,27 @@ on:
         required: false
         type: string
         default: com.mysql.jdbc.Driver
+      test_profile:
+        description: 'Which IT test profile to run - (integration-tests or int-tests-config-file)'
+        required: false
+        type: string
+        default: integration-tests
+      config_file:
+        description: 'Which config file to use'
+        required: false
+        type: string
+      pod_name:
+        description: 'To be used in case of k8s tests'
+        required: false
+        type: string
+      pod_namespace:
+        description: 'To be used in case of k8s tests'
+        required: false
+        type: string
+      build_druid_cluster:
+        description: 'To be used in case of k8s tests'
+        required: false
+        type: string
 
 env:
   MVN: mvn --no-snapshot-updates
@@ -79,9 +100,12 @@ jobs:
       - name: Run IT
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          MVN: ${{ format('{0}{1}', env.MVN, (steps.maven-restore.outputs.cache-hit && '' || ' -U')) }}
+          TEST_ARGS: |
+            ${{ inputs.test_profile == 'integration-tests' &&
+            '-Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} -Doverride.config.path=${{ inputs.override_config_path }}' ||
+            $-Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER} }}
         run: |
           # Debug echo
           echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"
-          MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
+          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile } ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}"
+          MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P ${{ inputs.test_profile }} ${{ inputs.testing_groups }} ${MAVEN_SKIP} ${TEST_ARGS}
