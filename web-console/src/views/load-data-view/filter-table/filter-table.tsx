@@ -18,17 +18,19 @@
 
 import classNames from 'classnames';
 import React from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
-import { DruidFilter, getFilterDimension } from '../../../druid-models';
+import type { DruidFilter } from '../../../druid-models';
+import { getFilterDimension } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../../react-table';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
-import { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
+import type { SampleEntry, SampleHeaderAndRows } from '../../../utils/sampler';
 
 import './filter-table.scss';
 
@@ -97,7 +99,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           id: String(i),
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           width: 140,
-          Cell: function FilterTableCell(row) {
+          Cell: function FilterTableCell(row: RowRenderProps) {
             return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
           },
         };

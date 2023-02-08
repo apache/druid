@@ -28,41 +28,43 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class HllSketchObjectStrategy implements ObjectStrategy<HllSketch>
+public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHolder>
 {
 
-  static final HllSketchObjectStrategy STRATEGY = new HllSketchObjectStrategy();
+  static final HllSketchHolderObjectStrategy STRATEGY = new HllSketchHolderObjectStrategy();
 
   @Override
-  public Class<HllSketch> getClazz()
+  public Class<HllSketchHolder> getClazz()
   {
-    return HllSketch.class;
+    return HllSketchHolder.class;
   }
 
   @Override
-  public int compare(final HllSketch sketch1, final HllSketch sketch2)
+  public int compare(final HllSketchHolder sketch1, final HllSketchHolder sketch2)
   {
     return HllSketchAggregatorFactory.COMPARATOR.compare(sketch1, sketch2);
   }
 
   @Override
-  public HllSketch fromByteBuffer(final ByteBuffer buf, final int size)
+  public HllSketchHolder fromByteBuffer(final ByteBuffer buf, final int size)
   {
-    return HllSketch.wrap(Memory.wrap(buf, ByteOrder.LITTLE_ENDIAN).region(buf.position(), size));
+    return HllSketchHolder.of(HllSketch.wrap(Memory.wrap(buf, ByteOrder.LITTLE_ENDIAN).region(buf.position(), size)));
   }
 
   @Override
-  public byte[] toBytes(final HllSketch sketch)
+  public byte[] toBytes(final HllSketchHolder sketch)
   {
-    return sketch.toCompactByteArray();
+    return sketch.getSketch().toCompactByteArray();
   }
 
   @Nullable
   @Override
-  public HllSketch fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  public HllSketchHolder fromByteBufferSafe(ByteBuffer buffer, int numBytes)
   {
-    return HllSketch.wrap(
-        SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    return HllSketchHolder.of(
+        HllSketch.wrap(
+            SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+        )
     );
   }
 }

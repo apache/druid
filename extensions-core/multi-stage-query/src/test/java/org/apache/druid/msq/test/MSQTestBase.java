@@ -546,6 +546,16 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
+  /**
+   * Creates an array of length and containing values decided by the parameters.
+   */
+  protected long[] createExpectedFrameArray(int length, int value)
+  {
+    long[] array = new long[length];
+    Arrays.fill(array, value);
+    return array;
+  }
+
   @Nonnull
   private Supplier<Pair<Segment, Closeable>> getSupplierForSegment(SegmentId segmentId)
   {
@@ -810,7 +820,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
-    protected final Map<Integer, Map<Integer, Map<String, QueryCounterSnapshot>>>
+    protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
 
     private boolean hasRun = false;
@@ -879,7 +889,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
 
     public Builder setExpectedCountersForStageWorkerChannel(
-        QueryCounterSnapshot counterSnapshot,
+        CounterSnapshotMatcher counterSnapshot,
         int stage,
         int worker,
         String channel
@@ -929,16 +939,16 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           final Map<String, QueryCounterSnapshot> channelToCounters = counters.getMap();
           expectedChannelToCounters.forEach(
-              (channel, counter) -> Assert.assertEquals(
-                  StringUtils.format(
-                      "Counter mismatch for stage [%d], worker [%d], channel [%s]",
-                      stage,
-                      worker,
-                      channel
-                  ),
-                  counter,
-                  channelToCounters.get(channel)
-              )
+              (channel, counter) -> {
+                String errorMessageFormat = StringUtils.format(
+                    "Counter mismatch for stage [%d], worker [%d], channel [%s]",
+                    stage,
+                    worker,
+                    channel
+                );
+                Assert.assertTrue(channelToCounters.containsKey(channel));
+                counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
+              }
           );
         });
       });

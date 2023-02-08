@@ -19,8 +19,8 @@
 import { Button, Classes, Dialog } from '@blueprintjs/core';
 import React from 'react';
 
-import { Execution } from '../../../druid-models';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { Execution } from '../../../druid-models';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionDetailsPaneLoader } from '../execution-details-pane-loader/execution-details-pane-loader';
 
 import './execution-details-dialog.scss';

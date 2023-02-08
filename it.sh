@@ -31,6 +31,8 @@ function usage
 {
   cat <<EOF
 Usage: $0 cmd [category]
+  ci
+      build Druid and the distribution for CI pipelines
   build
       build Druid and the distribution
   dist
@@ -49,6 +51,8 @@ Usage: $0 cmd [category]
       show the last 20 lines of each container log
   travis <category>
       run one IT in Travis (build dist, image, run test, tail logs)
+  github <category>
+      run one IT in Github Workflows (run test, tail logs)
   prune
       prune Docker volumes
 
@@ -188,6 +192,9 @@ case $CMD in
   "help" )
     usage
     ;;
+  "ci" )
+    mvn -q clean package dependency:go-offline -P dist $MAVEN_IGNORE
+    ;;
   "build" )
     mvn clean package -P dist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1.0C $*
     ;;
@@ -226,6 +233,11 @@ case $CMD in
     prepare_category $1
     $0 dist
     $0 image
+    $0 test $CATEGORY
+    $0 tail $CATEGORY
+    ;;
+  "github" )
+    prepare_category $1
     $0 test $CATEGORY
     $0 tail $CATEGORY
     ;;

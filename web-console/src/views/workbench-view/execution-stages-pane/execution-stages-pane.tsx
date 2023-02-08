@@ -21,22 +21,22 @@ import { IconNames } from '@blueprintjs/icons';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React from 'react';
-import ReactTable, { Column } from 'react-table';
+import type { Column } from 'react-table';
+import ReactTable from 'react-table';
 
 import { BracedText, TableClickableCell } from '../../../components';
-import {
+import type {
   ChannelCounterName,
   ChannelFields,
   ClusterBy,
   CounterName,
   Execution,
-  formatClusterBy,
   SimpleWideCounter,
   StageDefinition,
-  Stages,
-  summarizeInputSource,
 } from '../../../druid-models';
+import { formatClusterBy, Stages, summarizeInputSource } from '../../../druid-models';
 import { DEFAULT_TABLE_CLASS_NAME } from '../../../react-table';
+import type { NumberLike } from '../../../utils';
 import {
   capitalizeFirst,
   clamp,
@@ -47,7 +47,6 @@ import {
   formatDurationWithMs,
   formatInteger,
   formatPercent,
-  NumberLike,
   oneOf,
   twoLines,
 } from '../../../utils';

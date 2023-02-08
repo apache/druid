@@ -37,6 +37,7 @@ env:
 jobs:
   static-checks:
     strategy:
+      fail-fast: false
       matrix:
         java: [ 'jdk8', 'jdk11', 'jdk17' ]
     runs-on: ubuntu-latest

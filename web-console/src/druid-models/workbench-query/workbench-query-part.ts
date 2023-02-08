@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
-import { SqlExpression, SqlQuery, SqlValues, SqlWithQuery, T } from 'druid-query-toolkit';
+import type { SqlValues, SqlWithQuery } from 'druid-query-toolkit';
+import { SqlExpression, SqlQuery, T } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 
-import { ColumnMetadata, compact, filterMap, generate8HexId, sqlTypeFromDruid } from '../../utils';
-import { LastExecution, validateLastExecution } from '../execution/execution';
+import type { ColumnMetadata } from '../../utils';
+import { compact, filterMap, generate8HexId, sqlTypeFromDruid } from '../../utils';
+import type { LastExecution } from '../execution/execution';
+import { validateLastExecution } from '../execution/execution';
 import { fitExternalConfigPattern } from '../external-config/external-config';
 
 // -----------------------------
