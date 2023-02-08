@@ -21,7 +21,8 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { DiffDialog } from '../../dialogs';
-import { cleanSpec, IngestionSpec } from '../../druid-models';
+import type { IngestionSpec } from '../../druid-models';
+import { cleanSpec } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
 import { deepSet } from '../../utils';

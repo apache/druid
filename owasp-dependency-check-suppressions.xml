@@ -393,6 +393,7 @@
      <cve>CVE-2022-25168</cve>
      <cve>CVE-2022-26612</cve>
      <cve>CVE-2018-8009</cve>
+     <cve>CVE-2021-33036</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -698,10 +699,11 @@
    file name: d3-color:2.0.0
    ]]></notes>
     <!--
-    Not vulnerable to this as, we use d3-color on the client only.
+    Not vulnerable to these as, we use d3-color on the client only.
     -->
     <packageUrl regex="true">^pkg:npm/d3\-color@.*$</packageUrl>
     <vulnerabilityName>1084597</vulnerabilityName>
+    <vulnerabilityName>1088594</vulnerabilityName>
   </suppress>
 
   <suppress>

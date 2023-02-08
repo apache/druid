@@ -13,13 +13,11 @@ exports[`ColumnTree matches snapshot 1`] = `
     value={0}
   >
     <option
-      key="0"
       value={0}
     >
       druid
     </option>
     <option
-      key="1"
       value={1}
     >
       sys

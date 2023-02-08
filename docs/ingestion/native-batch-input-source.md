@@ -756,6 +756,8 @@ Use the Combining input source only if all the delegates are splittable and can 
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
+If you include the [Druid input source](#druid-input-source), the timestamp column is stored in the `__time` field.
+To correctly combine the data from the Druid input source with another source, ensure that other delegate input sources also store the timestamp column in `__time`.
 
 |Property|Description|Required|
 |--------|-----------|---------|

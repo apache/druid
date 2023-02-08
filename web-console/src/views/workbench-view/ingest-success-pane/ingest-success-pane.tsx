@@ -19,9 +19,10 @@
 import { T } from 'druid-query-toolkit';
 import React from 'react';
 
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
+import { WorkbenchQuery } from '../../../druid-models';
 import { formatDuration, pluralIfNeeded } from '../../../utils';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 
 import './ingest-success-pane.scss';
 

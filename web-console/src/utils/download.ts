@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { QueryResult } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
