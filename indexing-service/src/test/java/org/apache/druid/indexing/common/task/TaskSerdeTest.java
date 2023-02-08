@@ -80,7 +80,8 @@ public class TaskSerdeTest
     }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
-        new NamedType(IndexTuningConfig.class, "index")
+        new NamedType(IndexTuningConfig.class, "index"),
+        new NamedType(MockFirehoseFactory.class, "mock")
     );
   }
 
