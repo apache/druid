@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.TableDefnRegistry;
-import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -31,29 +30,18 @@ import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
 import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
-import static org.mockito.ArgumentMatchers.any;
-
-@RunWith(MockitoJUnitRunner.class)
 public class DruidOperatorTableTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  @Mock (answer = Answers.RETURNS_DEEP_STUBS) TableDefnRegistry tableDefnRegistry;
+  private final TableDefnRegistry tableDefnRegistry = new TableDefnRegistry(OBJECT_MAPPER);
 
-  @Mock TableFunction tableFunction;
   private DruidOperatorTable operatorTable;
 
   @Test
   public void test_operatorTable_with_operatorConversionDenyList_deniedConversionsUnavailable()
   {
-    Mockito.when(tableDefnRegistry.jsonMapper()).thenReturn(OBJECT_MAPPER);
-    Mockito.when(tableDefnRegistry.inputSourceDefnFor(any()).adHocTableFn()).thenReturn(tableFunction);
     final ExternalOperatorConversion externalOperatorConversion =
         new ExternalOperatorConversion(OBJECT_MAPPER);
     final HttpOperatorConversion httpOperatorConversion =
@@ -90,8 +78,6 @@ public class DruidOperatorTableTest
   @Test
   public void test_operatorTable_with_emptyOperatorConversionDenyList_conversionsAavailable()
   {
-    Mockito.when(tableDefnRegistry.jsonMapper()).thenReturn(OBJECT_MAPPER);
-    Mockito.when(tableDefnRegistry.inputSourceDefnFor(any()).adHocTableFn()).thenReturn(tableFunction);
     final ExternalOperatorConversion externalOperatorConversion =
         new ExternalOperatorConversion(OBJECT_MAPPER);
     final HttpOperatorConversion httpOperatorConversion =
