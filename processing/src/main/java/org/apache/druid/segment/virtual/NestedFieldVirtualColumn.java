@@ -664,11 +664,16 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                                                                            && NullHandling.sqlCompatible()));
       }
       // column is not nested, use underlying column capabilities, adjusted for expectedType as necessary
-      ColumnCapabilitiesImpl copy = ColumnCapabilitiesImpl.copyOf(capabilities);
-      if (expectedType != null) {
-        copy.setType(expectedType);
+      if (parts.isEmpty()) {
+        ColumnCapabilitiesImpl copy = ColumnCapabilitiesImpl.copyOf(capabilities);
+        if (expectedType != null) {
+          copy.setType(expectedType);
+        }
+        return copy;
+      } else if (capabilities.isPrimitive()) {
+        // path doesn't exist and column isn't nested, so effectively column doesn't exist
+        return null;
       }
-      return copy;
     }
 
     return capabilities(columnName);
