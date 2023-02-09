@@ -26,16 +26,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -118,61 +117,59 @@ public class TestDataBuilder
     }
   };
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
-          )
-      )
+  private static final InputRowSchema FOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
+      ),
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-          new DimensionsSpec(
-              ImmutableList.<DimensionSchema>builder()
-                           .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                               "dim1",
-                               "dim2",
-                               "dim3",
-                               "dim4",
-                               "dim5",
-                               "dim6"
-                           )))
-                           .add(new DoubleDimensionSchema("d1"))
-                           .add(new DoubleDimensionSchema("d2"))
-                           .add(new FloatDimensionSchema("f1"))
-                           .add(new FloatDimensionSchema("f2"))
-                           .add(new LongDimensionSchema("l1"))
-                           .add(new LongDimensionSchema("l2"))
+  private static final InputRowSchema NUMFOO_SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+      new DimensionsSpec(
+          ImmutableList.<DimensionSchema>builder()
+                       .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                           "dim1",
+                           "dim2",
+                           "dim3",
+                           "dim4",
+                           "dim5",
+                           "dim6"
+                       )))
+                       .add(new DoubleDimensionSchema("d1"))
+                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new FloatDimensionSchema("f1"))
+                       .add(new FloatDimensionSchema("f2"))
+                       .add(new LongDimensionSchema("l1"))
+                       .add(new LongDimensionSchema("l2"))
+                       .build()
+      ),
+      null
+  );
+
+  private static final InputRowSchema LOTS_OF_COLUMNS_SCHEMA = new InputRowSchema(
+      new TimestampSpec("timestamp", "millis", null),
+      new DimensionsSpec(
+          DimensionsSpec.getDefaultSchemas(
+              ImmutableList.<String>builder().add("dimHyperUnique")
+                           .add("dimMultivalEnumerated")
+                           .add("dimMultivalEnumerated2")
+                           .add("dimMultivalSequentialWithNulls")
+                           .add("dimSequential")
+                           .add("dimSequentialHalfNull")
+                           .add("dimUniform")
+                           .add("dimZipf")
+                           .add("metFloatNormal")
+                           .add("metFloatZipf")
+                           .add("metLongSequential")
+                           .add("metLongUniform")
                            .build()
           )
-      )
+      ),
+      null
   );
 
-  private static final InputRowParser<Map<String, Object>> PARSER_LOTS_OF_COLUMNS = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "millis", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(
-                  ImmutableList.<String>builder().add("dimHyperUnique")
-                               .add("dimMultivalEnumerated")
-                               .add("dimMultivalEnumerated2")
-                               .add("dimMultivalSequentialWithNulls")
-                               .add("dimSequential")
-                               .add("dimSequentialHalfNull")
-                               .add("dimUniform")
-                               .add("dimZipf")
-                               .add("metFloatNormal")
-                               .add("metFloatZipf")
-                               .add("metLongSequential")
-                               .add("metLongUniform")
-                               .build()
-              )
-          )
-      )
-  );
 
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
@@ -220,7 +217,7 @@ public class TestDataBuilder
           new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
-      .withDimensionsSpec(PARSER_NUMERIC_DIMS)
+      .withDimensionsSpec(NUMFOO_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
@@ -228,7 +225,7 @@ public class TestDataBuilder
       .withMetrics(
           new CountAggregatorFactory("count")
       )
-      .withDimensionsSpec(PARSER_LOTS_OF_COLUMNS)
+      .withDimensionsSpec(LOTS_OF_COLUMNS_SCHEMA.getDimensionsSpec())
       .withRollup(false)
       .build();
 
@@ -436,7 +433,7 @@ public class TestDataBuilder
                   .build()
   );
   public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
-      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, PARSER_NUMERIC_DIMS)).collect(Collectors.toList());
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -509,7 +506,7 @@ public class TestDataBuilder
                       .put("dimSequential", "0")
                       .put("dimSequentialHalfNull", "0")
                       .build(),
-          PARSER_LOTS_OF_COLUMNS
+          LOTS_OF_COLUMNS_SCHEMA
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -525,7 +522,7 @@ public class TestDataBuilder
                       .put("dimHyperUnique", "8")
                       .put("dimSequential", "8")
                       .build(),
-          PARSER_LOTS_OF_COLUMNS
+          LOTS_OF_COLUMNS_SCHEMA
       )
   );
 
@@ -928,23 +925,24 @@ public class TestDataBuilder
 
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
-    return PARSER.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(FOO_SCHEMA, (Map<String, Object>) map);
   }
 
-  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowSchema inputRowSchema)
   {
-    return parser.parseBatch((Map<String, Object>) map).get(0);
+    return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
   {
-    return PARSER.parseBatch(
+    return MapInputRowParser.parse(
+        FOO_SCHEMA,
         ImmutableMap.of(
             "t", new DateTime(t, ISOChronology.getInstanceUTC()).getMillis(),
             "dim1", dim1,
             "dim2", dim2,
             "m1", m1
         )
-    ).get(0);
+    );
   }
 }
