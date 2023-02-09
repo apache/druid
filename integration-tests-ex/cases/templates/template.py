@@ -130,7 +130,14 @@ class BaseTemplate:
         pass
 
     def gen_body(self):
-        yaml.dump(self.cluster, self.out_file, sort_keys=False)
+        try:
+            # Version 5.1 or later: sort the keys in the order we created them.
+            # This makes doing diffs easier when making changes.
+            yaml.dump(self.cluster, self.out_file, sort_keys=False)
+        except TypeError:
+            # For builds that use pyyaml older than 5.1. Keys will be emitted
+            # in random order.
+            yaml.dump(self.cluster, self.out_file)
 
     def define_network(self):
         self.cluster['networks'] = {
@@ -281,9 +288,10 @@ class BaseTemplate:
 
     def define_indexer(self):
         value = self.get_indexer_option()
-        if value == INDEXER:
+        key = value.lower()
+        if key == INDEXER:
             return self.define_indexer_service()
-        if value == MIDDLE_MANAGER:
+        if key == MIDDLE_MANAGER:
             return self.define_middle_manager_service()
         raise Exception("Invalid USE_INDEXER value: [" + value + ']')
 
