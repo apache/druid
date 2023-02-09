@@ -668,6 +668,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         ColumnCapabilitiesImpl copy = ColumnCapabilitiesImpl.copyOf(capabilities);
         if (expectedType != null) {
           copy.setType(expectedType);
+          copy.setHasNulls(
+              copy.hasNulls().or(ColumnCapabilities.Capable.of(expectedType.getType() != capabilities.getType()))
+          );
         }
         return copy;
       } else if (capabilities.isPrimitive()) {
