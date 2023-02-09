@@ -104,9 +104,9 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   );
 
   // Field names in the HttpInputSource
-  private static final String URIS_FIELD = "uris";
-  private static final String PASSWORD_FIELD = "httpAuthenticationPassword";
-  private static final String USERNAME_FIELD = "httpAuthenticationUsername";
+  protected static final String URIS_FIELD = "uris";
+  protected static final String PASSWORD_FIELD = "httpAuthenticationPassword";
+  protected static final String USERNAME_FIELD = "httpAuthenticationUsername";
 
   @Override
   public String typeValue()
@@ -170,6 +170,14 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
       }
     }
     super.validate(table);
+  }
+
+  @Override
+  protected void auditInputSource(Map<String, Object> jsonMap)
+  {
+    // A partial table may not include the URI parameter, but it is
+    // needed to serialize the input source.
+    jsonMap.putIfAbsent(URIS_PARAMETER, "http://bogus.com");
   }
 
   private Matcher templateMatcher(String uriTemplate)
