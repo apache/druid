@@ -329,7 +329,7 @@ public abstract class ExprEval<T>
   }
 
 
-  public static ExprEval ofArray(ExpressionType outputType, Object[] value)
+  public static ExprEval ofArray(ExpressionType outputType, @Nullable Object[] value)
   {
     Preconditions.checkArgument(outputType.isArray(), "Output type %s is not an array", outputType);
     return new ArrayExprEval(outputType, value);
@@ -572,6 +572,9 @@ public abstract class ExprEval<T>
         if (type.getElementType().isArray()) {
           return ofArray(type, (Object[]) value);
         }
+        if (value == null) {
+          return ofArray(type, null);
+        }
         // in a better world, we might get an object that matches the type signature for arrays and could do a switch
         // statement here, but this is not that world yet, and things that are array typed might also be non-arrays,
         // e.g. we might get a String instead of String[], so just fallback to bestEffortOf
@@ -798,7 +801,7 @@ public abstract class ExprEval<T>
               return ExprEval.ofStringArray(value == null ? null : new Object[] {value.toString()});
           }
       }
-      throw new IAE("invalid type " + castTo);
+      throw new IAE("invalid type cannot cast " + ExpressionType.DOUBLE + " to " + castTo);
     }
 
     @Override
@@ -1308,7 +1311,11 @@ public abstract class ExprEval<T>
       if (expressionType.equals(castTo)) {
         return this;
       }
-      throw new IAE("invalid type " + castTo);
+      // allow cast of unknown complex to some other complex type
+      if (expressionType.getComplexTypeName() == null) {
+        return new ComplexExprEval(castTo, value);
+      }
+      throw new IAE("invalid type cannot cast " + expressionType + " to " + castTo);
     }
 
     @Override
